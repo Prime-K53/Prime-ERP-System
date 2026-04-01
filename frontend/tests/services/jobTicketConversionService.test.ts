@@ -2,9 +2,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { jobTicketConversionService } from '../../services/jobTicketConversionService';
 
 const executeAtomicOperation = vi.fn();
-const initialize = vi.fn();
-const getActiveDefinitions = vi.fn();
-const startWorkflow = vi.fn();
+const createJobTicket = vi.fn();
+const updateJobTicket = vi.fn();
+const deleteJobTicket = vi.fn();
 
 vi.mock('../../services/db', () => ({
   dbService: {
@@ -12,11 +12,11 @@ vi.mock('../../services/db', () => ({
   }
 }));
 
-vi.mock('../../services/workflowService', () => ({
-  workflowService: {
-    initialize: (...args: any[]) => initialize(...args),
-    getActiveDefinitions: (...args: any[]) => getActiveDefinitions(...args),
-    startWorkflow: (...args: any[]) => startWorkflow(...args)
+vi.mock('../../services/jobTicketService', () => ({
+  jobTicketService: {
+    create: (...args: any[]) => createJobTicket(...args),
+    update: (...args: any[]) => updateJobTicket(...args),
+    delete: (...args: any[]) => deleteJobTicket(...args)
   }
 }));
 
@@ -27,11 +27,17 @@ const buildTx = (stores: Record<string, any>) => ({
 describe('jobTicketConversionService', () => {
   beforeEach(() => {
     executeAtomicOperation.mockReset();
-    initialize.mockReset();
-    getActiveDefinitions.mockReset();
-    startWorkflow.mockReset();
-    getActiveDefinitions.mockReturnValue([{ id: 'WF-1', isActive: true }]);
-    startWorkflow.mockResolvedValue({});
+    createJobTicket.mockReset();
+    updateJobTicket.mockReset();
+    deleteJobTicket.mockReset();
+    createJobTicket.mockResolvedValue({
+      id: 'TKT-0001',
+      ticketNumber: 'TKT-0001'
+    });
+    updateJobTicket.mockResolvedValue({
+      id: 'TKT-0001',
+      ticketNumber: 'TKT-0001'
+    });
   });
 
   it('converts a general quotation into a job ticket', async () => {
@@ -46,17 +52,12 @@ describe('jobTicketConversionService', () => {
       get: vi.fn().mockResolvedValue(quotation),
       put: vi.fn()
     };
-    const workOrderStore = {
-      getAll: vi.fn().mockResolvedValue([]),
-      put: vi.fn()
-    };
     const auditLogStore = { put: vi.fn() };
     const idempotencyStore = { get: vi.fn().mockResolvedValue(null), put: vi.fn() };
 
     executeAtomicOperation.mockImplementation(async (_stores: string[], op: any) =>
       op(buildTx({
         quotations: quotationStore,
-        workOrders: workOrderStore,
         auditLogs: auditLogStore,
         idempotencyKeys: idempotencyStore
       }))
@@ -68,9 +69,9 @@ describe('jobTicketConversionService', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.jobTicketId).toMatch(/^WO/i);
+    expect(result.jobTicketId).toBe('TKT-0001');
+    expect(createJobTicket).toHaveBeenCalled();
     expect(quotationStore.put).toHaveBeenCalled();
-    expect(workOrderStore.put).toHaveBeenCalled();
   });
 
   it('prevents duplicate conversion for quotations', async () => {
@@ -82,14 +83,12 @@ describe('jobTicketConversionService', () => {
     };
 
     const quotationStore = { get: vi.fn().mockResolvedValue(quotation), put: vi.fn() };
-    const workOrderStore = { getAll: vi.fn().mockResolvedValue([]), put: vi.fn() };
     const auditLogStore = { put: vi.fn() };
     const idempotencyStore = { get: vi.fn().mockResolvedValue({ id: 'lock' }), put: vi.fn() };
 
     executeAtomicOperation.mockImplementation(async (_stores: string[], op: any) =>
       op(buildTx({
         quotations: quotationStore,
-        workOrders: workOrderStore,
         auditLogs: auditLogStore,
         idempotencyKeys: idempotencyStore
       }))
@@ -106,14 +105,12 @@ describe('jobTicketConversionService', () => {
   it('rejects conversion when quotation data is incomplete', async () => {
     const quotation = { id: 'QTN-3', customerName: '', quotationType: 'General', items: [] };
     const quotationStore = { get: vi.fn().mockResolvedValue(quotation), put: vi.fn() };
-    const workOrderStore = { getAll: vi.fn().mockResolvedValue([]), put: vi.fn() };
     const auditLogStore = { put: vi.fn() };
     const idempotencyStore = { get: vi.fn().mockResolvedValue(null), put: vi.fn() };
 
     executeAtomicOperation.mockImplementation(async (_stores: string[], op: any) =>
       op(buildTx({
         quotations: quotationStore,
-        workOrders: workOrderStore,
         auditLogs: auditLogStore,
         idempotencyKeys: idempotencyStore
       }))
@@ -135,14 +132,12 @@ describe('jobTicketConversionService', () => {
     };
 
     const batchStore = { get: vi.fn().mockResolvedValue(batch), put: vi.fn() };
-    const workOrderStore = { getAll: vi.fn().mockResolvedValue([]), put: vi.fn() };
     const auditLogStore = { put: vi.fn() };
     const idempotencyStore = { get: vi.fn().mockResolvedValue(null), put: vi.fn() };
 
     executeAtomicOperation.mockImplementation(async (_stores: string[], op: any) =>
       op(buildTx({
         examinationBatches: batchStore,
-        workOrders: workOrderStore,
         auditLogs: auditLogStore,
         idempotencyKeys: idempotencyStore
       }))
@@ -150,10 +145,11 @@ describe('jobTicketConversionService', () => {
 
     const result = await jobTicketConversionService.convertExaminationBatchToJobTicket('BATCH-1');
     expect(result.success).toBe(true);
-    expect(workOrderStore.put).toHaveBeenCalled();
+    expect(result.jobTicketId).toBe('TKT-0001');
+    expect(createJobTicket).toHaveBeenCalled();
   });
 
-  it('rolls back conversion when work order save fails', async () => {
+  it('rolls back conversion when source update fails after ticket creation', async () => {
     const quotation = {
       id: 'QTN-4',
       customerName: 'Prime School',
@@ -161,20 +157,19 @@ describe('jobTicketConversionService', () => {
       items: [{ id: 'ITM-1', name: 'Booklet', quantity: 10, price: 5 }]
     };
 
-    const quotationStore = { get: vi.fn().mockResolvedValue(quotation), put: vi.fn() };
-    const workOrderStore = { getAll: vi.fn().mockResolvedValue([]), put: vi.fn().mockRejectedValue(new Error('fail')) };
+    const quotationStore = { get: vi.fn().mockResolvedValue(quotation), put: vi.fn().mockRejectedValue(new Error('fail')) };
     const auditLogStore = { put: vi.fn() };
     const idempotencyStore = { get: vi.fn().mockResolvedValue(null), put: vi.fn() };
 
     executeAtomicOperation.mockImplementation(async (_stores: string[], op: any) =>
       op(buildTx({
         quotations: quotationStore,
-        workOrders: workOrderStore,
         auditLogs: auditLogStore,
         idempotencyKeys: idempotencyStore
       }))
     );
 
     await expect(jobTicketConversionService.convertQuotationToJobTicket('QTN-4')).rejects.toThrow('fail');
+    expect(deleteJobTicket).toHaveBeenCalledWith('TKT-0001');
   });
 });

@@ -20,6 +20,7 @@ import {
   CheckSquare,
   FileOutput,
   Edit3,
+  Printer,
   Repeat,
   X
 } from 'lucide-react';
@@ -40,6 +41,7 @@ const ExaminationHub: React.FC = () => {
     calculateBatch,
     approveBatch,
     generateInvoice,
+    convertBatchToJobTicket,
     deleteBatch
   } = useExamination();
 
@@ -412,10 +414,9 @@ const ExaminationHub: React.FC = () => {
   const handleConvertToJobTicket = async (batchId: string) => {
     setActionLoading(batchId);
     try {
-      const { convertBatchToJobTicket } = useExamination();
       const ticketId = await convertBatchToJobTicket(batchId);
       toast.success(`Batch successfully converted to Job Ticket ${ticketId}`);
-      navigate('/production/work-orders');
+      navigate('/sales-flow/job-tickets');
       loadAllData();
     } catch (error: any) {
       toast.error(`Failed to convert batch: ${error.message || 'Unknown error'}`);

@@ -7,13 +7,36 @@ import {
 } from './receiptCalculationService';
 
 export interface LedgerEntry {
-    date: string;
-    type: 'INVOICE' | 'PAYMENT';
-    reference_no: string;
+  date: string;
+  type: 'INVOICE' | 'PAYMENT';
+  reference_no: string;
     memo?: string;
     debit: number;
-    credit: number;
+  credit: number;
 }
+
+const resolveInvoiceStatementReference = (invoice: Invoice & Record<string, any>) => {
+    const invoiceNumber = String(invoice.invoiceNumber || invoice.invoice_number || '').trim();
+    const explicitReference = String(invoice.reference || '').trim();
+    const originModule = String(invoice.originModule || invoice.origin_module || '').trim().toLowerCase();
+    const documentTitle = String(invoice.documentTitle || invoice.document_title || '').trim().toLowerCase();
+
+    const isExaminationInvoice =
+        originModule === 'examination'
+        || documentTitle.includes('examination invoice')
+        || documentTitle.includes('service invoice')
+        || explicitReference.toUpperCase().startsWith('EXM-BATCH-');
+
+    if (isExaminationInvoice && invoiceNumber) {
+        return invoiceNumber;
+    }
+
+    if (invoiceNumber) {
+        return invoiceNumber;
+    }
+
+    return explicitReference || invoice.id;
+};
 
 export const paymentService = {
     /**
@@ -175,7 +198,7 @@ export const paymentService = {
         const invoiceEntries: LedgerEntry[] = customerInvoices.map(inv => ({
             date: inv.date,
             type: 'INVOICE',
-            reference_no: inv.reference || inv.id, // Use reference if available, else ID
+            reference_no: resolveInvoiceStatementReference(inv as Invoice & Record<string, any>),
             memo: 'Invoice',
             debit: inv.totalAmount,
             credit: 0

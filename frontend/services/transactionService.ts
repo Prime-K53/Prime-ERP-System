@@ -705,6 +705,7 @@ export const transactionService = {
 
         return {
             ...proof,
+            recipientPhone: (proof as any).recipientPhone || (proof as any).receiverPhone || (proof as any).phone,
             signature: signatureDataUrl,
             signatureDataUrl,
             signatureInputMode: normalizedMode,

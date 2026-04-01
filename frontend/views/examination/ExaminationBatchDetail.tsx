@@ -13,7 +13,7 @@ import { buildRecurringDraftFromExaminationBatch } from '../../utils/recurringCo
 const ExaminationBatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { calculateBatch, deleteBatch, approveBatch, generateInvoice, createBatch, schools, loadAllData } = useExamination();
+  const { calculateBatch, deleteBatch, approveBatch, generateInvoice, createBatch, schools, loadAllData, convertBatchToJobTicket } = useExamination();
   const { fetchFinanceData } = useFinance();
   const { notify, checkPermission } = useAuth();
   const [batch, setBatch] = useState<ExaminationBatch | null>(null);
@@ -706,9 +706,9 @@ const ExaminationBatchDetail: React.FC = () => {
             <button
               type="button"
               onClick={async () => {
-                if (window.confirm('Convert this batch to a Job Ticket for production?')) {
+                if (window.confirm('Convert this batch to a Job Ticket?')) {
                   try {
-                    const ticketId = await (useExamination as any)().convertBatchToJobTicket(batch.id);
+                    await convertBatchToJobTicket(batch.id);
                     navigate('/sales-flow/job-tickets');
                   } catch (err) {
                     // Error handled in context

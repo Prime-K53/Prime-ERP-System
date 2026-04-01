@@ -259,6 +259,57 @@ const toSafeNumber = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const startOfToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const parseDateValue = (value: unknown): Date | null => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getInvoiceOutstandingAmount = (invoice: Record<string, unknown>): number => {
+  const totalAmount = toSafeNumber(invoice.totalAmount ?? invoice.total ?? invoice.amount);
+  const paidAmount = toSafeNumber(invoice.paidAmount ?? invoice.paid_amount ?? invoice.amountPaid);
+  return roundFinancial(Math.max(0, totalAmount - paidAmount));
+};
+
+const deriveInvoiceBalanceMetrics = (invoiceRows: Record<string, unknown>[]) => {
+  const today = startOfToday();
+
+  return invoiceRows.reduce((summary, invoice) => {
+    const status = String(invoice?.status || '').trim().toLowerCase();
+    if (status === 'draft' || status === 'cancelled' || status === 'canceled' || status === 'void') {
+      return summary;
+    }
+
+    const outstanding = getInvoiceOutstandingAmount(invoice);
+    if (outstanding <= 0) {
+      return summary;
+    }
+
+    const dueDate = parseDateValue(invoice.dueDate ?? invoice.due_date);
+    const isOverdue = status === 'overdue' || Boolean(dueDate && dueDate < today);
+
+    summary.outstandingBalance = roundFinancial(summary.outstandingBalance + outstanding);
+    if (isOverdue) {
+      summary.overdue = roundFinancial(summary.overdue + outstanding);
+    } else {
+      summary.pending = roundFinancial(summary.pending + outstanding);
+    }
+
+    return summary;
+  }, {
+    outstandingBalance: 0,
+    pending: 0,
+    overdue: 0,
+  });
+};
+
 const formatCurrency = (currency: string, value: number): string => {
   return `${currency}${value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -279,7 +330,7 @@ const getRangeDays = (range: DashboardRange): number => {
 // MAIN DASHBOARD COMPONENT
 // ============================================================
 const Dashboard: React.FC = () => {
-  const { isInitialized, user, companyConfig } = useData();
+  const { isInitialized, user, companyConfig, invoices: localInvoices = [] } = useData();
   const navigate = useNavigate();
   const { setIsOpen } = usePricingCalculator();
 
@@ -334,7 +385,8 @@ const Dashboard: React.FC = () => {
       const response = await api.dashboard.getDashboard(days);
 
       const sales = Array.isArray(response?.sales) ? response.sales : [];
-      const invoices = Array.isArray(response?.invoices) ? response.invoices : [];
+      const backendInvoices = Array.isArray(response?.invoices) ? response.invoices : [];
+      const invoices = Array.isArray(localInvoices) && localInvoices.length > 0 ? localInvoices : backendInvoices;
       const revenue = toSafeNumber(response?.revenue || 0);
       const todayCollection = toSafeNumber(response?.todaySales || 0);
 
@@ -348,15 +400,7 @@ const Dashboard: React.FC = () => {
       const netProfit = totalIncome - totalExpenses;
       const margin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
 
-      // Calculate pending/overdue from invoices
-      const pending = invoices.reduce((sum: number, inv: Record<string, unknown>) => {
-        const status = String(inv?.status || '').toLowerCase();
-        return status === 'pending' ? sum + toSafeNumber(inv.totalAmount) : sum;
-      }, 0);
-      const overdue = invoices.reduce((sum: number, inv: Record<string, unknown>) => {
-        const status = String(inv?.status || '').toLowerCase();
-        return status === 'overdue' ? sum + toSafeNumber(inv.totalAmount) : sum;
-      }, 0);
+      const balanceMetrics = deriveInvoiceBalanceMetrics(invoices);
 
       // Generate income vs expenditure data
       const now = new Date();
@@ -443,15 +487,13 @@ const Dashboard: React.FC = () => {
           const status = String(i?.status || '').toLowerCase();
           return status === 'active' || status === 'in-progress' || status === 'pending';
         }).length,
-        outstandingBalance: invoices.reduce((sum: number, inv: Record<string, unknown>) =>
-          sum + toSafeNumber(inv.totalAmount), 0
-        ),
+        outstandingBalance: balanceMetrics.outstandingBalance,
         totalIncome,
         totalExpenses,
         netProfit,
         margin,
-        pending,
-        overdue,
+        pending: balanceMetrics.pending,
+        overdue: balanceMetrics.overdue,
       });
 
       setIncomeExpenseData(formattedChartData);
@@ -466,7 +508,7 @@ const Dashboard: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [range, currency]);
+  }, [localInvoices, range]);
 
   // Refresh on range change
   useEffect(() => {

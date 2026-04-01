@@ -129,7 +129,7 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const finance = useFinance();
     const productionStore = useProductionStore();
     const inventoryStore = useInventoryStore();
-    const { notify, addAuditLog, companyConfig, addAlert, isInitialized, checkPermission } = useAuth();
+    const { notify, addAuditLog, companyConfig, addAlert, isInitialized, checkPermission, user } = useAuth();
 
     useEffect(() => {
         if (!isInitialized) return;

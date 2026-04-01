@@ -59,9 +59,11 @@ export const mapToInvoiceData = (item: any, companyConfig: any, targetType?: str
 
         const signatureDataUrl = resolveSignatureDataUrl(proof);
         if (!signatureDataUrl) return undefined;
+        const recipientPhone = proof.recipientPhone || proof.receiverPhone || proof.phone;
 
         return {
             ...proof,
+            recipientPhone,
             signatureDataUrl,
             signatureInputMode: inferSignatureInputMode(proof.signatureInputMode, signatureDataUrl),
             notes: proof.notes || proof.remarks,

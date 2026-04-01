@@ -138,6 +138,7 @@ export const PrimeDocument = ({ type, data }: DocProps) => {
     || dataAny.customerPhone
     || dataAny.customer_phone
     || dataAny.vendorPhone
+    || dataAny.proofOfDelivery?.recipientPhone
     || dataAny.proofOfDelivery?.receiverPhone
     || dataAny.proofOfDelivery?.phone
     || ''
@@ -145,6 +146,32 @@ export const PrimeDocument = ({ type, data }: DocProps) => {
   const shouldRenderRecipientSection = Boolean(
     resolvedRecipientName || resolvedRecipientAddress || resolvedRecipientPhone
   );
+  const deliveryProof = dataAny.proofOfDelivery || null;
+  const deliveryReceivedName = String(
+    dataAny.receivedBy
+    || deliveryProof?.receivedBy
+    || dataAny.conversionDetails?.acceptedBy
+    || ''
+  ).trim();
+  const deliveryReceivedPhone = String(
+    deliveryProof?.recipientPhone
+    || deliveryProof?.receiverPhone
+    || deliveryProof?.phone
+    || resolvedRecipientPhone
+    || ''
+  ).trim();
+  const deliveryReceivedAt = String(
+    dataAny.receivedAt
+    || deliveryProof?.timestamp
+    || dataAny.actualArrival
+    || ''
+  ).trim();
+  const deliverySignatureDataUrl = String(
+    dataAny.signatureDataUrl
+    || deliveryProof?.signatureDataUrl
+    || ''
+  ).trim();
+  const deliveryLocationStamp = dataAny.conversionDetails?.locationStamp || deliveryProof?.locationStamp;
   const recipientLabel = type === 'PO'
     ? 'To Vendor'
     : type === 'EXAMINATION_INVOICE'
@@ -992,12 +1019,6 @@ if (type === 'POS_RECEIPT') {
               </Text>
             </View>
 
-            {/* Thank You Note */}
-            <View style={{ marginTop: 15, alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: '#334155' }}>
-                Thank you for choosing <Text style={{ fontWeight: 'bold' }}>{companyName}</Text>
-              </Text>
-            </View>
           </View>
         )}
 
@@ -1245,30 +1266,41 @@ if (type === 'POS_RECEIPT') {
 
         {/* Delivery Signature Block */}
         {type === 'DELIVERY_NOTE' && (
-          <View style={[s.signatureBlock, { marginTop: 40 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>Logistics Details</Text>
-              <Text style={{ fontSize: 9, marginBottom: 3 }}>Driver Name: {('driverName' in data ? data.driverName : '____________________')}</Text>
-              <Text style={{ fontSize: 9 }}>Vehicle No: {('vehicleNo' in data ? data.vehicleNo : '____________________')}</Text>
+          <View wrap={false} style={{ marginTop: 18 }}>
+            <View style={[s.signatureBlock, { marginTop: 18, alignItems: 'flex-start' }]}>
+              <View style={{ flex: 1, paddingRight: 18 }}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>Logistics Details</Text>
+                <Text style={{ fontSize: 9, marginBottom: 3 }}>Driver Name: {('driverName' in data ? data.driverName : '____________________')}</Text>
+                <Text style={{ fontSize: 9 }}>Vehicle No: {('vehicleNo' in data ? data.vehicleNo : '____________________')}</Text>
+              </View>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                {deliverySignatureDataUrl ? (
+                  <Image src={deliverySignatureDataUrl} style={{ height: 40, width: 100, marginBottom: 4 }} />
+                ) : (
+                  <View style={{ height: 32 }} />
+                )}
+                <View style={{ width: 180, alignItems: 'center' }}>
+                  <View style={[s.sigLine, { width: 180, marginTop: 6 }]} />
+                  <Text style={{ fontSize: 9, marginTop: 2 }}>Received By: {deliveryReceivedName || '____________________'}</Text>
+                  {deliveryReceivedPhone ? (
+                    <Text style={{ fontSize: 8, color: '#666', marginTop: 1 }}>Phone: {deliveryReceivedPhone}</Text>
+                  ) : null}
+                  {deliveryReceivedAt ? (
+                    <Text style={{ fontSize: 8, color: '#666', marginTop: 1 }}>Received At: {formatDateOnly(deliveryReceivedAt)}</Text>
+                  ) : null}
+                  <Text style={{ fontSize: 7, color: '#666', marginTop: 2 }}>Stamp & Signature</Text>
+                  {deliveryLocationStamp ? (
+                    <Text style={{ fontSize: 7, color: '#666', marginTop: 4 }}>
+                      GPS: {deliveryLocationStamp.lat.toFixed(4)}, {deliveryLocationStamp.lng.toFixed(4)}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
             </View>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              {('signatureDataUrl' in data && (data as any).signatureDataUrl) || ('proofOfDelivery' in data && (data as any).proofOfDelivery?.signatureDataUrl) ? (
-                <Image src={('signatureDataUrl' in data && (data as any).signatureDataUrl) || ((data as any).proofOfDelivery?.signatureDataUrl)} style={{ height: 40, width: 100, marginBottom: 5 }} />
-              ) : (
-                <View style={{ height: 45 }} />
-              )}
-              <View style={[s.sigLine, { width: 180 }]} />
-              <Text style={{ fontSize: 9 }}>Received By: {('receivedBy' in data && (data as any).receivedBy) || ('proofOfDelivery' in data && (data as any).proofOfDelivery?.receivedBy) || ('conversionDetails' in data && data.conversionDetails?.acceptedBy) || '____________________'}</Text>
-              <Text style={{ fontSize: 7, color: '#666' }}>Stamp & Signature</Text>
-              {('conversionDetails' in data && data.conversionDetails?.locationStamp) ? (
-                <Text style={{ fontSize: 7, color: '#666', marginTop: 5 }}>
-                  GPS: {data.conversionDetails.locationStamp.lat.toFixed(4)}, {data.conversionDetails.locationStamp.lng.toFixed(4)}
-                </Text>
-              ) : ('proofOfDelivery' in data && (data as any).proofOfDelivery?.locationStamp) ? (
-                <Text style={{ fontSize: 7, color: '#666', marginTop: 5 }}>
-                  GPS: {(data as any).proofOfDelivery.locationStamp.lat.toFixed(4)}, {(data as any).proofOfDelivery.locationStamp.lng.toFixed(4)}
-                </Text>
-              ) : null}
+            <View style={{ marginTop: 10, alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: '#334155' }}>
+                Thank you for choosing <Text style={{ fontWeight: 'bold' }}>{companyName}</Text>
+              </Text>
             </View>
           </View>
         )}

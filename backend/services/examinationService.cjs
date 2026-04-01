@@ -400,7 +400,7 @@ const mapBackendInvoiceToFrontendPayload = ({ invoiceRow, batch, customerName, l
     items: normalizedItems,
     subAccountName: batch?.sub_account_name || invoiceRow?.sub_account_name || undefined,
     notes: String(invoiceRow?.notes || `Generated from examination batch ${String(batch?.name || batch?.id || '')}`),
-    reference: `EXM-BATCH-${String(batch?.id || '')}`,
+    reference: invoiceNumber,
     currency: String(invoiceRow?.currency || batch?.currency || 'MWK'),
     batchId: String(batch?.id || ''),
     schoolName: String(customerName || ''),
