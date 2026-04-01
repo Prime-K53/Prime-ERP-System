@@ -1,225 +1,176 @@
-/**
- * Income vs Expenditure Line Chart
- * Smooth curved lines, no area fills, proper memoization
- * CRITICAL: Anti-flickering measures applied
- *
- * 🚨 RECHARTS ANTI-FLICKERING RULES:
- * - Memoize data with useMemo
- * - Memoize entire chart component with React.memo
- * - Use stable color constants (no inline objects)
- * - Disable unnecessary animations
- * - Use stable keys
- */
-import React, { useMemo, memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
+  Area,
   CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Legend,
-  Tooltip as RechartsTooltip,
 } from 'recharts';
-import CustomTooltipComponent from './CustomTooltip';
-import { SEMANTIC_COLORS } from '../../styles/designTokens';
+import CustomTooltip from './CustomTooltip';
+import type { DashboardChartPoint, DashboardRange, IncomeVsExpenditureChartProps } from './types';
 
-// ============================================================
-// STABLE COLOR CONSTANTS - Never change, prevents re-renders
-// ============================================================
-const INCOME_COLOR = '#22C55E';      // Green
-const EXPENDITURE_COLOR = '#EF4444'; // Red
-const GRID_COLOR = '#F1F5F9';
-const AXIS_TEXT_COLOR = '#94A3B8';
-
-// ============================================================
-// STABLE STYLE OBJECTS - Defined outside component
-// ============================================================
-const CHART_CONTAINER_STYLE: React.CSSProperties = {
-  width: '100%',
-  height: '350px',
-  minHeight: '300px',
-};
-
-const X_AXIS_STYLE = {
+const CHART_HEIGHT = 360;
+const INCOME_COLOR = '#22C55E';
+const EXPENDITURE_COLOR = '#EF4444';
+const GRID_STROKE = '#E5E7EB';
+const TICK_STYLE = {
+  fill: '#64748B',
   fontSize: 12,
-  fill: AXIS_TEXT_COLOR,
+  fontWeight: 500,
+};
+const AXIS_LINE_STYLE = {
+  stroke: '#CBD5E1',
+};
+const CHART_MARGIN = {
+  top: 8,
+  right: 12,
+  left: -8,
+  bottom: 4,
+};
+const TOOLTIP_CURSOR = {
+  stroke: '#CBD5E1',
+  strokeDasharray: '4 4',
+  strokeWidth: 1,
+};
+const INCOME_ACTIVE_DOT = {
+  r: 4,
+  stroke: INCOME_COLOR,
+  strokeWidth: 2,
+  fill: '#FFFFFF',
+};
+const EXPENDITURE_ACTIVE_DOT = {
+  r: 4,
+  stroke: EXPENDITURE_COLOR,
+  strokeWidth: 2,
+  fill: '#FFFFFF',
 };
 
-const Y_AXIS_STYLE = {
-  fontSize: 12,
-  fill: AXIS_TEXT_COLOR,
+const FALLBACK_CHART_DATA: Record<DashboardRange, DashboardChartPoint[]> = {
+  weekly: [
+    { label: 'Mon', income: 3800, expenditure: 1600 },
+    { label: 'Tue', income: 4400, expenditure: 1800 },
+    { label: 'Wed', income: 5100, expenditure: 2100 },
+    { label: 'Thu', income: 4700, expenditure: 1900 },
+    { label: 'Fri', income: 5600, expenditure: 2300 },
+    { label: 'Sat', income: 4900, expenditure: 2000 },
+    { label: 'Sun', income: 5300, expenditure: 2200 },
+  ],
+  monthly: [
+    { label: '01', income: 3200, expenditure: 1400 },
+    { label: '05', income: 4500, expenditure: 1750 },
+    { label: '10', income: 4900, expenditure: 1950 },
+    { label: '15', income: 5600, expenditure: 2200 },
+    { label: '20', income: 6200, expenditure: 2480 },
+    { label: '25', income: 5900, expenditure: 2360 },
+    { label: '30', income: 6800, expenditure: 2650 },
+  ],
+  yearly: [
+    { label: 'Jan', income: 42000, expenditure: 16500 },
+    { label: 'Feb', income: 46800, expenditure: 18200 },
+    { label: 'Mar', income: 51000, expenditure: 19400 },
+    { label: 'Apr', income: 55800, expenditure: 20700 },
+    { label: 'May', income: 60200, expenditure: 22300 },
+    { label: 'Jun', income: 64800, expenditure: 23800 },
+    { label: 'Jul', income: 69000, expenditure: 25100 },
+  ],
 };
 
-const GRID_STYLE = {
-  strokeDasharray: '3 3',
-  vertical: false,
-  stroke: GRID_COLOR,
-};
-
-const LEGEND_STYLE: React.CSSProperties = {
-  paddingTop: '16px',
-};
-
-// ============================================================
-// TYPE DEFINITIONS
-// ============================================================
-export interface IncomeVsExpenditureDataPoint {
-  day: string;
-  income: number;
-  expenditure: number;
-}
-
-export interface IncomeVsExpenditureChartProps {
-  data: IncomeVsExpenditureDataPoint[];
-  currency?: string;
-  height?: number;
-}
-
-// ============================================================
-// TICK FORMATTER - Stable function reference
-// ============================================================
-const formatYAxisTick = (value: number): string => {
+const formatAxisValue = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-  return String(value);
+  return `${value}`;
 };
 
-// ============================================================
-// RENDER LEGEND ITEM - Custom legend rendering
-// ============================================================
-interface LegendItemProps {
-  color: string;
-  label: string;
-  value: string;
-}
+const hasLiveData = (data: DashboardChartPoint[]) =>
+  data.some((point) => point.income > 0 || point.expenditure > 0);
 
-const LegendItem: React.FC<LegendItemProps> = memo(({ color, label, value }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-    <div
-      style={{
-        width: '10px',
-        height: '3px',
-        borderRadius: '2px',
-        backgroundColor: color,
-      }}
-    />
-    <span style={{ fontSize: '13px', color: SEMANTIC_COLORS.textSecondary }}>
-      {label}
-    </span>
-    <span style={{ fontSize: '13px', fontWeight: 600, color: SEMANTIC_COLORS.textPrimary }}>
-      {value}
-    </span>
-  </div>
-));
-
-LegendItem.displayName = 'LegendItem';
-
-// ============================================================
-// MAIN CHART COMPONENT - Memoized to prevent re-renders
-// ============================================================
-const IncomeVsExpenditureChart: React.FC<IncomeVsExpenditureChartProps> = memo(({
+const IncomeVsExpenditureChartComponent: React.FC<IncomeVsExpenditureChartProps> = memo(({
   data,
-  currency = '$',
-  height,
+  currencySymbol = '$',
+  range,
 }) => {
-  // Memoize chart data with stable comparison
-  const memoizedData = useMemo(() => {
-    return data.map((item) => ({
-      ...item,
-      income: item.income,
-      expenditure: item.expenditure,
-    }));
-  }, [data]);
+  const chartData = useMemo(() => {
+    if (data.length === 0 || !hasLiveData(data)) {
+      return FALLBACK_CHART_DATA[range];
+    }
 
-  // Memoize container style with potential height
-  const containerStyle = useMemo<React.CSSProperties>(() => ({
-    ...CHART_CONTAINER_STYLE,
-    ...(height ? { height: `${height}px` } : {}),
-  }), [height]);
+    return data;
+  }, [data, range]);
 
-  // Use a stable key based on data length to prevent unnecessary remounts
-  const stableKey = `income-expense-chart-${memoizedData.length}`;
+  const tooltipContent = useMemo(() => (
+    <CustomTooltip currency={currencySymbol} />
+  ), [currencySymbol]);
 
   return (
-    <div style={containerStyle}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          key={stableKey}
-          data={memoizedData}
-          margin={{ top: 5, right: 20, left: -10, bottom: 0 }}
-        >
-          {/* Subtle grid - light, non-distracting */}
-          <CartesianGrid
-            strokeDasharray={GRID_STYLE.strokeDasharray}
-            vertical={GRID_STYLE.vertical}
-            stroke={GRID_STYLE.stroke}
-          />
+    <div className="dashboard-chart">
+      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+        <LineChart data={chartData} margin={CHART_MARGIN}>
+          <defs>
+            <linearGradient id="dashboard-income-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={INCOME_COLOR} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={INCOME_COLOR} stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="dashboard-expenditure-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={EXPENDITURE_COLOR} stopOpacity={0.16} />
+              <stop offset="100%" stopColor={EXPENDITURE_COLOR} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
 
-          {/* X Axis - date labels */}
+          <CartesianGrid stroke={GRID_STROKE} strokeDasharray="4 4" vertical={false} />
+
           <XAxis
-            dataKey="day"
-            axisLine={false}
+            dataKey="label"
+            axisLine={AXIS_LINE_STYLE}
             tickLine={false}
-            tick={{ ...X_AXIS_STYLE }}
+            tick={TICK_STYLE}
+            dy={8}
           />
 
-          {/* Y Axis - currency values */}
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ ...Y_AXIS_STYLE }}
-            tickFormatter={formatYAxisTick}
+            tick={TICK_STYLE}
+            tickFormatter={formatAxisValue}
+            width={52}
           />
 
-          {/* Custom Tooltip */}
-          <RechartsTooltip
-            content={
-              <CustomTooltipComponent
-                currency={currency}
-              />
-            }
-            cursor={{ stroke: '#E5E7EB', strokeWidth: 1, strokeDasharray: '5 5' }}
-          />
+          <Tooltip content={tooltipContent} cursor={TOOLTIP_CURSOR} />
 
-          {/* Legend at bottom */}
-          <Legend
-            verticalAlign="bottom"
-            height={40}
-            iconType="line"
-            iconSize={12}
-            wrapperStyle={LEGEND_STYLE}
-            formatter={(value: string) => {
-              const displayName = value === 'income' ? 'Income' : 'Expenditure';
-              return (
-                <span style={{ fontSize: '13px', color: SEMANTIC_COLORS.textSecondary }}>
-                  {displayName}
-                </span>
-              );
-            }}
-          />
-
-          {/* Income Line - GREEN, smooth, NO area */}
-          <Line
+          <Area
             type="monotone"
             dataKey="income"
-            name="income"
-            stroke={INCOME_COLOR}
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 4, stroke: INCOME_COLOR, strokeWidth: 2, fill: '#FFFFFF' }}
+            stroke="none"
+            fill="url(#dashboard-income-fill)"
+            isAnimationActive={false}
+          />
+          <Area
+            type="monotone"
+            dataKey="expenditure"
+            stroke="none"
+            fill="url(#dashboard-expenditure-fill)"
             isAnimationActive={false}
           />
 
-          {/* Expenditure Line - RED, smooth, NO area */}
+          <Line
+            type="monotone"
+            dataKey="income"
+            stroke={INCOME_COLOR}
+            strokeWidth={3}
+            dot={false}
+            activeDot={INCOME_ACTIVE_DOT}
+            isAnimationActive={false}
+          />
+
           <Line
             type="monotone"
             dataKey="expenditure"
-            name="expenditure"
             stroke={EXPENDITURE_COLOR}
-            strokeWidth={2.5}
+            strokeWidth={3}
             dot={false}
-            activeDot={{ r: 4, stroke: EXPENDITURE_COLOR, strokeWidth: 2, fill: '#FFFFFF' }}
+            activeDot={EXPENDITURE_ACTIVE_DOT}
             isAnimationActive={false}
           />
         </LineChart>
@@ -228,6 +179,6 @@ const IncomeVsExpenditureChart: React.FC<IncomeVsExpenditureChartProps> = memo((
   );
 });
 
-IncomeVsExpenditureChart.displayName = 'IncomeVsExpenditureChart';
+IncomeVsExpenditureChartComponent.displayName = 'IncomeVsExpenditureChart';
 
-export default IncomeVsExpenditureChart;
+export default IncomeVsExpenditureChartComponent;

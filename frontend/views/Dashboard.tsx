@@ -1,754 +1,1030 @@
-/**
- * Redesigned Prime ERP Dashboard
- * Premium, modern, enterprise-grade UI
- * Inspired by Stripe, Linear, Notion
- *
- * Features:
- * - Zero flickering charts (memoized data + components)
- * - Clean, minimal SaaS design
- * - Card-based layout with soft shadows
- * - Consistent design system
- */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, Bell, ChevronDown, MoreVertical, Calculator, TrendingUp, TrendingDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { usePricingCalculator } from '../context/PricingCalculatorContext';
-import { useData } from '../context/DataContext';
-import { DashboardSkeleton } from '../components/Skeleton';
-import { api } from '../services/api';
-import { roundFinancial } from '../utils/helpers';
-
-// Design tokens
-import { SEMANTIC_COLORS, SHADOWS, RADIUS, COLORS } from '../styles/designTokens';
-
-// Dashboard components
+import React, { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KpiCard,
+  Activity,
+  Bell,
+  BriefcaseBusiness,
+  Calculator,
+  CircleDollarSign,
+  CreditCard,
+  FileText,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { differenceInCalendarDays, formatDistanceToNowStrict, isSameDay, startOfMonth, subDays, subMonths } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { DashboardSkeleton } from '../components/Skeleton';
+import {
+  ChartCard,
   IncomeVsExpenditureChart,
-  RecurringInvoiceCard,
-  CashFlowBreakdown,
+  KpiCard,
+  SubscriptionCard,
 } from '../components/dashboard';
 import type {
-  SparklineDataPoint,
-  IncomeVsExpenditureDataPoint,
-  RecurringInvoice,
-  CashFlowData,
+  DashboardActivityRow,
+  DashboardChartPoint,
+  DashboardInvoiceRow,
+  DashboardPaymentRow,
+  DashboardRange,
+  DashboardSubscription,
 } from '../components/dashboard';
+import { useData } from '../context/DataContext';
+import { usePricingCalculator } from '../context/PricingCalculatorContext';
+import { api } from '../services/api';
+import { roundFinancial } from '../utils/helpers';
+import './dashboard.css';
 
-// ============================================================
-// TYPE DEFINITIONS
-// ============================================================
-type DashboardRange = 'weekly' | 'monthly' | 'yearly';
+type DataRecord = Record<string, unknown>;
 
-interface DashboardMetrics {
+interface DashboardApiState {
   revenue: number;
-  todayCollection: number;
-  activeJobs: number;
-  outstandingBalance: number;
-  totalIncome: number;
-  totalExpenses: number;
-  netProfit: number;
-  margin: number;
-  pending: number;
-  overdue: number;
+  todaySales: number;
+  sales: DataRecord[];
+  invoices: DataRecord[];
 }
 
-// ============================================================
-// STABLE STYLE OBJECTS - Defined outside component
-// ============================================================
-const PAGE_STYLE: React.CSSProperties = {
-  height: '100%',
-  overflowY: 'auto',
-  backgroundColor: '#F5F7FB',
-  padding: '24px 32px',
+const EMPTY_DASHBOARD_STATE: DashboardApiState = {
+  revenue: 0,
+  todaySales: 0,
+  sales: [],
+  invoices: [],
 };
 
-const PAGE_CONTAINER_STYLE: React.CSSProperties = {
-  maxWidth: '1400px',
-  margin: '0 auto',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
+const RANGE_DAY_COUNT: Record<DashboardRange, number> = {
+  weekly: 7,
+  monthly: 30,
+  yearly: 365,
 };
 
-const TOP_BAR_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '16px',
-  backgroundColor: '#FFFFFF',
-  borderRadius: RADIUS.lg,
-  boxShadow: SHADOWS.soft,
-  padding: '12px 20px',
-};
+const RANGE_OPTIONS: Array<{ value: DashboardRange; label: string }> = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+];
 
-const SEARCH_STYLE: React.CSSProperties = {
-  position: 'relative',
-  flex: 1,
-  maxWidth: '420px',
-};
+const WEEKDAY_LABEL = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
+const MONTH_LABEL = new Intl.DateTimeFormat('en-US', { month: 'short' });
+const LONG_DATE_LABEL = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const SHORT_DATE_LABEL = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const TIME_LABEL = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
 
-const SEARCH_INPUT_STYLE: React.CSSProperties = {
-  width: '100%',
-  borderRadius: RADIUS.full,
-  border: `1px solid ${SEMANTIC_COLORS.borderLight}`,
-  padding: '10px 16px 10px 40px',
-  fontSize: '14px',
-  outline: 'none',
-  transition: 'border-color 0.2s ease',
-  backgroundColor: '#FAFBFC',
-};
+const CLOSED_INVOICE_STATUSES = new Set(['paid', 'draft', 'cancelled', 'canceled', 'void']);
+const CLOSED_JOB_STATUSES = new Set(['completed', 'closed', 'delivered', 'cancelled', 'canceled']);
 
-const TOP_BAR_RIGHT_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-};
+const FALLBACK_SUBSCRIPTIONS: DashboardSubscription[] = [
+  {
+    id: 'sub-enterprise',
+    companyName: 'Northwind Holdings',
+    planName: 'Enterprise ERP',
+    price: 2500,
+    status: 'Active',
+    nextBillingDate: LONG_DATE_LABEL.format(new Date(Date.now() + (9 * 24 * 60 * 60 * 1000))),
+    frequencyLabel: '/mo',
+    cycleLabel: 'Monthly cycle',
+    daysUntilBilling: 9,
+    cycleProgress: 0.64,
+    notes: 'Multi-branch billing, approval workflows, and unified invoicing.',
+  },
+  {
+    id: 'sub-growth',
+    companyName: 'Atlas Printworks',
+    planName: 'Growth Billing Suite',
+    price: 1800,
+    status: 'Active',
+    nextBillingDate: LONG_DATE_LABEL.format(new Date(Date.now() + (14 * 24 * 60 * 60 * 1000))),
+    frequencyLabel: '/mo',
+    cycleLabel: 'Monthly cycle',
+    daysUntilBilling: 14,
+    cycleProgress: 0.52,
+    notes: 'Automated recurring billing with consolidated payment collection.',
+  },
+  {
+    id: 'sub-starter',
+    companyName: 'Prime Labs',
+    planName: 'Starter Finance Cloud',
+    price: 950,
+    status: 'Paused',
+    nextBillingDate: LONG_DATE_LABEL.format(new Date(Date.now() + (21 * 24 * 60 * 60 * 1000))),
+    frequencyLabel: '/mo',
+    cycleLabel: 'Monthly cycle',
+    daysUntilBilling: 21,
+    cycleProgress: 0.31,
+    notes: 'Invoice automation remains ready the moment the plan resumes.',
+  },
+];
 
-const ICON_BUTTON_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '40px',
-  height: '40px',
-  borderRadius: RADIUS.full,
-  border: `1px solid ${SEMANTIC_COLORS.borderLight}`,
-  backgroundColor: '#FFFFFF',
-  cursor: 'pointer',
-  color: SEMANTIC_COLORS.textSecondary,
-  transition: 'all 0.15s ease',
-};
+const isRecord = (value: unknown): value is DataRecord =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const USER_PROFILE_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '6px 12px 6px 6px',
-  borderRadius: RADIUS.full,
-  border: `1px solid ${SEMANTIC_COLORS.borderLight}`,
-  backgroundColor: '#FFFFFF',
-  cursor: 'pointer',
-};
+const toRecordArray = (value: unknown): DataRecord[] =>
+  Array.isArray(value) ? value.filter(isRecord) : [];
 
-const USER_AVATAR_STYLE: React.CSSProperties = {
-  width: '32px',
-  height: '32px',
-  borderRadius: RADIUS.full,
-  backgroundColor: '#EEF2FF',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '13px',
-  fontWeight: 600,
-  color: COLORS.primary[600],
-};
-
-const HEADER_ROW_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '16px',
-};
-
-const PAGE_TITLE_STYLE: React.CSSProperties = {
-  fontSize: '32px',
-  fontWeight: 700,
-  color: SEMANTIC_COLORS.textPrimary,
-  margin: 0,
-  letterSpacing: '-0.02em',
-};
-
-const RANGE_SWITCHER_STYLE: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '1px',
-  backgroundColor: '#FFFFFF',
-  borderRadius: RADIUS.full,
-  border: `1px solid ${SEMANTIC_COLORS.borderLight}`,
-  padding: '4px',
-};
-
-const RANGE_BUTTON_STYLE: (active: boolean) => React.CSSProperties = (active: boolean) => ({
-  padding: '8px 20px',
-  borderRadius: RADIUS.full,
-  border: 'none',
-  backgroundColor: active ? COLORS.primary[600] : 'transparent',
-  color: active ? '#FFFFFF' : SEMANTIC_COLORS.textSecondary,
-  fontSize: '13px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'all 0.15s ease',
-});
-
-const KPI_GRID_STYLE: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: '16px',
-};
-
-const MAIN_CONTENT_STYLE: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '2fr 1fr',
-  gap: '16px',
-};
-
-const CHART_CARD_STYLE: React.CSSProperties = {
-  backgroundColor: '#FFFFFF',
-  borderRadius: RADIUS.lg,
-  boxShadow: SHADOWS.card,
-  padding: '24px',
-};
-
-const CHART_HEADER_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: '20px',
-};
-
-const CHART_TITLE_STYLE: React.CSSProperties = {
-  fontSize: '18px',
-  fontWeight: 600,
-  color: SEMANTIC_COLORS.textPrimary,
-  margin: 0,
-  letterSpacing: '-0.01em',
-};
-
-const BOTTOM_SECTION_STYLE: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '16px',
-};
-
-const ERROR_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '12px',
-  backgroundColor: '#FEF2F2',
-  border: `1px solid #FECACA`,
-  borderRadius: RADIUS.lg,
-  padding: '16px 20px',
-  color: '#991B1B',
-  fontSize: '14px',
-  fontWeight: 500,
-};
-
-const RETRY_BUTTON_STYLE: React.CSSProperties = {
-  padding: '6px 16px',
-  borderRadius: RADIUS.md,
-  border: 'none',
-  backgroundColor: '#FFFFFF',
-  color: '#991B1B',
-  fontSize: '12px',
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-const SYNC_STATUS_STYLE: React.CSSProperties = {
-  textAlign: 'right',
-  fontSize: '11px',
-  color: SEMANTIC_COLORS.textMuted,
-};
-
-// ============================================================
-// HELPER FUNCTIONS - Stable references
-// ============================================================
 const toSafeNumber = (value: unknown): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const startOfToday = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+const toSafeString = (value: unknown, fallback = ''): string => {
+  const normalized = String(value ?? '').trim();
+  return normalized || fallback;
 };
 
 const parseDateValue = (value: unknown): Date | null => {
-  const normalized = String(value || '').trim();
+  const normalized = toSafeString(value);
   if (!normalized) return null;
+
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const getInvoiceOutstandingAmount = (invoice: Record<string, unknown>): number => {
+const formatCurrency = (currencySymbol: string, value: number): string =>
+  `${currencySymbol}${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatDate = (value: unknown, fallback = 'TBD'): string => {
+  const parsedDate = parseDateValue(value);
+  return parsedDate ? LONG_DATE_LABEL.format(parsedDate) : fallback;
+};
+
+const formatShortDate = (value: unknown, fallback = 'Unknown date'): string => {
+  const parsedDate = parseDateValue(value);
+  return parsedDate ? SHORT_DATE_LABEL.format(parsedDate) : fallback;
+};
+
+const formatRelativeTime = (value: unknown): string => {
+  const parsedDate = parseDateValue(value);
+  if (!parsedDate) return 'Unknown';
+  return formatDistanceToNowStrict(parsedDate, { addSuffix: true });
+};
+
+const getInvoiceOutstandingAmount = (invoice: DataRecord): number => {
   const totalAmount = toSafeNumber(invoice.totalAmount ?? invoice.total ?? invoice.amount);
   const paidAmount = toSafeNumber(invoice.paidAmount ?? invoice.paid_amount ?? invoice.amountPaid);
   return roundFinancial(Math.max(0, totalAmount - paidAmount));
 };
 
-const deriveInvoiceBalanceMetrics = (invoiceRows: Record<string, unknown>[]) => {
-  const today = startOfToday();
+const getSalesAmount = (sale: DataRecord) =>
+  toSafeNumber(sale.totalAmount ?? sale.total ?? sale.amount);
 
-  return invoiceRows.reduce((summary, invoice) => {
-    const status = String(invoice?.status || '').trim().toLowerCase();
-    if (status === 'draft' || status === 'cancelled' || status === 'canceled' || status === 'void') {
-      return summary;
-    }
+const getSalesExpense = (sale: DataRecord) =>
+  toSafeNumber(sale.cost ?? sale.expense ?? sale.totalExpense);
 
-    const outstanding = getInvoiceOutstandingAmount(invoice);
-    if (outstanding <= 0) {
-      return summary;
-    }
+const getPaymentAmount = (payment: DataRecord) =>
+  toSafeNumber(payment.amount ?? payment.amountReceived ?? payment.totalAmount);
 
-    const dueDate = parseDateValue(invoice.dueDate ?? invoice.due_date);
-    const isOverdue = status === 'overdue' || Boolean(dueDate && dueDate < today);
+const getRecordDate = (record: DataRecord): Date | null =>
+  parseDateValue(record.date ?? record.createdAt ?? record.updatedAt ?? record.nextRunDate ?? record.nextBillingDate);
 
-    summary.outstandingBalance = roundFinancial(summary.outstandingBalance + outstanding);
-    if (isOverdue) {
-      summary.overdue = roundFinancial(summary.overdue + outstanding);
-    } else {
-      summary.pending = roundFinancial(summary.pending + outstanding);
-    }
-
-    return summary;
-  }, {
-    outstandingBalance: 0,
-    pending: 0,
-    overdue: 0,
-  });
-};
-
-const formatCurrency = (currency: string, value: number): string => {
-  return `${currency}${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-};
-
-const getRangeDays = (range: DashboardRange): number => {
-  switch (range) {
-    case 'weekly': return 7;
-    case 'monthly': return 30;
-    case 'yearly': return 365;
-    default: return 7;
+const normalizeSubscriptionStatus = (status: unknown): DashboardSubscription['status'] => {
+  switch (toSafeString(status).toLowerCase()) {
+    case 'active':
+      return 'Active';
+    case 'paused':
+      return 'Paused';
+    case 'cancelled':
+    case 'canceled':
+      return 'Cancelled';
+    default:
+      return 'Draft';
   }
 };
 
-// ============================================================
-// MAIN DASHBOARD COMPONENT
-// ============================================================
+const joinClassNames = (...values: Array<string | false | null | undefined>) =>
+  values.filter(Boolean).join(' ');
+
+const EmptyState = memo(({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}) => (
+  <div className="dashboard-empty">
+    <Icon size={28} />
+    <h3>{title}</h3>
+    <p>{description}</p>
+  </div>
+));
+
+EmptyState.displayName = 'EmptyState';
+
+const useDebouncedValue = <T,>(value: T, delayMs: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => window.clearTimeout(timerId);
+  }, [delayMs, value]);
+
+  return debouncedValue;
+};
+
+const getFrequencyDetails = (frequency: unknown) => {
+  switch (toSafeString(frequency).toLowerCase()) {
+    case 'weekly':
+      return { cycleDays: 7, frequencyLabel: '/wk', cycleLabel: 'Weekly cycle' };
+    case 'quarterly':
+      return { cycleDays: 90, frequencyLabel: '/qtr', cycleLabel: 'Quarterly cycle' };
+    case 'annually':
+    case 'yearly':
+      return { cycleDays: 365, frequencyLabel: '/yr', cycleLabel: 'Annual cycle' };
+    default:
+      return { cycleDays: 30, frequencyLabel: '/mo', cycleLabel: 'Monthly cycle' };
+  }
+};
+
+const getPlanName = (record: DataRecord, amount: number): string => {
+  const description = toSafeString(record.planName ?? record.description ?? record.notes);
+  if (description) return description;
+  if (amount >= 2500) return 'Enterprise ERP';
+  if (amount >= 1500) return 'Growth Billing Suite';
+  return 'Starter Finance Cloud';
+};
+
+const buildChartData = (sales: DataRecord[], range: DashboardRange): DashboardChartPoint[] => {
+  const now = new Date();
+
+  if (range === 'yearly') {
+    const monthBuckets = Array.from({ length: 12 }, (_, index) => {
+      const date = subMonths(now, 11 - index);
+      return {
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        label: MONTH_LABEL.format(date),
+        income: 0,
+        expenditure: 0,
+      };
+    });
+
+    const bucketMap = new Map(monthBuckets.map((bucket) => [bucket.key, bucket]));
+
+    sales.forEach((sale) => {
+      const saleDate = getRecordDate(sale);
+      if (!saleDate) return;
+
+      const bucketKey = `${saleDate.getFullYear()}-${saleDate.getMonth()}`;
+      const bucket = bucketMap.get(bucketKey);
+      if (!bucket) return;
+
+      bucket.income = roundFinancial(bucket.income + getSalesAmount(sale));
+      bucket.expenditure = roundFinancial(bucket.expenditure + getSalesExpense(sale));
+    });
+
+    return monthBuckets.map(({ label, income, expenditure }) => ({ label, income, expenditure }));
+  }
+
+  const totalDays = range === 'weekly' ? 7 : 30;
+  const dailyBuckets = Array.from({ length: totalDays }, (_, index) => {
+    const date = subDays(now, totalDays - index - 1);
+    const key = date.toISOString().split('T')[0];
+
+    return {
+      key,
+      label: range === 'weekly'
+        ? WEEKDAY_LABEL.format(date)
+        : `${date.getDate()}`.padStart(2, '0'),
+      income: 0,
+      expenditure: 0,
+    };
+  });
+
+  const bucketMap = new Map(dailyBuckets.map((bucket) => [bucket.key, bucket]));
+
+  sales.forEach((sale) => {
+    const saleDate = getRecordDate(sale);
+    if (!saleDate) return;
+
+    const key = saleDate.toISOString().split('T')[0];
+    const bucket = bucketMap.get(key);
+    if (!bucket) return;
+
+    bucket.income = roundFinancial(bucket.income + getSalesAmount(sale));
+    bucket.expenditure = roundFinancial(bucket.expenditure + getSalesExpense(sale));
+  });
+
+  return dailyBuckets.map(({ label, income, expenditure }) => ({ label, income, expenditure }));
+};
+
+const getRevenueThisMonth = (sales: DataRecord[], fallbackRevenue: number) => {
+  if (sales.length === 0) return roundFinancial(fallbackRevenue);
+
+  const monthStart = startOfMonth(new Date());
+  const revenue = sales.reduce((sum, sale) => {
+    const saleDate = getRecordDate(sale);
+    if (!saleDate || saleDate < monthStart) return sum;
+    return sum + getSalesAmount(sale);
+  }, 0);
+
+  return roundFinancial(revenue);
+};
+
+const getTodayCollection = (payments: DataRecord[], sales: DataRecord[], fallbackValue: number) => {
+  const today = new Date();
+
+  if (payments.length > 0) {
+    const paymentTotal = payments.reduce((sum, payment) => {
+      const paymentDate = getRecordDate(payment);
+      if (!paymentDate || !isSameDay(paymentDate, today)) return sum;
+      return sum + getPaymentAmount(payment);
+    }, 0);
+
+    if (paymentTotal > 0) {
+      return roundFinancial(paymentTotal);
+    }
+  }
+
+  const salesTotal = sales.reduce((sum, sale) => {
+    const saleDate = getRecordDate(sale);
+    if (!saleDate || !isSameDay(saleDate, today)) return sum;
+    return sum + getSalesAmount(sale);
+  }, 0);
+
+  if (salesTotal > 0) {
+    return roundFinancial(salesTotal);
+  }
+
+  return roundFinancial(fallbackValue);
+};
+
+const isOpenInvoice = (invoice: DataRecord) => {
+  const status = toSafeString(invoice.status).toLowerCase();
+  return !CLOSED_INVOICE_STATUSES.has(status) && getInvoiceOutstandingAmount(invoice) > 0;
+};
+
+const isActiveJob = (job: DataRecord) => {
+  const status = toSafeString(job.status).toLowerCase();
+  if (!status) return true;
+  return !CLOSED_JOB_STATUSES.has(status);
+};
+
+const deriveSubscriptions = (
+  recurringInvoices: DataRecord[],
+  invoices: DataRecord[],
+): DashboardSubscription[] => {
+  const today = new Date();
+
+  const normalizedRecurring = recurringInvoices.map((record, index) => {
+    const amount = toSafeNumber(record.total ?? record.totalAmount ?? record.amount);
+    const nextBilling = parseDateValue(record.nextRunDate ?? record.nextBillingDate ?? record.dueDate ?? record.date);
+    const { cycleDays, frequencyLabel, cycleLabel } = getFrequencyDetails(record.frequency);
+    const daysUntilBilling = nextBilling ? Math.max(0, differenceInCalendarDays(nextBilling, today)) : cycleDays;
+    const cycleProgress = Math.max(0.1, Math.min(1, 1 - (daysUntilBilling / cycleDays)));
+
+    return {
+      id: toSafeString(record.id, `sub-${index + 1}`),
+      companyName: toSafeString(record.customerName ?? record.customer_name, 'Unknown company'),
+      planName: getPlanName(record, amount),
+      price: amount,
+      status: normalizeSubscriptionStatus(record.status),
+      nextBillingDate: formatDate(record.nextRunDate ?? record.nextBillingDate ?? record.dueDate ?? record.date),
+      frequencyLabel,
+      cycleLabel,
+      daysUntilBilling,
+      cycleProgress,
+      notes: toSafeString(record.description ?? record.notes, 'Recurring billing plan with automated invoice generation.'),
+    } satisfies DashboardSubscription;
+  }).filter((subscription) => subscription.companyName !== 'Unknown company');
+
+  if (normalizedRecurring.length > 0) {
+    return normalizedRecurring.slice(0, 6);
+  }
+
+  const derivedInvoices = invoices
+    .filter((invoice) => {
+      const type = toSafeString(invoice.type).toLowerCase();
+      const recurringFlag = toSafeString(invoice.recurring).toLowerCase();
+      return type === 'recurring' || recurringFlag === 'true';
+    })
+    .map((invoice, index) => {
+      const amount = toSafeNumber(invoice.totalAmount ?? invoice.total ?? invoice.amount);
+      const { cycleDays, frequencyLabel, cycleLabel } = getFrequencyDetails(invoice.frequency);
+      const nextBilling = parseDateValue(invoice.nextBillingDate ?? invoice.dueDate ?? invoice.date);
+      const daysUntilBilling = nextBilling ? Math.max(0, differenceInCalendarDays(nextBilling, today)) : cycleDays;
+
+      return {
+        id: toSafeString(invoice.id, `invoice-sub-${index + 1}`),
+        companyName: toSafeString(invoice.customerName ?? invoice.clientName, 'Unknown company'),
+        planName: getPlanName(invoice, amount),
+        price: amount,
+        status: normalizeSubscriptionStatus(invoice.status || 'Active'),
+        nextBillingDate: formatDate(invoice.nextBillingDate ?? invoice.dueDate ?? invoice.date),
+        frequencyLabel,
+        cycleLabel,
+        daysUntilBilling,
+        cycleProgress: Math.max(0.15, Math.min(1, 1 - (daysUntilBilling / cycleDays))),
+        notes: toSafeString(invoice.description ?? invoice.notes, 'Invoice-backed recurring billing plan.'),
+      } satisfies DashboardSubscription;
+    });
+
+  if (derivedInvoices.length > 0) {
+    return derivedInvoices.slice(0, 6);
+  }
+
+  return FALLBACK_SUBSCRIPTIONS;
+};
+
+const deriveRecentInvoices = (invoices: DataRecord[]): DashboardInvoiceRow[] =>
+  [...invoices]
+    .sort((left, right) => {
+      const leftDate = getRecordDate(left)?.getTime() || 0;
+      const rightDate = getRecordDate(right)?.getTime() || 0;
+      return rightDate - leftDate;
+    })
+    .slice(0, 6)
+    .map((invoice) => ({
+      id: toSafeString(invoice.id, 'INV'),
+      customerName: toSafeString(invoice.customerName ?? invoice.clientName, 'Unnamed customer'),
+      status: toSafeString(invoice.status, 'Unpaid'),
+      issueDate: formatDate(invoice.date, 'Pending'),
+      dueDate: formatDate(invoice.dueDate ?? invoice.nextBillingDate, 'TBD'),
+      totalAmount: toSafeNumber(invoice.totalAmount ?? invoice.total ?? invoice.amount),
+      outstandingAmount: getInvoiceOutstandingAmount(invoice),
+    }));
+
+const deriveRecentPayments = (payments: DataRecord[]): DashboardPaymentRow[] =>
+  [...payments]
+    .sort((left, right) => {
+      const leftDate = getRecordDate(left)?.getTime() || 0;
+      const rightDate = getRecordDate(right)?.getTime() || 0;
+      return rightDate - leftDate;
+    })
+    .slice(0, 6)
+    .map((payment) => ({
+      id: toSafeString(payment.id, 'PAY'),
+      customerName: toSafeString(payment.customerName, 'Unnamed customer'),
+      status: toSafeString(payment.status, 'Cleared'),
+      paymentDate: formatDate(payment.date, 'Pending'),
+      method: toSafeString(payment.paymentMethod ?? payment.method, 'Account credit'),
+      amount: getPaymentAmount(payment),
+      reference: toSafeString(payment.reference ?? payment.narrative, 'No reference'),
+    }));
+
+const getActivityTone = (action: string) => {
+  const normalized = action.toLowerCase();
+  if (normalized.includes('delete') || normalized.includes('void') || normalized.includes('fail')) {
+    return 'danger';
+  }
+  if (normalized.includes('payment') || normalized.includes('paid') || normalized.includes('cleared')) {
+    return 'success';
+  }
+  if (normalized.includes('approve') || normalized.includes('update')) {
+    return 'warning';
+  }
+  if (normalized.includes('create') || normalized.includes('invoice')) {
+    return 'primary';
+  }
+  return 'neutral';
+};
+
+const deriveActivityRows = (logs: DataRecord[]): DashboardActivityRow[] =>
+  [...logs]
+    .sort((left, right) => {
+      const leftDate = getRecordDate(left)?.getTime() || 0;
+      const rightDate = getRecordDate(right)?.getTime() || 0;
+      return rightDate - leftDate;
+    })
+    .slice(0, 7)
+    .map((log, index) => ({
+      id: toSafeString(log.id, `log-${index + 1}`),
+      title: toSafeString(log.action, 'System activity'),
+      detail: toSafeString(log.details, 'An update was recorded in the audit trail.'),
+      timestamp: toSafeString(log.date ?? log.createdAt ?? log.updatedAt),
+      actor: toSafeString(log.userId ?? log.user ?? log.userName, 'System'),
+      tone: getActivityTone(toSafeString(log.action)),
+    }));
+
+const getInvoiceTone = (invoice: DashboardInvoiceRow) => {
+  const normalizedStatus = invoice.status.toLowerCase();
+  if (normalizedStatus === 'paid' || invoice.outstandingAmount <= 0) return 'success';
+  if (normalizedStatus === 'overdue') return 'danger';
+  if (normalizedStatus === 'pending' || normalizedStatus === 'unpaid') return 'warning';
+  return 'neutral';
+};
+
+const getPaymentTone = (payment: DashboardPaymentRow) => {
+  const normalizedStatus = payment.status.toLowerCase();
+  if (normalizedStatus === 'cleared' || normalizedStatus === 'posted') return 'success';
+  if (normalizedStatus === 'pending') return 'warning';
+  if (normalizedStatus === 'voided' || normalizedStatus === 'bounced') return 'danger';
+  return 'neutral';
+};
+
 const Dashboard: React.FC = () => {
-  const { isInitialized, user, companyConfig, invoices: localInvoices = [] } = useData();
+  const {
+    isInitialized,
+    user,
+    companyConfig,
+    invoices: rawInvoices = [],
+    sales: rawSales = [],
+    customerPayments: rawCustomerPayments = [],
+    recurringInvoices: rawRecurringInvoices = [],
+    auditLogs: rawAuditLogs = [],
+    jobOrders: rawJobOrders = [],
+    workOrders: rawWorkOrders = [],
+  } = useData();
   const navigate = useNavigate();
   const { setIsOpen } = usePricingCalculator();
 
-  // State
-  const [range, setRange] = useState<DashboardRange>('weekly');
+  const [selectedRange, setSelectedRange] = useState<DashboardRange>('monthly');
   const [searchQuery, setSearchQuery] = useState('');
+  const [remoteDashboard, setRemoteDashboard] = useState<DashboardApiState>(EMPTY_DASHBOARD_STATE);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
-    revenue: 0,
-    todayCollection: 0,
-    activeJobs: 0,
-    outstandingBalance: 0,
-    totalIncome: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    margin: 0,
-    pending: 0,
-    overdue: 0,
-  });
-  const [incomeExpenseData, setIncomeExpenseData] = useState<IncomeVsExpenditureDataPoint[]>([]);
-  const [recurringInvoices, setRecurringInvoices] = useState<RecurringInvoice[]>([]);
+  const requestIdRef = useRef(0);
 
-  // Stable currency
-  const currency = companyConfig?.currencySymbol || '$';
+  const debouncedRange = useDebouncedValue(selectedRange, 220);
+  const currencySymbol = companyConfig?.currencySymbol || '$';
 
-  // ============================================================
-  // MEMOIZED SPARKLINE DATA - Derived from metrics
-  // ============================================================
-  const revenueSparkline = useMemo<SparklineDataPoint[]>(() => {
-    if (!incomeExpenseData.length) return [];
-    return incomeExpenseData.map(d => ({ value: d.income }));
-  }, [incomeExpenseData]);
+  const invoices = useMemo(() => toRecordArray(rawInvoices), [rawInvoices]);
+  const sales = useMemo(() => toRecordArray(rawSales), [rawSales]);
+  const customerPayments = useMemo(() => toRecordArray(rawCustomerPayments), [rawCustomerPayments]);
+  const recurringInvoices = useMemo(() => toRecordArray(rawRecurringInvoices), [rawRecurringInvoices]);
+  const auditLogs = useMemo(() => toRecordArray(rawAuditLogs), [rawAuditLogs]);
+  const jobOrders = useMemo(() => toRecordArray(rawJobOrders), [rawJobOrders]);
+  const workOrders = useMemo(() => toRecordArray(rawWorkOrders), [rawWorkOrders]);
 
-  const todayCollectionSparkline = useMemo<SparklineDataPoint[]>(() => {
-    // Generate a simple trend based on recent data
-    if (!incomeExpenseData.length) return [];
-    const last7 = incomeExpenseData.slice(-7);
-    return last7.map(d => ({ value: d.income - d.expenditure }));
-  }, [incomeExpenseData]);
+  const hasLocalData = sales.length > 0
+    || invoices.length > 0
+    || customerPayments.length > 0
+    || recurringInvoices.length > 0
+    || auditLogs.length > 0;
 
-  // ============================================================
-  // LOAD DASHBOARD DATA
-  // ============================================================
-  const loadDashboard = useCallback(async (showLoading = true) => {
-    if (showLoading) setIsLoading(true);
+  const loadDashboard = useCallback(async (initialLoad: boolean) => {
+    const currentRequestId = requestIdRef.current + 1;
+    requestIdRef.current = currentRequestId;
+
+    if (initialLoad && !hasLocalData) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
     setDashboardError(null);
+
     try {
-      const days = getRangeDays(range);
-      const response = await api.dashboard.getDashboard(days);
+      const response = await api.dashboard.getDashboard(RANGE_DAY_COUNT[debouncedRange]);
 
-      const sales = Array.isArray(response?.sales) ? response.sales : [];
-      const backendInvoices = Array.isArray(response?.invoices) ? response.invoices : [];
-      const invoices = Array.isArray(localInvoices) && localInvoices.length > 0 ? localInvoices : backendInvoices;
-      const revenue = toSafeNumber(response?.revenue || 0);
-      const todayCollection = toSafeNumber(response?.todaySales || 0);
-
-      // Calculate aggregates
-      const totalIncome = sales.reduce((sum: number, s: Record<string, unknown>) =>
-        sum + toSafeNumber(s.totalAmount ?? s.total), 0
-      );
-      const totalExpenses = sales.reduce((sum: number, s: Record<string, unknown>) =>
-        sum + toSafeNumber(s.cost ?? s.expense ?? 0), 0
-      );
-      const netProfit = totalIncome - totalExpenses;
-      const margin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
-
-      const balanceMetrics = deriveInvoiceBalanceMetrics(invoices);
-
-      // Generate income vs expenditure data
-      const now = new Date();
-      const chartData: Record<string, { income: number; expenditure: number }> = {};
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split('T')[0];
-        const label = range === 'weekly'
-          ? d.toLocaleDateString('en-US', { weekday: 'short' })
-          : range === 'monthly'
-            ? `${d.getDate()}`
-            : d.toLocaleDateString('en-US', { month: 'short' });
-        chartData[key] = { income: 0, expenditure: 0, day: label };
+      if (currentRequestId !== requestIdRef.current) {
+        return;
       }
 
-      // Aggregate sales into chart data
-      sales.forEach((s: Record<string, unknown>) => {
-        const dateStr = String(s.date || '').split('T')[0];
-        if (chartData[dateStr]) {
-          const amount = toSafeNumber(s.totalAmount ?? s.total);
-          const cost = toSafeNumber(s.cost ?? s.expense ?? 0);
-          chartData[dateStr].income += amount;
-          chartData[dateStr].expenditure += cost;
-        }
+      setRemoteDashboard({
+        revenue: toSafeNumber(response?.revenue),
+        todaySales: toSafeNumber(response?.todaySales),
+        sales: toRecordArray(response?.sales),
+        invoices: toRecordArray(response?.invoices),
       });
-
-      const formattedChartData: IncomeVsExpenditureDataPoint[] = Object.entries(chartData)
-        .map(([key, data]) => ({
-          day: data.day,
-          income: roundFinancial(data.income),
-          expenditure: roundFinancial(data.expenditure),
-        }));
-
-      // Build recurring invoices from subscriptions
-      const sampleInvoices: RecurringInvoice[] = invoices
-        .filter((inv: Record<string, unknown>) => String(inv?.type || '').toLowerCase() === 'recurring' || String(inv?.recurring || '').toLowerCase() === 'true')
-        .slice(0, 5)
-        .map((inv: Record<string, unknown>) => ({
-          id: String(inv.id || ''),
-          customerName: String(inv.customerName || inv.clientName || 'Unknown'),
-          amount: toSafeNumber(inv.totalAmount ?? inv.amount),
-          description: String(inv.description || inv.notes || ''),
-          nextBillingDate: String(inv.nextBillingDate || inv.date || ''),
-          frequency: 'monthly' as const,
-          status: String(inv.status || 'active').toLowerCase() as RecurringInvoice['status'],
-        }));
-
-      // Fallback sample data if no real recurring invoices
-      const recurringData = sampleInvoices.length > 0 ? sampleInvoices : [
-        {
-          id: '1',
-          customerName: 'Acme Corporation',
-          amount: 2500,
-          description: 'Monthly ERP Subscription - Enterprise Plan',
-          nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          frequency: 'monthly',
-          status: 'active',
-        },
-        {
-          id: '2',
-          customerName: 'Global Industries',
-          amount: 1800,
-          description: 'Monthly ERP Subscription - Professional Plan',
-          nextBillingDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          frequency: 'monthly',
-          status: 'active',
-        },
-        {
-          id: '3',
-          customerName: 'TechStart Ltd',
-          amount: 950,
-          description: 'Monthly ERP Subscription - Starter Plan',
-          nextBillingDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-          frequency: 'monthly',
-          status: 'paused',
-        },
-      ];
-
-      setMetrics({
-        revenue,
-        todayCollection,
-        activeJobs: invoices.filter((i: Record<string, unknown>) => {
-          const status = String(i?.status || '').toLowerCase();
-          return status === 'active' || status === 'in-progress' || status === 'pending';
-        }).length,
-        outstandingBalance: balanceMetrics.outstandingBalance,
-        totalIncome,
-        totalExpenses,
-        netProfit,
-        margin,
-        pending: balanceMetrics.pending,
-        overdue: balanceMetrics.overdue,
-      });
-
-      setIncomeExpenseData(formattedChartData);
-      setRecurringInvoices(recurringData);
       setLastUpdated(new Date().toISOString());
-
-      console.log('Dashboard refreshed');
     } catch (error) {
-      console.error('Dashboard refresh failed', error);
-      setDashboardError('Dashboard data unavailable');
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
+      setDashboardError('Dashboard data is currently unavailable. Showing the latest local activity instead.');
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
-  }, [localInvoices, range]);
+  }, [debouncedRange, hasLocalData]);
 
-  // Refresh on range change
   useEffect(() => {
-    loadDashboard(true);
+    if (!isInitialized) return;
+    void loadDashboard(!hasLocalData);
+  }, [hasLocalData, isInitialized, loadDashboard]);
+
+  useEffect(() => {
+    const handleDashboardRefresh = () => {
+      void loadDashboard(false);
+    };
+
+    window.addEventListener('primeerp:dashboard-refresh', handleDashboardRefresh);
+    return () => window.removeEventListener('primeerp:dashboard-refresh', handleDashboardRefresh);
   }, [loadDashboard]);
 
-  // External refresh handler
-  useEffect(() => {
-    const onRefresh = () => loadDashboard(false);
-    window.addEventListener('primeerp:dashboard-refresh', onRefresh);
-    return () => window.removeEventListener('primeerp:dashboard-refresh', onRefresh);
+  const effectiveSales = useMemo(() => (
+    sales.length > 0 ? sales : remoteDashboard.sales
+  ), [remoteDashboard.sales, sales]);
+
+  const effectiveInvoices = useMemo(() => (
+    invoices.length > 0 ? invoices : remoteDashboard.invoices
+  ), [invoices, remoteDashboard.invoices]);
+
+  const revenueThisMonth = useMemo(() => (
+    getRevenueThisMonth(effectiveSales, remoteDashboard.revenue)
+  ), [effectiveSales, remoteDashboard.revenue]);
+
+  const todayCollection = useMemo(() => (
+    getTodayCollection(customerPayments, effectiveSales, remoteDashboard.todaySales)
+  ), [customerPayments, effectiveSales, remoteDashboard.todaySales]);
+
+  const activeJobsAndInvoices = useMemo(() => {
+    const openInvoices = effectiveInvoices.filter(isOpenInvoice).length;
+    const activeJobs = [...jobOrders, ...workOrders].filter(isActiveJob).length;
+    return {
+      total: openInvoices + activeJobs,
+      openInvoices,
+      activeJobs,
+    };
+  }, [effectiveInvoices, jobOrders, workOrders]);
+
+  const chartData = useMemo(() => buildChartData(effectiveSales, debouncedRange), [debouncedRange, effectiveSales]);
+  const subscriptions = useMemo(() => deriveSubscriptions(recurringInvoices, effectiveInvoices), [effectiveInvoices, recurringInvoices]);
+  const recentInvoices = useMemo(() => deriveRecentInvoices(effectiveInvoices), [effectiveInvoices]);
+  const recentPayments = useMemo(() => deriveRecentPayments(customerPayments), [customerPayments]);
+  const activityRows = useMemo(() => deriveActivityRows(auditLogs), [auditLogs]);
+
+  const chartHasLiveData = useMemo(() => (
+    chartData.some((point) => point.income > 0 || point.expenditure > 0)
+  ), [chartData]);
+
+  const kpiCards = useMemo(() => ([
+    {
+      id: 'revenue',
+      title: 'Revenue (This Month)',
+      value: revenueThisMonth,
+      helperText: revenueThisMonth > 0
+        ? 'Recognized revenue across current billing activity.'
+        : 'Awaiting billed revenue for the current month.',
+      icon: CircleDollarSign,
+      tone: 'primary' as const,
+      format: 'currency' as const,
+    },
+    {
+      id: 'collection',
+      title: "Today's Collection",
+      value: todayCollection,
+      helperText: todayCollection > 0
+        ? `${recentPayments.length} recent payments feeding today's cash position.`
+        : 'No payment receipts have been posted today.',
+      icon: CreditCard,
+      tone: 'success' as const,
+      format: 'currency' as const,
+    },
+    {
+      id: 'active',
+      title: 'Active Jobs / Invoices',
+      value: activeJobsAndInvoices.total,
+      helperText: activeJobsAndInvoices.total > 0
+        ? `${activeJobsAndInvoices.activeJobs} live jobs and ${activeJobsAndInvoices.openInvoices} open invoices need attention.`
+        : 'New jobs and open invoices will surface here automatically.',
+      icon: BriefcaseBusiness,
+      tone: 'warning' as const,
+      format: 'count' as const,
+      emptyLabel: 'No active jobs',
+    },
+  ]), [activeJobsAndInvoices.activeJobs, activeJobsAndInvoices.openInvoices, activeJobsAndInvoices.total, recentPayments.length, revenueThisMonth, todayCollection]);
+
+  const chartHeaderMeta = useMemo(() => (
+    <div className="dashboard-legend">
+      <span className="dashboard-legend__item">
+        <span className="dashboard-legend__swatch dashboard-legend__swatch--income" />
+        Income
+      </span>
+      <span className="dashboard-legend__item">
+        <span className="dashboard-legend__swatch dashboard-legend__swatch--expense" />
+        Expenditure
+      </span>
+      {!chartHasLiveData ? <span className="dashboard-chip">Preview data</span> : null}
+    </div>
+  ), [chartHasLiveData]);
+
+  const invoiceHeaderMeta = useMemo(() => (
+    <span className="dashboard-chip">{recentInvoices.length} latest</span>
+  ), [recentInvoices.length]);
+
+  const paymentHeaderMeta = useMemo(() => (
+    <span className="dashboard-chip">{recentPayments.length} latest</span>
+  ), [recentPayments.length]);
+
+  const activityHeaderMeta = useMemo(() => (
+    <span className="dashboard-chip">{activityRows.length} events</span>
+  ), [activityRows.length]);
+
+  const syncLabel = useMemo(() => {
+    if (isRefreshing) {
+      return 'Refreshing live billing data...';
+    }
+
+    if (!lastUpdated) {
+      return 'Waiting for dashboard sync';
+    }
+
+    const updatedAt = parseDateValue(lastUpdated);
+    if (!updatedAt) {
+      return 'Waiting for dashboard sync';
+    }
+
+    return `Updated ${TIME_LABEL.format(updatedAt)}`;
+  }, [isRefreshing, lastUpdated]);
+
+  const userInitial = useMemo(() => {
+    const fullName = toSafeString(user?.name ?? user?.fullName ?? user?.username, 'U');
+    return fullName.charAt(0).toUpperCase();
+  }, [user?.fullName, user?.name, user?.username]);
+
+  const dashboardHasUsableData = effectiveSales.length > 0
+    || effectiveInvoices.length > 0
+    || customerPayments.length > 0
+    || recurringInvoices.length > 0
+    || auditLogs.length > 0;
+
+  const handleRangeChange = useCallback((nextRange: DashboardRange) => {
+    startTransition(() => {
+      setSelectedRange(nextRange);
+    });
+  }, []);
+
+  const handleSearchSubmit = useCallback(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+    navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+  }, [navigate, searchQuery]);
+
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  }, []);
+
+  const handleSearchKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  }, [handleSearchSubmit]);
+
+  const handleRetry = useCallback(() => {
+    void loadDashboard(false);
   }, [loadDashboard]);
 
-  // ============================================================
-  // LOADING STATE
-  // ============================================================
-  if (!isInitialized || isLoading) {
+  const handleOpenCalculator = useCallback(() => {
+    setIsOpen(true);
+  }, [setIsOpen]);
+
+  const handleManageSubscriptions = useCallback((_subscriptionId: string) => {
+    navigate('/sales-flow/subscriptions');
+  }, [navigate]);
+
+  const handleRangeButtonClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    const nextRange = event.currentTarget.dataset.range as DashboardRange | undefined;
+    if (!nextRange) return;
+    handleRangeChange(nextRange);
+  }, [handleRangeChange]);
+
+  if (!isInitialized || (isLoading && !dashboardHasUsableData)) {
     return <DashboardSkeleton />;
   }
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
-    <div style={PAGE_STYLE}>
-      <div style={PAGE_CONTAINER_STYLE}>
-        {/* Top Bar */}
-        <div style={TOP_BAR_STYLE}>
-          <div style={SEARCH_STYLE}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '14px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: SEMANTIC_COLORS.textMuted,
-                pointerEvents: 'none',
-              }}
-            />
+    <div className="dashboard-shell">
+      <div className="dashboard-shell__inner">
+        <section className="dashboard-toolbar">
+          <div className="dashboard-toolbar__search">
+            <Search size={16} className="dashboard-toolbar__search-icon" />
             <input
+              className="dashboard-toolbar__search-input"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
-              placeholder="Search invoices, customers, orders..."
-              style={SEARCH_INPUT_STYLE}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search invoices, clients, receipts..."
             />
           </div>
-          <div style={TOP_BAR_RIGHT_STYLE}>
-            <button
-              type="button"
-              style={ICON_BUTTON_STYLE}
-              onClick={() => setIsOpen(true)}
-              title="Pricing Calculator"
-            >
-              <Calculator size={18} />
+
+          <div className="dashboard-toolbar__actions">
+            <button type="button" className="dashboard-icon-button" onClick={handleOpenCalculator} aria-label="Open pricing calculator">
+              <Calculator size={16} />
             </button>
-            <button
-              type="button"
-              style={ICON_BUTTON_STYLE}
-              title="Notifications"
-            >
-              <Bell size={18} />
+            <button type="button" className="dashboard-icon-button" aria-label="Notifications">
+              <Bell size={16} />
             </button>
-            <div style={USER_PROFILE_STYLE}>
-              <div style={USER_AVATAR_STYLE}>
-                {(user?.name || 'U').charAt(0).toUpperCase()}
+            <button type="button" className="dashboard-button dashboard-button--ghost" onClick={handleRetry}>
+              <RefreshCw size={15} className={isRefreshing ? 'dashboard-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+            <div className="dashboard-user-pill">
+              <span className="dashboard-user-pill__avatar">{userInitial}</span>
+              <div>
+                <p className="dashboard-user-pill__label">{toSafeString(user?.name ?? user?.fullName, 'Prime user')}</p>
+                <p className="dashboard-user-pill__meta">{syncLabel}</p>
               </div>
-              <div style={{ lineHeight: 1.2 }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: SEMANTIC_COLORS.textPrimary }}>
-                  {user?.name || 'User'}
-                </div>
-              </div>
-              <ChevronDown size={14} style={{ color: SEMANTIC_COLORS.textMuted }} />
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Error State */}
-        {dashboardError && (
-          <div style={ERROR_STYLE}>
-            <span>{dashboardError}</span>
-            <button
-              type="button"
-              onClick={() => loadDashboard(false)}
-              style={RETRY_BUTTON_STYLE}
-            >
+        <section className="dashboard-hero">
+          <div>
+            <p className="dashboard-hero__eyebrow">Billing cockpit</p>
+            <h1 className="dashboard-hero__title">Premium SaaS billing and invoice control.</h1>
+            <p className="dashboard-hero__subtitle">
+              A cleaner operating view for collections, recurring billing, invoice throughput, and finance activity.
+            </p>
+          </div>
+
+          <div className="dashboard-hero__controls">
+            <div className="dashboard-range-switcher" role="tablist" aria-label="Dashboard range">
+              {RANGE_OPTIONS.map((rangeOption) => (
+                <button
+                  key={rangeOption.value}
+                  type="button"
+                  data-range={rangeOption.value}
+                  className={rangeOption.value === selectedRange ? 'dashboard-range-pill dashboard-range-pill--active' : 'dashboard-range-pill'}
+                  onClick={handleRangeButtonClick}
+                >
+                  {rangeOption.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="dashboard-sync-chip">
+              <Activity size={15} />
+              <span>{syncLabel}</span>
+            </div>
+          </div>
+        </section>
+
+        {dashboardError ? (
+          <div className="dashboard-alert">
+            <div>
+              <strong>Heads up:</strong> {dashboardError}
+            </div>
+            <button type="button" className="dashboard-button dashboard-button--ghost" onClick={handleRetry}>
               Retry
             </button>
           </div>
-        )}
+        ) : null}
 
-        {/* Header */}
-        <div style={HEADER_ROW_STYLE}>
-          <h1 style={PAGE_TITLE_STYLE}>Dashboard</h1>
-          <div style={RANGE_SWITCHER_STYLE}>
-            {(['weekly', 'monthly', 'yearly'] as DashboardRange[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                style={RANGE_BUTTON_STYLE(range === r)}
-              >
-                {r.charAt(0).toUpperCase() + r.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* KPI Cards Row */}
-        <div style={KPI_GRID_STYLE}>
-          <KpiCard
-            title="Revenue (This Month)"
-            value={formatCurrency(currency, metrics.revenue)}
-            trendDirection={metrics.revenue > 0 ? 'up' : 'neutral'}
-            trendValue="+12.5%"
-            accentColor={COLORS.primary[600]}
-            sparklineData={revenueSparkline.length > 1 ? revenueSparkline : undefined}
-            sparklineColor={COLORS.primary[600]}
-          />
-          <KpiCard
-            title="Today's Collection"
-            value={formatCurrency(currency, metrics.todayCollection)}
-            trendDirection={metrics.todayCollection > 0 ? 'up' : 'neutral'}
-            trendValue="+8.2%"
-            accentColor={COLORS.success[500]}
-            sparklineData={todayCollectionSparkline.length > 1 ? todayCollectionSparkline : undefined}
-            sparklineColor={COLORS.success[500]}
-          />
-          <KpiCard
-            title="Active Jobs / Invoices"
-            value={String(metrics.activeJobs)}
-            trendDirection={metrics.activeJobs > 0 ? 'up' : 'neutral'}
-            trendValue="+3"
-            accentColor={COLORS.warning[500]}
-          />
-          <KpiCard
-            title="Outstanding Balance"
-            value={formatCurrency(currency, metrics.outstandingBalance)}
-            trendDirection={metrics.outstandingBalance > 0 ? 'down' : 'neutral'}
-            trendValue={metrics.outstandingBalance > 0 ? '-2.1%' : '0%'}
-            accentColor={COLORS.danger[500]}
-          />
-        </div>
-
-        {/* Main Content Area */}
-        <div style={MAIN_CONTENT_STYLE}>
-          {/* Income vs Expenditure Chart */}
-          <div style={CHART_CARD_STYLE}>
-            <div style={CHART_HEADER_STYLE}>
-              <h2 style={CHART_TITLE_STYLE}>Income vs Expenditure</h2>
-              <button type="button" style={{ ...ICON_BUTTON_STYLE, width: '32px', height: '32px' }}>
-                <MoreVertical size={16} />
-              </button>
-            </div>
-            <IncomeVsExpenditureChart
-              data={incomeExpenseData}
-              currency={currency}
-              height={320}
+        <section className="dashboard-kpi-grid">
+          {kpiCards.map((card) => (
+            <KpiCard
+              key={card.id}
+              title={card.title}
+              value={card.value}
+              helperText={card.helperText}
+              icon={card.icon}
+              tone={card.tone}
+              format={card.format}
+              currencySymbol={currencySymbol}
+              emptyLabel={card.emptyLabel}
             />
-          </div>
+          ))}
+        </section>
 
-          {/* Recurring Invoices */}
-          <RecurringInvoiceCard
-            invoices={recurringInvoices}
-            currency={currency}
+        <section className="dashboard-main-grid">
+          <ChartCard
+            title="Income vs Expenditure"
+            subtitle={chartHasLiveData
+              ? `Smooth ${debouncedRange} cashflow tracking across the latest billing activity.`
+              : 'Preview mode stays visible until live billing activity lands.'}
+            headerMeta={chartHeaderMeta}
+            className={joinClassNames('dashboard-chart-card', isRefreshing && 'dashboard-card--refreshing')}
+            loading={isRefreshing}
+          >
+            <IncomeVsExpenditureChart
+              data={chartData}
+              currencySymbol={currencySymbol}
+              range={debouncedRange}
+            />
+          </ChartCard>
+
+          <SubscriptionCard
+            subscriptions={subscriptions}
+            currencySymbol={currencySymbol}
+            onManage={handleManageSubscriptions}
+            isLoading={isRefreshing}
           />
-        </div>
+        </section>
 
-        {/* Bottom Section */}
-        <div style={BOTTOM_SECTION_STYLE}>
-          {/* Cash Flow Breakdown */}
-          <CashFlowBreakdown
-            data={{
-              income: metrics.totalIncome,
-              expenses: metrics.totalExpenses,
-              netProfit: metrics.netProfit,
-              margin: metrics.margin,
-              pending: metrics.pending,
-              overdue: metrics.overdue,
-            }}
-            currency={currency}
-          />
+        <section className="dashboard-secondary-grid">
+          <ChartCard
+            title="Recent Invoices"
+            subtitle="Fresh billing documents and the balances still open."
+            headerMeta={invoiceHeaderMeta}
+          >
+            {recentInvoices.length > 0 ? (
+              <div className="dashboard-table-wrap">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice</th>
+                      <th>Customer</th>
+                      <th>Status</th>
+                      <th>Due</th>
+                      <th className="dashboard-table__numeric">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentInvoices.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td>
+                          <div className="dashboard-table__primary">{invoice.id}</div>
+                          <div className="dashboard-table__secondary">Issued {invoice.issueDate}</div>
+                        </td>
+                        <td>{invoice.customerName}</td>
+                        <td>
+                          <span className={`dashboard-status-badge dashboard-status-badge--${getInvoiceTone(invoice)}`}>
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td>{invoice.dueDate}</td>
+                        <td className="dashboard-table__numeric">
+                          <div className="dashboard-table__primary">{formatCurrency(currencySymbol, invoice.totalAmount)}</div>
+                          <div className="dashboard-table__secondary">
+                            {invoice.outstandingAmount > 0
+                              ? `${formatCurrency(currencySymbol, invoice.outstandingAmount)} open`
+                              : 'Settled'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState
+                icon={FileText}
+                title="No recent invoices"
+                description="The billing table will populate as soon as invoices are posted."
+              />
+            )}
+          </ChartCard>
 
-          {/* Quick Stats */}
-          <div style={{ ...CHART_CARD_STYLE, display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ ...CHART_TITLE_STYLE, marginBottom: '24px' }}>Quick Stats</h2>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: RADIUS.sm, backgroundColor: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <TrendingUp size={16} color="#22C55E" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: SEMANTIC_COLORS.textMuted, fontWeight: 500, textTransform: 'uppercase' }}>Best Day</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: SEMANTIC_COLORS.textPrimary }}>Today</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: COLORS.success[500] }}>
-                  {formatCurrency(currency, metrics.todayCollection)}
-                </div>
-              </div>
-              <div style={{ borderTop: `1px solid ${SEMANTIC_COLORS.borderLighter}` }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: RADIUS.sm, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <TrendingDown size={16} color="#F59E0B" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: SEMANTIC_COLORS.textMuted, fontWeight: 500, textTransform: 'uppercase' }}>Pending</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: SEMANTIC_COLORS.textPrimary }}>{metrics.activeJobs} invoices</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: COLORS.warning[500] }}>
-                  {formatCurrency(currency, metrics.pending)}
-                </div>
-              </div>
-              <div style={{ borderTop: `1px solid ${SEMANTIC_COLORS.borderLighter}` }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: RADIUS.sm, backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <TrendingDown size={16} color="#EF4444" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: SEMANTIC_COLORS.textMuted, fontWeight: 500, textTransform: 'uppercase' }}>Overdue</div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: SEMANTIC_COLORS.textPrimary }}>Action needed</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '16px', fontWeight: 700, color: COLORS.danger[500] }}>
-                  {formatCurrency(currency, metrics.overdue)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <ChartCard
+            title="Recent Payments"
+            subtitle="Collections arriving through the latest receipt activity."
+            headerMeta={paymentHeaderMeta}
+          >
+            {recentPayments.length > 0 ? (
+              <div className="dashboard-list">
+                {recentPayments.map((payment) => (
+                  <article key={payment.id} className="dashboard-list-row">
+                    <div className="dashboard-list-row__leading">
+                      <div className="dashboard-list-row__icon">
+                        <CreditCard size={16} />
+                      </div>
+                      <div>
+                        <div className="dashboard-list-row__title">{payment.customerName}</div>
+                        <div className="dashboard-list-row__subtitle">
+                          {payment.id} - {payment.method}
+                        </div>
+                        <div className="dashboard-list-row__meta">{payment.reference}</div>
+                      </div>
+                    </div>
 
-        {/* Sync Status */}
-        <div style={SYNC_STATUS_STYLE}>
-          {isRefreshing ? 'Refreshing live data...' : `Last updated: ${lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Not synced'}`}
-        </div>
+                    <div className="dashboard-list-row__trailing">
+                      <div className="dashboard-list-row__amount">{formatCurrency(currencySymbol, payment.amount)}</div>
+                      <span className={`dashboard-status-badge dashboard-status-badge--${getPaymentTone(payment)}`}>
+                        {payment.status}
+                      </span>
+                      <div className="dashboard-list-row__meta">{payment.paymentDate}</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={CreditCard}
+                title="No recent payments"
+                description="Customer receipts will appear here when collections are recorded."
+              />
+            )}
+          </ChartCard>
+
+          <ChartCard
+            title="Activity Timeline"
+            subtitle="Audit events across invoices, updates, and payment operations."
+            headerMeta={activityHeaderMeta}
+          >
+            {activityRows.length > 0 ? (
+              <div className="dashboard-timeline">
+                {activityRows.map((activity) => (
+                  <article key={activity.id} className="dashboard-timeline__item">
+                    <span className={`dashboard-timeline__dot dashboard-timeline__dot--${activity.tone}`} aria-hidden="true" />
+                    <div className="dashboard-timeline__content">
+                      <div className="dashboard-timeline__title-row">
+                        <h3 className="dashboard-timeline__title">{activity.title}</h3>
+                        <span className="dashboard-timeline__time">{formatRelativeTime(activity.timestamp)}</span>
+                      </div>
+                      <p className="dashboard-timeline__detail">{activity.detail}</p>
+                      <p className="dashboard-timeline__meta">
+                        {activity.actor} - {formatShortDate(activity.timestamp)}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Activity}
+                title="No activity yet"
+                description="Once users create, approve, or collect against invoices, the timeline will show it here."
+              />
+            )}
+          </ChartCard>
+        </section>
       </div>
     </div>
   );

@@ -1,210 +1,123 @@
-/**
- * Premium KPI Card component
- * Title (small, muted), Value (large, bold), Trend indicator, Optional sparkline
- */
-import React, { memo, useMemo } from 'react';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from 'recharts';
-import { SEMANTIC_COLORS, SHADOWS, RADIUS } from '../../styles/designTokens';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import type { KpiCardProps } from './types';
 
-export type TrendDirection = 'up' | 'down' | 'neutral';
-
-export interface SparklineDataPoint {
-  value: number;
-}
-
-export interface KpiCardProps {
-  title: string;
-  value: string;
-  trendDirection?: TrendDirection;
-  trendValue?: string;
-  accentColor?: string;
-  sparklineData?: SparklineDataPoint[];
-  sparklineColor?: string;
-  icon?: React.ReactNode;
-  className?: string;
-}
-
-// Stable style objects - defined outside to prevent recreation
-const CARD_STYLE: React.CSSProperties = {
-  backgroundColor: '#FFFFFF',
-  borderRadius: RADIUS.lg,
-  boxShadow: SHADOWS.card,
-  padding: '20px 24px',
-  transition: 'box-shadow 0.2s ease',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'space-between',
+const CURRENCY_FRACTION_OPTIONS = {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 };
 
-const TITLE_STYLE: React.CSSProperties = {
-  fontSize: '13px',
-  fontWeight: 500,
-  color: SEMANTIC_COLORS.textSecondary,
-  margin: 0,
-  marginBottom: '8px',
-  letterSpacing: '-0.01em',
+const COUNT_UP_DURATION_MS = 700;
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined'
+  && typeof window.matchMedia === 'function'
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const formatMetricValue = (
+  value: number,
+  format: 'currency' | 'count',
+  currencySymbol: string,
+): string => {
+  if (format === 'count') {
+    return Math.round(value).toLocaleString();
+  }
+
+  return `${currencySymbol}${value.toLocaleString(undefined, CURRENCY_FRACTION_OPTIONS)}`;
 };
 
-const VALUE_STYLE: React.CSSProperties = {
-  fontSize: '28px',
-  fontWeight: 700,
-  color: SEMANTIC_COLORS.textPrimary,
-  lineHeight: 1.2,
-  letterSpacing: '-0.02em',
+const useCountUp = (targetValue: number) => {
+  const [displayValue, setDisplayValue] = useState(targetValue);
+  const displayValueRef = useRef(targetValue);
+
+  useEffect(() => {
+    displayValueRef.current = displayValue;
+  }, [displayValue]);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setDisplayValue(targetValue);
+      displayValueRef.current = targetValue;
+      return;
+    }
+
+    const startValue = displayValueRef.current;
+    const difference = targetValue - startValue;
+
+    if (Math.abs(difference) < 0.01) {
+      setDisplayValue(targetValue);
+      displayValueRef.current = targetValue;
+      return;
+    }
+
+    let frameId = 0;
+    const startTime = performance.now();
+
+    const step = (timestamp: number) => {
+      const elapsed = timestamp - startTime;
+      const progress = clamp(elapsed / COUNT_UP_DURATION_MS, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      setDisplayValue(startValue + (difference * eased));
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(step);
+      } else {
+        displayValueRef.current = targetValue;
+      }
+    };
+
+    frameId = window.requestAnimationFrame(step);
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [targetValue]);
+
+  return displayValue;
 };
 
-const TREND_CONTAINER_STYLE: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-  marginTop: '12px',
-};
-
-const TREND_BADGE_BASE: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '2px',
-  padding: '2px 8px',
-  borderRadius: RADIUS.sm,
-  fontSize: '12px',
-  fontWeight: 600,
-};
-
-const SPARKLINE_CONTAINER_STYLE: React.CSSProperties = {
-  position: 'absolute' as const,
-  bottom: 0,
-  right: 16,
-  width: '80px',
-  height: '32px',
-};
-
-/**
- * Sparkline component - memoized with disabled animation for stability
- */
-const Sparkline: React.FC<{
-  data: SparklineDataPoint[];
-  color: string;
-}> = memo(({ data, color }) => {
-  const memoizedData = useMemo(() => data, [data]);
-  // Stable color reference
-  const strokeColor = color;
-
-  if (memoizedData.length === 0) return null;
-
-  return (
-    <div style={SPARKLINE_CONTAINER_STYLE}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={memoizedData}>
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke={strokeColor}
-            strokeWidth={1.5}
-            dot={false}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-});
-
-Sparkline.displayName = 'Sparkline';
-
-/**
- * KPI Card component - memoized for performance
- */
 const KpiCardComponent: React.FC<KpiCardProps> = memo(({
   title,
   value,
-  trendDirection = 'neutral',
-  trendValue,
-  accentColor = SEMANTIC_COLORS.textPrimary,
-  sparklineData,
-  sparklineColor = '#4F46E5',
-  icon,
-  className = '',
+  helperText,
+  icon: Icon,
+  tone = 'primary',
+  format = 'currency',
+  currencySymbol = '$',
+  emptyLabel,
 }) => {
-  // Memoized accent indicator style
-  const accentStyle: React.CSSProperties = useMemo(() => ({
-    width: '4px',
-    height: '100%',
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    borderRadius: RADIUS.lg,
-    backgroundColor: accentColor,
-    opacity: 0.8,
-  }), [accentColor]);
+  const animatedValue = useCountUp(value);
 
-  // Trend badge styles based on direction
-  const trendBadgeStyle: React.CSSProperties = useMemo(() => {
-    const base = { ...TREND_BADGE_BASE };
-    switch (trendDirection) {
-      case 'up':
-        base.backgroundColor = `${SEMANTIC_COLORS.income}15`;
-        base.color = SEMANTIC_COLORS.income;
-        break;
-      case 'down':
-        base.backgroundColor = `${SEMANTIC_COLORS.expenditure}15`;
-        base.color = SEMANTIC_COLORS.expenditure;
-        break;
-      default:
-        base.backgroundColor = `${SEMANTIC_COLORS.neutral}15`;
-        base.color = SEMANTIC_COLORS.neutral;
+  const displayValue = useMemo(() => {
+    if (emptyLabel && value <= 0) {
+      return emptyLabel;
     }
-    return base;
-  }, [trendDirection]);
 
-  const hasTrendInfo = trendValue && trendDirection !== 'neutral';
+    return formatMetricValue(animatedValue, format, currencySymbol);
+  }, [animatedValue, currencySymbol, emptyLabel, format, value]);
 
-  // Stable key for sparkline to prevent unnecessary remounts
-  const sparklineKey = `sparkline-${title}`;
+  const valueClassName = useMemo(() => {
+    if (emptyLabel && value <= 0) {
+      return 'dashboard-kpi__value dashboard-kpi__value--empty';
+    }
+
+    return 'dashboard-kpi__value';
+  }, [emptyLabel, value]);
 
   return (
-    <div className={className} style={{ ...CARD_STYLE, position: 'relative' }}>
-      {/* Left accent bar */}
-      <div style={accentStyle} />
-      
-      <div style={{ flex: 1 }}>
-        {/* Title */}
-        <h3 style={TITLE_STYLE}>{title}</h3>
-        
-        {/* Value */}
-        <div style={{ ...VALUE_STYLE, color: accentColor }}>
-          {value}
+    <article className={`dashboard-card dashboard-kpi dashboard-kpi--${tone}`}>
+      <div className="dashboard-kpi__header">
+        <div>
+          <p className="dashboard-kpi__label">{title}</p>
+          <div className={valueClassName}>{displayValue}</div>
         </div>
-        
-        {/* Trend */}
-        {hasTrendInfo && (
-          <div style={TREND_CONTAINER_STYLE}>
-            <span style={trendBadgeStyle}>
-              {trendDirection === 'up' && <ArrowUpRight size={12} />}
-              {trendDirection === 'down' && <ArrowDownRight size={12} />}
-              {trendValue}
-            </span>
-            <span style={{ fontSize: '11px', color: SEMANTIC_COLORS.textMuted }}>
-              vs last period
-            </span>
-          </div>
-        )}
+        <div className="dashboard-kpi__icon-shell" aria-hidden="true">
+          <Icon size={18} strokeWidth={2.1} />
+        </div>
       </div>
-      
-      {/* Sparkline */}
-      {sparklineData && sparklineData.length > 0 && (
-        <Sparkline
-          key={sparklineKey}
-          data={sparklineData}
-          color={sparklineColor}
-        />
-      )}
-    </div>
+
+      <p className="dashboard-kpi__helper">{helperText}</p>
+    </article>
   );
 });
 
