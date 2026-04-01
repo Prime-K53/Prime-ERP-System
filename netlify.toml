@@ -1,5 +1,5 @@
 [build]
-  command = "npm --prefix backend install --no-optional && cd frontend && npm install --no-optional && npm run build"
+  command = "npm --prefix backend install && cd frontend && npm ci && npm run build"
   publish = "frontend/dist"
 
 [[redirects]]
