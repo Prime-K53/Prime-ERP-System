@@ -3,7 +3,7 @@ import { useSalesStore } from '../stores/salesStore';
 import { useFinance } from './FinanceContext';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../stores/inventoryStore';
-import { Sale, Quotation, JobOrder, HeldOrder, ZReport, CustomerPayment, Invoice, WorkOrder, LedgerEntry, RecurringInvoice, WalletTransaction, CartItem, Customer, SalesExchange, ReprintJob, SalesOrder } from '../types';
+import { Sale, Quotation, JobOrder, ZReport, CustomerPayment, Invoice, LedgerEntry, RecurringInvoice, WalletTransaction, CartItem, Customer, SalesExchange, ReprintJob, SalesOrder } from '../types';
 import { generateNextId, roundFinancial, resolveCustomerPaymentPolicy, resolveCustomerPaymentTerms } from '../utils/helpers';
 import { useAuth } from './AuthContext';
 import { bomService } from '../services/bomService';
@@ -99,7 +99,7 @@ interface SalesContextType {
     deleteJobOrder: (id: string, reason?: string) => void;
     convertJobOrderToInvoice: (jobOrder: JobOrder) => Promise<string>;
 
-    parkOrder: (order: HeldOrder) => void;
+    parkOrder: (order: any) => void;
     retrieveOrder: (id: string) => void;
 
     addCustomerPayment: (payment: CustomerPayment) => Promise<void>;
@@ -134,11 +134,18 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     useEffect(() => {
         if (!isInitialized) return;
 
+        // Avoid duplicate fetches if store already populated by another initializer
+        try {
+            const existing = useSalesStore.getState().sales || [];
+            if (existing.length > 0) return;
+        } catch (e) {
+            // ignore and proceed
+        }
+
         // Auth initialized, fetching sales data
         salesStore.fetchSalesData().then(async () => {
             try {
                 await syncExistingCustomerPaymentTerms();
-                await salesStore.fetchSalesData();
             } catch (error) {
                 console.error('Failed to synchronize customer payment terms policy', error);
             }

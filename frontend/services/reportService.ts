@@ -723,31 +723,45 @@ class ReportService {
     if (!charts || charts.length === 0) return {};
 
     const chartData: Record<string, any[]> = {};
+    const toSafeNumber = (value: unknown) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const toSafeLabel = (value: unknown, fallback = '') => {
+      const normalized = String(value ?? fallback).trim();
+      return normalized;
+    };
 
     charts.forEach(chart => {
       const seriesData: any[] = [];
+      logger.debug('Chart source payload', {
+        chartId: chart.id,
+        chartType: chart.type,
+        rowsCount: data.length,
+        sampleRow: data[0] || null,
+      });
 
       if (chart.type === 'pie' || chart.type === 'doughnut') {
-        // Group by x-axis field and aggregate y-axis field
         const groups = new Map<string, number>();
         data.forEach(row => {
-          const key = String(row[chart.xAxisField || ''] || 'Other');
-          const value = Number(row[chart.yAxisField] || 0);
+          const key = toSafeLabel(row[chart.xAxisField || ''], 'Other') || 'Other';
+          const value = toSafeNumber(row[chart.yAxisField]);
           groups.set(key, (groups.get(key) || 0) + value);
         });
         
         groups.forEach((value, name) => {
-          seriesData.push({ name, value });
+          if (name !== '' && Number.isFinite(value)) {
+            seriesData.push({ name, value });
+          }
         });
       } else {
-        // For bar/line/area charts
         if (chart.seriesField) {
-          // Multiple series
           const seriesMap = new Map<string, Map<string, number>>();
           data.forEach(row => {
-            const xValue = String(row[chart.xAxisField || ''] || '');
-            const series = String(row[chart.seriesField!] || 'Default');
-            const yValue = Number(row[chart.yAxisField] || 0);
+            const xValue = toSafeLabel(row[chart.xAxisField || '']);
+            if (!xValue) return;
+            const series = toSafeLabel(row[chart.seriesField!], 'Default') || 'Default';
+            const yValue = toSafeNumber(row[chart.yAxisField]);
             
             if (!seriesMap.has(series)) {
               seriesMap.set(series, new Map());
@@ -761,25 +775,30 @@ class ReportService {
               x,
               y,
               series: seriesName,
-            }));
+            })).filter(point => point.x !== '' && Number.isFinite(point.y));
             seriesData.push(...points);
           });
         } else {
-          // Single series
           const groups = new Map<string, number>();
           data.forEach(row => {
-            const key = String(row[chart.xAxisField || ''] || '');
-            const value = Number(row[chart.yAxisField] || 0);
+            const key = toSafeLabel(row[chart.xAxisField || '']);
+            if (!key) return;
+            const value = toSafeNumber(row[chart.yAxisField]);
             groups.set(key, (groups.get(key) || 0) + value);
           });
           
           groups.forEach((y, x) => {
-            seriesData.push({ x, y });
+            if (x !== '' && Number.isFinite(y)) {
+              seriesData.push({ x, y });
+            }
           });
         }
       }
 
-      chartData[chart.id] = seriesData;
+      chartData[chart.id] = Array.isArray(seriesData) ? seriesData : [];
+      if (chartData[chart.id].length === 0) {
+        logger.warn('No chart data generated', { chartId: chart.id, chartType: chart.type });
+      }
     });
 
     return chartData;

@@ -58,7 +58,7 @@ const ExaminationHub: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
-  }, [loadAllData]);
+  }, []);
 
   const getSchoolName = (schoolId: string) => {
     return schools.find((school) => String(school.id) === String(schoolId))?.name || 'Unknown School';

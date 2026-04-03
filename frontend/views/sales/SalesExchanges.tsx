@@ -24,6 +24,7 @@ const SalesExchanges: React.FC = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [selectedExchange, setSelectedExchange] = useState<SalesExchange | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<{
     open: boolean;
     title: string;
@@ -41,8 +42,16 @@ const SalesExchanges: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchExchanges();
-  }, [fetchExchanges]);
+    const loadExchanges = async () => {
+      try {
+        setError(null);
+        await fetchExchanges();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load exchanges');
+      }
+    };
+    loadExchanges();
+  }, []);
 
   const filteredExchanges = salesExchanges.filter(ex => {
     const matchesSearch = 
@@ -104,6 +113,78 @@ const SalesExchanges: React.FC = () => {
   const handleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-600 border-t-transparent mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading exchanges...</p>
+          <p className="text-gray-400 text-sm mt-2">Please wait while we fetch your data</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Error Loading Exchanges</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (salesExchanges.length === 0) {
+    return (
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales Exchanges</h1>
+            <p className="text-sm text-gray-500">Manage print job replacements and reprints</p>
+          </div>
+          <button
+            onClick={() => setIsRequestModalOpen(true)}
+            className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm font-bold text-xs uppercase tracking-wider"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Exchange Request
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-lg mx-auto p-8">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FileText size={48} className="text-gray-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">No Exchanges Yet</h2>
+            <p className="text-gray-600 mb-6">
+              You haven't created any exchange requests yet. Start by creating your first exchange request to manage print job replacements and reprints.
+            </p>
+            <button 
+              onClick={() => setIsRequestModalOpen(true)} 
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+            >
+              Create Exchange Request
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import { dbService } from './db.ts';
 import { API_BASE_URL, getUrl } from '@/config/api.js';
 import {
@@ -11,8 +11,43 @@ import {
   SMSCampaign, Subscriber, SMSTemplate, Cheque, Shipment, SubcontractOrder,
   MaintenanceLog, UserRole,
   ExamPaper, ExamPrintingBatch, School, ExamJob, Customer, Supplier, SupplierPayment, SalesReturn,
-  ExaminationJob, ExaminationJobSubject, ExaminationInvoiceGroup, ExaminationRecurringProfile
+  ExaminationJob, ExaminationJobSubject, ExaminationInvoiceGroup, ExaminationRecurringProfile,
+  Order
 } from '../types.ts';
+
+// Define missing types locally
+interface OrderPayment {
+  id: string;
+  orderId: string;
+  amount: number;
+  paymentMethod: string;
+  date: string;
+  reference?: string;
+}
+
+interface BillOfMaterial {
+  id: string;
+  name: string;
+  components: Array<{ itemId: string; quantity: number }>;
+  [key: string]: any;
+}
+
+interface BOMTemplate {
+  id: string;
+  name: string;
+  components: Array<{ itemId: string; quantity: number }>;
+  [key: string]: any;
+}
+
+interface MarketAdjustment {
+  id: string;
+  name: string;
+  type: string;
+  value: number;
+  categories?: string[];
+  [key: string]: any;
+}
+import { fetchOnce, createRequestKey } from '../utils/requestGuard.ts';
 import { transactionService } from './transactionService.ts';
 import { generateNextId } from '../utils/helpers.ts';
 import {
@@ -67,6 +102,15 @@ const isJsonContent = (contentType: string) => {
   return normalized.includes('application/json') || normalized.includes('+json');
 };
 
+// Track endpoints that have already logged empty array warnings (one-time logging per session)
+const loggedEmptyEndpoints = new Set<string>();
+
+export const networkDebug = {
+  activeRequests: 0,
+  lastFetchAt: null as Date | null,
+  lastUrl: '' as string,
+};
+
 const handleUnauthorizedResponse = (fullUrl: string) => {
   console.error('Missing or invalid authentication headers', { url: fullUrl });
   if (typeof window !== 'undefined') {
@@ -87,7 +131,43 @@ apiClient.interceptors.response.use(
     const fullUrl = getRequestUrl(response.config);
     const responseText = typeof response.data === 'string' ? response.data : '';
 
-    console.debug(`[API Response] ${method} ${fullUrl} -> ${response.status} (Content-Type: ${contentType})`);
+    try {
+      networkDebug.activeRequests = Math.max(0, networkDebug.activeRequests - 1);
+      networkDebug.lastFetchAt = new Date();
+      networkDebug.lastUrl = fullUrl;
+      
+      // Grouped API logging - only in development
+      if (!isProd) {
+        const isEmpty = Array.isArray(response.data) 
+          ? response.data.length === 0 
+          : (response.data && typeof response.data === 'object' && Array.isArray((response.data as any).data))
+            ? (response.data as any).data.length === 0
+            : false;
+        
+        const dataCount = Array.isArray(response.data) 
+          ? response.data.length 
+          : (response.data && typeof response.data === 'object' && Array.isArray((response.data as any).data))
+            ? (response.data as any).data.length
+            : null;
+
+        // Only log empty array warning ONCE per endpoint per session
+        if (isEmpty) {
+          const endpointKey = `${method}:${fullUrl}`;
+          if (!loggedEmptyEndpoints.has(endpointKey)) {
+            loggedEmptyEndpoints.add(endpointKey);
+            console.groupCollapsed(`⚠️ [API] ${method} ${fullUrl} - Empty data (first warning)`);
+            console.log('Status:', response.status);
+            console.log('Note: This warning will only appear once per endpoint');
+            console.groupEnd();
+          }
+        } else if (dataCount !== null && dataCount > 0) {
+          // Log non-empty data summaries
+          console.groupCollapsed(`✅ [API] ${method} ${fullUrl}`);
+          console.log('Records:', dataCount);
+          console.groupEnd();
+        }
+      }
+    } catch {}
 
     if (responseText.toLowerCase().includes('method not allowed')) {
       const error = new Error(`Wrong HTTP method for endpoint: ${method} ${fullUrl} (HTTP ${response.status})`);
@@ -108,6 +188,11 @@ apiClient.interceptors.response.use(
     const config = error.config || {};
     const method = getRequestMethod(config.method);
     const fullUrl = getRequestUrl(config);
+    try {
+      networkDebug.activeRequests = Math.max(0, networkDebug.activeRequests - 1);
+      networkDebug.lastFetchAt = new Date();
+      networkDebug.lastUrl = fullUrl;
+    } catch {}
 
     if (error.response) {
       const { data, status, headers } = error.response;
@@ -151,7 +236,9 @@ apiClient.interceptors.response.use(
 // Attach identity headers from sessionStorage to allow server-side permission checks
 apiClient.interceptors.request.use((config) => {
   try {
-    config.headers = config.headers || {};
+    if (!config.headers) {
+      config.headers = new AxiosHeaders();
+    }
     const saved = sessionStorage.getItem('nexus_user');
     if (saved) {
       const user = JSON.parse(saved);
@@ -164,7 +251,9 @@ apiClient.interceptors.request.use((config) => {
       config.headers['x-user-is-super-admin'] = config.headers['x-user-is-super-admin'] || 'true';
     }
   } catch (e) {
-    config.headers = config.headers || {};
+    if (!config.headers) {
+      config.headers = new AxiosHeaders();
+    }
     config.headers['x-user-id'] = config.headers['x-user-id'] || 'USR-0001';
     config.headers['x-user-role'] = config.headers['x-user-role'] || 'Admin';
     config.headers['x-user-is-super-admin'] = config.headers['x-user-is-super-admin'] || 'true';
@@ -176,7 +265,9 @@ apiClient.interceptors.request.use((config) => {
 // so local dev backend (which relies on x-user-id/x-user-role) won't reject requests.
 apiClient.interceptors.request.use((config) => {
   try {
-    config.headers = config.headers || {};
+    if (!config.headers) {
+      config.headers = new AxiosHeaders();
+    }
     const alreadyHas = config.headers['x-user-id'] || config.headers['x-user-role'] || config.headers['x-user-is-super-admin'];
     if (!alreadyHas && import.meta.env && import.meta.env.DEV) {
       config.headers['x-user-id'] = 'dev';
@@ -195,6 +286,9 @@ apiClient.interceptors.request.use((config) => {
   const method = getRequestMethod(config.method);
   const fullUrl = getRequestUrl(config);
   console.debug(`[API Request] ${method} ${fullUrl}`);
+  try {
+    networkDebug.activeRequests += 1;
+  } catch {}
   return config;
 }, (err) => Promise.reject(err));
 
@@ -234,9 +328,9 @@ const toNum = (value: any, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const normalizeSalesExchange = (exchange: any) => {
-  const fallbackId = exchange?.id || exchange?.exchange_number || Date.now().toString();
-  const rawItems = Array.isArray(exchange?.items) ? exchange.items : [];
+const normalizeSalesExchange = (exchange: Record<string, unknown>) => {
+  const fallbackId = (exchange?.id as string) || (exchange?.exchange_number as string) || Date.now().toString();
+  const rawItems = Array.isArray(exchange?.items) ? (exchange.items as any[]) : [];
 
   const items = rawItems.map((item: any, index: number) => {
     const productName =
@@ -267,7 +361,7 @@ const normalizeSalesExchange = (exchange: any) => {
   return {
     ...exchange,
     items,
-  };
+  } as Record<string, unknown>;
 };
 
 // Removed API_BASE - All operations must be local-only.
@@ -338,17 +432,21 @@ export const api = {
 
   sales: {
     getAllSales: () => handle(async () => {
-      try {
-        const response = await apiClient.get('/sales');
-        const sales = Array.isArray(response.data) ? response.data : [];
-        for (const sale of sales) {
-          await dbService.put('sales', sale);
+      const requestKey = createRequestKey('GET', '/sales');
+      return fetchOnce(requestKey, async () => {
+        try {
+            console.log('🚀 Fetching: /api/sales');
+            const response = await apiClient.get('/sales');
+          const sales = Array.isArray(response.data) ? response.data : [];
+          for (const sale of sales) {
+            await dbService.put('sales', sale);
+          }
+          return sales;
+        } catch (err) {
+          ensureBackendInProd('Sales.GetAll', err);
+          return dbService.getAll<Sale>('sales');
         }
-        return sales;
-      } catch (err) {
-        ensureBackendInProd('Sales.GetAll', err);
-        return dbService.getAll<Sale>('sales');
-      }
+      });
     }, 'Sales.GetAll'),
     createSale: (sale: Sale) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Sales.Create');
@@ -415,16 +513,20 @@ export const api = {
 
     /* Sales Orders */
     getSalesOrders: () => handle(async () => {
-      try {
-        const response = await apiClient.get(`${API_BASE_URL}/sales-orders`);
-        const orders = Array.isArray(response.data) ? response.data : [];
-        for (const o of orders) await dbService.put('salesOrders', o);
-        return orders;
-      } catch (err) {
-        ensureBackendInProd('Sales.GetSalesOrders', err);
-        console.warn('Backend fetch failed for sales orders, using local');
-        return dbService.getAll('salesOrders');
-      }
+      const requestKey = createRequestKey('GET', '/sales-orders');
+      return fetchOnce(requestKey, async () => {
+        try {
+          console.log('🚀 Fetching: /api/sales-orders');
+          const response = await apiClient.get(`${API_BASE_URL}/sales-orders`);
+          const orders = Array.isArray(response.data) ? response.data : [];
+          for (const o of orders) await dbService.put('salesOrders', o);
+          return orders;
+        } catch (err) {
+          ensureBackendInProd('Sales.GetSalesOrders', err);
+          console.warn('Backend fetch failed for sales orders, using local');
+          return dbService.getAll('salesOrders');
+        }
+      });
     }, 'Sales.GetSalesOrders'),
 
     getSalesOrderById: (id: string) => handle(async () => {
@@ -472,56 +574,60 @@ export const api = {
     }, 'Sales.SaveRefund'),
 
     getSalesExchanges: () => handle(async () => {
-      try {
-        // Try backend first
-        const response = await apiClient.get(`${API_BASE_URL}/sales-exchanges`);
-        const remoteExchanges = Array.isArray(response.data) ? response.data : [];
+      const requestKey = createRequestKey('GET', '/sales-exchanges');
+      return fetchOnce(requestKey, async () => {
+        try {
+          // Try backend first
+          console.log('🚀 Fetching: /api/sales-exchanges');
+          const response = await apiClient.get(`${API_BASE_URL}/sales-exchanges`);
+          const remoteExchanges = Array.isArray(response.data) ? response.data : [];
 
-        const hydratedExchanges = await Promise.all(
-          remoteExchanges.map(async (exchange: any) => {
-            let hydrated = exchange;
+          const hydratedExchanges = await Promise.all(
+            remoteExchanges.map(async (exchange: any) => {
+              let hydrated = exchange;
 
-            // The list endpoint can omit item lines; hydrate via details endpoint when needed.
-            if (!Array.isArray(hydrated?.items) || hydrated.items.length === 0) {
-              try {
-                const detailResponse = await apiClient.get(`${API_BASE_URL}/sales-exchanges/${exchange.id}`);
-                hydrated = detailResponse.data || hydrated;
-              } catch {
-                // Keep list payload if details endpoint is unavailable.
+              // The list endpoint can omit item lines; hydrate via details endpoint when needed.
+              if (!Array.isArray(hydrated?.items) || hydrated.items.length === 0) {
+                try {
+                  const detailResponse = await apiClient.get(`${API_BASE_URL}/sales-exchanges/${exchange.id}`);
+                  hydrated = detailResponse.data || hydrated;
+                } catch {
+                  // Keep list payload if details endpoint is unavailable.
+                }
               }
-            }
 
-            // Preserve locally cached items if backend payload is missing them.
-            if (!Array.isArray(hydrated?.items) || hydrated.items.length === 0) {
-              const localCached =
-                (await dbService.get('salesExchanges', exchange.id)) ||
-                (await dbService.get('salesExchanges', String(exchange.id)));
-              if (Array.isArray(localCached?.items) && localCached.items.length > 0) {
-                hydrated = { ...hydrated, items: localCached.items };
+              // Preserve locally cached items if backend payload is missing them.
+              if (!Array.isArray(hydrated?.items) || hydrated.items.length === 0) {
+                const localCached =
+                  (await dbService.get('salesExchanges', exchange.id)) ||
+                  (await dbService.get('salesExchanges', String(exchange.id)));
+                if (Array.isArray(localCached?.items) && localCached.items.length > 0) {
+                  hydrated = { ...hydrated, items: localCached.items };
+                }
               }
-            }
 
-            return normalizeSalesExchange(hydrated);
-          })
-        );
+              return normalizeSalesExchange(hydrated);
+            })
+          );
 
-        // Sync to local
-        for (const ex of hydratedExchanges) {
-          await dbService.put('salesExchanges', ex);
+          // Sync to local
+          for (const ex of hydratedExchanges) {
+            await dbService.put('salesExchanges', ex);
+          }
+          return hydratedExchanges;
+        } catch (err) {
+          ensureBackendInProd('Sales.GetExchanges', err);
+          console.warn('Backend fetch failed for sales exchanges, using local');
+          const localExchanges = await dbService.getAll('salesExchanges');
+          return (localExchanges || []).map((exchange: any) => normalizeSalesExchange(exchange));
         }
-        return hydratedExchanges;
-      } catch (err) {
-        ensureBackendInProd('Sales.GetExchanges', err);
-        console.warn('Backend fetch failed for sales exchanges, using local');
-        const localExchanges = await dbService.getAll('salesExchanges');
-        return (localExchanges || []).map((exchange: any) => normalizeSalesExchange(exchange));
-      }
+      });
     }, 'Sales.GetExchanges'),
 
     getSalesExchangeById: (id: string) => handle(async () => {
       try {
         const response = await apiClient.get(`${API_BASE_URL}/sales-exchanges/${id}`);
-        const normalized = normalizeSalesExchange(response.data);
+        const normalized = normalizeSalesExchange(response.data as Record<string, unknown>);
         await dbService.put('salesExchanges', normalized);
         return normalized;
       } catch (err) {
@@ -529,7 +635,7 @@ export const api = {
         const local =
           (await dbService.get('salesExchanges', id)) ||
           (await dbService.get('salesExchanges', String(id)));
-        return local ? normalizeSalesExchange(local) : local;
+        return local ? normalizeSalesExchange(local as Record<string, unknown>) : local;
       }
     }, 'Sales.GetExchangeById'),
 
@@ -564,16 +670,20 @@ export const api = {
     }, 'Sales.ApproveExchange'),
 
     getReprintJobs: () => handle(async () => {
-      try {
-        const response = await apiClient.get(`${API_BASE_URL}/reprint-jobs`);
-        for (const job of response.data) {
-          await dbService.put('reprintJobs', job);
+      const requestKey = createRequestKey('GET', '/reprint-jobs');
+      return fetchOnce(requestKey, async () => {
+        try {
+          console.log('🚀 Fetching: /api/reprint-jobs');
+          const response = await apiClient.get(`${API_BASE_URL}/reprint-jobs`);
+          for (const job of response.data) {
+            await dbService.put('reprintJobs', job);
+          }
+          return response.data;
+        } catch (err) {
+          ensureBackendInProd('Sales.GetReprintJobs', err);
+          return dbService.getAll('reprintJobs');
         }
-        return response.data;
-      } catch (err) {
-        ensureBackendInProd('Sales.GetReprintJobs', err);
-        return dbService.getAll('reprintJobs');
-      }
+      });
     }, 'Sales.GetReprintJobs'),
 
     updateReprintJob: (id: string, data: any) => handle(async () => {
@@ -597,14 +707,14 @@ export const api = {
         await apiClient.patch(`${API_BASE_URL}/sales-exchanges/${id}`, { status: 'Deleted' });
         const existing = await dbService.get('salesExchanges', id);
         if (existing) {
-          await dbService.put('salesExchanges', { ...existing, status: 'Deleted' });
+          await dbService.put('salesExchanges', { ...(existing as Record<string, unknown>), status: 'Deleted' });
         }
         return { success: true };
       } catch (err) {
         ensureBackendInProd('Sales.DeleteExchange', err);
         const existing = await dbService.get('salesExchanges', id);
         if (existing) {
-          await dbService.put('salesExchanges', { ...existing, status: 'Deleted' });
+          await dbService.put('salesExchanges', { ...(existing as Record<string, unknown>), status: 'Deleted' });
         }
         return { success: true, localOnly: true };
       }
@@ -616,14 +726,14 @@ export const api = {
         const response = await apiClient.patch(`${API_BASE_URL}/sales-exchanges/${id}`, { status: 'Cancelled' });
         const existing = await dbService.get('salesExchanges', id);
         if (existing) {
-          await dbService.put('salesExchanges', { ...existing, status: 'Cancelled' });
+          await dbService.put('salesExchanges', { ...(existing as Record<string, unknown>), status: 'Cancelled' });
         }
         return response.data;
       } catch (err) {
         ensureBackendInProd('Sales.CancelExchange', err);
         const existing = await dbService.get('salesExchanges', id);
         if (existing) {
-          await dbService.put('salesExchanges', { ...existing, status: 'Cancelled' });
+          await dbService.put('salesExchanges', { ...(existing as Record<string, unknown>), status: 'Cancelled' });
         }
         return { success: true, localOnly: true };
       }
@@ -1595,6 +1705,119 @@ export const api = {
       return dbService.put('marketAdjustments', adj);
     }, 'Pricing.SaveAdjustment'),
 
+  },
+
+  diagnostics: {
+    // Check data counts for all stores
+    getDataCounts: () => handle(async () => {
+      const stores = ['sales', 'salesOrders', 'salesExchanges', 'reprintJobs', 'invoices', 'customers'];
+      const counts: Record<string, number> = {};
+      
+      for (const store of stores) {
+        try {
+          const data = await dbService.getAll(store as any);
+          counts[store] = Array.isArray(data) ? data.length : 0;
+        } catch (err) {
+          counts[store] = -1; // Error reading store
+        }
+      }
+      
+      return {
+        timestamp: new Date().toISOString(),
+        counts,
+        hasData: Object.values(counts).some(c => c > 0)
+      };
+    }, 'Diagnostics.GetDataCounts'),
+
+    // Add sample data for testing
+    addSampleData: () => handle(async () => {
+      const sampleCustomer = {
+        id: 'SAMPLE-001',
+        name: 'Sample Customer',
+        email: 'sample@example.com',
+        phone: '+1234567890',
+        status: 'Active' as const,
+        createdAt: new Date().toISOString()
+      };
+
+      const sampleSale = {
+        id: 'SALE-001',
+        customerId: sampleCustomer.id,
+        customerName: sampleCustomer.name,
+        date: new Date().toISOString(),
+        items: [{ 
+          id: 'ITEM-001', 
+          name: 'Sample Product', 
+          quantity: 1, 
+          unitPrice: 100, 
+          total: 100 
+        }],
+        totalAmount: 100,
+        status: 'Completed',
+        paymentMethod: 'Cash'
+      };
+
+      const sampleOrder = {
+        id: 'ORDER-001',
+        customerId: sampleCustomer.id,
+        customerName: sampleCustomer.name,
+        date: new Date().toISOString(),
+        items: [{ 
+          id: 'ITEM-001', 
+          name: 'Sample Product', 
+          quantity: 2, 
+          unitPrice: 100, 
+          total: 200 
+        }],
+        totalAmount: 200,
+        status: 'Pending',
+        paymentMethod: 'Card'
+      };
+
+      const sampleExchange = {
+        id: 'EXCH-001',
+        exchangeNumber: 'EXCH-001',
+        customerId: sampleCustomer.id,
+        customerName: sampleCustomer.name,
+        date: new Date().toISOString(),
+        status: 'Approved',
+        items: [{
+          id: 'EXITEM-001',
+          productId: 'ITEM-001',
+          productName: 'Sample Product',
+          qty_returned: 1,
+          qty_replaced: 1,
+          price_difference: 0
+        }]
+      };
+
+      const sampleReprintJob = {
+        id: 'RPT-001',
+        documentType: 'Invoice',
+        documentId: 'INV-001',
+        status: 'Completed',
+        copies: 2,
+        date: new Date().toISOString()
+      };
+
+      await dbService.put('customers', sampleCustomer);
+      await dbService.put('sales', sampleSale);
+      await dbService.put('salesOrders', sampleOrder);
+      await dbService.put('salesExchanges', sampleExchange);
+      await dbService.put('reprintJobs', sampleReprintJob);
+
+      return {
+        success: true,
+        message: 'Sample data added successfully',
+        added: {
+          customers: 1,
+          sales: 1,
+          salesOrders: 1,
+          salesExchanges: 1,
+          reprintJobs: 1
+        }
+      };
+    }, 'Diagnostics.AddSampleData'),
   },
 
   system: {

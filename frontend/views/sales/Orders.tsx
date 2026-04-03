@@ -34,6 +34,7 @@ import { PreviewModal } from '../shared/components/PDF/PreviewModal';
 import { useDocumentPreview } from '../../hooks/useDocumentPreview';
 import { mapToInvoiceData } from '../../utils/pdfMapper';
 import { buildRecurringDraftFromInvoice } from '../../utils/recurringConversion';
+import DebugPanel from '../../components/DebugPanel';
 
 const SUBSCRIPTION_STATUSES = ['Draft', 'Active', 'Paused', 'Cancelled', 'Expired'] as const;
 
@@ -136,6 +137,9 @@ const Orders: React.FC = () => {
         salesExchanges = [], deleteSalesExchange, approveSalesExchange, cancelSalesExchange,
         notify, user, boms = [], isLoading
     } = useData();
+
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     const { createDeliveryNote, checkAndApplyLateFees } = useFinance();
     const { convertQuotationToWorkOrder, convertQuotationToJobTicket } = useSales();
@@ -285,6 +289,30 @@ const Orders: React.FC = () => {
         }
     }, [location, invoices]);
 
+    useEffect(() => {
+        console.debug('[Orders] Request started', { view: activeView });
+        const counts = {
+            quotations: quotations.length,
+            invoices: invoices.length,
+            subscriptions: recurringInvoices.length,
+            salesOrders: jobOrders.length,
+            orders: orders.length,
+            exchanges: salesExchanges.length
+        };
+        console.debug('[Orders] Data received', counts);
+        const selectedCount =
+            activeView === 'Quotations' ? counts.quotations :
+            activeView === 'Invoices' ? counts.invoices :
+            activeView === 'Subscriptions' ? counts.subscriptions :
+            activeView === 'SalesOrders' ? counts.salesOrders :
+            activeView === 'Orders' ? counts.orders :
+            counts.exchanges;
+        if (selectedCount === 0) {
+            console.warn('[Orders] Data empty', { view: activeView });
+        }
+        setLastUpdated(new Date());
+    }, [activeView, quotations.length, invoices.length, recurringInvoices.length, jobOrders.length, orders.length, salesExchanges.length]);
+
     const handleCreate = () => {
         setEditingItem(null);
         setIsFormOpen(true);
@@ -414,6 +442,13 @@ const Orders: React.FC = () => {
     const dashboardData = useMemo(() => {
         const allInvs = invoices || [];
         const invs = allInvs.filter(inv => inv.status !== 'Cancelled' && inv.status !== 'Draft');
+        try {
+            console.debug('[Orders] Invoice chart source', {
+                rawCount: allInvs.length,
+                filteredCount: invs.length,
+                sample: invs[0]
+            });
+        } catch {}
         const monthlyData: Record<string, { month: string; revenue: number; profit: number }> = {};
         const statusData: Record<string, { name: string; value: number; color: string }> = {
             'Paid': { name: 'Paid', value: 0, color: '#10b981' },
@@ -432,7 +467,7 @@ const Orders: React.FC = () => {
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = { month: monthName, revenue: 0, profit: 0 };
             }
-            monthlyData[monthKey].revenue += inv.totalAmount;
+            monthlyData[monthKey].revenue += Number(inv.totalAmount || 0);
 
             // Profit for the month
             const netInvoice = inv.totalAmount;
@@ -450,7 +485,7 @@ const Orders: React.FC = () => {
                     invCost += (i?.cost || 0) * item.quantity;
                 }
             });
-            monthlyData[monthKey].profit += (netInvoice - invCost);
+            monthlyData[monthKey].profit += Number(netInvoice - invCost || 0);
 
             // Status Distribution
             let status = inv.status as string;
@@ -459,8 +494,22 @@ const Orders: React.FC = () => {
         });
 
         return {
-            monthly: Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month)).slice(-6),
-            status: Object.values(statusData).filter(s => s.value > 0)
+            monthly: Object.values(monthlyData)
+                .map(entry => ({
+                    month: String(entry.month || ''),
+                    revenue: Number(entry.revenue || 0),
+                    profit: Number(entry.profit || 0)
+                }))
+                .filter(entry => entry.month !== '' && Number.isFinite(entry.revenue) && Number.isFinite(entry.profit))
+                .sort((a, b) => a.month.localeCompare(b.month))
+                .slice(-6),
+            status: Object.values(statusData)
+                .map(entry => ({
+                    name: String(entry.name || ''),
+                    value: Number(entry.value || 0),
+                    color: entry.color
+                }))
+                .filter(entry => entry.name !== '' && Number.isFinite(entry.value) && entry.value > 0)
         };
     }, [invoices, inventory, boms, companyConfig]);
 
@@ -881,6 +930,7 @@ const Orders: React.FC = () => {
                                 description: i.productName,
                                 price: i.unitPrice
                             })),
+                            total: item.totalAmount,
                             totalAmount: item.totalAmount,
                             paidAmount: item.paidAmount,
                             status: item.paidAmount >= item.totalAmount ? 'Paid' : 'Unpaid',
@@ -942,6 +992,15 @@ const Orders: React.FC = () => {
         });
         return data;
     }, [invoices, moneyBarFilter, searchText, sortField, sortDirection]);
+
+    const visibleDataCount = useMemo(() => {
+        if (activeView === 'Quotations') return quotations.length;
+        if (activeView === 'Invoices') return processedInvoices.length;
+        if (activeView === 'Subscriptions') return recurringInvoices.length;
+        if (activeView === 'SalesOrders') return jobOrders.length;
+        if (activeView === 'Orders') return orders.length;
+        return salesExchanges.length;
+    }, [activeView, quotations.length, processedInvoices.length, recurringInvoices.length, jobOrders.length, orders.length, salesExchanges.length]);
 
     const handleSort = (field: keyof Invoice) => { if (sortField === field) { setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc'); } else { setSortField(field); setSortDirection('desc'); } };
     const handleSelectInvoice = (id: string) => { setSelectedInvoiceIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
@@ -1177,6 +1236,13 @@ const Orders: React.FC = () => {
                     </p>
                 </div>
 
+                <DebugPanel
+                    label={`Orders ${activeView}`}
+                    count={visibleDataCount}
+                    lastUpdated={lastUpdated}
+                    className="relative md:ml-auto"
+                />
+
                 <div className="flex gap-2 items-center">
                     {activeView === 'Exchanges' && (
                         <button
@@ -1296,6 +1362,9 @@ const Orders: React.FC = () => {
                                 <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Profit</div>
                             </div>
                         </div>
+                        {dashboardData.monthly.length === 0 ? (
+                            <div className="h-full flex items-center justify-center text-slate-400">No chart data</div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0} className="flex-1">
                             <BarChart data={dashboardData.monthly}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -1309,11 +1378,15 @@ const Orders: React.FC = () => {
                                     <Bar dataKey="profit" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
                             </BarChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
                     <div className="bg-white/90 backdrop-blur-sm border border-slate-200 p-6 rounded-[2.5rem] shadow-sm flex flex-col h-[300px]">
                         <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
                             <PieChartIcon size={16} className="text-blue-600" /> Status Distribution
                         </h3>
+                        {dashboardData.status.length === 0 ? (
+                            <div className="h-full flex items-center justify-center text-slate-400">No chart data</div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0} className="flex-1">
                             <PieChart>
                                     <Pie
@@ -1334,6 +1407,7 @@ const Orders: React.FC = () => {
                                     />
                             </PieChart>
                         </ResponsiveContainer>
+                        )}
                         <div className="grid grid-cols-2 gap-2 mt-4">
                             {dashboardData.status.map((s, i) => (
                                 <div key={i} className="flex items-center gap-2">

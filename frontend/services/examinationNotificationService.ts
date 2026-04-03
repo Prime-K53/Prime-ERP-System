@@ -313,6 +313,7 @@ export const examinationNotificationService = {
     }
 
     try {
+      console.log(`🚀 Fetching: /api/examination/notifications?user_id=${user}&limit=${limit}`);
       const response = await fetchWithTimeout(`/notifications?user_id=${user}&limit=${limit}`, {
         method: 'GET',
         headers: getHeaders()

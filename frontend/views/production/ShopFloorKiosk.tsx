@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { 
   Search, Play, Pause, CheckCircle, AlertTriangle, 
   Clock, Package, User, ChevronLeft, Maximize2, 

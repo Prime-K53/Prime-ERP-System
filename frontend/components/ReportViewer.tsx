@@ -8,6 +8,7 @@ import Select from './Select';
 import Card from './Card';
 import Badge from './Badge';
 import Pagination from './Pagination';
+import DebugPanel from './DebugPanel';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface ReportViewerProps {
@@ -40,6 +41,17 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
   const [filterText, setFilterText] = useState('');
   const [selectedRow, setSelectedRow] = useState<ReportRow | null>(null);
   const [activeView, setActiveView] = useState<'table' | 'charts' | 'summary'>('table');
+
+  useEffect(() => {
+    console.debug('[ReportViewer] Request started', { reportName: result.reportName, reportId: result.id });
+    console.debug('[ReportViewer] Data received', {
+      rows: result.rows?.length || 0,
+      charts: result.chartData ? Object.keys(result.chartData).length : 0
+    });
+    if (!result.rows || result.rows.length === 0) {
+      console.warn('[ReportViewer] Data empty', { reportName: result.reportName });
+    }
+  }, [result.id, result.reportName, result.rows, result.chartData]);
 
   // Filter data based on search text
   const filteredData = React.useMemo(() => {
@@ -195,7 +207,45 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
 
   // Render chart
   const renderChart = (chart: ReportChart) => {
-    const chartData = result.chartData?.[chart.id] || [];
+    const raw = result.chartData?.[chart.id];
+    const sourceRows = result.rows || [];
+    const isArray = Array.isArray(raw);
+    const normalized = (() => {
+      if (!isArray && raw && typeof raw === 'object' && Array.isArray((raw as any).data)) {
+        return (raw as any).data;
+      }
+      if (isArray) return raw as any[];
+      return [];
+    })();
+    try {
+      console.debug('[ReportViewer] Chart input', {
+        chartId: chart.id,
+        type: chart.type,
+        sourceRowsCount: sourceRows.length,
+        rawChartDataSample: normalized?.[0],
+        rawChartDataLength: normalized?.length || 0,
+      });
+    } catch {}
+    const chartData = (() => {
+      if (!Array.isArray(normalized)) return [];
+      if (chart.type === 'pie' || chart.type === 'doughnut') {
+        return normalized
+          .map((d: any) => ({
+            name: String(d?.name ?? d?.x ?? d?.label ?? 'Other'),
+            value: Number(d?.value ?? d?.y ?? d?.amount ?? 0),
+          }))
+          .filter((d: any) => Number.isFinite(d.value) && d.name !== '');
+      }
+      return normalized
+        .map((d: any) => ({
+          x: String(d?.x ?? d?.label ?? d?.name ?? ''),
+          y: Number(d?.y ?? d?.value ?? d?.amount ?? 0),
+        }))
+        .filter((d: any) => d.x !== '' && Number.isFinite(d.y));
+    })();
+    if (!chartData || chartData.length === 0) {
+      return <div className="text-gray-500 px-3 py-2">No chart data</div>;
+    }
     
     switch (chart.type) {
       case 'bar':
@@ -523,6 +573,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
             )}
           </div>
         )}
+      </div>
+      <div className="px-4 py-2 border-b border-gray-100">
+        <DebugPanel
+          position="footer"
+          label="Report"
+          count={result.rows?.length || 0}
+          lastUpdated={new Date(result.generatedAt)}
+        />
       </div>
 
       {/* View Tabs */}

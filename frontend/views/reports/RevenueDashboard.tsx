@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { format, parseISO, startOfWeek, startOfMonth, isWithinInterval, subDays, isSameDay } from 'date-fns';
 import {
@@ -7,6 +7,7 @@ import {
     BarChart3, PieChart, Calendar, RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import DebugPanel from '../../components/DebugPanel';
 
 type DateRange = 'week' | 'month' | 'quarter' | 'year' | 'all';
 
@@ -18,6 +19,7 @@ const RevenueDashboard: React.FC = () => {
     } = useData();
     const currency = companyConfig?.currencySymbol || '$';
     const [dateRange, setDateRange] = useState<DateRange>('month');
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     const formatCurrency = (val: number) => {
         if (val === undefined || val === null || isNaN(val)) return `${currency}0.00`;
@@ -146,6 +148,20 @@ const RevenueDashboard: React.FC = () => {
             paymentMethods
         };
     }, [sales, invoices, expenses, purchases, customerPayments, ledger, companyConfig, dateRange]);
+
+    useEffect(() => {
+        console.debug('[RevenueDashboard] Request started', { module: 'revenue', dateRange });
+        console.debug('[RevenueDashboard] Data received', {
+            sales: sales.length,
+            invoices: invoices.length,
+            expenses: expenses.length,
+            purchases: purchases.length
+        });
+        if (stats.trendData.length === 0 && stats.topCustomers.length === 0) {
+            console.warn('[RevenueDashboard] Data empty', { module: 'revenue', dateRange });
+        }
+        setLastUpdated(new Date());
+    }, [dateRange, sales.length, invoices.length, expenses.length, purchases.length, stats.trendData.length, stats.topCustomers.length]);
 
     return (
         <div className="space-y-6 animate-fadeIn">
@@ -332,6 +348,12 @@ const RevenueDashboard: React.FC = () => {
                         ))}
                 </div>
             </div>
+            <DebugPanel
+                position="footer"
+                label="Revenue"
+                count={sales.length + invoices.length + purchases.length}
+                lastUpdated={lastUpdated}
+            />
         </div>
     );
 };

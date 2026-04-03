@@ -100,12 +100,17 @@ const IncomeVsExpenditureChartComponent: React.FC<IncomeVsExpenditureChartProps>
     return data;
   }, [data, range]);
 
+  const noData = useMemo(() => data.length === 0 || !hasLiveData(data), [data]);
+
   const tooltipContent = useMemo(() => (
     <CustomTooltip currency={currencySymbol} />
   ), [currencySymbol]);
 
   return (
     <div className="dashboard-chart">
+      {noData ? (
+        <div className="p-12 text-center text-slate-400">No chart data</div>
+      ) : null}
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <ComposedChart data={chartData} margin={CHART_MARGIN}>
           <defs>

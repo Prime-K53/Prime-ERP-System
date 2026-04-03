@@ -3,7 +3,7 @@ import {
   X, Save, User, MapPin, CreditCard, FileText, Building, 
   Plus, Trash2, AlertTriangle, CheckCircle2, Phone, Mail, 
   Globe, Tag, Info, UserCheck, Briefcase, DollarSign,
-  ChevronRight, ArrowRight, ShieldCheck, PieChart, Landmark
+  ChevronRight, ArrowRight, ShieldCheck, PieChart, Landmark, Target
 } from 'lucide-react';
 import { Customer } from '../../../types';
 import { getDefaultPaymentTermsForSegment } from '../../../utils/helpers';
@@ -130,17 +130,17 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex flex-col items-start p-4 rounded-2xl transition-all duration-300 border-2 text-left group ${
+      className={`flex flex-col items-start p-3 rounded-xl transition-all duration-300 border-2 text-left group ${
         activeTab === id 
-          ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100/50' 
-          : 'border-transparent text-slate-500 hover:bg-white hover:border-slate-100 hover:shadow-lg'
+          ? 'border-indigo-600 bg-white shadow-lg shadow-indigo-100/50' 
+          : 'border-transparent text-slate-500 hover:bg-white hover:border-slate-100 hover:shadow-md'
       }`}
     >
-      <div className={`p-2 rounded-xl mb-3 transition-all duration-300 ${activeTab === id ? 'bg-indigo-600 text-white scale-110' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
-        <Icon size={20} strokeWidth={2.5} />
+      <div className={`p-2 rounded-lg mb-2 transition-all duration-300 ${activeTab === id ? 'bg-indigo-600 text-white scale-105' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'}`}>
+        <Icon size={18} strokeWidth={2.5} />
       </div>
-      <span className={`text-[13px] font-bold tracking-tight mb-0.5 ${activeTab === id ? 'text-indigo-950' : 'text-slate-600'}`}>{label}</span>
-      <span className="text-[10px] font-medium text-slate-400 line-clamp-1">{desc}</span>
+      <span className={`text-[13.5px] font-semibold tracking-tight mb-0.5 ${activeTab === id ? 'text-indigo-900' : 'text-slate-600'}`}>{label}</span>
+      <span className="text-[11px] font-medium text-slate-400 line-clamp-1">{desc}</span>
     </button>
   );
 
@@ -149,15 +149,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
       <div className="bg-slate-50 rounded-[2.5rem] shadow-2xl w-full max-w-6xl h-[90vh] flex overflow-hidden ring-1 ring-white/20 animate-in zoom-in-95 duration-300">
         
         {/* Sidebar Navigation */}
-        <div className="w-72 bg-slate-50 border-r border-slate-200 p-8 flex flex-col gap-2 shrink-0 overflow-y-auto custom-scrollbar">
-          <div className="mb-8 px-2">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-xl shadow-indigo-200 mb-4 ring-4 ring-white">
-              <User size={28} strokeWidth={2.5} />
+        <div className="w-64 bg-slate-50 border-r border-slate-200 p-5 flex flex-col gap-1.5 shrink-0 overflow-y-auto custom-scrollbar">
+          <div className="mb-6 px-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 mb-3 ring-2 ring-white">
+              <User size={24} strokeWidth={2.5} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-[20px] font-semibold text-slate-800 tracking-tight leading-snug">
               {customer ? 'Account Settings' : 'Onboard Client'}
             </h2>
-            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-1 opacity-60">Customer Profile V2</p>
+            <p className="text-[12px] text-slate-500 font-medium tracking-wide mt-0.5 opacity-70">Customer Profile V2</p>
           </div>
 
           <TabButton id="basic" label="Basic Profile" icon={Info} desc="Core entity information" />
@@ -166,13 +166,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
           <TabButton id="crm" label="Relationships" icon={Briefcase} desc="Lead status & Pipeline" />
           <TabButton id="branches" label="Subsidiaries" icon={Building} desc="Linked sub-accounts" />
 
-          <div className="mt-auto pt-8">
-            <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Security Active</span>
+          <div className="mt-auto pt-6">
+            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Security Active</span>
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium leading-relaxed italic">Changes are logged to the global security trail for financial compliance.</p>
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">Changes are logged to the global security trail for compliance.</p>
             </div>
           </div>
         </div>
@@ -180,62 +180,62 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
         {/* Content Area */}
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           {/* Top Bar */}
-          <div className="px-10 py-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
              <div>
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                <h3 className="text-[15px] font-semibold text-slate-700 flex items-center gap-2">
                     {activeTab === 'basic' && 'Core Identity Details'}
                     {activeTab === 'address' && 'Geospatial & Delivery Info'}
                     {activeTab === 'finance' && 'Fiscal Policy Settings'}
                     {activeTab === 'crm' && 'Lifecycle Management'}
                     {activeTab === 'branches' && 'Organization Hierarchy'}
-                    <ChevronRight size={16} className="text-slate-300" />
-                    <span className="text-slate-400 font-medium">{customer?.name || 'New Entity'}</span>
+                    <ChevronRight size={14} className="text-slate-300" />
+                    <span className="text-slate-400 font-medium text-[13.5px]">{customer?.name || 'New Entity'}</span>
                 </h3>
              </div>
-             <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={20} strokeWidth={2.5} />
+             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={18} strokeWidth={2.5} />
              </button>
           </div>
 
-          <form id="client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-slate-50/30">
+          <form id="client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/30">
             
             {activeTab === 'basic' && (
-              <div className="max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-2 gap-8">
+              <div className="max-w-3xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-2 gap-6">
                   <div className="col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Legal Name / Business Entity</label>
+                    <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Legal Name / Business Entity</label>
                     <div className="relative group">
-                       <UserCheck className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={20} />
+                       <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={16} />
                        <input required type="text" name="name" value={formData.name} onChange={handleChange}
-                        className="w-full bg-white border border-slate-200 rounded-[1.25rem] pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-11 pr-4 py-2.5 text-[13.5px] font-normal text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
                         placeholder="e.g. Acme Corporation Ltd" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Contact Number</label>
+                    <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Contact Number</label>
                     <div className="relative group">
-                       <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={18} />
+                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={16} />
                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                        className="w-full bg-white border border-slate-200 rounded-[1.25rem] pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-11 pr-4 py-2.5 text-[13.5px] font-normal text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
                         placeholder="+263 7..." />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Primary Email</label>
+                    <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Primary Email</label>
                     <div className="relative group">
-                       <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={18} />
+                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={16} />
                        <input type="email" name="email" value={formData.email} onChange={handleChange}
-                        className="w-full bg-white border border-slate-200 rounded-[1.25rem] pl-14 pr-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full bg-white border border-slate-200 rounded-lg pl-11 pr-4 py-2.5 text-[13.5px] font-normal text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm"
                         placeholder="billing@example.com" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Market Segment</label>
+                    <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Market Segment</label>
                     <select name="segment" value={formData.segment} onChange={handleChange}
-                      className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-sm cursor-pointer appearance-none">
+                      className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-[13.5px] font-normal text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm cursor-pointer appearance-none">
                       <option value="Individual">Direct Consumer</option>
                       <option value="School Account">Educational Institution</option>
                       <option value="Institution">Corporate / NGO</option>
@@ -244,17 +244,17 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                   </div>
 
                   <div>
-                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Entity Status</label>
+                     <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Entity Status</label>
                      <div className="flex gap-2">
                         {['Active', 'Inactive', 'VIP', 'Lead'].map(status => (
                             <button
                                 key={status}
                                 type="button"
                                 onClick={() => setFormData((p: any) => ({ ...p, status }))}
-                                className={`flex-1 py-4 px-2 rounded-2xl text-[11px] font-black uppercase tracking-tighter transition-all border-2 ${
+                                className={`flex-1 py-2.5 px-2 rounded-lg text-[12px] font-semibold transition-all border ${
                                     formData.status === status 
-                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105' 
-                                        : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
+                                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-600'
                                 }`}
                             >
                                 {status}
@@ -264,11 +264,11 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                   </div>
 
                   <div className="col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Internal Relationship Memo</label>
+                    <label className="block text-[13.5px] font-medium text-slate-600 mb-2">Internal Relationship Memo</label>
                     <div className="relative group">
-                       <FileText className="absolute left-5 top-5 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={18} />
+                       <FileText className="absolute left-4 top-3.5 text-slate-300 transition-colors group-focus-within:text-indigo-500" size={16} />
                        <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] pl-14 pr-6 py-5 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-inner resize-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-11 pr-4 py-3 text-[13.5px] font-normal text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all shadow-sm resize-none"
                         placeholder="Historical context, billing quirks, or contact preferences..." />
                     </div>
                   </div>
@@ -626,37 +626,34 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
           </form>
 
           {/* Master Footer */}
-          <div className="px-12 py-8 border-t border-slate-100 flex items-center justify-between bg-white shrink-0 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.05)]">
+          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between bg-white shrink-0 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col">
-                <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-[pulse_2s_infinite]" />
-                    <span className="text-[11px] font-black text-slate-950 uppercase tracking-widest">Cloud Database Sync Ready</span>
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-[pulse_2s_infinite]" />
+                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Cloud Sync Ready</span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-tighter">Last synced: Just now</p>
+                <p className="text-[9px] text-slate-400 font-medium mt-0.5">Last synced: Just now</p>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-8 py-4 text-slate-400 font-black hover:text-slate-900 transition-all text-[11px] uppercase tracking-widest"
+                className="px-3 py-2 text-slate-500 font-medium hover:text-slate-700 transition-all text-[13px] rounded-lg hover:bg-slate-100"
               >
-                Abort Changes
+                Cancel
               </button>
               <button
                 form="client-form"
                 type="submit"
                 disabled={isSubmitting}
-                className="group relative flex items-center gap-4 px-14 py-5 bg-slate-900 text-white rounded-[1.5rem] font-black hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 text-xs uppercase tracking-widest disabled:opacity-50 overflow-hidden active:scale-95"
+                className="group relative flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all shadow-sm text-[13px] disabled:opacity-50 overflow-hidden active:scale-[0.98]"
               >
                 {isSubmitting ? (
-                   <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+                   <div className="w-4 h-4 border-[2px] border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                   <Save size={20} strokeWidth={3} />
+                   <Save size={16} strokeWidth={2} />
                 )}
-                <span>{customer ? 'Update Vault Record' : 'Commit New Entity'}</span>
-                
-                {/* Advanced shine effect */}
-                <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-25deg] group-hover:left-[200%] transition-all duration-[1200ms] ease-in-out" />
+                <span>{customer ? 'Update' : 'Create'}</span>
               </button>
             </div>
           </div>

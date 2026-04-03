@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useVatStore } from '../../stores/vatStore';
 import { useData } from '../../context/DataContext';
 import {
@@ -9,15 +9,26 @@ import {
     ArrowUpRight, ArrowDownRight, FileText
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
+import DebugPanel from '../../components/DebugPanel';
 
 export const VatDashboard: React.FC = () => {
     const { transactions, returns, fetchVatData, isLoading } = useVatStore();
     const { companyConfig } = useData();
     const currency = companyConfig?.currencySymbol || 'MK';
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     useEffect(() => {
+        console.debug('[VatDashboard] Request started', { module: 'vat' });
         fetchVatData();
     }, []);
+
+    useEffect(() => {
+        console.debug('[VatDashboard] Data received', { transactions: transactions.length, returns: returns.length });
+        if (transactions.length === 0 && returns.length === 0) {
+            console.warn('[VatDashboard] Data empty', { module: 'vat' });
+        }
+        setLastUpdated(new Date());
+    }, [transactions.length, returns.length]);
 
     const stats = useMemo(() => {
         const currentMonth = new Date();
@@ -140,6 +151,9 @@ export const VatDashboard: React.FC = () => {
                         VAT liability trend (6 months)
                     </h3>
                     <div style={{ width: '100%', height: 320, minHeight: 150 }}>
+                        {chartData.length === 0 ? (
+                            <div className="h-full flex items-center justify-center text-slate-400">No chart data</div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0}>
                             <BarChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -153,6 +167,7 @@ export const VatDashboard: React.FC = () => {
                                 <Bar dataKey="Input" fill="#EF4444" name="Input tax" />
                             </BarChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
@@ -188,6 +203,12 @@ export const VatDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <DebugPanel
+                position="footer"
+                label="VAT"
+                count={transactions.length}
+                lastUpdated={lastUpdated}
+            />
         </div>
     );
 };

@@ -320,7 +320,7 @@ export const BOMDialog: React.FC<BOMDialogProps> = ({ isOpen, onClose, batch }) 
     setExpandedMaterialGroups({});
     setExpandedAdjustmentGroups({});
     void syncBreakdown(false, false);
-    const id = window.setInterval(() => void syncBreakdown(true, false), 12000);
+    const id = window.setInterval(() => void syncBreakdown(true, false), 15000);
     return () => window.clearInterval(id);
   }, [batch?.id, batch?.updated_at, isOpen, syncBreakdown]);
 
