@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '@/services/logger';
 // PRICING RULE: Do NOT implement pricing logic here. All pricing MUST go through pricingEngine.ts
-import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Calculator, DollarSign, Tag, ShieldCheck, Plus, Search, Building2, FileText, Clock, Settings, Info, RefreshCw, Layers } from 'lucide-react';
+import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Calculator, DollarSign, Tag, ShieldCheck, Plus, Search, Building2, FileText, Clock, Settings, Info, RefreshCw, Layers, Package, Zap } from 'lucide-react';
 import { HeldOrder, Sale, Invoice, Item, ProductVariant, BillOfMaterial, WorkOrder, BOMTemplate } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
@@ -220,7 +220,13 @@ export const ServiceCalculatorModal: React.FC<{
     const [enginePricing, setEnginePricing] = useState<DynamicServicePricingResult | null>(null);
     const [finishingCostOverrides, setFinishingCostOverrides] = useState<Record<string, number>>({});
 
+    const sp = service.smartPricing;
     const config = service.serviceConfig;
+    const hasSmartPricing = !!sp;
+
+    const [enabledFinishing, setEnabledFinishing] = useState<string[]>(() =>
+        (sp?.finishingEnabled || []) as string[]
+    );
 
     useEffect(() => {
         let mounted = true;
@@ -235,6 +241,9 @@ export const ServiceCalculatorModal: React.FC<{
             });
         return () => { mounted = false; };
     }, []);
+
+    const paper = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.paperItemId) : null, [sp, inventory]);
+    const toner = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.tonerItemId) : null, [sp, inventory]);
 
     const normalizedAdjustments = useMemo(() => {
         return (marketAdjustments || [])
@@ -254,77 +263,122 @@ export const ServiceCalculatorModal: React.FC<{
             }));
     }, [marketAdjustments, service.category]);
 
-    const computePageScaledCost = useCallback((pageCount: number, copyCount: number): number => {
-        const sp = service.smartPricing;
-        const defaultFinishingCosts: Record<string, number> = {
-            binding: 150,
-            coverPages: 20,
-            cutting: 30,
-            holePunch: 20,
-            folding: 15,
-            stapling: 10
+    const getFinishingName = useCallback((id: string): string => {
+        const configOptions = companyConfig?.productionSettings?.finishingOptions || [];
+        const found = configOptions.find((o: any) => o.id === id);
+        if (found) return found.name;
+        const names: Record<string, string> = {
+            binding: 'Binding', coverPages: 'Cover Pages', cutting: 'Cutting & Trimming',
+            holePunch: 'Hole Punching', folding: 'Folding', stapling: 'Stapling',
         };
+        return names[id] || id;
+    }, [companyConfig]);
 
+    const resolveFinishingCost = useCallback((id: string, pageCount: number, copyCount: number): number => {
+        if (!sp) return 0;
+        const savedFinishingSelections = Array.isArray(sp.finishingSelections) ? sp.finishingSelections : [];
+        const savedFinishingCostMap = (sp.finishingOptionCosts || {}) as Record<string, number>;
+        const enabledFinishingIds = ((sp.finishingEnabled || []) as string[]);
+        const savedCopies = Math.max(1, Number(sp.copies) || 1);
+        const savedFinishingFallbackPerOption = enabledFinishingIds.length > 0 && Number(sp.finishingCost) > 0
+            ? (Number(sp.finishingCost) / (enabledFinishingIds.length * savedCopies))
+            : 0;
+        const defaultFinishingCosts: Record<string, number> = {
+            binding: 150, coverPages: 20, cutting: 30, holePunch: 20, folding: 15, stapling: 10
+        };
+        const selection = savedFinishingSelections.find((option: any) => option?.id === id);
+        const configuredOption = companyConfig?.productionSettings?.finishingOptions?.find((option: any) => option?.id === id);
+        const configuredCost = Number(
+            selection?.price ?? savedFinishingCostMap[id] ?? finishingCostOverrides[id] ?? configuredOption?.price
+        ) || 0;
+        return configuredCost > 0
+            ? configuredCost
+            : (savedFinishingFallbackPerOption > 0 ? savedFinishingFallbackPerOption : (defaultFinishingCosts[id] || 0));
+    }, [sp, companyConfig, finishingCostOverrides]);
+
+    const costBreakdown = useMemo(() => {
+        let paperCost = 0;
+        let sheetsPerCopy = 0;
+        let totalSheets = 0;
+        let costPerSheet = 0;
+        if (paper && sp) {
+            sheetsPerCopy = Math.ceil(pages / 2);
+            totalSheets = sheetsPerCopy * copies;
+            const reamSize = Number(paper.conversionRate || paper.conversion_rate || 500);
+            const paperUnitCost = Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0);
+            costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
+            paperCost = Number((totalSheets * costPerSheet).toFixed(2));
+        }
+
+        let tonerCost = 0;
+        let tonerCostPerPage = 0;
+        if (toner && sp) {
+            const capacity = 20000;
+            const totalPagesVal = pages * copies;
+            const tonerUnitCost = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0);
+            tonerCostPerPage = tonerUnitCost / capacity;
+            tonerCost = Number((totalPagesVal * tonerCostPerPage).toFixed(2));
+        }
+
+        let finishingCost = 0;
+        const finishingDetails: { id: string; name: string; cost: number; total: number }[] = [];
+        if (sp) {
+            enabledFinishing.forEach((id) => {
+                const optionCost = resolveFinishingCost(id, pages, copies);
+                finishingDetails.push({
+                    id,
+                    name: getFinishingName(id),
+                    cost: optionCost,
+                    total: Number((optionCost * copies).toFixed(2)),
+                });
+                finishingCost += optionCost * copies;
+            });
+        }
+        finishingCost = Number(finishingCost.toFixed(2));
+
+        const baseCost = Number((paperCost + tonerCost + finishingCost).toFixed(2));
+        return { paperCost, tonerCost, finishingCost, baseCost, sheetsPerCopy, totalSheets, costPerSheet, tonerCostPerPage, finishingDetails };
+    }, [pages, copies, paper, toner, sp, enabledFinishing, resolveFinishingCost, getFinishingName]);
+
+    const computePageScaledCost = useCallback((pageCount: number, copyCount: number): number => {
         if (sp) {
             const savedPages = Math.max(1, Number(sp.pages) || 1);
             const savedCopies = Math.max(1, Number(sp.copies) || 1);
             const savedBaseCost = Number(sp.baseCost) || 0;
-
             if (savedBaseCost > 0 && savedPages === pageCount && savedCopies === copyCount) {
                 return savedBaseCost;
             }
-
-            let paperCost = 0;
-            const paper = inventory.find((i: any) => i.id === sp.paperItemId);
-            if (paper) {
-                const sheetsPerCopy = Math.ceil(pageCount / 2);
-                const totalSheets = sheetsPerCopy * copyCount;
-                const reamSize = Number(paper.conversionRate || paper.conversion_rate || 500);
-                const paperUnitCost = Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0);
-                const costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
-                paperCost = Number((totalSheets * costPerSheet).toFixed(2));
+            let paperCostVal = 0;
+            const paperItem = inventory.find((i: any) => i.id === sp.paperItemId);
+            if (paperItem) {
+                const sPerCopy = Math.ceil(pageCount / 2);
+                const tSheets = sPerCopy * copyCount;
+                const rSize = Number(paperItem.conversionRate || paperItem.conversion_rate || 500);
+                const pCost = Number(paperItem.cost_price || paperItem.cost_per_unit || paperItem.cost || 0);
+                const cPerSheet = rSize > 0 ? pCost / rSize : 0;
+                paperCostVal = Number((tSheets * cPerSheet).toFixed(2));
             }
-
-            let tonerCost = 0;
-            const toner = inventory.find((i: any) => i.id === sp.tonerItemId);
-            if (toner) {
+            let tonerCostVal = 0;
+            const tonerItem = inventory.find((i: any) => i.id === sp.tonerItemId);
+            if (tonerItem) {
                 const capacity = 20000;
-                const totalPages = pageCount * copyCount;
-                const tonerUnitCost = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0);
-                tonerCost = Number((totalPages * (tonerUnitCost / capacity)).toFixed(2));
+                const totalPagesVal = pageCount * copyCount;
+                const tCost = Number(tonerItem.cost_price || tonerItem.cost_per_unit || tonerItem.cost || 0);
+                tonerCostVal = Number((totalPagesVal * (tCost / capacity)).toFixed(2));
             }
 
-            const enabledFinishingIds = ((sp.finishingEnabled || []) as string[]);
-            const savedFinishingSelections = Array.isArray(sp.finishingSelections) ? sp.finishingSelections : [];
-            const savedFinishingCostMap = (sp.finishingOptionCosts || {}) as Record<string, number>;
-            const savedFinishingFallbackPerOption = enabledFinishingIds.length > 0 && Number(sp.finishingCost) > 0
-                ? (Number(sp.finishingCost) / (enabledFinishingIds.length * savedCopies))
-                : 0;
-
-            const finishingCost = enabledFinishingIds.reduce((sum: number, id: string) => {
-                const selection = savedFinishingSelections.find((option: any) => option?.id === id);
-                const configuredOption = companyConfig?.productionSettings?.finishingOptions?.find((option: any) => option?.id === id);
-                const configuredCost = Number(
-                    selection?.price
-                    ?? savedFinishingCostMap[id]
-                    ?? finishingCostOverrides[id]
-                    ?? configuredOption?.price
-                ) || 0;
-                const optionCost = configuredCost > 0
-                    ? configuredCost
-                    : (savedFinishingFallbackPerOption > 0 ? savedFinishingFallbackPerOption : (defaultFinishingCosts[id] || 0));
-
+            const finishingCostVal = enabledFinishing.reduce((sum: number, id: string) => {
+                const optionCost = resolveFinishingCost(id, pageCount, copyCount);
                 return sum + (optionCost * copyCount);
             }, 0);
 
-            return paperCost + tonerCost + finishingCost;
+            return Number((paperCostVal + tonerCostVal + finishingCostVal).toFixed(2));
         }
-
         const flatCostPerCopy = config?.baseLaborCost || config?.baseRate || service.cost || 0;
         const baselinePages = Number(service.pages) || 1;
         const scaledCostPerCopy = flatCostPerCopy * (pageCount / baselinePages);
         return scaledCostPerCopy * copyCount;
-    }, [service, inventory, config, companyConfig?.productionSettings?.finishingOptions, finishingCostOverrides]);
+    }, [service, inventory, config, sp, enabledFinishing, resolveFinishingCost]);
 
     useEffect(() => {
         let mounted = true;
@@ -366,20 +420,20 @@ export const ServiceCalculatorModal: React.FC<{
                         marginAmount: result.marginAmount,
                         rounding_difference: result.roundingDifference,
                         components: [],
-                            serviceDetails: {
-                                pages,
-                                copies,
-                                totalPages,
-                                unitCostPerPage,
-                                unitPricePerPage,
-                                unitCostPerCopy,
-                                unitPricePerCopy: result.unitPrice,
-                                totalCost: baseCost,
-                                totalPrice: result.totalPrice,
-                                calculatedTotalPrice: result.totalPrice,
-                                materials: [],
-                                adjustments: []
-                            }
+                        serviceDetails: {
+                            pages,
+                            copies,
+                            totalPages,
+                            unitCostPerPage,
+                            unitPricePerPage,
+                            unitCostPerCopy,
+                            unitPricePerCopy: result.unitPrice,
+                            totalCost: baseCost,
+                            totalPrice: result.totalPrice,
+                            calculatedTotalPrice: result.totalPrice,
+                            materials: [],
+                            adjustments: []
+                        }
                     };
                     setEnginePricing(transformed);
                 }
@@ -405,65 +459,128 @@ export const ServiceCalculatorModal: React.FC<{
         : 0;
     const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString()}%`;
 
+    const premiumCard = 'backdrop-blur-sm border border-slate-200/80 rounded-xl p-4 transition-all duration-200';
+    const premiumInput = 'w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all tabular-nums';
+
     if (!activePricing) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/40">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200 font-sans">
-                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <Settings className="w-4 h-4 text-indigo-600" />
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200 font-sans" style={{ fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45 }}>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10">
+                                <Calculator size={16} className="text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-[15px] font-bold text-white leading-snug">Service Configuration</h2>
+                                <p className="text-[11px] text-slate-400 font-medium">{service.name}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-[15px] font-semibold text-slate-800 leading-snug">Service Configuration</h2>
-                            <p className="text-[11px] text-slate-500 font-medium">{service.name}</p>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
+                            <X size={18} />
+                        </button>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                        <div className="flex-1">
+                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                                <FileText size={11} /> Pages
+                            </label>
+                            <input type="number" min={1} step={1} value={pages}
+                                onChange={e => setPages(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums placeholder-slate-500" />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                                <Layers size={11} /> Copies
+                            </label>
+                            <input type="number" min={1} value={copies}
+                                onChange={e => setCopies(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums placeholder-slate-500" />
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-rose-500">
-                        <X size={18} />
-                    </button>
                 </div>
 
-                <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-[12px] font-medium text-slate-600 flex items-center gap-1.5">
-                                <FileText className="w-3 h-3" /> Pages / Units
-                            </label>
-                            <input
-                                type="number"
-                                min={1}
-                                step={1}
-                                value={pages}
-                                onChange={e => {
-                                    const newValue = Math.max(1, parseInt(e.target.value || '1', 10) || 1);
-                                    setPages(newValue);
-                                }}
-                                onBlur={e => {
-                                    const finalValue = Math.max(1, parseInt(e.target.value || '1', 10) || 1);
-                                    setPages(finalValue);
-                                }}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all tabular-nums"
-                            />
+                <div className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1" style={{ background: '#F8FAFC' }}>
+                    {/* Paper & Toner */}
+                    {hasSmartPricing && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className={`${premiumCard} bg-white`}>
+                                <div className="flex items-center gap-2 text-indigo-700 mb-2">
+                                    <Package size={13} />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">Paper</span>
+                                </div>
+                                {paper ? (
+                                    <div>
+                                        <p className="text-[13px] font-semibold text-slate-800 truncate">{paper.name}</p>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                            {formatCurrency(costBreakdown.costPerSheet)} / sheet · {costBreakdown.totalSheets} sheets
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-[12px] text-slate-400 italic">No paper configured</p>
+                                )}
+                            </div>
+                            <div className={`${premiumCard} bg-white`}>
+                                <div className="flex items-center gap-2 text-indigo-700 mb-2">
+                                    <Printer size={13} />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">Toner</span>
+                                </div>
+                                {toner ? (
+                                    <div>
+                                        <p className="text-[13px] font-semibold text-slate-800 truncate">{toner.name}</p>
+                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                            {formatCurrency(costBreakdown.tonerCostPerPage)} / page
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-[12px] text-slate-400 italic">No toner configured</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-[12px] font-medium text-slate-600 flex items-center gap-1.5">
-                                <Layers className="w-3 h-3" /> Quantity / Copies
-                            </label>
-                            <input
-                                type="number"
-                                min={1}
-                                value={copies}
-                                onChange={e => setCopies(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all tabular-nums"
-                            />
-                        </div>
-                    </div>
+                    )}
 
-                    <div className="bg-slate-50 rounded-lg border border-slate-100 p-4 space-y-3">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
-                            <span className="text-[12px] font-semibold text-slate-600">Pricing Breakdown</span>
+                    {/* Finishing Options */}
+                    {hasSmartPricing && costBreakdown.finishingDetails.length > 0 && (
+                        <div className={`${premiumCard} bg-white`}>
+                            <div className="flex items-center gap-2 text-slate-700 mb-3">
+                                <Zap size={13} />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">Finishing Options</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {costBreakdown.finishingDetails.map(fd => {
+                                    const isOn = enabledFinishing.includes(fd.id);
+                                    return (
+                                        <button key={fd.id} type="button" onClick={() => {
+                                            setEnabledFinishing(prev =>
+                                                prev.includes(fd.id) ? prev.filter(id => id !== fd.id) : [...prev, fd.id]
+                                            );
+                                        }}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border-2 transition-all ${
+                                                isOn
+                                                    ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-sm'
+                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                            }`}>
+                                            <div className={`w-2 h-2 rounded-full ${isOn ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                                            {fd.name}
+                                            <span className={`text-[10px] ${isOn ? 'text-indigo-500' : 'text-slate-400'}`}>
+                                                {formatCurrency(fd.cost)}/copy
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cost Breakdown */}
+                    <div className={`${premiumCard} bg-white shadow-md border border-slate-200`}>
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <Calculator size={13} /> Cost Breakdown
+                            </span>
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-md border border-emerald-200">
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                                 <span className="text-[10px] font-semibold text-emerald-700">Live</span>
@@ -471,91 +588,110 @@ export const ServiceCalculatorModal: React.FC<{
                         </div>
 
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <span className="text-[13px] text-slate-700">Base Service Rate</span>
-                                    <p className="text-[10px] text-slate-400">{pages} pages × {copies} {copies === 1 ? 'copy' : 'copies'}</p>
+                            {hasSmartPricing && (
+                                <>
+                                    <div className="flex justify-between items-center py-1">
+                                        <span className="text-[12px] text-slate-600">Paper Cost</span>
+                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.paperCost)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-1">
+                                        <span className="text-[12px] text-slate-600">Toner Cost</span>
+                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.tonerCost)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-1">
+                                        <span className="text-[12px] text-slate-600">Finishing Cost</span>
+                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.finishingCost)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-1.5 border-t border-slate-100">
+                                        <span className="text-[13px] font-semibold text-slate-700">Base Cost</span>
+                                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.baseCost)}</span>
+                                    </div>
+                                </>
+                            )}
+                            {!hasSmartPricing && (
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-[12px] text-slate-600">Base Rate</span>
+                                    <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(activePricing.totalCost)}</span>
                                 </div>
-                                <span className="text-[13px] font-semibold text-slate-800 tabular-nums">{formatCurrency(activePricing.totalCost)}</span>
-                            </div>
+                            )}
 
                             {activePricing.adjustmentSnapshots && activePricing.adjustmentSnapshots.length > 0 && (
                                 activePricing.adjustmentSnapshots
                                     .filter((adj: any) => adj.name?.toLowerCase().includes('margin') ? false : true)
                                     .map((adj: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[13px] text-emerald-700">{adj.name}</span>
-                                            {adj.type === 'PERCENTAGE' && (
-                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-semibold">+{adj.value}%</span>
-                                            )}
+                                        <div key={i} className="flex justify-between items-center py-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[12px] text-emerald-700">{adj.name}</span>
+                                                {adj.type === 'PERCENTAGE' && (
+                                                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-semibold">+{adj.value}%</span>
+                                                )}
+                                            </div>
+                                            <span className="text-[12px] font-semibold text-emerald-700 tabular-nums">+{formatCurrency(adj.calculatedAmount)}</span>
                                         </div>
-                                        <span className="text-[13px] font-semibold text-emerald-700 tabular-nums">+{formatCurrency(adj.calculatedAmount)}</span>
-                                    </div>
-                                ))
+                                    ))
                             )}
 
                             {activePricing.marginAmount > 0 && activePricing.unitCostPerCopy > 0 && (
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-center py-1">
                                     <div className="flex items-center gap-1.5">
-                                        <span className="text-[13px] text-blue-700">Profit Margin</span>
-                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded font-semibold">
+                                        <span className="text-[12px] text-blue-700">Profit Margin</span>
+                                        <span className="text-[9px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded font-semibold">
                                             +{formatPercent(effectiveMarginPercent)}
                                         </span>
                                     </div>
-                                    <span className="text-[13px] font-semibold text-blue-700 tabular-nums">+{formatCurrency(activePricing.marginAmount)}</span>
+                                    <span className="text-[12px] font-semibold text-blue-700 tabular-nums">+{formatCurrency(activePricing.marginAmount)}</span>
                                 </div>
                             )}
 
                             {(activePricing.rounding_difference || 0) !== 0 && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[13px] text-slate-500">Round Up</span>
-                                    <span className="text-[13px] font-medium text-slate-500 tabular-nums">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-[12px] text-slate-500">Round Up</span>
+                                    <span className="text-[12px] font-medium text-slate-500 tabular-nums">
                                         +{formatCurrency(activePricing.rounding_difference * activePricing.copies)}
                                     </span>
                                 </div>
                             )}
 
-                            <div className="pt-2 border-t border-slate-200/60 flex justify-between items-center">
-                                <span className="text-[13px] font-semibold text-slate-800">Total Price</span>
+                            <div className="pt-2.5 border-t border-slate-200 flex justify-between items-center">
+                                <span className="text-[14px] font-bold text-slate-800">Total Price</span>
                                 <span className="text-[18px] font-bold text-indigo-600 tabular-nums">{formatCurrency(activePricing.totalPrice)}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-lg p-4">
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/10 rounded-full -translate-y-1/3 translate-x-1/3"></div>
+                    {/* Total Due */}
+                    <div className="relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-xl p-4">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full -translate-y-1/3 translate-x-1/3"></div>
                         <div className="relative flex justify-between items-end">
                             <div>
                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Due</p>
-                                <h3 className="text-[22px] font-bold text-white tabular-nums">
-                                    {formatCurrency(activePricing.totalPrice)}
-                                </h3>
+                                <h3 className="text-[24px] font-bold text-white tabular-nums">{formatCurrency(activePricing.totalPrice)}</h3>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                    {formatCurrency(activePricing.unitPricePerCopy)} / copy
+                                </p>
                             </div>
                             <div className="text-right">
-                                <div className="text-[10px] font-medium text-slate-400">Total Items</div>
-                                <div className="text-[14px] font-semibold text-white tabular-nums">{activePricing.totalPages} <span className="text-[10px] text-slate-400 font-normal">pages</span></div>
+                                <div className="text-[10px] font-medium text-slate-400">Total Pages</div>
+                                <div className="text-[14px] font-bold text-white tabular-nums">{activePricing.totalPages} <span className="text-[10px] text-slate-400 font-normal">pgs</span></div>
+                                <div className="text-[10px] text-slate-500 mt-0.5">{Math.ceil(pages / 2) * copies} sheets</div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-semibold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98]"
-                        >
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-1">
+                        <button onClick={onClose}
+                            className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98] shadow-sm">
                             Cancel
                         </button>
-                        <button
-                            onClick={() => onConfirm({
-                                ...activePricing,
-                                priceLocked: true,
-                                lockedTotalPrice: activePricing.totalPrice,
-                                lockedUnitPricePerCopy: activePricing.unitPricePerCopy,
-                                lockedUnitCostPerCopy: activePricing.unitCostPerCopy
-                            })}
-                            className="flex-[1.5] py-2 bg-indigo-600 text-white rounded-lg font-semibold text-[13px] hover:bg-indigo-700 shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-                        >
+                        <button onClick={() => onConfirm({
+                            ...activePricing,
+                            priceLocked: true,
+                            lockedTotalPrice: activePricing.totalPrice,
+                            lockedUnitPricePerCopy: activePricing.unitPricePerCopy,
+                            lockedUnitCostPerCopy: activePricing.unitCostPerCopy
+                        })}
+                            className="flex-[1.5] py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-[13px] hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
                             Add to Order <ArrowRight size={16} />
                         </button>
                     </div>

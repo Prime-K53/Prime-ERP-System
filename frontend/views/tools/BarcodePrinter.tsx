@@ -1,11 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Printer, Plus, Minus, X, ScanLine, Box, FileText, Loader2 } from 'lucide-react';
+import { Search, Printer, Plus, Minus, X, ScanLine, Box, FileText, Loader2, Download } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useInventoryStore } from '../../stores/inventoryStore';
 import { Item } from '../../types';
+import html2canvas from 'html2canvas';
 
 const BarcodePrinter: React.FC = () => {
     const { companyConfig, notify } = useAuth();
@@ -52,6 +53,24 @@ const BarcodePrinter: React.FC = () => {
             return;
         }
         window.print();
+    };
+
+    const handleSaveImage = async () => {
+        if (printQueue.length === 0) {
+            notify("Print queue is empty", "error");
+            return;
+        }
+        const el = document.getElementById('printable-labels');
+        if (!el) return;
+        try {
+            const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false });
+            const link = document.createElement('a');
+            link.download = `barcode-labels-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (err) {
+            notify("Failed to save image", "error");
+        }
     };
 
     const items = Array.isArray(inventory) ? inventory : [];
@@ -185,6 +204,13 @@ const BarcodePrinter: React.FC = () => {
                             </select>
                         </div>
                         <div className="flex gap-2">
+                            <button 
+                                onClick={handleSaveImage} 
+                                disabled={printQueue.length === 0}
+                                className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                                <Download size={14}/> Save as Image
+                            </button>
                             <button 
                                 onClick={handlePrint} 
                                 disabled={printQueue.length === 0}
