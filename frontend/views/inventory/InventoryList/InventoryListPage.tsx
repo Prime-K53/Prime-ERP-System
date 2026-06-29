@@ -176,7 +176,7 @@ export const InventoryListPage: React.FC = () => {
         stock: 0,
         status: 'Active',
       };
-      if (tabType === 'printing') {
+      if (tabType === 'printing' || tabType === 'product') {
         base.classification = 'printing_service';
       }
       setEditingItem(base as Item);
