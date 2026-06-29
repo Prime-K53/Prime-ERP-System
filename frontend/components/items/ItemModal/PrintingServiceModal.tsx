@@ -729,7 +729,7 @@ export const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, a
         </div>
         {/* Right Sidebar */}
         <div className="w-72 shrink-0 hidden lg:flex flex-col gap-4 overflow-y-auto custom-scrollbar min-h-0">
-          <div className={`${cardClass} sticky top-0`}>
+          <div className={cardClass}>
             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Live Quote</h4>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between"><span className="text-slate-400">Quantity</span><span className="font-semibold text-slate-700">1,000</span></div>
