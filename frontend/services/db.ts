@@ -1021,7 +1021,10 @@ export const dbService = {
     },
 
     async getAll<T>(storeName: keyof NexusDB): Promise<T[]> {
+        let triedCloud = false
+
         if (isCloudOnlyMode() && !LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
+            triedCloud = true
             try {
                 const cloudValues = await cloudDb.getAll<T>(String(storeName));
                 if (cloudValues !== null && cloudValues.length > 0) {
@@ -1033,7 +1036,7 @@ export const dbService = {
         }
 
         // Cloud-primary: read from Supabase first when online
-        if (shouldUseCloud() && !LOCAL_ONLY_STORES.has(String(storeName))) {
+        if (!triedCloud && shouldUseCloud() && !LOCAL_ONLY_STORES.has(String(storeName))) {
             try {
                 const cloudValues = await cloudDb.getAll<T>(String(storeName));
                 if (cloudValues !== null && cloudValues.length > 0) {

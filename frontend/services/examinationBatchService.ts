@@ -94,16 +94,23 @@ const EXAM_PRICING_SETTINGS_KEY = 'examinationPricingSettings';
 const DEFAULT_TONER_PAGES_PER_UNIT = 20000;
 const DEFAULT_PAPER_CONVERSION_RATE = 500;
 let authCooldownUntil = 0;
+let backendCooldownUntil = 0;
 
 const isAuthRetryCoolingDown = () => authCooldownUntil > Date.now();
 const markAuthRetryCooldown = () => {
   authCooldownUntil = Date.now() + AUTH_RETRY_COOLDOWN_MS;
 };
 
+const isBackendCoolingDown = () => backendCooldownUntil > Date.now();
+const markBackendCooldown = () => {
+  backendCooldownUntil = Date.now() + AUTH_RETRY_COOLDOWN_MS;
+};
+
+const EXAM_BACKEND_URL = (import.meta as any)?.env?.VITE_EXAM_BACKEND_URL;
+
 const API_BASE_CANDIDATES = () => {
-  const base = API_BASE_URL;
-  if (!base || isAuthRetryCoolingDown() || !apiClient.canUseRemoteApi()) return [];
-  return [`${base}/examination`];
+  if (!EXAM_BACKEND_URL || isAuthRetryCoolingDown() || isBackendCoolingDown() || !apiClient.canUseRemoteApi()) return [];
+  return [`${EXAM_BACKEND_URL}/examination`];
 };
 
 const isProd = Boolean((import.meta as any)?.env?.PROD);
@@ -674,6 +681,9 @@ const fetchWithTimeout = async (
     if (isAuthUnavailableError(error)) {
       markAuthRetryCooldown();
     }
+    if (isOfflineError(error)) {
+      markBackendCooldown();
+    }
     throw error;
   }
 };
@@ -791,8 +801,8 @@ export const examinationBatchService = {
       if (status && status < 500 && !shouldFallback) {
         throw error;
       }
-      if (localBatches.length > 0 && shouldFallback) {
-        return localBatches as ExaminationBatch[];
+      if (shouldFallback) {
+        return (localBatches.length > 0 ? localBatches : await getLocalBatches()) as ExaminationBatch[];
       }
     }
 

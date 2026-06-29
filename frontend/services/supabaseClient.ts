@@ -11,12 +11,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-const TIMEOUT_MS = 20000
+const TIMEOUT_MS = 10000
 
 function fetchWithTimeout(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), TIMEOUT_MS)
-  return fetch(url, { ...options, signal: controller.signal })
+
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  return fetch(url, { ...options, signal })
     .finally(() => clearTimeout(id))
 }
 

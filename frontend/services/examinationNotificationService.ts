@@ -11,9 +11,11 @@ const FALLBACK_CANDIDATE_TIMEOUT_MS = 12000;
 const BACKEND_RETRY_COOLDOWN_MS = 60000;
 const PASSWORD_BYPASS_USER_ID = 'USR-PASSWORD-BYPASS';
 
+const EXAM_BACKEND_URL = (import.meta as any)?.env?.VITE_EXAM_BACKEND_URL;
+
 const API_BASE_CANDIDATES = () => {
-  const base = API_BASE_URL;
-  return base ? [`${base}/examination`] : [];
+  if (!EXAM_BACKEND_URL) return [];
+  return [`${EXAM_BACKEND_URL}/examination`];
 };
 let backendRetryAfter = 0;
 
