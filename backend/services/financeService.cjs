@@ -1,0 +1,266 @@
+const crypto = require('crypto');
+
+class FinanceService {
+  constructor(db) {
+    this.db = db;
+  }
+
+  _run(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve({ changes: this.changes, lastID: this.lastID });
+      });
+    });
+  }
+
+  _get(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
+  _all(sql, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  }
+
+  // ── Chart of Accounts ──────────────────────────────────────────────
+  async getAccounts(companyId) {
+    return this._all(
+      'SELECT * FROM chart_of_accounts WHERE company_id = ? ORDER BY code',
+      [companyId]
+    );
+  }
+
+  async getAccountById(id, companyId) {
+    return this._get(
+      'SELECT * FROM chart_of_accounts WHERE id = ? AND company_id = ?',
+      [id, companyId]
+    );
+  }
+
+  async createAccount(data, companyId) {
+    const id = data.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO chart_of_accounts (id, code, name, type, category, subtype, parent_id, is_active, description, company_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.code, data.name, data.type, data.category || null,
+       data.subtype || null, data.parent_id || null,
+       data.is_active != null ? (data.is_active ? 1 : 0) : 1,
+       data.description || null, companyId]
+    );
+    return this.getAccountById(id, companyId);
+  }
+
+  async updateAccount(id, data, companyId) {
+    const fields = [];
+    const params = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      const col = { code: 'code', name: 'name', type: 'type', category: 'category',
+        subtype: 'subtype', parent_id: 'parent_id', is_active: 'is_active',
+        description: 'description' }[key];
+      if (!col) continue;
+      fields.push(`${col} = ?`);
+      params.push(key === 'is_active' ? (value ? 1 : 0) : value);
+    }
+    if (!fields.length) return this.getAccountById(id, companyId);
+    params.push(id, companyId);
+    await this._run(
+      `UPDATE chart_of_accounts SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`,
+      params
+    );
+    return this.getAccountById(id, companyId);
+  }
+
+  async deleteAccount(id, companyId) {
+    await this._run(
+      'DELETE FROM chart_of_accounts WHERE id = ? AND company_id = ?',
+      [id, companyId]
+    );
+    return { success: true };
+  }
+
+  // ── Ledger ─────────────────────────────────────────────────────────
+  async getLedger(companyId, accountId) {
+    let sql = 'SELECT * FROM ledger_entries WHERE company_id = ?';
+    const params = [companyId];
+    if (accountId) {
+      sql += ' AND account_id = ?';
+      params.push(accountId);
+    }
+    sql += ' ORDER BY entry_date DESC, created_at DESC';
+    return this._all(sql, params);
+  }
+
+  async saveLedgerEntry(entry, companyId) {
+    const id = entry.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO ledger_entries (id, account_id, account_code, account_name, entry_type, amount, currency, description, reference_type, reference_id, journal_id, entry_date, company_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, entry.account_id, entry.account_code || null, entry.account_name || null,
+       entry.entry_type, entry.amount, entry.currency || 'USD',
+       entry.description || null, entry.reference_type || null,
+       entry.reference_id || null, entry.journal_id || null,
+       entry.entry_date, companyId, entry.created_by || null]
+    );
+    return this._get('SELECT * FROM ledger_entries WHERE id = ?', [id]);
+  }
+
+  // ── Expenses ───────────────────────────────────────────────────────
+  async getExpenses(companyId) {
+    return this._all(
+      'SELECT * FROM expenses WHERE company_id = ? ORDER BY expense_date DESC',
+      [companyId]
+    );
+  }
+
+  async createExpense(data, companyId) {
+    const id = data.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO expenses (id, category, vendor_name, amount, currency, description, expense_date, account_id, payment_method, status, receipt_url, company_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.category, data.vendor_name || null, data.amount,
+       data.currency || 'USD', data.description || null,
+       data.expense_date, data.account_id || null,
+       data.payment_method || null, data.status || 'pending',
+       data.receipt_url || null, companyId, data.created_by || null]
+    );
+    return this._get('SELECT * FROM expenses WHERE id = ?', [id]);
+  }
+
+  async updateExpense(id, data, companyId) {
+    const fields = [];
+    const params = [];
+    const allowed = ['category', 'vendor_name', 'amount', 'currency', 'description',
+      'expense_date', 'account_id', 'payment_method', 'status', 'receipt_url'];
+    for (const field of allowed) {
+      if (data[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        params.push(data[field] === null ? null : data[field]);
+      }
+    }
+    if (!fields.length) return this._get('SELECT * FROM expenses WHERE id = ? AND company_id = ?', [id, companyId]);
+    params.push(id, companyId);
+    await this._run(
+      `UPDATE expenses SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`,
+      params
+    );
+    return this._get('SELECT * FROM expenses WHERE id = ?', [id]);
+  }
+
+  async deleteExpense(id, companyId) {
+    await this._run('DELETE FROM expenses WHERE id = ? AND company_id = ?', [id, companyId]);
+    return { success: true };
+  }
+
+  // ── Income ─────────────────────────────────────────────────────────
+  async getIncome(companyId) {
+    return this._all(
+      'SELECT * FROM income WHERE company_id = ? ORDER BY income_date DESC',
+      [companyId]
+    );
+  }
+
+  async createIncome(data, companyId) {
+    const id = data.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO income (id, source, amount, currency, description, income_date, account_id, payment_method, reference, company_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.source, data.amount, data.currency || 'USD',
+       data.description || null, data.income_date,
+       data.account_id || null, data.payment_method || null,
+       data.reference || null, companyId, data.created_by || null]
+    );
+    return this._get('SELECT * FROM income WHERE id = ?', [id]);
+  }
+
+  async deleteIncome(id, companyId) {
+    await this._run('DELETE FROM income WHERE id = ? AND company_id = ?', [id, companyId]);
+    return { success: true };
+  }
+
+  // ── Budgets ────────────────────────────────────────────────────────
+  async getBudgets(companyId) {
+    return this._all(
+      'SELECT * FROM budgets WHERE company_id = ? ORDER BY fiscal_year DESC, name',
+      [companyId]
+    );
+  }
+
+  async createBudget(data, companyId) {
+    const id = data.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO budgets (id, name, account_id, fiscal_year, period, amount, company_id, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.name, data.account_id || null, data.fiscal_year,
+       data.period, data.amount, companyId, data.notes || null]
+    );
+    return this._get('SELECT * FROM budgets WHERE id = ?', [id]);
+  }
+
+  async updateBudget(id, data, companyId) {
+    const fields = [];
+    const params = [];
+    const allowed = ['name', 'account_id', 'fiscal_year', 'period', 'amount', 'spent', 'notes'];
+    for (const field of allowed) {
+      if (data[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        params.push(data[field] === null ? null : data[field]);
+      }
+    }
+    if (!fields.length) return this._get('SELECT * FROM budgets WHERE id = ? AND company_id = ?', [id, companyId]);
+    params.push(id, companyId);
+    await this._run(
+      `UPDATE budgets SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`,
+      params
+    );
+    return this._get('SELECT * FROM budgets WHERE id = ?', [id]);
+  }
+
+  async deleteBudget(id, companyId) {
+    await this._run('DELETE FROM budgets WHERE id = ? AND company_id = ?', [id, companyId]);
+    return { success: true };
+  }
+
+  // ── Transfers ──────────────────────────────────────────────────────
+  async getTransfers(companyId) {
+    return this._all(
+      `SELECT t.*, fa.name as from_account_name, ta.name as to_account_name
+       FROM transfers t
+       LEFT JOIN chart_of_accounts fa ON t.from_account_id = fa.id
+       LEFT JOIN chart_of_accounts ta ON t.to_account_id = ta.id
+       WHERE t.company_id = ? ORDER BY t.created_at DESC`,
+      [companyId]
+    );
+  }
+
+  async createTransfer(data, companyId, userId) {
+    const id = data.id || crypto.randomUUID();
+    await this._run(
+      `INSERT INTO transfers (id, from_account_id, to_account_id, amount, currency, description, status, reference, company_id, created_by, executed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.from_account_id, data.to_account_id, data.amount,
+       data.currency || 'USD', data.description || null, 'completed',
+       data.reference || null, companyId, userId,
+       new Date().toISOString()]
+    );
+    return this._get(
+      `SELECT t.*, fa.name as from_account_name, ta.name as to_account_name
+       FROM transfers t
+       LEFT JOIN chart_of_accounts fa ON t.from_account_id = fa.id
+       LEFT JOIN chart_of_accounts ta ON t.to_account_id = ta.id
+       WHERE t.id = ?`, [id]
+    );
+  }
+}
+
+module.exports = FinanceService;

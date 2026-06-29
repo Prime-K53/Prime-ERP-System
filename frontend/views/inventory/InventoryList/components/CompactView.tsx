@@ -1,0 +1,38 @@
+import React from 'react';
+import { Package } from 'lucide-react';
+import type { Item } from '../../../../types';
+import { StockBadge, RowIndicators } from './RowIndicators';
+
+interface Props {
+  items: Item[];
+  onView: (item: Item) => void;
+  onEdit: (item: Item) => void;
+}
+
+export const CompactView: React.FC<Props> = ({ items, onView, onEdit }) => (
+  <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden divide-y divide-[#F1F5F9] shadow-sm">
+    {items.map((item, idx) => (
+      <div key={`${item.id}-${idx}`} onClick={() => onView(item)}
+        className="flex items-center gap-4 px-4 py-[7px] cursor-pointer transition-colors hover:bg-blue-50/50">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#F8FAFC', color: '#94A3B8' }}>
+          <Package size={16} />
+        </div>
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <span className="text-[12.5px] font-medium truncate" style={{ color: '#0F172A' }}>{item.name}</span>
+          <span className="font-mono text-[12.5px] shrink-0" style={{ color: '#64748B' }}>{item.sku}</span>
+          <span className="inline-flex px-[9px] py-[3px] rounded-[99px] text-[12px] shrink-0" style={{ background: '#F8FAFC', color: '#475569' }}>{item.type}</span>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <RowIndicators item={item} />
+          <StockBadge item={item} />
+          <span className="font-mono text-[12.5px] tabular-nums" style={{ color: '#64748B' }}>{(item.costPrice || item.cost || 0).toFixed(2)}</span>
+          <span className="font-mono text-[12.5px] font-medium tabular-nums" style={{ color: '#2563EB' }}>{(item.sellingPrice || item.price || 0).toFixed(2)}</span>
+        </div>
+        <button onClick={e => { e.stopPropagation(); onEdit(item); }}
+          className="px-3 py-1 text-xs font-medium rounded-xl border border-[#E2E8F0] bg-white text-[#475569] hover:bg-blue-50/50 transition-all shadow-sm shrink-0">
+          Edit
+        </button>
+      </div>
+    ))}
+  </div>
+);

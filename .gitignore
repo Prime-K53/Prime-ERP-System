@@ -1,0 +1,15 @@
+node_modules
+.pnpm
+.pnpm-store
+dist
+build
+.env
+.env.local
+*.log
+*.db
+*.db-journal
+.opencode
+.vite
+coverage
+.DS_Store
+Thumbs.db

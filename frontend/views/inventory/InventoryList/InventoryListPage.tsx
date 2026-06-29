@@ -1,0 +1,1101 @@
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { Loader2, LayoutDashboard, Boxes, Droplets, Package, PenTool, Printer, Sparkles, BrainCircuit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useInventory } from '../../../context/InventoryContext';
+import { useAuth } from '../../../context/AuthContext';
+import { ItemModal } from '../../../components/items/ItemModal';
+import StockAdjustmentModal from '../components/StockAdjustmentModal';
+import SmartAdjustModal from '../components/SmartAdjustModal';
+import { SmartStockInsights } from './components/SmartStockInsights';
+import { useInventoryList } from './hooks/useInventoryList';
+import { InventoryTable } from './components/InventoryTable';
+import { Pagination } from './components/Pagination';
+import { EmptyState } from './components/EmptyState';
+import { InventoryDashboard } from './components/InventoryDashboard';
+import { FilterPanel } from './components/FilterPanel';
+import '../../inventory/inventory-reference.css';
+import type { Item } from '../../../types';
+import { BulkActionToolbar } from './components/BulkActionToolbar';
+import { BulkEditModal } from './modals/BulkEditModal';
+import { AssignModal } from './modals/AssignModal';
+import { PrintLabelModal } from './modals/PrintLabelModal';
+
+function money(n: number): string {
+  n = Number(n) || 0;
+  return 'MK ' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function num(v: any): number {
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function esc(s: any): string {
+  return String(s == null ? '' : s);
+}
+
+type TabKey = 'dashboard' | 'raw' | 'consumable' | 'product' | 'stationery' | 'printing';
+
+export const InventoryListPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { addItem, updateItem, deleteItem, warehouses } = useInventory();
+  const { notify } = useAuth();
+
+  const {
+    allItems, loading, search, setSearch,
+    filters, setFilter, resetFilters,
+    categories, brands, warehouses: warehouseIds,
+    filterPresets, savePreset, loadPreset, deletePreset,
+    sortKey, sortDir, toggleSort,
+    page, setPage, pageSize, setPageSize,
+    safePage, totalPages, paginatedItems, filteredItems,
+    selectedIds, toggleSelect, toggleSelectAll, clearSelection,
+    refresh,
+  } = useInventoryList();
+
+  const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
+  const [tabSearch, setTabSearch] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [lockClassification, setLockClassification] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [adjustingItem, setAdjustingItem] = useState<Item | null>(null);
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [assignMode, setAssignMode] = useState<'warehouse' | 'supplier'>('warehouse');
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [printMode, setPrintMode] = useState<'barcode' | 'qrcode' | 'label'>('label');
+  const [isSmartAdjustOpen, setIsSmartAdjustOpen] = useState(false);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+
+  const selectedItems = useMemo(() => allItems.filter(i => selectedIds.has(i.id)), [allItems, selectedIds]);
+
+  const handleTabSelectAll = useCallback((items: Item[]) => {
+    const allSelected = items.length > 0 && items.every(i => selectedIds.has(i.id));
+    if (allSelected) {
+      items.forEach(i => { if (selectedIds.has(i.id)) toggleSelect(i.id); });
+    } else {
+      items.forEach(i => { if (!selectedIds.has(i.id)) toggleSelect(i.id); });
+    }
+  }, [selectedIds, toggleSelect]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!window.confirm(`Delete ${selectedItems.length} item(s)? This cannot be undone.`)) return;
+    try {
+      await Promise.all(selectedItems.map(i => deleteItem(i.id)));
+      notify?.(`${selectedItems.length} item(s) deleted`, 'success');
+      clearSelection();
+      refresh();
+    } catch (error: any) {
+      notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [selectedItems, deleteItem, notify, clearSelection, refresh]);
+
+  const handleBulkArchive = useCallback(async () => {
+    if (!window.confirm(`Archive ${selectedItems.length} item(s)?`)) return;
+    try {
+      await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
+      notify?.(`${selectedItems.length} item(s) archived`, 'success');
+      clearSelection();
+      refresh();
+    } catch (error: any) {
+      notify?.(`Archive failed: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [selectedItems, updateItem, notify, clearSelection, refresh]);
+
+  const handleBulkActivate = useCallback(async () => {
+    try {
+      await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Active' })));
+      notify?.(`${selectedItems.length} item(s) activated`, 'success');
+      clearSelection();
+      refresh();
+    } catch (error: any) {
+      notify?.(`Activate failed: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [selectedItems, updateItem, notify, clearSelection, refresh]);
+
+  const handleBulkDeactivate = useCallback(async () => {
+    if (!window.confirm(`Deactivate ${selectedItems.length} item(s)?`)) return;
+    try {
+      await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
+      notify?.(`${selectedItems.length} item(s) deactivated`, 'success');
+      clearSelection();
+      refresh();
+    } catch (error: any) {
+      notify?.(`Deactivate failed: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [selectedItems, updateItem, notify, clearSelection, refresh]);
+
+  const handleExportSelected = useCallback(() => {
+    if (selectedItems.length === 0) return;
+    const headers = ['Name', 'SKU', 'Type', 'Status', 'Stock', 'Cost Price', 'Selling Price', 'Category', 'Brand'];
+    const rows = selectedItems.map(i => [
+      i.name, i.sku || '', i.type || '', i.status || 'Active',
+      String(i.stock || 0), String(i.costPrice || i.cost || 0),
+      String(i.sellingPrice || i.price || 0), i.category || '', i.brand || '',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inventory-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify?.(`Exported ${selectedItems.length} item(s)`, 'success');
+  }, [selectedItems, notify]);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openActionMenu) setOpenActionMenu(null);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openActionMenu]);
+
+  const typeForTab: Record<string, string> = {
+    raw: 'Raw Material',
+    consumable: 'Material',
+    product: 'Product',
+    stationery: 'Stationery',
+    printing: 'Service',
+  };
+
+  const handleNewItem = useCallback((tabType?: string) => {
+    if (tabType && typeForTab[tabType]) {
+      const base: Record<string, any> = {
+        id: '',
+        name: '',
+        type: typeForTab[tabType],
+        sku: '',
+        unit: 'pcs',
+        costPrice: 0,
+        sellingPrice: 0,
+        stock: 0,
+        status: 'Active',
+      };
+      if (tabType === 'printing') {
+        base.classification = 'printing_service';
+      }
+      setEditingItem(base as Item);
+      setLockClassification(true);
+    } else {
+      setEditingItem(null);
+      setLockClassification(false);
+    }
+    setIsModalOpen(true);
+  }, []);
+
+  const handleEditItem = useCallback((item: Item) => {
+    setEditingItem(item);
+    setLockClassification(true);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+    setLockClassification(false);
+  }, []);
+
+  const handleSaveItem = useCallback(async (item: Item) => {
+    try {
+      if (item.id && allItems.some(i => i.id === item.id)) {
+        await updateItem(item);
+        notify?.('Item updated successfully', 'success');
+      } else {
+        await addItem(item);
+        notify?.('Item created successfully', 'success');
+      }
+      refresh();
+    } catch (error: any) {
+      notify?.(`Save failed: ${error?.message || 'Unknown error'}`, 'error');
+      throw error;
+    }
+  }, [allItems, updateItem, addItem, notify, refresh]);
+
+  const handleViewItem = useCallback((item: Item) => {
+    navigate(`/supply-chain/inventory/${item.id}`);
+  }, [navigate]);
+
+const handleProduce = useCallback((item: Item) => {
+    setActiveTab('dashboard');
+  }, [setActiveTab]);
+
+  const toggleActionMenu = useCallback((id: string) => {
+    setOpenActionMenu(prev => prev === id ? null : id);
+  }, []);
+
+  const closeActionMenu = useCallback(() => {
+    setOpenActionMenu(null);
+  }, []);
+
+  const handleDuplicate = useCallback(async (item: Item) => {
+    const dup = {
+      ...item,
+      id: '',
+      name: `${item.name} (Copy)`,
+      sku: item.sku ? `${item.sku}-COPY` : '',
+    };
+    setEditingItem(dup as Item);
+    setLockClassification(true);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleOpenAdjustStock = useCallback((item: Item) => {
+    setAdjustingItem(item);
+    setIsAdjustModalOpen(true);
+  }, []);
+
+  const handleTransferStock = useCallback((item: Item) => {
+    navigate(`/supply-chain/inventory/${item.id}?tab=warehouses`);
+  }, [navigate]);
+
+  const handleToggleStatus = useCallback(async (item: Item) => {
+    const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
+    if (!window.confirm(`${newStatus === 'Inactive' ? 'Archive' : 'Activate'} "${item.name}"?`)) return;
+    try {
+      await updateItem({ ...item, status: newStatus });
+      notify?.(`${item.name} ${newStatus === 'Inactive' ? 'archived' : 'activated'}`, 'success');
+      refresh();
+    } catch (error: any) {
+      notify?.(`Failed to update status: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [updateItem, notify, refresh]);
+
+  const handlePrintBarcode = useCallback((item: Item) => {
+    navigate(`/internal-tools/barcodes?item=${encodeURIComponent(item.id)}`);
+  }, [navigate]);
+
+  const handlePrintQR = useCallback((item: Item) => {
+    const win = window.open('', '_blank');
+    if (!win) { notify?.('Popup blocked. Allow popups for this site.', 'error'); return; }
+    const sp = item.sellingPrice || item.price || 0;
+    win.document.write(`<!DOCTYPE html><html><head><title>QR - ${esc(item.name)}</title><style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;text-align:center;background:#f8fafc}.label{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:12px auto;display:inline-block;box-shadow:0 4px 12px rgba(0,0,0,.08)}.name{font-weight:700;font-size:14px;color:#0f172a;margin-bottom:8px}.qr-grid{display:grid;grid-template-columns:repeat(11,8px);grid-template-rows:repeat(11,8px);gap:1px;justify-content:center;margin:12px 0}.cell{background:#fff;border-radius:1px}.cell.dark{background:#0f172a}.meta{font-size:10px;color:#64748b;font-family:'Courier New',monospace;margin-top:6px}</style></head><body><div class="label"><div class="name">${esc(item.name)}</div><div class="qr-grid">${Array.from({length:121},(_,i)=>{const r=Math.floor(i/11),c=i%11;return r===0||r===10||c===0||c===10||(r>=2&&r<=4&&c>=2&&c<=4)||(r>=2&&r<=4&&c>=7&&c<=9)||(r>=7&&r<=9&&c>=2&&c<=4)||(r===7&&c>=7&&c<=8)||(r===8&&c>=7&&c<=9)||(r===9&&c===8)||(r===5&&c===5)?'<div class="cell dark"></div>':'<div class="cell"></div>';}).join('')}</div><div class="meta">${esc(item.sku || 'N/A')}${sp>0 ? ` · ${'MK ' + sp.toFixed(2)}` : ''}</div></div><script>window.print()</script></body></html>`);
+    win.document.close();
+  }, [notify]);
+
+  const handleDeleteItem = useCallback(async (item: Item) => {
+    if (!window.confirm(`Delete "${item.name}"?`)) return;
+    try {
+      await deleteItem(item.id);
+      notify?.('Item deleted', 'success');
+      refresh();
+      clearSelection();
+    } catch (error: any) {
+      notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
+    }
+  }, [deleteItem, notify, refresh, clearSelection]);
+
+  // Build all items rows for InventoryTable on dashboard
+  const availableColumns = ['Name', 'SKU', 'Classification', 'Status', 'Stock', 'Base Unit', 'Cost Price', 'Selling Price', 'Markup'];
+
+  // Derived tab data
+  const rawMaterials = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Raw Material'), [allItems]);
+  const consumables = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Consumable'), [allItems]);
+  const products = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Product'), [allItems]);
+  const stationery = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Stationery'), [allItems]);
+  const printingServices = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Service' || (i as Record<string, unknown>).classification === 'Printing Service'), [allItems]);
+
+  const lowStock = useCallback((item: Item) => {
+    return item.reorderPoint != null && Number(item.stock) <= Number(item.reorderPoint);
+  }, []);
+
+  const adjustStock = useCallback(async (item: Item, delta: number) => {
+    const updated = { ...item, stock: Math.max(0, num(item.stock) + delta) };
+    try {
+      await updateItem(updated);
+      refresh();
+    } catch { /* ignore */ }
+  }, [updateItem, refresh]);
+
+  const deleteSimple = useCallback(async (item: Item) => {
+    if (!window.confirm(`Delete "${item.name}"?`)) return;
+    try {
+      await deleteItem(item.id);
+      refresh();
+    } catch { /* ignore */ }
+  }, [deleteItem, refresh]);
+
+  if (loading) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden" style={{ background: '#F3F0EC' }}>
+        <div className="flex items-center justify-center py-20 flex-1">
+          <Loader2 size={32} className="animate-spin text-slate-300" />
+        </div>
+      </div>
+    );
+  }
+
+  if (allItems.length === 0) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden" style={{ background: '#F3F0EC' }}>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-[1600px] mx-auto w-full">
+          <EmptyState type="no_items" onNewItem={handleNewItem} />
+        </div>
+      </div>
+    );
+  }
+
+  const filteredForTab = activeTab === 'raw' ? rawMaterials
+    : activeTab === 'consumable' ? consumables
+    : activeTab === 'product' ? products
+    : activeTab === 'stationery' ? stationery
+    : activeTab === 'printing' ? printingServices
+    : allItems;
+
+  const searchFiltered = filteredForTab.filter(i => {
+    const q = tabSearch.toLowerCase();
+    if (!q) return true;
+    return (i.name || '').toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: '#F3F0EC' }}>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="inventory-module">
+          {/* Module head */}
+          <div className="module-head">
+            <div className="eyebrow">Inventory Management</div>
+            <h1 className="module-title">Inventory</h1>
+          </div>
+
+          {/* Tabs */}
+          <div className="dash-tabs">
+            {([
+              { key: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+              { key: 'raw', label: 'Raw Materials', icon: Boxes },
+              { key: 'consumable', label: 'Consumables', icon: Droplets },
+              { key: 'product', label: 'Products', icon: Package },
+              { key: 'stationery', label: 'Stationery', icon: PenTool },
+              { key: 'printing', label: 'Printing Service', icon: Printer },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button key={key} className={`dash-tab ${activeTab === key ? 'active' : ''}`}
+                onClick={() => setActiveTab(key as TabKey)}>
+                <Icon size={15} strokeWidth={2.2} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Filter & Search row */}
+          <div className="flex items-center gap-2 mb-3">
+            <FilterPanel
+              filters={filters}
+              onSetFilter={setFilter}
+              onReset={resetFilters}
+              presets={filterPresets}
+              onSavePreset={savePreset}
+              onLoadPreset={loadPreset}
+              onDeletePreset={deletePreset}
+              categories={categories}
+              brands={brands}
+              warehouses={warehouseIds}
+            />
+            <div className="flex gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={() => setIsSmartAdjustOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
+              >
+                <Sparkles size={14} />
+                Smart Adjust
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsInsightsOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
+              >
+                <BrainCircuit size={14} />
+                AI Insights
+              </button>
+            </div>
+          </div>
+
+          {/* ============ DASHBOARD ============ */}
+          {activeTab === 'dashboard' && (
+            <InventoryDashboard allItems={allItems} warehouses={warehouses} onViewItem={handleViewItem} />
+          )}
+
+          {/* ============ RAW MATERIALS / CONSUMABLES ============ */}
+          {(activeTab === 'raw' || activeTab === 'consumable') && (
+            <>
+              <div className="page-head">
+                <div>
+                  <div className="eyebrow">Inputs &middot; Not For Sale</div>
+                  <h1 className="pp">
+                    {activeTab === 'raw' ? 'Raw Materials' : 'Consumables'}
+                  </h1>
+                </div>
+                <button className="pp-btn pp-btn-primary" onClick={() => handleNewItem(activeTab)}>
+                   + Add {activeTab === 'raw' ? 'Raw Material' : 'Consumable'}
+                 </button>
+              </div>
+              <BulkActionToolbar
+                selectedCount={selectedIds.size}
+                onBulkEdit={() => setIsBulkEditOpen(true)}
+                onAssignWarehouse={() => { setAssignMode('warehouse'); setIsAssignOpen(true); }}
+                onAssignSupplier={() => { setAssignMode('supplier'); setIsAssignOpen(true); }}
+                onPrintLabels={() => { setPrintMode('label'); setIsPrintOpen(true); }}
+                onExportSelected={handleExportSelected}
+                onArchive={handleBulkArchive}
+                onActivate={handleBulkActivate}
+                onDeactivate={handleBulkDeactivate}
+                onGenerateBarcodes={() => { setPrintMode('barcode'); setIsPrintOpen(true); }}
+                onGenerateQRCodes={() => { setPrintMode('qrcode'); setIsPrintOpen(true); }}
+                onStockAdjust={() => { if (selectedItems.length > 0) { setAdjustingItem(selectedItems[0]); setIsAdjustModalOpen(true); } }}
+                onDelete={handleBulkDelete}
+                onClear={clearSelection}
+              />
+              <div className="pp-panel">
+                <div className="pp-panel-head">
+                  <h2 className="pp">{activeTab === 'raw' ? 'Raw Materials' : 'Consumables'} List</h2>
+                  <div className="flex items-center gap-3">
+                    <input className="pp-search" placeholder={`Search ${activeTab === 'raw' ? 'raw materials' : 'consumables'}...`}
+                      value={tabSearch} onChange={e => setTabSearch(e.target.value)} style={{marginBottom:0}} />
+                    <span className="pp-muted">{searchFiltered.length} item(s)</span>
+                  </div>
+                </div>
+                {searchFiltered.length === 0 ? (
+                  <div className="pp-empty">No {activeTab === 'raw' ? 'raw materials' : 'consumables'} yet.</div>
+                ) : (
+                  <table className="pp-table">
+                    <thead>
+                      <tr>
+                        <th className="w-10 px-1 text-center">
+                          <input type="checkbox" checked={searchFiltered.length > 0 && searchFiltered.every(i => selectedIds.has(i.id))}
+                            onChange={() => handleTabSelectAll(searchFiltered)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                        </th>
+                        <th>SKU</th><th>Name</th><th>Unit</th><th className="num">Cost / Unit</th><th className="num">Stock</th><th className="num">Reorder At</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchFiltered.map((m, idx) => (
+                        <tr key={`${m.id}-${idx}`} className={lowStock(m) ? 'pp-row-warn' : ''} onClick={() => handleViewItem(m)} style={{cursor:'pointer'}}>
+                          <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
+                            <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                          </td>
+                          <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(m.sku)}</td>
+                          <td>
+                            {esc(m.name)}
+                            {(m as Record<string, unknown>).supplierName ? <div className="pp-sub">{esc((m as Record<string, unknown>).supplierName)}</div> : ''}
+                          </td>
+                          <td className="mono" style={{ fontFamily:'IBM Plex Mono,monospace' }}>{esc(m.unit || 'pcs')}</td>
+                          <td className="num mono" style={{ fontFamily:'IBM Plex Mono,monospace' }}>{money(m.costPrice || m.cost || 0)}</td>
+                          <td className="num mono" style={{ fontFamily:'IBM Plex Mono,monospace' }}>
+                            <span className="pp-stepper">
+                              <button onClick={e => { e.stopPropagation(); adjustStock(m, -1); }}>&minus;</button>
+                              <span>{esc(m.stock)}</span>
+                              <button onClick={e => { e.stopPropagation(); adjustStock(m, 1); }}>+</button>
+                            </span>
+                          </td>
+                          <td className="num mono" style={{ fontFamily:'IBM Plex Mono,monospace' }}>
+                            {m.reorderPoint != null ? esc(m.reorderPoint) : '\u2014'}
+                          </td>
+                          <td className="actions" onClick={e => e.stopPropagation()}>
+                            <div className="action-dropdown-container">
+                              <button className="action-menu-btn" onClick={() => toggleActionMenu(m.id)}>
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                                  <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                  <circle cx="8" cy="13" r="1.5" fill="currentColor"/>
+                                </svg>
+                              </button>
+                              {openActionMenu === m.id && (
+                                <div className="action-dropdown-menu">
+                                  <button className="action-dropdown-item" onClick={() => { handleEditItem(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                    Edit
+                                  </button>
+                                  <button className="action-dropdown-item" onClick={() => { handleDuplicate(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    Duplicate
+                                  </button>
+                                  <button className="action-dropdown-item" onClick={() => { handleViewItem(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    View Details
+                                  </button>
+                                  <div className="action-dropdown-divider"></div>
+                                  <button className="action-dropdown-item" onClick={() => { handleOpenAdjustStock(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                    Adjust Stock
+                                  </button>
+                                  <button className="action-dropdown-item" onClick={() => { handleTransferStock(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                    Transfer Stock
+                                  </button>
+                                  <div className="action-dropdown-divider"></div>
+                                  <button className="action-dropdown-item" onClick={() => { handlePrintBarcode(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M2 15h20"/><path d="M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/><rect x="7" y="9" width="2" height="6"/><rect x="11" y="9" width="2" height="6"/><rect x="15" y="9" width="2" height="6"/></svg>
+                                    Print Barcode
+                                  </button>
+                                  <button className="action-dropdown-item" onClick={() => { handlePrintQR(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><line x1="14" y1="14" x2="18" y2="14"/><line x1="18" y1="18" x2="18" y2="22"/><line x1="14" y1="22" x2="16" y2="22"/></svg>
+                                    Print QR
+                                  </button>
+                                  <div className="action-dropdown-divider"></div>
+                                  <button className="action-dropdown-item" onClick={() => { handleToggleStatus(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                    {m.status === 'Active' ? 'Archive' : 'Activate'}
+                                  </button>
+                                  <div className="action-dropdown-divider"></div>
+                                  <button className="action-dropdown-item danger" onClick={() => { deleteSimple(m); closeActionMenu(); }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="pp-totals-row">
+                        <td></td>
+                        <td>Total ({searchFiltered.length} items)</td>
+                        <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => s + num(i.stock), 0)}</td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ============ PRODUCTS ============ */}
+          {activeTab === 'product' && (
+            <>
+              <div className="page-head">
+                <div>
+                  <div className="eyebrow">Made From Bill Of Materials</div>
+                  <h1 className="pp">Products</h1>
+                </div>
+                <button className="pp-btn pp-btn-primary" onClick={() => handleNewItem('product')}>+ Add Product</button>
+              </div>
+              <BulkActionToolbar
+                selectedCount={selectedIds.size}
+                onBulkEdit={() => setIsBulkEditOpen(true)}
+                onAssignWarehouse={() => { setAssignMode('warehouse'); setIsAssignOpen(true); }}
+                onAssignSupplier={() => { setAssignMode('supplier'); setIsAssignOpen(true); }}
+                onPrintLabels={() => { setPrintMode('label'); setIsPrintOpen(true); }}
+                onExportSelected={handleExportSelected}
+                onArchive={handleBulkArchive}
+                onActivate={handleBulkActivate}
+                onDeactivate={handleBulkDeactivate}
+                onGenerateBarcodes={() => { setPrintMode('barcode'); setIsPrintOpen(true); }}
+                onGenerateQRCodes={() => { setPrintMode('qrcode'); setIsPrintOpen(true); }}
+                onStockAdjust={() => { if (selectedItems.length > 0) { setAdjustingItem(selectedItems[0]); setIsAdjustModalOpen(true); } }}
+                onDelete={handleBulkDelete}
+                onClear={clearSelection}
+              />
+              <div className="pp-panel">
+                <div className="pp-panel-head">
+                <h2 className="pp">Products List</h2>
+                  <div className="flex items-center gap-3">
+                    <input className="pp-search" placeholder="Search products..." value={tabSearch}
+                      onChange={e => setTabSearch(e.target.value)} style={{marginBottom:0}} />
+                    <span className="pp-muted">{searchFiltered.length} item(s)</span>
+                  </div>
+                </div>
+                {searchFiltered.length === 0 ? (
+                  <div className="pp-empty">No products yet.</div>
+                ) : (
+                  <table className="pp-table">
+                    <thead>
+                      <tr>
+                        <th className="w-10 px-1 text-center">
+                          <input type="checkbox" checked={searchFiltered.length > 0 && searchFiltered.every(i => selectedIds.has(i.id))}
+                            onChange={() => handleTabSelectAll(searchFiltered)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                        </th>
+                        <th>SKU</th><th>Product</th><th>Variant</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchFiltered.flatMap((p, parentIdx) => {
+                          const variants = (p as Record<string, unknown>).variants || [];
+                          const rows = variants.length > 0 ? variants : [{ ...p, name: 'Standard', id: p.id, _key: 'default' }];
+                          return rows.map((v: any, idx) => {
+                            const cp = v.costPrice || p.costPrice || p.cost || 0;
+                            const sp = v.sellingPrice || p.sellingPrice || p.price || 0;
+                            const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
+                            const low = (v.reorderPoint != null && num(v.stock) <= num(v.reorderPoint));
+                            const isLow = low || (!variants.length && lowStock(p));
+                            const rowKey = v.id || `${parentIdx}-${idx}`;
+                          const isMenuOpen = openActionMenu === rowKey;
+                          return (
+                            <tr key={rowKey} className={isLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
+                              <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              </td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(p.sku)}</td>
+                              <td>{esc(p.name)}</td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(v.name || 'Standard')}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
+                              <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>
+                                <span className="pp-stepper">
+                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
+                                  <span>{esc(v.stock ?? p.stock)}</span>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                </span>
+                              </td>
+                              <td className="actions" onClick={e => e.stopPropagation()}>
+                                <div className="action-dropdown-container">
+                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(rowKey)}>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                                      <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                      <circle cx="8" cy="13" r="1.5" fill="currentColor"/>
+                                    </svg>
+                                  </button>
+                                  {isMenuOpen && (
+                                    <div className="action-dropdown-menu">
+                                      <button className="action-dropdown-item" onClick={() => { handleEditItem(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        Edit
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleDuplicate(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        Duplicate
+                                      </button>
+<button className="action-dropdown-item" onClick={() => { handleProduce(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                                        Produce
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleViewItem(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        View Details
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handleOpenAdjustStock(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                        Adjust Stock
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleTransferStock(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                        Transfer Stock
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handlePrintBarcode(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M2 15h20"/><path d="M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/><rect x="7" y="9" width="2" height="6"/><rect x="11" y="9" width="2" height="6"/><rect x="15" y="9" width="2" height="6"/></svg>
+                                        Print Barcode
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handlePrintQR(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><line x1="14" y1="14" x2="18" y2="14"/><line x1="18" y1="18" x2="18" y2="22"/><line x1="14" y1="22" x2="16" y2="22"/></svg>
+                                        Print QR
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handleToggleStatus(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                        {p.status === 'Active' ? 'Archive' : 'Activate'}
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item danger" onClick={() => { deleteSimple(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="pp-totals-row">
+                        <td></td>
+                        <td>Total ({searchFiltered.length} products)</td>
+                        <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
+                        <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => {
+                          const v = (i as Record<string, unknown>).variants || [];
+                          return s + (v.length > 0 ? v.reduce((a:number, v:any) => a + num(v.stock), 0) : num(i.stock));
+                        }, 0)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ============ STATIONERY ============ */}
+          {activeTab === 'stationery' && (
+            <>
+              <div className="page-head">
+                <div>
+                  <div className="eyebrow">Manual Pricing</div>
+                  <h1 className="pp">Stationery</h1>
+                </div>
+                <button className="pp-btn pp-btn-primary" onClick={() => handleNewItem('stationery')}>+ Add Stationery</button>
+              </div>
+              <BulkActionToolbar
+                selectedCount={selectedIds.size}
+                onBulkEdit={() => setIsBulkEditOpen(true)}
+                onAssignWarehouse={() => { setAssignMode('warehouse'); setIsAssignOpen(true); }}
+                onAssignSupplier={() => { setAssignMode('supplier'); setIsAssignOpen(true); }}
+                onPrintLabels={() => { setPrintMode('label'); setIsPrintOpen(true); }}
+                onExportSelected={handleExportSelected}
+                onArchive={handleBulkArchive}
+                onActivate={handleBulkActivate}
+                onDeactivate={handleBulkDeactivate}
+                onGenerateBarcodes={() => { setPrintMode('barcode'); setIsPrintOpen(true); }}
+                onGenerateQRCodes={() => { setPrintMode('qrcode'); setIsPrintOpen(true); }}
+                onStockAdjust={() => { if (selectedItems.length > 0) { setAdjustingItem(selectedItems[0]); setIsAdjustModalOpen(true); } }}
+                onDelete={handleBulkDelete}
+                onClear={clearSelection}
+              />
+              <div className="pp-panel">
+                <div className="pp-panel-head">
+                <h2 className="pp">Stationery List</h2>
+                  <div className="flex items-center gap-3">
+                    <input className="pp-search" placeholder="Search stationery..." value={tabSearch}
+                      onChange={e => setTabSearch(e.target.value)} style={{marginBottom:0}} />
+                    <span className="pp-muted">{searchFiltered.length} item(s)</span>
+                  </div>
+                </div>
+                {searchFiltered.length === 0 ? (
+                  <div className="pp-empty">No stationery items yet.</div>
+                ) : (
+                  <table className="pp-table">
+                    <thead>
+                      <tr>
+                        <th className="w-10 px-1 text-center">
+                          <input type="checkbox" checked={searchFiltered.length > 0 && searchFiltered.every(i => selectedIds.has(i.id))}
+                            onChange={() => handleTabSelectAll(searchFiltered)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                        </th>
+                        <th>SKU</th><th>Product</th><th>Variant</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchFiltered.flatMap((p, parentIdx) => {
+                          const variants = (p as Record<string, unknown>).variants || [];
+                          const rows = variants.length > 0 ? variants : [{ ...p, name: 'Standard', id: p.id, _key: 'default' }];
+                          return rows.map((v: any, idx) => {
+                            const cp = v.costPrice || p.costPrice || p.cost || 0;
+                            const sp = v.sellingPrice || p.sellingPrice || p.price || 0;
+                            const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
+                            const low = (v.reorderPoint != null && num(v.stock) <= num(v.reorderPoint));
+                            const isLow = low || (!variants.length && lowStock(p));
+                            const rowKey = v.id || `${parentIdx}-${idx}`;
+                          const isMenuOpen = openActionMenu === rowKey;
+                          return (
+                            <tr key={rowKey} className={isLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
+                              <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              </td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(p.sku)}</td>
+                              <td>{esc(p.name)}</td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(v.name || 'Standard')}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
+                              <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>
+                                <span className="pp-stepper">
+                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
+                                  <span>{esc(v.stock ?? p.stock)}</span>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                </span>
+                              </td>
+                              <td className="actions" onClick={e => e.stopPropagation()}>
+                                <div className="action-dropdown-container">
+                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(rowKey)}>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                                      <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                      <circle cx="8" cy="13" r="1.5" fill="currentColor"/>
+                                    </svg>
+                                  </button>
+                                  {isMenuOpen && (
+                                    <div className="action-dropdown-menu">
+                                      <button className="action-dropdown-item" onClick={() => { handleEditItem(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        Edit
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleDuplicate(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        Duplicate
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleViewItem(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        View Details
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handleOpenAdjustStock(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                        Adjust Stock
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handleTransferStock(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                        Transfer Stock
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handlePrintBarcode(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M2 15h20"/><path d="M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/><rect x="7" y="9" width="2" height="6"/><rect x="11" y="9" width="2" height="6"/><rect x="15" y="9" width="2" height="6"/></svg>
+                                        Print Barcode
+                                      </button>
+                                      <button className="action-dropdown-item" onClick={() => { handlePrintQR(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><line x1="14" y1="14" x2="18" y2="14"/><line x1="18" y1="18" x2="18" y2="22"/><line x1="14" y1="22" x2="16" y2="22"/></svg>
+                                        Print QR
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item" onClick={() => { handleToggleStatus(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                        {p.status === 'Active' ? 'Archive' : 'Activate'}
+                                      </button>
+                                      <div className="action-dropdown-divider"></div>
+                                      <button className="action-dropdown-item danger" onClick={() => { deleteSimple(p); closeActionMenu(); }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="pp-totals-row">
+                        <td></td>
+                        <td>Total ({searchFiltered.length} items)</td>
+                        <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
+                        <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => {
+                          const v = (i as Record<string, unknown>).variants || [];
+                          return s + (v.length > 0 ? v.reduce((a:number, v:any) => a + num(v.stock), 0) : num(i.stock));
+                        }, 0)}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ============ PRINTING SERVICE ============ */}
+          {activeTab === 'printing' && (
+            <>
+              <div className="page-head">
+                <div>
+                  <div className="eyebrow">Priced Per Page</div>
+                  <h1 className="pp">Printing Service</h1>
+                </div>
+                <button className="pp-btn pp-btn-primary" onClick={() => handleNewItem('printing')}>+ Add Service Type</button>
+              </div>
+
+              <BulkActionToolbar
+                selectedCount={selectedIds.size}
+                onBulkEdit={() => setIsBulkEditOpen(true)}
+                onAssignWarehouse={() => { setAssignMode('warehouse'); setIsAssignOpen(true); }}
+                onAssignSupplier={() => { setAssignMode('supplier'); setIsAssignOpen(true); }}
+                onPrintLabels={() => { setPrintMode('label'); setIsPrintOpen(true); }}
+                onExportSelected={handleExportSelected}
+                onArchive={handleBulkArchive}
+                onActivate={handleBulkActivate}
+                onDeactivate={handleBulkDeactivate}
+                onGenerateBarcodes={() => { setPrintMode('barcode'); setIsPrintOpen(true); }}
+                onGenerateQRCodes={() => { setPrintMode('qrcode'); setIsPrintOpen(true); }}
+                onStockAdjust={() => { if (selectedItems.length > 0) { setAdjustingItem(selectedItems[0]); setIsAdjustModalOpen(true); } }}
+                onDelete={handleBulkDelete}
+                onClear={clearSelection}
+              />
+              <div className="pp-panel">
+                <div className="pp-panel-head">
+                  <h2 className="pp">Service Types</h2>
+                  <div className="flex items-center gap-3">
+                    <input className="pp-search" placeholder="Search services..." value={tabSearch}
+                      onChange={e => setTabSearch(e.target.value)} style={{marginBottom:0}} />
+                    <span className="pp-muted">{searchFiltered.length} service(s)</span>
+                  </div>
+                </div>
+                {searchFiltered.length === 0 ? (
+                  <div className="pp-empty">No service types yet.</div>
+                ) : (
+                  <table className="pp-table">
+                    <thead>
+                      <tr>
+                        <th className="w-10 px-1 text-center">
+                          <input type="checkbox" checked={searchFiltered.length > 0 && searchFiltered.every(i => selectedIds.has(i.id))}
+                            onChange={() => handleTabSelectAll(searchFiltered)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                        </th>
+                        <th>SKU</th><th>Service</th><th className="num">Cost / Unit</th><th className="num">Selling Price</th><th className="num">Margin</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchFiltered.map((s, idx) => {
+                        const cp = s.costPrice || s.cost || 0;
+                        const sp = s.sellingPrice || s.price || 0;
+                        const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
+                        return (
+                          <tr key={`${s.id}-${idx}`} onClick={() => handleViewItem(s)} style={{cursor:'pointer'}}>
+                            <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
+                              <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelect(s.id)}
+                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                            </td>
+                            <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(s.sku)}</td>
+                            <td>{esc(s.name)}</td>
+                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
+                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
+                            <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                            <td className="actions" onClick={e => e.stopPropagation()}>
+                              <div className="action-dropdown-container">
+                                <button className="action-menu-btn" onClick={() => toggleActionMenu(s.id)}>
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                                    <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+                                    <circle cx="8" cy="13" r="1.5" fill="currentColor"/>
+                                  </svg>
+                                </button>
+                                {openActionMenu === s.id && (
+                                  <div className="action-dropdown-menu">
+                                    <button className="action-dropdown-item" onClick={() => { handleEditItem(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                      Edit
+                                    </button>
+                                    <button className="action-dropdown-item" onClick={() => { handleDuplicate(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                      Duplicate
+                                    </button>
+                                    <button className="action-dropdown-item" onClick={() => { handleViewItem(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                      View Details
+                                    </button>
+                                    <div className="action-dropdown-divider"></div>
+                                    <button className="action-dropdown-item" onClick={() => { handleOpenAdjustStock(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                      Adjust Stock
+                                    </button>
+                                    <div className="action-dropdown-divider"></div>
+                                    <button className="action-dropdown-item" onClick={() => { handlePrintBarcode(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M2 15h20"/><path d="M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/><rect x="7" y="9" width="2" height="6"/><rect x="11" y="9" width="2" height="6"/><rect x="15" y="9" width="2" height="6"/></svg>
+                                      Print Barcode
+                                    </button>
+                                    <button className="action-dropdown-item" onClick={() => { handlePrintQR(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/><rect x="2" y="14" width="8" height="8"/><line x1="14" y1="14" x2="18" y2="14"/><line x1="18" y1="18" x2="18" y2="22"/><line x1="14" y1="22" x2="16" y2="22"/></svg>
+                                      Print QR
+                                    </button>
+                                    <div className="action-dropdown-divider"></div>
+                                    <button className="action-dropdown-item" onClick={() => { handleToggleStatus(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                      {s.status === 'Active' ? 'Archive' : 'Activate'}
+                                    </button>
+                                    <div className="action-dropdown-divider"></div>
+                                    <button className="action-dropdown-item danger" onClick={() => { deleteSimple(s); closeActionMenu(); }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="pp-totals-row">
+                        <td></td>
+                        <td>Total ({searchFiltered.length} services)</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+
+      {/* Modals */}
+      <ItemModal open={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={editingItem} allItems={allItems} lockClassification={lockClassification} />
+      {adjustingItem && (
+        <StockAdjustmentModal
+          isOpen={isAdjustModalOpen}
+          onClose={() => { setIsAdjustModalOpen(false); setAdjustingItem(null); }}
+          item={adjustingItem}
+        />
+      )}
+      <BulkEditModal
+        open={isBulkEditOpen}
+        items={selectedItems}
+        onClose={() => setIsBulkEditOpen(false)}
+        onSave={async (ids, updates) => {
+          await Promise.all(ids.map(id => {
+            const item = allItems.find(i => i.id === id);
+            if (item) return updateItem({ ...item, ...updates } as Item);
+          }));
+          notify?.(`Updated ${ids.length} item(s)`, 'success');
+          clearSelection();
+          refresh();
+        }}
+      />
+      <AssignModal
+        open={isAssignOpen}
+        items={selectedItems}
+        mode={assignMode}
+        onClose={() => setIsAssignOpen(false)}
+        onAssign={async (ids, value) => {
+          await Promise.all(ids.map(id => {
+            const item = allItems.find(i => i.id === id);
+            if (item) {
+              const field = assignMode === 'warehouse' ? 'warehouseId' : 'preferredSupplierId';
+              return updateItem({ ...item, [field]: value } as Item);
+            }
+          }));
+          notify?.(`Assigned to ${ids.length} item(s)`, 'success');
+          clearSelection();
+          refresh();
+        }}
+      />
+      <PrintLabelModal
+        open={isPrintOpen}
+        items={selectedItems}
+        mode={printMode}
+        onClose={() => setIsPrintOpen(false)}
+      />
+      <SmartAdjustModal
+        isOpen={isSmartAdjustOpen}
+        onClose={() => setIsSmartAdjustOpen(false)}
+        onSuccess={() => { refresh(); clearSelection(); }}
+        items={selectedItems.length > 0 ? selectedItems : allItems}
+      />
+      {isInsightsOpen && (
+        <SmartStockInsights
+          items={allItems}
+          onClose={() => setIsInsightsOpen(false)}
+        />
+      )}
+    </div>
+  );
+};

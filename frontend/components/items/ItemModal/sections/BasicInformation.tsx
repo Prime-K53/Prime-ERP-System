@@ -1,0 +1,182 @@
+import React from 'react';
+import type { ItemFormData } from '../types/itemFormTypes';
+import { CLASSIFICATION_OPTIONS } from '../types/itemFormTypes';
+
+interface Props {
+  data: ItemFormData;
+  onChange: <K extends keyof ItemFormData>(key: K, value: ItemFormData[K]) => void;
+  errors: Record<string, string>;
+  onGenerateSku?: (category: string) => string;
+  classificationReadOnly?: boolean;
+}
+
+export const BasicInformation: React.FC<Props> = ({ data, onChange, errors, onGenerateSku, classificationReadOnly }) => {
+  const handleGenerateSku = () => {
+    const sku = onGenerateSku?.(data.category) || '';
+    if (sku) onChange('code', sku);
+  };
+
+  const handleCategoryBlur = () => {
+    if (!data.code && data.category && onGenerateSku) {
+      const sku = onGenerateSku(data.category);
+      if (sku) onChange('code', sku);
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: '#1E2A24' }}>
+      <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1E2A24', margin: '0 0 14px', lineHeight: 1.4 }}>Basic Information</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Classification *</label>
+          <select
+            value={data.classification}
+            onChange={e => onChange('classification', e.target.value)}
+            disabled={classificationReadOnly}
+            className={classificationReadOnly ? 'opacity-60 cursor-not-allowed' : ''}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: errors.classification ? '1px solid #B23A34' : '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: errors.classification ? '#FBEAE8' : 'white',
+              outline: 'none', lineHeight: 1.45
+            }}
+          >
+            {CLASSIFICATION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {errors.classification && <p style={{ fontSize: 12, color: '#B23A34', margin: '3px 0 0', lineHeight: 1.4 }}>{errors.classification}</p>}
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Code / SKU *</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              value={data.code}
+              onChange={e => onChange('code', e.target.value)}
+              style={{
+                flex: 1, padding: '7px 10px', borderRadius: 7,
+                border: errors.code ? '1px solid #B23A34' : '1px solid #E5E8E1',
+                fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+                color: '#1E2A24', background: errors.code ? '#FBEAE8' : 'white',
+                outline: 'none', lineHeight: 1.45
+              }}
+              placeholder="e.g. RAW-A4-001"
+            />
+            <button
+              type="button"
+              onClick={handleGenerateSku}
+              title="Generate SKU"
+              style={{
+                padding: '7px 10px', borderRadius: 7, border: '1px solid #E5E8E1',
+                background: 'white', color: '#6C766F', cursor: 'pointer', lineHeight: 1
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ display: 'block' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+          {errors.code && <p style={{ fontSize: 12, color: '#B23A34', margin: '3px 0 0', lineHeight: 1.4 }}>{errors.code}</p>}
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Name *</label>
+          <input
+            type="text"
+            value={data.name}
+            onChange={e => onChange('name', e.target.value)}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: errors.name ? '1px solid #B23A34' : '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: errors.name ? '#FBEAE8' : 'white',
+              outline: 'none', lineHeight: 1.45
+            }}
+            placeholder="e.g. A4 Paper 80gsm"
+          />
+          {errors.name && <p style={{ fontSize: 12, color: '#B23A34', margin: '3px 0 0', lineHeight: 1.4 }}>{errors.name}</p>}
+        </div>
+        <div style={{ gridColumn: 'span 2' }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Description</label>
+          <textarea
+            value={data.description}
+            onChange={e => onChange('description', e.target.value)}
+            rows={3}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: 'white', outline: 'none',
+              lineHeight: 1.45, resize: 'none'
+            }}
+            placeholder="Optional description"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Brand</label>
+          <input
+            type="text"
+            value={data.brand}
+            onChange={e => onChange('brand', e.target.value)}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+            }}
+            placeholder="e.g. HP, Canon"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Category</label>
+          <input
+            type="text"
+            value={data.category}
+            onChange={e => onChange('category', e.target.value)}
+            onBlur={handleCategoryBlur}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+            }}
+            placeholder="e.g. Paper, Ink, Binding"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Tags</label>
+          <input
+            type="text"
+            value={data.tags}
+            onChange={e => onChange('tags', e.target.value)}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+            }}
+            placeholder="Comma separated"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Status</label>
+          <select
+            value={data.status}
+            onChange={e => onChange('status', e.target.value)}
+            style={{
+              width: '100%', padding: '7px 10px', borderRadius: 7,
+              border: '1px solid #E5E8E1',
+              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+              color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+            }}
+          >
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+};
