@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '@/services/logger';
 // PRICING RULE: Do NOT implement pricing logic here. All pricing MUST go through pricingEngine.ts
-import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Calculator, DollarSign, Tag, ShieldCheck, Plus, Search, Building2, FileText, Clock, Settings, Info, RefreshCw, Layers, Package, Zap } from 'lucide-react';
+import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Calculator, DollarSign, Tag, ShieldCheck, Plus, Search, Building2, FileText, Clock, Settings, Info, RefreshCw, Layers, Package, Zap, AlertTriangle, TrendingUp } from 'lucide-react';
 import { HeldOrder, Sale, Invoice, Item, ProductVariant, BillOfMaterial, WorkOrder, BOMTemplate } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
@@ -219,6 +219,8 @@ export const ServiceCalculatorModal: React.FC<{
     const [isCalculating, setIsCalculating] = useState(false);
     const [enginePricing, setEnginePricing] = useState<DynamicServicePricingResult | null>(null);
     const [finishingCostOverrides, setFinishingCostOverrides] = useState<Record<string, number>>({});
+    const [sellingPrice, setSellingPrice] = useState<number>(0);
+    const [priceManuallySet, setPriceManuallySet] = useState(false);
 
     const sp = service.smartPricing;
     const config = service.serviceConfig;
@@ -448,8 +450,20 @@ export const ServiceCalculatorModal: React.FC<{
         return () => { mounted = false; };
     }, [service, pages, copies, normalizedAdjustments, computePageScaledCost]);
 
+    useEffect(() => {
+        if (enginePricing && !priceManuallySet && enginePricing.totalPrice > 0) {
+            setSellingPrice(enginePricing.totalPrice);
+        }
+    }, [enginePricing, priceManuallySet]);
+
     const activePricing = enginePricing;
     const formatCurrency = (value: number) => `${currencySymbol}${formatNumber(value)}`;
+    const profit = roundToCurrency(sellingPrice - (activePricing?.totalCost || 0));
+    const isLoss = profit < 0;
+    const profitMarginPct = (activePricing?.totalCost || 0) > 0
+        ? roundToCurrency((profit / (activePricing?.totalCost || 1)) * 100)
+        : 0;
+    const priceDiff = activePricing ? roundToCurrency(sellingPrice - activePricing.totalPrice) : 0;
     const marginBaseAmount = roundToCurrency(
         Number(activePricing?.totalCost || 0)
         + Math.max(0, Number(activePricing?.adjustmentTotal || 0) - Number(activePricing?.marginAmount || 0))
@@ -652,11 +666,61 @@ export const ServiceCalculatorModal: React.FC<{
                                 </div>
                             )}
 
-                            <div className="pt-2.5 border-t border-slate-200 flex justify-between items-center">
-                                <span className="text-[14px] font-bold text-slate-800">Total Price</span>
-                                <span className="text-[18px] font-bold text-indigo-600 tabular-nums">{formatCurrency(activePricing.totalPrice)}</span>
+                            <div className="pt-2.5 border-t border-slate-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <DollarSign size={13} className="text-indigo-600" />
+                                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Selling Price</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[13px] font-semibold text-slate-500">{currencySymbol}</span>
+                                    <input type="number" step="0.01" min={0} value={sellingPrice}
+                                        onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }}
+                                        className="w-full px-3 py-2 bg-white border-2 border-indigo-200 rounded-xl text-[16px] font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all tabular-nums" />
+                                </div>
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-[11px] text-slate-500">Calculated: {formatCurrency(activePricing.totalPrice)}</span>
+                                    {priceDiff !== 0 && (
+                                        <span className={`text-[11px] font-semibold ${priceDiff > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {priceDiff > 0 ? '+' : ''}{formatCurrency(priceDiff)} {priceDiff > 0 ? 'above' : 'below'} calc.
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Profit / Loss Indicator */}
+                    <div className={`${premiumCard} ${isLoss ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                {isLoss
+                                    ? <AlertTriangle size={16} className="text-red-500" />
+                                    : <TrendingUp size={16} className="text-emerald-600" />
+                                }
+                                <span className="text-[12px] font-semibold text-slate-700">Expected {isLoss ? 'Loss' : 'Profit'}</span>
+                            </div>
+                            <span className={`text-[15px] font-bold ${isLoss ? 'text-red-600' : 'text-emerald-600'} tabular-nums`}>
+                                {isLoss ? '-' : '+'}{formatCurrency(Math.abs(profit))}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] text-slate-500">Margin on cost</span>
+                            <span className={`text-[11px] font-semibold ${isLoss ? 'text-red-600' : 'text-emerald-600'}`}>
+                                {isLoss ? '-' : ''}{profitMarginPct}%
+                            </span>
+                        </div>
+                        {isLoss && (
+                            <div className="mt-2 px-3 py-2 bg-red-100 rounded-lg text-[11px] text-red-700 font-medium flex items-center gap-1.5">
+                                <AlertTriangle size={12} />
+                                Selling price is below production cost. Expected loss: {formatCurrency(Math.abs(profit))}.
+                            </div>
+                        )}
+                        {!isLoss && profit > 0 && profitMarginPct < 10 && (
+                            <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
+                                <Info size={12} />
+                                Low margin ({profitMarginPct}%). Consider increasing the selling price.
+                            </div>
+                        )}
                     </div>
 
                     {/* Total Due */}
@@ -665,9 +729,9 @@ export const ServiceCalculatorModal: React.FC<{
                         <div className="relative flex justify-between items-end">
                             <div>
                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Due</p>
-                                <h3 className="text-[24px] font-bold text-white tabular-nums">{formatCurrency(activePricing.totalPrice)}</h3>
+                                <h3 className="text-[24px] font-bold text-white tabular-nums">{formatCurrency(sellingPrice)}</h3>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {formatCurrency(activePricing.unitPricePerCopy)} / copy
+                                    {formatCurrency(copies > 0 ? roundToCurrency(sellingPrice / copies) : 0)} / copy
                                 </p>
                             </div>
                             <div className="text-right">
@@ -686,10 +750,14 @@ export const ServiceCalculatorModal: React.FC<{
                         </button>
                         <button onClick={() => onConfirm({
                             ...activePricing,
+                            totalPrice: sellingPrice,
+                            unitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0,
+                            calculatedTotalPrice: activePricing.totalPrice,
+                            marginAmount: profit,
                             priceLocked: true,
-                            lockedTotalPrice: activePricing.totalPrice,
-                            lockedUnitPricePerCopy: activePricing.unitPricePerCopy,
-                            lockedUnitCostPerCopy: activePricing.unitCostPerCopy
+                            lockedTotalPrice: sellingPrice,
+                            lockedUnitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0,
+                            lockedUnitCostPerCopy: copies > 0 ? roundToCurrency(activePricing.totalCost / copies) : 0
                         })}
                             className="flex-[1.5] py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-[13px] hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
                             Add to Order <ArrowRight size={16} />
