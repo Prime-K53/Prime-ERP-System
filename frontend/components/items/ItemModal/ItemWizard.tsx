@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
+import { FileText, Package, Scale, Layers, DollarSign, Printer, Beaker, ShoppingCart, Zap, Calculator, TrendingUp, CheckCircle, Sparkles, Brain } from 'lucide-react';
 import type { Item, FinishingOption } from '../../../types';
 import type { WizardStep, ItemFormData } from './types/itemFormTypes';
 import { useItemForm } from './hooks/useItemForm';
@@ -271,126 +272,108 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
 
   const handleBackOrCancel = currentIndex === 0 ? onClose : goBack;
 
-  return (
-    <div className="flex gap-6 flex-1 min-h-0 overflow-hidden" onKeyDown={handleKeyDown} style={{ fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: '#1E2A24' }}>
-      {/* Left: Wizard Content */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0" role="region" aria-label="Item Wizard">
-        {/* Step Indicator */}
-        <nav className="flex items-center gap-0 mb-3 shrink-0 flex-wrap" style={{ borderBottom: '1px solid #E5E8E1' }} role="tablist" aria-label="Wizard steps">
-          {steps.map((step, idx) => {
-            const isActive = currentStep === step;
-            const isPast = idx < currentIndex;
-            const StepIcon = STEP_META[step]?.icon || '○';
-            return (
-              <button
-                key={step}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-label={`${STEP_META[step]?.label || step} step`}
-                tabIndex={isActive || isPast ? 0 : -1}
-                onClick={() => isPast && goToStep(step)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: '7px 12px', marginBottom: '-1px',
-                  fontFamily: "'Inter',sans-serif", fontWeight: isActive ? 600 : 500, fontSize: 13,
-                  lineHeight: 1.45, letterSpacing: '0.01em',
-                  color: isActive ? '#128C72' : isPast ? '#1E2A24' : '#9CA59E',
-                  borderBottom: isActive ? '2px solid #128C72' : '2px solid transparent',
-                  transition: 'color .12s'
-                }}
-              >
-                <span aria-hidden="true" className="mr-1" style={{ fontSize: 11 }}>{StepIcon}</span>
-                <span>{STEP_META[step]?.label || step}</span>
-              </button>
-            );
-          })}
-        </nav>
+  const cardClass = 'bg-white shadow-sm rounded-xl p-5';
+  const inputClass = 'w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none transition-all duration-150';
+  const labelClass = 'block text-xs font-semibold text-slate-700 mb-1';
+  const premiumCard = `${cardClass} backdrop-blur-sm border border-slate-200/80 hover:border-slate-300/80 transition-all duration-200`;
+  const premiumInput = `${inputClass} bg-white/80 backdrop-blur-sm border-slate-200/80 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20`;
+  const premiumSelect = `${inputClass} bg-white/80 backdrop-blur-sm appearance-none cursor-pointer`;
 
-        {/* Section Content */}
-        <div
-          ref={contentRef}
-          tabIndex={-1}
-          className="flex-1 overflow-auto custom-scrollbar focus:outline-none min-h-0"
-          style={{ borderRadius: 0, padding: 0, marginBottom: 0 }}
-          role="tabpanel"
-          aria-label={`${STEP_META[currentStep]?.label || currentStep} content`}
-        >
-          <SectionComponent {...sectionProps[currentStep]} />
-          {Object.keys(stepErrors).length > 0 && (
-            <div className="mt-4" style={{ padding: '8px 10px', background: '#FBEAE8', border: '1px solid #B23A34', borderRadius: '6px' }} role="alert">
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#B23A34', margin: '0 0 4px', lineHeight: 1.45 }}>Please fix the following:</p>
-              <ul style={{ fontSize: 12, color: '#B23A34', margin: 0, paddingLeft: 14 }}>
-                {Object.values(stepErrors).map((msg, i) => (
-                  <li key={i} style={{ lineHeight: 1.45 }}>{msg}</li>
-                ))}
-              </ul>
+  const renderCardHeader = (icon: React.ReactNode, title: string, badge?: string, gradient = 'from-indigo-500 to-purple-600') => (
+    <div className={`flex items-center gap-3 mb-4 p-3 -m-5 -mt-5 mb-5 bg-gradient-to-r ${gradient} rounded-t-xl text-white`}>
+      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">{icon}</div>
+      <h4 className="text-sm font-bold">{title}</h4>
+      {badge && <span className="ml-auto text-[10px] bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">{badge}</span>}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden" onKeyDown={handleKeyDown}>
+      {/* Premium Tabs */}
+      <div className="relative flex items-center gap-0 shrink-0 flex-wrap border-b border-slate-200/80 -mx-4 px-4">
+        {TABS.map(tab => (
+          <button key={tab.key} type="button" onClick={() => goToStep(tab.key)}
+            className={`shrink-0 px-4 py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+              currentStep === tab.key ? 'border-indigo-600 text-indigo-700 bg-gradient-to-b from-indigo-50/50 to-transparent' : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300'
+            }`}>
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content + Sidebar */}
+      <div className="flex-1 flex gap-6 overflow-hidden mt-4 min-h-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="flex-1 overflow-auto custom-scrollbar pr-2 min-h-0">
+            <SectionComponent {...sectionProps[currentStep]} />
+            {Object.keys(stepErrors).length > 0 && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl" role="alert">
+                <p className="text-xs font-semibold text-red-700 mb-1">Please fix the following:</p>
+                <ul className="text-[11px] text-red-600 list-disc pl-4 space-y-0.5">
+                  {Object.values(stepErrors).map((msg, i) => (
+                    <li key={i}>{msg}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between shrink-0 mt-6">
+              <button type="button" onClick={handleBackOrCancel}
+                className="px-5 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
+                {currentIndex === 0 ? 'Cancel' : 'Back'}
+              </button>
+              {currentIndex === steps.length - 1 ? (
+                <button type="button" onClick={handleSave} disabled={saving || !isDirty}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+                  {saving ? 'Saving...' : <><Zap size={14} /> {item?.id ? 'Update Item' : 'Create Item'}</>}
+                </button>
+              ) : (
+                <button type="button" onClick={handleNext} disabled={!canGoNext}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none">
+                  Next
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between shrink-0" style={{ paddingTop: 12, marginTop: 12 }}>
-          <button
-            type="button"
-            onClick={handleBackOrCancel}
-            style={{
-              padding: '7px 14px', borderRadius: 7, border: '1px solid #E5E8E1',
-              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 500,
-              color: '#3B453F', background: 'white', cursor: 'pointer', lineHeight: 1.4
-            }}
-            aria-label={currentIndex === 0 ? 'Cancel and close' : 'Go to previous step'}
-          >
-            {currentIndex === 0 ? 'Cancel' : 'Back'}
-          </button>
-          <div className="flex items-center gap-2">
-            {currentIndex === steps.length - 1 ? (
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving || !isDirty}
-                style={{
-                  padding: '7px 14px', borderRadius: 7, border: 'none',
-                  fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 600,
-                  color: 'white', background: saving || !isDirty ? '#9CA59E' : '#128C72',
-                  cursor: saving || !isDirty ? 'not-allowed' : 'pointer', lineHeight: 1.4,
-                  display: 'flex', alignItems: 'center', gap: 6
-                }}
-                aria-label={saving ? 'Saving item' : item?.id ? 'Update item' : 'Create item'}
-              >
-                {saving ? 'Saving...' : item?.id ? 'Update Item' : 'Create Item'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={!canGoNext}
-                style={{
-                  padding: '7px 14px', borderRadius: 7, border: 'none',
-                  fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 600,
-                  color: 'white', background: canGoNext ? '#128C72' : '#9CA59E',
-                  cursor: canGoNext ? 'pointer' : 'not-allowed', lineHeight: 1.4,
-                  display: 'flex', alignItems: 'center', gap: 6
-                }}
-                aria-label="Go to next step"
-              >
-                Next
-              </button>
-            )}
+        {/* Right Sidebar - Premium Summary */}
+        <div className="w-72 shrink-0 hidden lg:flex flex-col gap-4 overflow-y-auto custom-scrollbar min-h-0">
+          <div className={`${premiumCard} sticky top-0 shadow-md border border-slate-200`}>
+            <div className="p-4 -m-5 mb-4 bg-gradient-to-r from-slate-800 to-slate-700 rounded-t-xl">
+              <div className="flex items-center gap-2 text-white mb-1">
+                <Calculator size={14} />
+                <h4 className="text-sm font-bold">Item Summary</h4>
+              </div>
+              <p className="text-slate-400 text-[10px]">{steps.indexOf(currentStep) + 1} of {steps.length} steps</p>
+            </div>
+            <SummarySidebar
+              formData={formData}
+              variants={variantsManager.variants}
+              pricingValidation={pricingValidation}
+              currentStep={currentStep}
+              steps={steps}
+              onUpdateField={updateField}
+            />
           </div>
         </div>
       </div>
 
-      {/* Right: Summary Panel */}
-      <div className="w-72 shrink-0 hidden lg:flex flex-col overflow-y-auto custom-scrollbar min-h-0" role="complementary" aria-label="Item summary">
-        <SummarySidebar
-          formData={formData}
-          variants={variantsManager.variants}
-          pricingValidation={pricingValidation}
-          currentStep={currentStep}
-          steps={steps}
-          onUpdateField={updateField}
-        />
+      {/* Footer */}
+      <div className="flex items-center justify-between shrink-0 pt-4 mt-4 border-t border-slate-200 -mx-4 px-4">
+        <button type="button" onClick={onClose}
+          className="px-5 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
+          Cancel
+        </button>
+        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+          {formData.name && <span className="text-indigo-600 font-medium">{formData.name}</span>}
+          {pricingValidation && pricingValidation.profitMarkup > 0 && (
+            <span className={pricingValidation.valid ? 'text-emerald-600' : 'text-amber-600'}>
+              {pricingValidation.profitMarkup.toFixed(1)}% margin
+            </span>
+          )}
+        </div>
       </div>
 
       <RecipeEditorModal
@@ -407,13 +390,13 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
   );
 };
 
-const STEP_META: Record<WizardStep, { label: string; icon: string }> = {
-  basic: { label: 'Basic', icon: '◎' },
-  inventory: { label: 'Inventory', icon: '▤' },
-  units: { label: 'Units', icon: '⚖' },
-  variants: { label: 'Variants', icon: '✦' },
-  pricing: { label: 'Pricing', icon: '₿' },
-  printing: { label: 'Printing', icon: '⎙' },
-  recipe: { label: 'Recipe', icon: '⚗' },
-  purchasing: { label: 'Purchasing', icon: '↔' },
-};
+const TABS: { key: WizardStep; label: string; icon: React.ReactNode }[] = [
+  { key: 'basic', label: 'Basic', icon: <FileText size={13} /> },
+  { key: 'inventory', label: 'Inventory', icon: <Package size={13} /> },
+  { key: 'units', label: 'Units', icon: <Scale size={13} /> },
+  { key: 'variants', label: 'Variants', icon: <Layers size={13} /> },
+  { key: 'pricing', label: 'Pricing', icon: <DollarSign size={13} /> },
+  { key: 'printing', label: 'Printing', icon: <Printer size={13} /> },
+  { key: 'recipe', label: 'Recipe', icon: <Beaker size={13} /> },
+  { key: 'purchasing', label: 'Purchasing', icon: <ShoppingCart size={13} /> },
+];
