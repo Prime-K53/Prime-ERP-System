@@ -53,7 +53,10 @@ const SmartPricing: React.FC = () => {
     const [bomExpanded, setBomExpanded] = useState(false);
     const [showSummaryCard, setShowSummaryCard] = useState(false);
     const [cameFromModal, setCameFromModal] = useState(false);
-    const [showTypeChoice, setShowTypeChoice] = useState(false);
+    const [showSaveDialog, setShowSaveDialog] = useState(false);
+    const [saveItemName, setSaveItemName] = useState('');
+    const [saveDialogType, setSaveDialogType] = useState<'Product' | 'Service'>('Product');
+    const [saveVariants, setSaveVariants] = useState<Array<{ id: string; attribute: string; pages: number; basePrice: number; sellingPrice: number }>>([]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -457,6 +460,173 @@ const SmartPricing: React.FC = () => {
         return item.unit || 'unit';
     };
 
+    const handleOpenSaveDialog = () => {
+        setSaveItemName(productName || '');
+        setSaveDialogType('Product');
+        setSaveVariants([]);
+        setShowSaveDialog(true);
+    };
+
+    const addVariantRow = () => {
+        if (saveVariants.length >= 5) return;
+        const flatCost = paperCost + tonerCost + finishingCost + finishingInventoryCost;
+        setSaveVariants(prev => [...prev, {
+            id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            attribute: '',
+            pages,
+            basePrice: parseFloat(flatCost.toFixed(2)),
+            sellingPrice: 0,
+        }]);
+    };
+
+    const updateVariantRow = (id: string, field: string, value: any) => {
+        setSaveVariants(prev => prev.map(v => {
+            if (v.id !== id) return v;
+            const updated = { ...v, [field]: value };
+            if (field === 'pages') {
+                const pageCost = (paperCost + tonerCost) / pages;
+                updated.basePrice = parseFloat((pageCost * (value as number) + finishingCost + finishingInventoryCost).toFixed(2));
+            }
+            return updated;
+        }));
+    };
+
+    const removeVariantRow = (id: string) => {
+        setSaveVariants(prev => prev.filter(v => v.id !== id));
+    };
+
+    const handleSaveFromDialog = async () => {
+        if (!saveItemName.trim()) {
+            alert('Please enter a name');
+            return;
+        }
+
+        if (!validation.valid) {
+            alert(`Unable to save product.\n\nCalculated markup: ${profitMarkup.toFixed(1)}%\nMinimum required markup: ${validation.minimumMarkup}%\n\n${validation.message}`);
+            return;
+        }
+
+        const name = saveItemName.trim();
+        const type = saveDialogType;
+        const variantsToSave = saveVariants.filter(v => v.attribute.trim() && v.sellingPrice > 0);
+
+        setProductName(name);
+        setItemType(type);
+        setShowSaveDialog(false);
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        setIsCreatingProduct(true);
+        try {
+            await handleSaveProduct();
+
+            if (variantsToSave.length > 0) {
+                const enabledFinishingOptions = finishingOptions.filter(o => o.enabled);
+
+                for (const variant of variantsToSave) {
+                    const varPages = variant.pages;
+                    const varTotalSheets = Math.ceil(varPages / 2);
+                    const varPaperCost = parseFloat((paperCost * (varPages / pages)).toFixed(2));
+                    const varTonerCost = parseFloat((tonerCost * (varPages / pages)).toFixed(2));
+                    const varCost = parseFloat((varPaperCost + varTonerCost + finishingCost + finishingInventoryCost).toFixed(2));
+                    const varId = `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                    const varBomId = `BOM-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+                    const varProfit = parseFloat((variant.sellingPrice - varCost).toFixed(2));
+                    const varItem: Item = {
+                        id: varId,
+                        name: `${name} - ${variant.attribute.trim()}`,
+                        sku: generateAutoSKU(type, `${name} ${variant.attribute.trim()}`, undefined, inventory),
+                        type: type,
+                        classification: type === 'Service' ? 'printing_service' : undefined,
+                        category: type === 'Service' ? 'Printing Service' : 'Printed Products',
+                        unit: 'Booklet',
+                        cost: varCost,
+                        cost_price: varCost,
+                        costPrice: varCost,
+                        price: variant.sellingPrice,
+                        selling_price: variant.sellingPrice,
+                        sellingPrice: variant.sellingPrice,
+                        profitAmount: varProfit,
+                        profitMargin: varCost > 0 ? parseFloat(((varProfit / varCost) * 100).toFixed(2)) : 0,
+                        minimumMargin: validation.minimumMarkup,
+                        pricingValidated: validation.valid,
+                        stock: 0,
+                        pages: varPages,
+                        pricingConfig: {
+                            paperId: selectedPaperId,
+                            tonerId: selectedTonerId,
+                            finishingOptions: enabledFinishingOptions,
+                            manualOverride: false,
+                            marketAdjustment: 0,
+                        },
+                        smartPricing: {
+                            pages: varPages,
+                            copies: 1,
+                            totalPages: varPages,
+                            totalSheets: varTotalSheets,
+                            paperItemId: selectedPaperId,
+                            tonerItemId: selectedTonerId,
+                            finishingEnabled: enabledFinishingOptions.map(o => o.id),
+                            finishingOptionCosts: enabledFinishingOptions.reduce<Record<string, number>>((acc, o) => {
+                                acc[o.id] = Number(o.price) || 0;
+                                return acc;
+                            }, {}),
+                            bomTemplateId: varBomId,
+                            paperCost: varPaperCost,
+                            tonerCost: varTonerCost,
+                            finishingCost: finishingCost,
+                            finishingInventoryCost: finishingInventoryCost,
+                            baseCost: varCost,
+                        } as Item['smartPricing']
+                    };
+
+                    const varComponents: any[] = [];
+                    if (selectedPaper) {
+                        varComponents.push({
+                            itemId: selectedPaperId,
+                            name: selectedPaper.name,
+                            quantityFormula: `${varTotalSheets}`,
+                            unit: selectedPaper.unit || 'ream'
+                        });
+                    }
+                    if (selectedToner) {
+                        varComponents.push({
+                            itemId: selectedTonerId,
+                            name: selectedToner.name,
+                            quantityFormula: `${Math.ceil(varPages / 20000 * 100)} / 100`,
+                            unit: selectedToner.unit || 'unit'
+                        });
+                    }
+                    enabledFinishingOptions.forEach(opt => {
+                        varComponents.push({
+                            itemId: opt.id,
+                            name: opt.name,
+                            quantityFormula: `${opt.id === 'coverPages' ? 2 : 1}`,
+                            unit: 'unit'
+                        });
+                    });
+
+                    const varBom: BOMTemplate = {
+                        id: varBomId,
+                        name: `${name} - ${variant.attribute.trim()} (${type === 'Service' ? 'Printing Service' : 'Product'})`,
+                        type: 'Custom',
+                        components: varComponents,
+                        lastUpdated: new Date().toISOString()
+                    };
+
+                    await dbService.put('inventory', varItem);
+                    await dbService.put('bomTemplates', varBom);
+                }
+            }
+        } catch (error) {
+            logger.error('Failed to save with variants:', error);
+            alert('Failed to save item');
+        } finally {
+            setIsCreatingProduct(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center bg-slate-50">
@@ -796,7 +966,7 @@ const SmartPricing: React.FC = () => {
                                     Summary Card
                                 </button>
                                 <button 
-                                    onClick={() => setShowTypeChoice(true)}
+                                    onClick={handleOpenSaveDialog}
                                     disabled={!validation.valid || sellingPrice <= 0}
                                     className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50"
                                     title={!validation.valid && sellingPrice > 0 ? `Markup ${profitMarkup.toFixed(1)}% below minimum ${validation.minimumMarkup}%` : ''}
@@ -866,32 +1036,157 @@ const SmartPricing: React.FC = () => {
                 </div>
             )}
 
-            {showTypeChoice && (
+            {showSaveDialog && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-                        <h2 className="text-xl font-bold text-slate-800 mb-2">Save as...</h2>
-                        <p className="text-sm text-slate-500 mb-6">Choose how this item should be saved in inventory.</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={() => { setItemType('Product'); setShowTypeChoice(false); setTimeout(() => handleSaveProduct(), 50); }}
-                                className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all"
-                            >
-                                <Package size={32} className="text-indigo-600" />
-                                <span className="font-semibold text-slate-800">Product</span>
-                                <span className="text-[11px] text-slate-400 text-center">Saved as a sellable product with BOM recipe</span>
-                            </button>
-                            <button
-                                onClick={() => { setItemType('Service'); setShowTypeChoice(false); setTimeout(() => handleSaveProduct(), 50); }}
-                                className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all"
-                            >
-                                <Printer size={32} className="text-indigo-600" />
-                                <span className="font-semibold text-slate-800">Printing Service</span>
-                                <span className="text-[11px] text-slate-400 text-center">Saved as a service type with pricing config</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-800">Save to Inventory</h2>
+                            <button onClick={() => setShowSaveDialog(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                                <X size={20} />
                             </button>
                         </div>
-                        <button onClick={() => setShowTypeChoice(false)} className="mt-4 w-full py-2.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-                            Cancel
-                        </button>
+
+                        <div className="space-y-4">
+                            <div className="p-4 bg-slate-50 rounded-xl space-y-2">
+                                <p className="text-sm font-medium text-slate-600">Pricing Summary</p>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="flex justify-between"><span className="text-slate-500">Cost:</span><span className="font-medium">{formatCurrency(costPrice)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Selling:</span><span className="font-medium">{formatCurrency(sellingPrice)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Profit:</span><span className={`font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(profit)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Margin:</span><span className={`font-medium ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>{profitMarkup.toFixed(1)}%</span></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Item Name</label>
+                                <input
+                                    type="text"
+                                    value={saveItemName}
+                                    onChange={e => setSaveItemName(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="Enter item name..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaveDialogType('Product')}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                                            saveDialogType === 'Product' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <Package size={20} className={saveDialogType === 'Product' ? 'text-indigo-600' : 'text-slate-400'} />
+                                        <span className={`font-medium ${saveDialogType === 'Product' ? 'text-indigo-700' : 'text-slate-600'}`}>Product</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaveDialogType('Service')}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                                            saveDialogType === 'Service' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <Printer size={20} className={saveDialogType === 'Service' ? 'text-indigo-600' : 'text-slate-400'} />
+                                        <span className={`font-medium ${saveDialogType === 'Service' ? 'text-indigo-700' : 'text-slate-600'}`}>Printing Service</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {!editingProductId && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block text-sm font-medium text-slate-700">Variants</label>
+                                        <button
+                                            type="button"
+                                            onClick={addVariantRow}
+                                            disabled={saveVariants.length >= 5}
+                                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
+                                        >
+                                            <Plus size={14} /> Add Variant
+                                        </button>
+                                    </div>
+                                    {saveVariants.length > 0 && (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200">
+                                                        <th className="text-left py-2 pr-2 text-slate-500 font-medium">Attribute</th>
+                                                        <th className="text-left py-2 px-2 text-slate-500 font-medium">Pages</th>
+                                                        <th className="text-right py-2 px-2 text-slate-500 font-medium">Base Price</th>
+                                                        <th className="text-right py-2 px-2 text-slate-500 font-medium">Selling Price</th>
+                                                        <th className="py-2 pl-2"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {saveVariants.map(v => (
+                                                        <tr key={v.id} className="border-b border-slate-100">
+                                                            <td className="py-1.5 pr-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={v.attribute}
+                                                                    onChange={e => updateVariantRow(v.id, 'attribute', e.target.value)}
+                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm"
+                                                                    placeholder="e.g. A4"
+                                                                />
+                                                            </td>
+                                                            <td className="py-1.5 px-2">
+                                                                <input
+                                                                    type="number"
+                                                                    value={v.pages}
+                                                                    onChange={e => updateVariantRow(v.id, 'pages', parseInt(e.target.value) || 1)}
+                                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-sm"
+                                                                    min={1}
+                                                                />
+                                                            </td>
+                                                            <td className="py-1.5 px-2 text-right text-slate-600">
+                                                                {formatCurrency(v.basePrice)}
+                                                            </td>
+                                                            <td className="py-1.5 px-2">
+                                                                <input
+                                                                    type="number"
+                                                                    value={v.sellingPrice || ''}
+                                                                    onChange={e => updateVariantRow(v.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
+                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right"
+                                                                    min={0}
+                                                                    step={0.01}
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </td>
+                                                            <td className="py-1.5 pl-2">
+                                                                <button type="button" onClick={() => removeVariantRow(v.id)} className="p-1 text-red-400 hover:text-red-600">
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                    <p className="text-[11px] text-slate-400 mt-1">Base price auto-calculated from cost per page. Add up to 5 variants.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowSaveDialog(false)}
+                                className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSaveFromDialog}
+                                disabled={isCreatingProduct || !saveItemName.trim()}
+                                className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
+                            >
+                                {isCreatingProduct ? 'Saving...' : editingProductId ? 'Update' : 'Save'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -498,7 +498,7 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
                         <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center hover:bg-slate-50 border-r border-slate-200" title="Decrease quantity" aria-label="Decrease quantity"><Minus size={10} /></button>
                         <input
                             type="number"
-                            className="w-10 text-xs font-bold text-slate-800 text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-7 text-xs font-bold text-slate-800 text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             value={localQty}
                             onChange={(e) => setLocalQty(e.target.value)}
                             onKeyDown={handleKeyDown}

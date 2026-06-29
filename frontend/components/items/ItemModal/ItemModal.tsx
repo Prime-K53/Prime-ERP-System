@@ -89,7 +89,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       >
         <div
           ref={modalRef}
-          className="bg-white rounded-[16px] w-full max-w-[56rem] max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
+          className="bg-white rounded-[16px] w-full max-w-[72.8rem] max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
           style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)', fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: '#1E2A24', padding: '16px 20px' }}
         >
           <PrintingServiceModal
@@ -113,7 +113,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-[16px] w-full max-w-[44.8rem] max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
+        className="bg-white rounded-[16px] w-full max-w-[58.24rem] max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
         style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)', fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: '#1E2A24' }}
       >
         {/* Header */}
