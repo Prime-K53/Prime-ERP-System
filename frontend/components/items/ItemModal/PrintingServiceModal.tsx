@@ -12,6 +12,7 @@ interface Props {
   onClose: () => void;
   allItems?: Item[];
   lockClassification?: boolean;
+  sourceTab?: string | null;
 }
 
 type PrintingTab = 'basicInfo' | 'printSettings' | 'bomMaterials' | 'finishing' | 'variants';
@@ -35,7 +36,9 @@ const defaultFinishingOptions: FinishingOption[] = [
 
 const DEFAULT_MARKUP_PCT = 25;
 
-const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems = [] }) => {
+const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems = [], sourceTab }) => {
+  const isProduct = sourceTab === 'product';
+  const entityType = isProduct ? 'Product' : 'Service';
   const inventory = useMemo(() => allItems.map(normalizeInventoryItemPricing), [allItems]);
   const [activeTab, setActiveTab] = useState<PrintingTab>('basicInfo');
   const [saving, setSaving] = useState(false);
@@ -43,7 +46,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [name, setName] = useState(item?.name || '');
   const [sku, setSku] = useState(item?.sku || '');
   const [description, setDescription] = useState(item?.description || '');
-  const [category, setCategory] = useState(item?.category || 'Printing Service');
+  const [category, setCategory] = useState(item?.category || (isProduct ? 'Products' : 'Printing Service'));
   const [status, setStatus] = useState<'Active' | 'Archived'>((item as any)?.status === 'Archived' ? 'Archived' : 'Active');
   const [favorite, setFavorite] = useState(!!(item as any)?.favorite);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -224,7 +227,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   useEffect(() => {
     if (name.trim() && (!sku || !item?.sku)) {
-      const generated = generateAutoSKU('Service', name.trim(), undefined, inventory);
+      const generated = generateAutoSKU(entityType, name.trim(), undefined, inventory);
       setSku(generated);
     }
   }, [name]);
@@ -320,10 +323,10 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         ...item,
         id: productId,
         name: nameTrimmed,
-        sku: sku.trim() || generateAutoSKU('Service', nameTrimmed, undefined, inventory),
-        type: 'Service' as any,
-        classification: 'printing_service',
-        category: category || 'Printing Service',
+        sku: sku.trim() || generateAutoSKU(entityType, nameTrimmed, undefined, inventory),
+        type: entityType as any,
+        classification: isProduct ? 'Product' : 'printing_service',
+        category: category || (isProduct ? 'Products' : 'Printing Service'),
         unit: item?.unit || 'Booklet',
         description: description || generatedDescription || item?.description,
         status,
@@ -371,9 +374,11 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             baseCost,
           } as Item['smartPricing'],
         } : {}),
-        printType: 'Digital',
-        printingServiceType: 'printing',
-        printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+        ...(isProduct ? {} : {
+          printType: 'Digital' as const,
+          printingServiceType: 'printing' as const,
+          printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+        }),
         paperCost: hasVariants ? 0 : paperCost,
         tonerCost: hasVariants ? 0 : tonerCost,
         variants: hasVariants ? saveVariants.filter(v => v.attribute.trim() && v.sellingPrice > 0).map(v => ({
@@ -397,7 +402,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         });
         await dbService.put('bomTemplates', {
           id: bomId,
-          name: `${nameTrimmed} (Printing Service)`,
+          name: `${nameTrimmed} (${entityType})`,
           type: 'Custom',
           components,
           lastUpdated: new Date().toISOString(),
@@ -422,10 +427,10 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
           const varItem: Item = {
             id: varId,
             name: `${nameTrimmed} - ${variant.attribute.trim()}`,
-            sku: generateAutoSKU('Service', `${nameTrimmed} ${variant.attribute.trim()}`, undefined, inventory),
-            type: 'Service' as any,
-            classification: 'printing_service',
-            category: category || 'Printing Service',
+            sku: generateAutoSKU(entityType, `${nameTrimmed} ${variant.attribute.trim()}`, undefined, inventory),
+            type: entityType as any,
+            classification: isProduct ? 'Product' : 'printing_service',
+            category: category || (isProduct ? 'Products' : 'Printing Service'),
             unit: 'Booklet',
             status,
             favorite,
@@ -471,9 +476,11 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               finishingInventoryCost: finishingInventoryCost,
               baseCost: varCost,
             } as Item['smartPricing'],
-            printType: 'Digital',
-            printingServiceType: 'printing',
-            printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+            ...(isProduct ? {} : {
+              printType: 'Digital' as const,
+              printingServiceType: 'printing' as const,
+              printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+            }),
             paperCost: varPaperCost,
             tonerCost: varTonerCost,
           } as unknown as Item;
@@ -492,7 +499,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
           await dbService.put('inventory', varItem);
           await dbService.put('bomTemplates', {
             id: varBomId,
-            name: `${nameTrimmed} - ${variant.attribute.trim()} (Printing Service)`,
+            name: `${nameTrimmed} - ${variant.attribute.trim()} (${entityType})`,
             type: 'Custom',
             components: varComponents,
             lastUpdated: new Date().toISOString(),
@@ -530,19 +537,19 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const renderBasicInfoTab = () => (
     <div className="space-y-4">
       <div className={premiumCard}>
-        {renderCardHeader(<FileText size={15} className="text-white" />, 'Service Information')}
+        {renderCardHeader(<FileText size={15} className="text-white" />, `${isProduct ? 'Product' : 'Service'} Information`)}
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className={premiumLabel}><FileText size={12} /> Service Name *</label>
+            <label className={premiumLabel}><FileText size={12} /> {entityType} Name *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} className={premiumInput} placeholder="e.g. A4 Full Colour Flyers" />
           </div>
           <div className="col-span-2">
             <label className={premiumLabel}><FileText size={12} /> Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
-              className={`${premiumInput} resize-none`} rows={2} placeholder="Brief description of this printing service..." />
+              className={`${premiumInput} resize-none`} rows={2} placeholder="Brief description..." />
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <label className={premiumLabel}><Package size={12} /> SKU / Service Code</label>
+            <label className={premiumLabel}><Package size={12} /> SKU / {entityType} Code</label>
             <input type="text" value={sku} onChange={e => setSku(e.target.value)} className={premiumInput} placeholder="Auto-generated" />
           </div>
           <div>
@@ -1026,13 +1033,13 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               {activeTab !== 'variants' && (
                 <button type="button" onClick={handleSave} disabled={saving || (!hasVariants && (sellingPrice <= 0 || !validation.valid))}
                   className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:shadow-none text-sm flex items-center justify-center gap-2">
-                  {saving ? <>Saving...</> : <><Zap size={16} /> Save Printing Service</>}
+                  {saving ? <>Saving...</> : <><Zap size={16} /> Save {entityType}</>}
                 </button>
               )}
               {activeTab === 'variants' && (
                 <button type="button" onClick={handleSave} disabled={saving}
                   className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:shadow-none text-sm flex items-center justify-center gap-2">
-                  {saving ? <>Saving...</> : <><Zap size={16} /> Save Printing Service</>}
+                  {saving ? <>Saving...</> : <><Zap size={16} /> Save {entityType}</>}
                 </button>
               )}
             </div>

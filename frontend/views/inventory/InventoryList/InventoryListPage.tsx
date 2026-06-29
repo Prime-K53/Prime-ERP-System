@@ -58,6 +58,7 @@ export const InventoryListPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [lockClassification, setLockClassification] = useState(false);
+  const [sourceTab, setSourceTab] = useState<string | null>(null);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [adjustingItem, setAdjustingItem] = useState<Item | null>(null);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
@@ -176,14 +177,16 @@ export const InventoryListPage: React.FC = () => {
         stock: 0,
         status: 'Active',
       };
-      if (tabType === 'printing' || tabType === 'product') {
+      if (tabType === 'printing') {
         base.classification = 'printing_service';
       }
       setEditingItem(base as Item);
       setLockClassification(true);
+      setSourceTab(tabType);
     } else {
       setEditingItem(null);
       setLockClassification(false);
+      setSourceTab(null);
     }
     setIsModalOpen(true);
   }, []);
@@ -198,6 +201,7 @@ export const InventoryListPage: React.FC = () => {
     setIsModalOpen(false);
     setEditingItem(null);
     setLockClassification(false);
+    setSourceTab(null);
   }, []);
 
   const handleSaveItem = useCallback(async (item: Item) => {
@@ -1038,7 +1042,7 @@ const handleProduce = useCallback((item: Item) => {
       </div>
 
       {/* Modals */}
-      <ItemModal open={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={editingItem} allItems={allItems} lockClassification={lockClassification} />
+      <ItemModal open={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={editingItem} allItems={allItems} lockClassification={lockClassification} sourceTab={sourceTab} />
       {adjustingItem && (
         <StockAdjustmentModal
           isOpen={isAdjustModalOpen}

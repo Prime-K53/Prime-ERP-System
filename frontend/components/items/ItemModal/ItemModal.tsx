@@ -11,9 +11,10 @@ interface Props {
   onSave: (item: Item) => Promise<void>;
   allItems?: Item[];
   lockClassification?: boolean;
+  sourceTab?: string | null;
 }
 
-export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allItems, lockClassification }) => {
+export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allItems, lockClassification, sourceTab }) => {
   const [internalItem, setInternalItem] = React.useState<Item | null | undefined>(item);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -78,14 +79,18 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     return false;
   })();
 
-  if (isPrintingService) {
+  const usePrintingServiceModal = !internalItem?.id
+    ? (sourceTab === 'product' || sourceTab === 'printing')
+    : isPrintingService;
+
+  if (usePrintingServiceModal) {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{ background: 'rgba(22,32,27,.5)' }}
         role="dialog"
         aria-modal="true"
-        aria-label={internalItem?.id ? 'Edit printing service' : 'New printing service'}
+        aria-label={internalItem?.id ? `Edit ${sourceTab === 'product' ? 'product' : 'printing service'}` : `New ${sourceTab === 'product' ? 'product' : 'printing service'}`}
       >
         <div
           ref={modalRef}
@@ -97,6 +102,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
             onSave={handleSave}
             onClose={onClose}
             allItems={allItems}
+            sourceTab={sourceTab}
           />
         </div>
       </div>
