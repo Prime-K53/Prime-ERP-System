@@ -6,7 +6,6 @@ import { useVariantManager } from './hooks/useVariantManager';
 import { useAttributeStore } from '../../../stores/attributeStore';
 import { useConversionManager } from './hooks/useConversionManager';
 import { useAuth } from '../../../context/AuthContext';
-import '../../../views/inventory/inventory-reference.css';
 import { BasicInformation } from './sections/BasicInformation';
 import { InventorySection } from './sections/InventorySection';
 import { UnitConversionSection } from './sections/UnitConversionSection';

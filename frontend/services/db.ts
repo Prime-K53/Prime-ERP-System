@@ -24,6 +24,8 @@ import {
 } from '../types/banking';
 import { cloudDb } from './cloudDb';
 import { isCloudOnlyMode, isSupabaseConfigured, requireCloudSessionMessage } from './cloudMode';
+import { durableSyncQueue } from './durableSyncQueue';
+import { backgroundSyncService } from './backgroundSyncService';
 
 interface NexusDB extends DBSchema {
     inventory: { key: string; value: Item; };
@@ -432,19 +434,108 @@ const shouldUseCloud = () => {
 };
 
 const writeSyncOutbox = async (entityId: string, type: string, payload: any) => {
-  if (!SUPABASE_CONFIGURED()) return;
-  try {
-    await putToLegacyStore('syncOutbox', {
-      id: `outbox-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      entityId,
-      type,
-      payload,
-      date: new Date().toISOString()
-    });
-  } catch {
-    // outbox logging is best-effort
-  }
+  // DEPRECATED: use durableSyncQueue instead
+  // Kept for backward compatibility — no-op
 };
+
+const CLOUD_TABLE_MAP: Record<string, string> = {
+  inventory: 'products',
+  ledger: 'ledger_entries',
+  batches: 'production_batches',
+  resources: 'production_resources',
+  workCenters: 'work_centers',
+  workOrders: 'work_orders',
+  salesOrders: 'sales_orders',
+  userGroups: 'user_groups',
+  bomTemplates: 'bom_templates',
+  bankAccounts: 'bank_accounts',
+  customerPayments: 'customer_payments',
+  examinationBatches: 'examination_batches',
+  auditLogs: 'audit_logs',
+  goodsReceipts: 'goods_receipts',
+  supplierPayments: 'supplier_payments',
+  resourceAllocations: 'resource_allocations',
+  profitMarginSettings: 'profit_margin_settings',
+  marketAdjustments: 'market_adjustments',
+  materialCategories: 'material_categories',
+  warehouseInventory: 'warehouse_inventory',
+  materialBatches: 'material_batches',
+  inventoryTransactions: 'inventory_transactions',
+  materialReservations: 'material_reservations',
+  bankTransactions: 'bank_transactions',
+  bankStatements: 'bank_statements',
+  bankScheduledPayments: 'bank_scheduled_payments',
+  bankExchangeRates: 'bank_exchange_rates',
+  bankFees: 'bank_fees',
+  bankReconciliations: 'bank_reconciliations',
+  bankAdjustments: 'bank_adjustments',
+  bankCashFlowForecasts: 'bank_cash_flow_forecasts',
+  bankAlerts: 'bank_alerts',
+  bankCategories: 'bank_categories',
+  idempotencyKeys: 'idempotency_keys',
+  customerNotificationLogs: 'customer_notification_logs',
+  whatsappChats: 'whatsapp_chats',
+  whatsappTemplates: 'whatsapp_templates',
+  whatsappCampaigns: 'whatsapp_campaigns',
+  whatsappAutomations: 'whatsapp_automations',
+  vatTransactions: 'vat_transactions',
+  vatReturns: 'vat_returns',
+  roundingLogs: 'rounding_logs',
+  examinationJobs: 'examination_jobs',
+  examinationJobSubjects: 'examination_job_subjects',
+  examinationInvoiceGroups: 'examination_invoice_groups',
+  examinationRecurringProfiles: 'examination_recurring_profiles',
+  examinationInventoryDeductions: 'examination_inventory_deductions',
+  examinationBatchNotifications: 'examination_batch_notifications',
+  smsCampaigns: 'sms_campaigns',
+  smsTemplates: 'sms_templates',
+  subcontractOrders: 'subcontract_orders',
+  maintenanceLogs: 'maintenance_logs',
+  jobTickets: 'job_tickets',
+  jobTicketSettings: 'job_ticket_settings',
+  jobOrders: 'job_orders',
+  examJobs: 'examination_jobs',
+  examPapers: 'examination_papers',
+  examPrintingBatches: 'examination_printing_batches',
+  salesExchanges: 'sales_exchanges',
+  salesExchangeItems: 'sales_exchange_items',
+  reprintJobs: 'reprint_jobs',
+  salesExchangeApprovals: 'sales_exchange_approvals',
+  marketAdjustmentTransactions: 'market_adjustment_transactions',
+  notificationAuditLogs: 'notification_audit_logs',
+  classes: 'classes',
+  subjects: 'subjects',
+  recurringInvoices: 'recurring_invoices',
+  scheduledPayments: 'scheduled_payments',
+  walletTransactions: 'wallet_transactions',
+  deliveryNotes: 'delivery_notes',
+  payrollRuns: 'payroll_runs',
+  shipments: 'shipments',
+  schools: 'schools',
+  tasks: 'tasks',
+  expenses: 'expenses',
+  income: 'income',
+  budgets: 'budgets',
+  transfers: 'transfers',
+  cheques: 'cheques',
+  employees: 'employees',
+  payslips: 'payslips',
+  subscribers: 'subscribers',
+  suppliers: 'suppliers',
+  sales: 'sales',
+  purchases: 'purchases',
+  invoices: 'invoices',
+  customers: 'customers',
+  accounts: 'accounts',
+  reminders: 'reminders',
+  quotations: 'quotations',
+  orders: 'orders',
+  boms: 'boms',
+};
+
+function getCloudTable(storeName: string): string {
+  return CLOUD_TABLE_MAP[storeName] || storeName;
+}
 
 const getSettingFromLegacyStore = async <T>(key: string): Promise<T | undefined> => withDbRecovery(async (db) => {
     if (!db.objectStoreNames.contains('settings')) return undefined;
@@ -1039,71 +1130,76 @@ export const dbService = {
         }
 
         const isFromCloud = (item as Record<string, unknown>)?._cloudSource === true;
-        if (isCloudOnlyMode() && !LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
-            if (isFromCloud) return String((item as Record<string, unknown>)?.id ?? '');
-            const cloudId = await cloudDb.put(String(storeName), item);
-            if (!cloudId) {
-                await putToLegacyStore(storeName, item);
-                return String((item as Record<string, unknown>)?.id ?? '');
-            }
-            emitDataChange([String(storeName)]);
-            return cloudId;
+        if (isFromCloud) {
+            await putToLegacyStore(storeName, item);
+            return String((item as Record<string, unknown>)?.id ?? '');
         }
 
-        // Cloud-primary: write to Supabase first when online (skip if data is already from cloud)
-        if (shouldUseCloud() && !isFromCloud && !LOCAL_ONLY_STORES.has(String(storeName))) {
+        const itemId = String((item as Record<string, unknown>)?.id ?? '');
+
+        // Always write to local cache first for immediate UI responsiveness.
+        // Capture the resolved ID for return.
+        const route = getRouteDecision(storeName);
+        let localResultId = itemId;
+        if (route && isBackedStore(String(storeName))) {
+            const sourceStore = storeName as BackedLegacyStoreName;
+            let persisted = false;
+
+            if (route.writeTargets.includes('rxdb')) {
+                try {
+                    await dexieBridge.put(sourceStore, item);
+                    persisted = true;
+                    await trackRouteHealthy(storeName);
+                } catch (error) {
+                    await trackRouteError(
+                        storeName,
+                        error,
+                        route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy write for ${String(storeName)}.`
+                    );
+                }
+            }
+            if (route.writeTargets.includes('legacy') || !persisted) {
+                localResultId = await putToLegacyStore(storeName, item);
+            }
+        } else {
+            localResultId = await putToLegacyStore(storeName, item);
+        }
+
+        // Queue the operation BEFORE cloud write (guarantees no data loss on crash)
+        const isLocalOnly = LOCAL_ONLY_STORES.has(String(storeName)) || String(storeName) === 'syncOutbox';
+        if (shouldUseCloud() && !isLocalOnly) {
+            const table = getCloudTable(String(storeName));
+            let dependsOn: string[] = [];
+            const depKey = (item as Record<string, unknown>)?.dependsOn as string[] | undefined;
+            if (depKey) dependsOn = depKey;
+
+            const queued = await durableSyncQueue.enqueue({
+                table,
+                recordId: localResultId || null,
+                operation: 'upsert',
+                payload: item,
+                companyId: currentCompanyId || null,
+                dependsOn,
+            });
+
+            // Try cloud write now (non-blocking — background sync will retry if this fails)
             try {
-                const cloudId = await cloudDb.put(String(storeName), item);
-                if (cloudId) {
-                    await putToLegacyStore(storeName, { ...(item as Record<string, unknown>), _cloudSource: undefined });
-                    emitDataChange([String(storeName)]);
-                    return cloudId;
+                const cloudResult = await cloudDb.put(String(storeName), item);
+                if (cloudResult?.id) {
+                    await durableSyncQueue.markCompleted(queued.id, cloudResult.updatedAt);
                 }
             } catch (err) {
-                console.warn(`[DB] Cloud write failed for ${String(storeName)}, falling back to local:`, err);
+                // Queue item stays pending — background sync will retry
+                console.warn(`[DB] Cloud write failed for ${String(storeName)}, queued for retry:`, err);
             }
+
+            // Trigger background sync to process queue in case the above attempt failed
+            backgroundSyncService.trigger();
         }
 
-        const route = getRouteDecision(storeName);
-        if (!route || !isBackedStore(String(storeName))) {
-            const result = await putToLegacyStore(storeName, item);
-            if (!shouldUseCloud()) {
-                writeSyncOutbox(String((item as Record<string, unknown>)?.id ?? result), `${String(storeName)}:upsert`, item);
-            }
-            this.triggerSync();
-            emitDataChange([String(storeName)]);
-            return result;
-        }
-
-        const sourceStore = storeName as BackedLegacyStoreName;
-        let resultId = String((item as Record<string, unknown>)?.id ?? '');
-        let persisted = false;
-
-        if (route.writeTargets.includes('rxdb')) {
-            try {
-                resultId = await dexieBridge.put(sourceStore, item);
-                persisted = true;
-                await trackRouteHealthy(storeName);
-            } catch (error) {
-                await trackRouteError(
-                    storeName,
-                    error,
-                    route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy write for ${String(storeName)}.`
-                );
-            }
-        }
-
-        if (route.writeTargets.includes('legacy') || !persisted) {
-            resultId = await putToLegacyStore(storeName, item);
-            persisted = true;
-        }
-
-        if (!shouldUseCloud()) {
-            writeSyncOutbox(resultId, `${String(storeName)}:upsert`, item);
-        }
         this.triggerSync();
         emitDataChange([String(storeName)]);
-        return resultId;
+        return localResultId;
     },
 
     async bulkPut<T>(storeName: keyof NexusDB, items: T[]): Promise<void> {
@@ -1154,29 +1250,33 @@ export const dbService = {
     },
 
     async saveSetting<T>(key: string, value: T): Promise<void> {
-        if (isCloudOnlyMode()) {
-            const saved = await cloudDb.saveSetting<T>(key, value);
-            if (saved === null) {
-                throw new Error(requireCloudSessionMessage);
-            }
-            emitDataChange(['settings']);
-            return;
-        }
-
-        // Cloud-primary: write settings to Supabase first when online
-        if (shouldUseCloud()) {
-            try {
-                await cloudDb.saveSetting<T>(key, value);
-            } catch (err) {
-                console.warn(`[DB] Cloud saveSetting failed for ${key}, falling back to local:`, err);
-            }
-        }
-
+        // Save locally first for immediate access
         try {
             await settingsBackplane.setJson(key, value, { exactKey: true });
         } catch (error) {
             console.warn("[DB] Error saving setting:", key, error);
         }
+
+        // Queue the setting save and try cloud write
+        if (shouldUseCloud()) {
+            const queued = await durableSyncQueue.enqueue({
+                table: 'settings',
+                recordId: key,
+                operation: 'upsert',
+                payload: { id: key, data: value },
+                companyId: currentCompanyId || null,
+            });
+
+            try {
+                await cloudDb.saveSetting<T>(key, value);
+                await durableSyncQueue.markCompleted(queued.id);
+            } catch (err) {
+                console.warn(`[DB] Cloud saveSetting failed for ${key}, queued for retry:`, err);
+            }
+
+            backgroundSyncService.trigger();
+        }
+
         this.triggerSync();
         emitDataChange(['settings']);
     },
@@ -1207,6 +1307,7 @@ export const dbService = {
 
         await resetEnterpriseDatabase().catch(() => undefined);
         await Promise.all(LEGACY_DATABASE_NAMES.map((name) => deleteDB(name).catch(() => undefined)));
+        await durableSyncQueue.destroy().catch(() => undefined);
 
         try {
             localStorage.clear();
@@ -1230,77 +1331,65 @@ export const dbService = {
     },
 
     async delete(storeName: keyof NexusDB, id: string): Promise<void> {
-        if (isCloudOnlyMode() && !LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
-            const cloudResult = await cloudDb.delete(String(storeName), id);
-            if (!cloudResult) {
-                throw new Error(requireCloudSessionMessage);
+        // Delete from local cache first for immediate responsiveness
+        const route = getRouteDecision(storeName);
+        if (route && isBackedStore(String(storeName))) {
+            const sourceStore = storeName as BackedLegacyStoreName;
+            let deleted = false;
+            if (route.writeTargets.includes('rxdb')) {
+                try {
+                    await dexieBridge.delete(sourceStore, id);
+                    deleted = true;
+                    await trackRouteHealthy(storeName);
+                } catch (error) {
+                    await trackRouteError(
+                        storeName,
+                        error,
+                        route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy delete for ${String(storeName)}.`
+                    );
+                }
             }
-            emitDataChange([String(storeName)]);
-            return;
+            if (route.writeTargets.includes('legacy') || !deleted) {
+                await deleteFromLegacyStore(storeName, id);
+            }
+        } else {
+            await deleteFromLegacyStore(storeName, id);
         }
 
-        // Cloud-primary: delete from Supabase first when online
-        if (shouldUseCloud() && !LOCAL_ONLY_STORES.has(String(storeName))) {
+        // Queue the delete BEFORE cloud write (guarantees no data loss on crash)
+        const isLocalOnly = LOCAL_ONLY_STORES.has(String(storeName)) || String(storeName) === 'syncOutbox';
+        if (shouldUseCloud() && !isLocalOnly) {
+            const table = getCloudTable(String(storeName));
+            const queued = await durableSyncQueue.enqueue({
+                table,
+                recordId: id,
+                operation: 'delete',
+                payload: { id },
+                companyId: currentCompanyId || null,
+            });
+
+            // Try cloud delete now
             try {
                 const cloudResult = await cloudDb.delete(String(storeName), id);
                 if (cloudResult) {
-                    await deleteFromLegacyStore(storeName, id);
-                    emitDataChange([String(storeName)]);
-                    return;
+                    await durableSyncQueue.markCompleted(queued.id);
                 }
             } catch (err) {
-                console.warn(`[DB] Cloud delete failed for ${String(storeName)}/${id}, falling back to local:`, err);
+                console.warn(`[DB] Cloud delete failed for ${String(storeName)}/${id}, queued for retry:`, err);
             }
+
+            backgroundSyncService.trigger();
         }
 
-        const route = getRouteDecision(storeName);
-        if (!route || !isBackedStore(String(storeName))) {
-            await deleteFromLegacyStore(storeName, id);
-            if (!shouldUseCloud()) {
-                writeSyncOutbox(id, `${String(storeName)}:delete`, { id });
-            }
-            this.triggerSync();
-            emitDataChange([String(storeName)]);
-            return;
-        }
-
-        const sourceStore = storeName as BackedLegacyStoreName;
-        let deleted = false;
-
-        if (route.writeTargets.includes('rxdb')) {
-            try {
-                await dexieBridge.delete(sourceStore, id);
-                deleted = true;
-                await trackRouteHealthy(storeName);
-            } catch (error) {
-                await trackRouteError(
-                    storeName,
-                    error,
-                    route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy delete for ${String(storeName)}.`
-                );
-            }
-        }
-
-        if (route.writeTargets.includes('legacy') || !deleted) {
-            await deleteFromLegacyStore(storeName, id);
-        }
-
-        if (!shouldUseCloud()) {
-            writeSyncOutbox(id, `${String(storeName)}:delete`, { id });
-        }
         this.triggerSync();
         emitDataChange([String(storeName)]);
     },
 
     async saveFile(file: File): Promise<string> {
-        if (isCloudOnlyMode()) {
-            const fileId = await cloudDb.uploadFile(file);
-            if (!fileId) throw new Error(requireCloudSessionMessage);
-            return fileId;
-        }
-
         const id = `FILE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        return withDbRecovery(async (db) => {
+
+        // Cache locally first for immediate access
+        await withDbRecovery(async (db) => {
             await db.put('files', {
                 id,
                 blob: file,
@@ -1308,13 +1397,43 @@ export const dbService = {
                 type: file.type,
                 created: new Date().toISOString()
             });
-            return id;
         });
+
+        // Queue upload to Supabase Storage
+        if (shouldUseCloud()) {
+            const queued = await durableSyncQueue.enqueue({
+                table: '_files',
+                recordId: id,
+                operation: 'upsert',
+                payload: { id, name: file.name, type: file.type },
+                companyId: currentCompanyId || null,
+                fileRef: id,
+            });
+
+            try {
+                const fileId = await cloudDb.uploadFile(file);
+                if (fileId) {
+                    await durableSyncQueue.markCompleted(queued.id);
+                }
+            } catch (err) {
+                console.warn(`[DB] File upload failed for ${file.name}, queued for retry:`, err);
+            }
+
+            backgroundSyncService.trigger();
+        }
+
+        return id;
     },
 
     async getFile(id: string): Promise<string | null> {
-        if (isCloudOnlyMode()) {
-            return cloudDb.createSignedFileUrl(id);
+        // Try cloud first when in cloud mode
+        if (shouldUseCloud()) {
+            try {
+                const url = await cloudDb.createSignedFileUrl(id);
+                if (url) return url;
+            } catch {
+                // Fall through to local cache
+            }
         }
 
         return withDbRecovery(async (db) => {
@@ -1325,8 +1444,14 @@ export const dbService = {
     },
 
     async getFileBlob(id: string): Promise<Blob | null> {
-        if (isCloudOnlyMode()) {
-            return cloudDb.downloadFile(id);
+        // Try cloud first when in cloud mode
+        if (shouldUseCloud()) {
+            try {
+                const blob = await cloudDb.downloadFile(id);
+                if (blob) return blob;
+            } catch {
+                // Fall through to local cache
+            }
         }
 
         return withDbRecovery(async (db) => {

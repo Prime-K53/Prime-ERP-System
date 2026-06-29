@@ -1,6 +1,5 @@
 import React from 'react';
 import type { Item } from '../../../../types';
-import '../../inventory-reference.css';
 
 const I = (item: Item) => item as Item & { trackingMethod?: string; valuationMethod?: string };
 

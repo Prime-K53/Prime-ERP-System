@@ -4,7 +4,6 @@ import type { ProductVariant } from '../../../../types';
 import type { ValidationResult } from '../../../../services/pricingValidationService';
 import { aiService } from '../../../../services/ai/aiService';
 import { CLASSIFICATION_OPTIONS } from '../types/itemFormTypes';
-import '../../../../views/inventory/inventory-reference.css';
 
 const STOCK_TRACKED = new Set(['raw_material', 'consumable', 'product', 'stationery']);
 

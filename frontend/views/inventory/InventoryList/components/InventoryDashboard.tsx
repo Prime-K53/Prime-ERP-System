@@ -3,7 +3,6 @@ import { Package, DollarSign, Layers, AlertTriangle, XCircle, ShoppingCart, Chec
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useInventoryDashboard, type DashboardData } from '../hooks/useInventoryDashboard';
 import type { Item } from '../../../../types';
-import '../../inventory-reference.css';
 
 const KPI_ICONS: Record<string, React.ReactNode> = {
   'Total Items': <Package size={18} />,

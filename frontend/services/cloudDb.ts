@@ -385,14 +385,64 @@ export const cloudDb = {
     });
   },
 
-  async put<T>(storeName: string, item: T): Promise<string | null> {
+  /**
+   * Check if an operation has already been processed (idempotency check).
+   */
+  async checkIdempotency(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
+    try {
+      const { data } = await supabase
+        .from('idempotency_keys')
+        .select('result')
+        .eq('id', operationId)
+        .maybeSingle();
+      if (data) {
+        return { alreadyProcessed: true, result: data.result as string | null };
+      }
+    } catch {
+      // Idempotency check is best-effort
+    }
+    return { alreadyProcessed: false };
+  },
+
+  /**
+   * Record an idempotency key after successful operation.
+   */
+  async recordIdempotency(operationId: string, result: string, ttlMs: number = 86400000): Promise<void> {
+    try {
+      await supabase.from('idempotency_keys').upsert({
+        id: operationId,
+        result,
+        expires_at: new Date(Date.now() + ttlMs).toISOString(),
+      }, { onConflict: 'id' });
+    } catch {
+      // Idempotency recording is best-effort
+    }
+  },
+
+  async put<T>(storeName: string, item: T, operationId?: string): Promise<{ id: string | null; updatedAt?: string; createdAt?: string; version?: number } | null> {
     return withSession(async () => {
+      const raw = { ...(item as Record<string, unknown>) };
+
+      // Idempotency check
+      const opId = operationId || (raw._operationId as string | undefined);
+      if (opId) {
+        const { alreadyProcessed, result } = await this.checkIdempotency(opId);
+        if (alreadyProcessed) {
+          return result ? { id: result } : null;
+        }
+      }
+
       const table = getTable(storeName);
       const companyId = await getCompanyId();
-      const raw = { ...(item as Record<string, unknown>) };
+
+      const version = raw._version as number | undefined;
       delete raw._updatedAt;
       delete raw._cloudSource;
       delete raw._companyId;
+      delete raw._operationId;
+      delete raw._version;
+      delete raw.dependsOn;
+
       const { id, ...domainData } = raw;
       const record: Record<string, unknown> = {
         id: id || crypto.randomUUID(),
@@ -402,18 +452,44 @@ export const cloudDb = {
       if (companyId) {
         record.company_id = companyId;
       }
-      const { data, error } = await supabase
+
+      let query = supabase
         .from(table)
         .upsert(record, { onConflict: 'id', ignoreDuplicates: false })
-        .select('id')
+        .select('*')
         .single();
+
+      if (version !== undefined) {
+        query = query.eq('version', version);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      return data?.id || id || null;
+
+      const result = {
+        id: data?.id || id || null,
+        updatedAt: data?.updated_at ? String(data.updated_at) : undefined,
+        createdAt: data?.created_at ? String(data.created_at) : undefined,
+        version: data?.version ? Number(data.version) : undefined,
+      };
+
+      // Record idempotency
+      if (opId && result.id) {
+        await this.recordIdempotency(opId, result.id);
+      }
+
+      return result;
     });
   },
 
-  async delete(storeName: string, id: string): Promise<boolean | null> {
+  async delete(storeName: string, id: string, operationId?: string): Promise<boolean | null> {
     return withSession(async () => {
+      // Idempotency check
+      if (operationId) {
+        const { alreadyProcessed } = await this.checkIdempotency(operationId);
+        if (alreadyProcessed) return true;
+      }
+
       const table = getTable(storeName);
       const companyId = await getCompanyId();
       let query = supabase.from(table).delete().eq('id', id);
@@ -422,6 +498,12 @@ export const cloudDb = {
       }
       const { error } = await query;
       if (error) throw error;
+
+      // Record idempotency
+      if (operationId) {
+        await this.recordIdempotency(operationId, id);
+      }
+
       return true;
     });
   },
@@ -456,8 +538,14 @@ export const cloudDb = {
     });
   },
 
-  async uploadFile(file: File, folder = 'documents'): Promise<string | null> {
+  async uploadFile(file: File, folder = 'documents', operationId?: string): Promise<string | null> {
     return withSession(async () => {
+      // Idempotency check for file uploads
+      if (operationId) {
+        const { alreadyProcessed, result } = await this.checkIdempotency(operationId);
+        if (alreadyProcessed) return result || null;
+      }
+
       const companyId = await getCompanyId();
       if (!companyId) throw new Error('Cannot upload file without an active company.');
 
@@ -472,7 +560,14 @@ export const cloudDb = {
         });
 
       if (error) throw error;
-      return `storage:${FILE_BUCKET}:${path}`;
+      const result = `storage:${FILE_BUCKET}:${path}`;
+
+      // Record idempotency
+      if (operationId) {
+        await this.recordIdempotency(operationId, result);
+      }
+
+      return result;
     });
   },
 

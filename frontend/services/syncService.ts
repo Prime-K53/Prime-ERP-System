@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { dbService } from './db';
-import { mergeRecords } from './syncConflictResolver';
+import { mergeRecords, fieldLevelMerge } from './syncConflictResolver';
+import { durableSyncQueue } from './durableSyncQueue';
 
 const getCompanyId = (): string | null => {
   try {
@@ -164,14 +165,35 @@ async function ensureSession() {
   return null;
 }
 
+const LAST_SYNC_META_PREFIX = 'last_synced_at:';
+
 /**
- * Pull all data from Supabase into local IndexedDB cache.
- * Called on initial load and when coming back online.
- * Processes stores in parallel batches (SYNC_CONCURRENCY = 6)
- * for dramatically faster startup sync.
+ * Get the last successful sync timestamp for a given table
+ */
+async function getLastSyncAt(table: string): Promise<string | null> {
+  try {
+    const val = await durableSyncQueue.getMeta(`${LAST_SYNC_META_PREFIX}${table}`);
+    return val as string | null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save the last successful sync timestamp for a given table
+ */
+async function setLastSyncAt(table: string, timestamp: string): Promise<void> {
+  await durableSyncQueue.setMeta(`${LAST_SYNC_META_PREFIX}${table}`, timestamp);
+}
+
+/**
+ * Pull data from Supabase into local IndexedDB cache using incremental sync.
+ * Only fetches rows updated since last sync per table.
+ * Falls back to full sync if no prior sync exists.
  */
 export async function pullRemoteChanges(
-  onProgress?: (progress: SyncProgress) => void
+  onProgress?: (progress: SyncProgress) => void,
+  forceFullSync: boolean = false
 ): Promise<{ pulled: number; errors: string[] }> {
   if (!SUPABASE_ENABLED) return { pulled: 0, errors: [] };
 
@@ -184,7 +206,6 @@ export async function pullRemoteChanges(
   let completedStores = 0;
   const companyId = getCompanyId();
 
-  // Share one Supabase session check per batch — avoid redundant auth calls
   for (let i = 0; i < totalStores; i += SYNC_CONCURRENCY) {
     const batch = TABLES_TO_SYNC.slice(i, i + SYNC_CONCURRENCY);
 
@@ -195,20 +216,52 @@ export async function pullRemoteChanges(
 
         try {
           let query = supabase.from(table).select('*');
+
           if (companyId) query = query.eq('company_id', companyId);
-          const { data, error } = await query.order('updated_at', { ascending: true });
+
+          // Incremental sync: only fetch rows updated since last sync
+          if (!forceFullSync) {
+            const lastSyncAt = await getLastSyncAt(table);
+            if (lastSyncAt) {
+              query = query.gte('updated_at', lastSyncAt);
+            }
+          }
+
+          const { data, error } = await query
+            .order('updated_at', { ascending: true })
+            .limit(10000);
 
           if (error) { errors.push(`${storeName}: ${error.message}`); return 0; }
           if (!data || data.length === 0) return 0;
 
-          // Normalize all cloud records in one pass, then batch-write
           const cloudRecords = data.map((record: any) => {
             const { data: jsonData, updated_at, ...rest } = record;
             return { id: record.id, ...rest, ...(jsonData || {}), _cloudSource: true };
           });
 
-          // Batch-write all records for this store at once (single IDB transaction)
-          await dbService.bulkPut(storeName, cloudRecords as Record<string, unknown>[]);
+          // Apply field-level merge for existing records, skip for new ones
+          // All cloud records are marked _cloudSource: true so they don't trigger re-sync
+          const mergedRecords = [];
+          for (const cloudRecord of cloudRecords) {
+            const existing = await dbService.get(storeName, cloudRecord.id);
+            if (existing) {
+              const merged = fieldLevelMerge(existing, cloudRecord);
+              merged._cloudSource = true;
+              await dbService.put(storeName, merged);
+            } else {
+              mergedRecords.push(cloudRecord as Record<string, unknown>);
+            }
+          }
+          if (mergedRecords.length > 0) {
+            await dbService.bulkPut(storeName, mergedRecords);
+          }
+
+          // Track the latest updated_at for incremental sync
+          const lastTimestamp = data[data.length - 1]?.updated_at;
+          if (lastTimestamp) {
+            await setLastSyncAt(table, lastTimestamp);
+          }
+
           storeCount = cloudRecords.length;
         } catch (err) {
           errors.push(`${storeName}: ${err instanceof Error ? err.message : 'Unknown'}`);
@@ -350,7 +403,8 @@ function subscribeToRemoteChanges() {
                 const cloudRecord = { id: payload.new.id, ...rest, ...(jsonData || {}), _cloudSource: true };
                 const local = await dbService.get(storeName, payload.new.id);
                 if (local) {
-                  const merged = mergeRecords(cloudRecord, local);
+                  const merged = fieldLevelMerge(local, cloudRecord);
+                  merged._cloudSource = true;
                   await dbService.put(storeName, merged as Record<string, unknown>);
                 } else {
                   await dbService.put(storeName, cloudRecord as Record<string, unknown>);
@@ -361,7 +415,14 @@ function subscribeToRemoteChanges() {
             }
           }
         )
-        .subscribe();
+        .subscribe((status: string) => {
+          // On reconnection, trigger an incremental pull to catch missed events
+          if (status === 'SUBSCRIBED') {
+            import('./backgroundSyncService').then(({ backgroundSyncService }) => {
+              backgroundSyncService.trigger();
+            }).catch(() => {});
+          }
+        });
 
       realtimeChannels.push(channel);
     } catch {
@@ -387,23 +448,31 @@ export function startPeriodicSync(
 
   subscribeToRemoteChanges();
 
+  // Start the durable background sync engine (processes the durable queue,
+  // handles realtime recovery, incremental pulls, and retries forever)
+  import('./backgroundSyncService').then(({ backgroundSyncService }) => {
+    backgroundSyncService.start();
+  });
+
+  // Periodic pull (incremental sync) - 30 second interval for catching missed realtime events
   pushTimer = setInterval(async () => {
     if (navigator.onLine) {
-      const { pushed } = await pushLocalChanges().catch(() => ({ pushed: 0 }));
-      if (pushed > 0) {
-        console.log(`[Sync] Pushed ${pushed} offline mutations`);
+      const result = await pullRemoteChanges().catch(() => ({ pulled: 0, errors: [] }));
+      if (result.pulled > 0) {
+        console.log(`[Sync] Incremental pull: ${result.pulled} records from ${result.errors.length > 0 ? result.errors.join(',') : 'all tables'}`);
       }
     }
-  }, intervalMs);
+  }, Math.min(intervalMs, 30000));
 
-  // Initial sync on start
+  // Initial sync on start - full pull on first sync, then incremental
   if (navigator.onLine) {
-    fullSync().then(result => {
-      if (result.pushed > 0 || result.pulled > 0) {
-        console.log(`[Sync] Initial sync complete: ${result.pulled} pulled, ${result.pushed} pushed`);
+    const isFirstSync = !localStorage.getItem('nexus_last_sync_pull');
+    pullRemoteChanges(undefined, isFirstSync).then(result => {
+      if (result.pulled > 0) {
+        console.log(`[Sync] Initial pull complete: ${result.pulled} records`);
       }
-      onSyncComplete?.(result);
-    }).catch(err => console.warn('[Sync] Initial sync failed:', err));
+      onSyncComplete?.({ pulled: result.pulled, pushed: 0, errors: result.errors });
+    }).catch(err => console.warn('[Sync] Initial pull failed:', err));
   } else {
     onSyncComplete?.({ pulled: 0, pushed: 0, errors: ['offline'] });
   }

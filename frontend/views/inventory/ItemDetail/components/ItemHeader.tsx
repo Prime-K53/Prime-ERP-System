@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft, ArrowRight, Edit2, Printer, Copy } from 'lucide-react';
 import type { Item } from '../../../../types';
-import '../../inventory-reference.css';
 
 interface Props {
   item: Item;
