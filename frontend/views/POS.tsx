@@ -145,100 +145,19 @@ const POS: React.FC = () => {
 
   const upsertDynamicServiceInCart = async (service: Item, pricing: DynamicServicePricingResult) => {
     const lineId = `${service.id}::${pricing.pages}`;
-    const adjustmentSnapshots = pricing.adjustmentSnapshots || [];
-    const adjustmentTotal = adjustmentSnapshots.reduce((sum: number, s: any) => sum + (s.calculatedAmount || 0), 0);
-
-    const activeAdjs: any[] = [];
-
-    const recalculatePricing = async (serviceId: string, categoryId: string, baseCost: number, pages: number, copies: number) => {
-      if (!activeAdjs.length) {
-        const unitPrice = pricing.unitPricePerCopy;
-        const total = unitPrice * copies;
-        return { unitPrice, cost: baseCost, totalPrice: total, adjustmentSnapshots: [], adjustmentTotal: 0 };
-      }
-      return calculateServicePrice({
-        itemId: serviceId,
-        categoryId: categoryId,
-        baseCost: baseCost,
-        pages: pages,
-        copies: copies,
-        adjustments: activeAdjs,
-        marketAdjustments: activeAdjs,
-        context: 'SERVICE'
-      });
-    };
-
-    const dynamicLine: CartItem = {
-      ...service,
-      id: lineId,
-      itemId: service.id,
-      productId: service.id,
-      quantity: pricing.copies,
-      price: pricing.unitPricePerCopy,
-      cost: pricing.unitCostPerCopy,
-      marginAmount: pricing.marginAmount,
-      rounding_difference: pricing.rounding_difference,
-      calculated_price: pricing.unitPricePerCopy - (pricing.rounding_difference || 0),
-      basePrice: pricing.unitCostPerCopy,
-      pagesOverride: pricing.pages,
-      adjustmentSnapshots,
-      adjustmentTotal,
-      serviceDetails: pricing.serviceDetails,
-      // Store price lock information to prevent recalculation on quantity changes
-      priceLocked: pricing.priceLocked || false,
-      lockedTotalPrice: pricing.lockedTotalPrice,
-      lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy,
-      lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy
-    } as CartItem;
+    const adjs = pricing.adjustmentSnapshots || [];
+    const adjTotal = adjs.reduce((s: number, a: any) => s + (a.calculatedAmount || 0), 0);
+    const baseCartItem = { ...service, id: lineId, itemId: service.id, productId: service.id, quantity: pricing.copies, price: pricing.unitPricePerCopy, cost: pricing.unitCostPerCopy, marginAmount: pricing.marginAmount, rounding_difference: pricing.rounding_difference, calculated_price: pricing.unitPricePerCopy - (pricing.rounding_difference || 0), basePrice: pricing.unitCostPerCopy, pagesOverride: pricing.pages, adjustmentSnapshots: adjs, adjustmentTotal: adjTotal, serviceDetails: pricing.serviceDetails, priceLocked: pricing.priceLocked || false, lockedTotalPrice: pricing.lockedTotalPrice, lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy, lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy } as CartItem;
 
     setCart(prev => {
       const existing = prev.find(i => i.id === lineId);
-      if (!existing) return [...prev, dynamicLine];
-
+      if (!existing) return [...prev, baseCartItem];
       const updatedCopies = (existing.quantity || 0) + pricing.copies;
-
-      // If price is locked, maintain the locked unit price and scale the total
-      if (pricing.priceLocked && pricing.lockedUnitPricePerCopy !== undefined) {
-        const lockedAdjustmentTotal = adjustmentTotal; // Preserve original adjustment
-        return prev.map(i => i.id === lineId ? {
-          ...i,
-          quantity: updatedCopies,
-          price: pricing.lockedUnitPricePerCopy,
-          cost: pricing.lockedUnitCostPerCopy || i.cost,
-          basePrice: pricing.lockedUnitCostPerCopy || i.basePrice,
-          pagesOverride: pricing.pages,
-          adjustmentSnapshots,
-          adjustmentTotal: lockedAdjustmentTotal,
-          serviceDetails: pricing.serviceDetails,
-          priceLocked: true,
-          lockedTotalPrice: pricing.lockedTotalPrice,
-          lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy,
-          lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy
-        } : i);
-      }
-
-      // For non-locked services, we need to handle async - use existing values as fallback
-      // The actual recalculation will happen via useEffect triggered updates
-      const totalPages = pricing.pages * updatedCopies;
       return prev.map(i => i.id === lineId ? {
-        ...i,
-        quantity: updatedCopies,
-        price: pricing.unitPricePerCopy,
-        cost: pricing.unitCostPerCopy || i.cost,
-        basePrice: pricing.unitCostPerCopy || i.basePrice,
-        pagesOverride: pricing.pages,
-        adjustmentSnapshots,
-        adjustmentTotal: adjustmentTotal,
-        serviceDetails: {
-          pages: pricing.pages,
-          copies: updatedCopies,
-          totalPages,
-          unitCostPerPage: (pricing.unitCostPerCopy || 0) / pricing.pages,
-          unitPricePerCopy: pricing.unitPricePerCopy,
-          unitCostPerCopy: pricing.unitCostPerCopy,
-          totalCost: pricing.unitCostPerCopy * updatedCopies,
-          totalPrice: pricing.unitPricePerCopy * updatedCopies
-        }
+        ...i, quantity: updatedCopies, pagesOverride: pricing.pages, adjustmentSnapshots: adjs, adjustmentTotal: adjTotal,
+        ...(pricing.priceLocked && pricing.lockedUnitPricePerCopy !== undefined
+          ? { price: pricing.lockedUnitPricePerCopy, cost: pricing.lockedUnitCostPerCopy || i.cost, basePrice: pricing.lockedUnitCostPerCopy || i.basePrice, priceLocked: true, lockedTotalPrice: pricing.lockedTotalPrice, lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy, lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy, serviceDetails: pricing.serviceDetails }
+          : { price: pricing.unitPricePerCopy, cost: pricing.unitCostPerCopy || i.cost, basePrice: pricing.unitCostPerCopy || i.basePrice, serviceDetails: { pages: pricing.pages, copies: updatedCopies, totalPages: pricing.pages * updatedCopies, unitCostPerPage: (pricing.unitCostPerCopy || 0) / pricing.pages, unitPricePerCopy: pricing.unitPricePerCopy, unitCostPerCopy: pricing.unitCostPerCopy, totalCost: pricing.unitCostPerCopy * updatedCopies, totalPrice: pricing.unitPricePerCopy * updatedCopies } })
       } : i);
     });
   };

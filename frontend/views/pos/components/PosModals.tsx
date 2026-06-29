@@ -205,6 +205,8 @@ export const PrintingVariantModal: React.FC<{
 };
 
 // --- Dynamic Service Calculator Modal ---
+const getFinishingName = (id: string) => ({ binding: 'Binding', coverPages: 'Cover Pages', cutting: 'Cutting & Trimming', holePunch: 'Hole Punching', folding: 'Folding', stapling: 'Stapling' })[id] || id;
+
 export const ServiceCalculatorModal: React.FC<{
     service: Item;
     currencySymbol: string;
@@ -216,511 +218,183 @@ export const ServiceCalculatorModal: React.FC<{
     const { companyConfig } = useAuth(); const { inventory = [], marketAdjustments = [] } = useInventory();
     const [pages, setPages] = useState(Math.max(1, Number(initialPages) || 1));
     const [copies, setCopies] = useState(Math.max(1, Number(initialCopies) || 1));
-    const [isCalculating, setIsCalculating] = useState(false);
     const [enginePricing, setEnginePricing] = useState<DynamicServicePricingResult | null>(null);
     const [finishingCostOverrides, setFinishingCostOverrides] = useState<Record<string, number>>({});
     const [sellingPrice, setSellingPrice] = useState<number>(0);
     const [priceManuallySet, setPriceManuallySet] = useState(false);
+    const [bomTemplate, setBomTemplate] = useState<any>(null);
 
     const sp = service.smartPricing;
-    const config = service.serviceConfig;
     const hasSmartPricing = !!sp;
 
-    const [enabledFinishing, setEnabledFinishing] = useState<string[]>(() =>
-        (sp?.finishingEnabled || []) as string[]
-    );
+    const [enabledFinishing, setEnabledFinishing] = useState<string[]>(() => (sp?.finishingEnabled || []) as string[]);
+
+    useEffect(() => { let m = true; dbService.getSetting<Record<string, number>>('finishingOptionCosts').then(c => { if (m) setFinishingCostOverrides(c || {}); }).catch(() => { if (m) setFinishingCostOverrides({}); }); return () => { m = false; }; }, []);
 
     useEffect(() => {
-        let mounted = true;
-        dbService.getSetting<Record<string, number>>('finishingOptionCosts')
-            .then((savedCosts) => {
-                if (!mounted) return;
-                setFinishingCostOverrides(savedCosts || {});
-            })
-            .catch(() => {
-                if (!mounted) return;
-                setFinishingCostOverrides({});
-            });
-        return () => { mounted = false; };
-    }, []);
+        const bomId = sp?.bomTemplateId;
+        if (bomId) {
+            dbService.get('bomTemplates', bomId).then(tpl => {
+                if (tpl) setBomTemplate(tpl);
+            }).catch(() => {});
+        } else {
+            setBomTemplate(null);
+        }
+    }, [sp?.bomTemplateId]);
 
     const paper = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.paperItemId) : null, [sp, inventory]);
     const toner = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.tonerItemId) : null, [sp, inventory]);
 
-    const normalizedAdjustments = useMemo(() => {
-        return (marketAdjustments || [])
-            .filter((adj: any) => {
-                const isActive = adj.active ?? adj.isActive;
-                const categoryMatch = !adj.applyToCategories || adj.applyToCategories.length === 0 || adj.applyToCategories.includes(service.category);
-                return isActive && categoryMatch;
-            })
-            .map((adj: any) => ({
-                name: adj.name,
-                type: adj.type,
-                value: adj.value,
-                percentage: adj.percentage ?? adj.value,
-                calculatedAmount: adj.value,
-                adjustmentId: adj.id,
-                isActive: true
-            }));
-    }, [marketAdjustments, service.category]);
+    const normalizedAdjustments = useMemo(() => (marketAdjustments || []).filter((adj: any) => (adj.active ?? adj.isActive) && (!adj.applyToCategories?.length || adj.applyToCategories.includes(service.category))).map((adj: any) => ({ name: adj.name, type: adj.type, value: adj.value, percentage: adj.percentage ?? adj.value, calculatedAmount: adj.value, adjustmentId: adj.id, isActive: true })), [marketAdjustments, service.category]);
 
-    const getFinishingName = useCallback((id: string): string => {
-        const configOptions = companyConfig?.productionSettings?.finishingOptions || [];
-        const found = configOptions.find((o: any) => o.id === id);
-        if (found) return found.name;
-        const names: Record<string, string> = {
-            binding: 'Binding', coverPages: 'Cover Pages', cutting: 'Cutting & Trimming',
-            holePunch: 'Hole Punching', folding: 'Folding', stapling: 'Stapling',
-        };
-        return names[id] || id;
-    }, [companyConfig]);
-
-    const resolveFinishingCost = useCallback((id: string, pageCount: number, copyCount: number): number => {
+    const resolveFinishingCost = useCallback((id: string): number => {
         if (!sp) return 0;
-        const savedFinishingSelections = Array.isArray(sp.finishingSelections) ? sp.finishingSelections : [];
-        const savedFinishingCostMap = (sp.finishingOptionCosts || {}) as Record<string, number>;
-        const enabledFinishingIds = ((sp.finishingEnabled || []) as string[]);
-        const savedCopies = Math.max(1, Number(sp.copies) || 1);
-        const savedFinishingFallbackPerOption = enabledFinishingIds.length > 0 && Number(sp.finishingCost) > 0
-            ? (Number(sp.finishingCost) / (enabledFinishingIds.length * savedCopies))
-            : 0;
-        const defaultFinishingCosts: Record<string, number> = {
-            binding: 150, coverPages: 20, cutting: 30, holePunch: 20, folding: 15, stapling: 10
-        };
-        const selection = savedFinishingSelections.find((option: any) => option?.id === id);
-        const configuredOption = companyConfig?.productionSettings?.finishingOptions?.find((option: any) => option?.id === id);
-        const configuredCost = Number(
-            selection?.price ?? savedFinishingCostMap[id] ?? finishingCostOverrides[id] ?? configuredOption?.price
-        ) || 0;
-        return configuredCost > 0
-            ? configuredCost
-            : (savedFinishingFallbackPerOption > 0 ? savedFinishingFallbackPerOption : (defaultFinishingCosts[id] || 0));
+        const savedCost = sp.finishingSelections?.find((o: any) => o?.id === id)?.price ?? (sp.finishingOptionCosts || {})[id] ?? finishingCostOverrides[id] ?? companyConfig?.productionSettings?.finishingOptions?.find((o: any) => o?.id === id)?.price ?? 0;
+        if (savedCost > 0) return Number(savedCost);
+        const fees = ((sp.finishingEnabled || []) as string[]);
+        const fb = fees.length > 0 && Number(sp.finishingCost) > 0 ? Number(sp.finishingCost) / (fees.length * Math.max(1, Number(sp.copies) || 1)) : 0;
+        return fb > 0 ? Number(fb.toFixed(2)) : ({ binding: 150, coverPages: 20, cutting: 30, holePunch: 20, folding: 15, stapling: 10 }[id] || 0);
     }, [sp, companyConfig, finishingCostOverrides]);
 
     const costBreakdown = useMemo(() => {
-        let paperCost = 0;
-        let sheetsPerCopy = 0;
-        let totalSheets = 0;
-        let costPerSheet = 0;
-        if (paper && sp) {
-            sheetsPerCopy = Math.ceil(pages / 2);
-            totalSheets = sheetsPerCopy * copies;
-            const reamSize = Number(paper.conversionRate || paper.conversion_rate || 500);
-            const paperUnitCost = Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0);
-            costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
-            paperCost = Number((totalSheets * costPerSheet).toFixed(2));
-        }
-
-        let tonerCost = 0;
-        let tonerCostPerPage = 0;
-        if (toner && sp) {
-            const capacity = 20000;
-            const totalPagesVal = pages * copies;
-            const tonerUnitCost = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0);
-            tonerCostPerPage = tonerUnitCost / capacity;
-            tonerCost = Number((totalPagesVal * tonerCostPerPage).toFixed(2));
-        }
-
-        let finishingCost = 0;
-        const finishingDetails: { id: string; name: string; cost: number; total: number }[] = [];
-        if (sp) {
-            enabledFinishing.forEach((id) => {
-                const optionCost = resolveFinishingCost(id, pages, copies);
-                finishingDetails.push({
-                    id,
-                    name: getFinishingName(id),
-                    cost: optionCost,
-                    total: Number((optionCost * copies).toFixed(2)),
-                });
-                finishingCost += optionCost * copies;
-            });
-        }
-        finishingCost = Number(finishingCost.toFixed(2));
-
-        const baseCost = Number((paperCost + tonerCost + finishingCost).toFixed(2));
-        return { paperCost, tonerCost, finishingCost, baseCost, sheetsPerCopy, totalSheets, costPerSheet, tonerCostPerPage, finishingDetails };
-    }, [pages, copies, paper, toner, sp, enabledFinishing, resolveFinishingCost, getFinishingName]);
+        const p = paper && sp ? { sheetsPerCopy: Math.ceil(pages / 2), totalSheets: Math.ceil(pages / 2) * copies, costPerSheet: (() => { const rs = Number(paper.conversionRate || paper.conversion_rate || 500); return rs > 0 ? Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0) / rs : 0; })(), paperCost: 0 } : { sheetsPerCopy: 0, totalSheets: 0, costPerSheet: 0, paperCost: 0 };
+        if (p.paperCost === 0 && p.totalSheets > 0) p.paperCost = Number((p.totalSheets * p.costPerSheet).toFixed(2));
+        const t = toner && sp ? { tonerCostPerPage: (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000), tonerCost: Number(((pages * copies) * (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000)).toFixed(2)) } : { tonerCostPerPage: 0, tonerCost: 0 };
+        const fd = sp ? (enabledFinishing.map(id => ({ id, name: getFinishingName(id), cost: resolveFinishingCost(id), total: Number((resolveFinishingCost(id) * copies).toFixed(2)) }))) : [];
+        const fc = Number(fd.reduce((s, f) => s + f.total, 0).toFixed(2));
+        return { paperCost: p.paperCost, tonerCost: t.tonerCost, finishingCost: fc, baseCost: Number((p.paperCost + t.tonerCost + fc).toFixed(2)), sheetsPerCopy: p.sheetsPerCopy, totalSheets: p.totalSheets, costPerSheet: p.costPerSheet, tonerCostPerPage: t.tonerCostPerPage, finishingDetails: fd };
+    }, [pages, copies, paper, toner, sp, enabledFinishing, resolveFinishingCost]);
 
     const computePageScaledCost = useCallback((pageCount: number, copyCount: number): number => {
-        if (sp) {
-            const savedPages = Math.max(1, Number(sp.pages) || 1);
-            const savedCopies = Math.max(1, Number(sp.copies) || 1);
-            const savedBaseCost = Number(sp.baseCost) || 0;
-            if (savedBaseCost > 0 && savedPages === pageCount && savedCopies === copyCount) {
-                return savedBaseCost;
-            }
-            let paperCostVal = 0;
-            const paperItem = inventory.find((i: any) => i.id === sp.paperItemId);
-            if (paperItem) {
-                const sPerCopy = Math.ceil(pageCount / 2);
-                const tSheets = sPerCopy * copyCount;
-                const rSize = Number(paperItem.conversionRate || paperItem.conversion_rate || 500);
-                const pCost = Number(paperItem.cost_price || paperItem.cost_per_unit || paperItem.cost || 0);
-                const cPerSheet = rSize > 0 ? pCost / rSize : 0;
-                paperCostVal = Number((tSheets * cPerSheet).toFixed(2));
-            }
-            let tonerCostVal = 0;
-            const tonerItem = inventory.find((i: any) => i.id === sp.tonerItemId);
-            if (tonerItem) {
-                const capacity = 20000;
-                const totalPagesVal = pageCount * copyCount;
-                const tCost = Number(tonerItem.cost_price || tonerItem.cost_per_unit || tonerItem.cost || 0);
-                tonerCostVal = Number((totalPagesVal * (tCost / capacity)).toFixed(2));
-            }
+        if (!sp) { const flat = service.serviceConfig?.baseLaborCost || service.serviceConfig?.baseRate || service.cost || 0; return flat * (pageCount / (Number(service.pages) || 1)) * copyCount; }
+        const p = inventory.find((i: any) => i.id === sp.paperItemId); const tn = inventory.find((i: any) => i.id === sp.tonerItemId);
+        const pc = p ? Number((Math.ceil(pageCount / 2) * copyCount * (Number(p.conversionRate || p.conversion_rate || 500) > 0 ? Number(p.cost_price || p.cost_per_unit || p.cost || 0) / Number(p.conversionRate || p.conversion_rate || 500) : 0)).toFixed(2)) : 0;
+        const tc = tn ? Number(((pageCount * copyCount) * (Number(tn.cost_price || tn.cost_per_unit || tn.cost || 0) / 20000)).toFixed(2)) : 0;
+        const fc = enabledFinishing.reduce((s, id) => s + resolveFinishingCost(id) * copyCount, 0);
+        return Number((pc + tc + fc).toFixed(2));
+    }, [service, inventory, sp, enabledFinishing, resolveFinishingCost]);
 
-            const finishingCostVal = enabledFinishing.reduce((sum: number, id: string) => {
-                const optionCost = resolveFinishingCost(id, pageCount, copyCount);
-                return sum + (optionCost * copyCount);
-            }, 0);
+    useEffect(() => { let m = true; const calc = async () => { try { const bc = computePageScaledCost(pages, copies); const r = await calculateServicePrice({ itemId: service.id, categoryId: service.category, baseCost: bc, pages, copies, adjustments: normalizedAdjustments, context: 'SERVICE' }); if (m) { const tp = pages * copies; setEnginePricing({ pages, copies, totalPages: tp, unitCostPerCopy: copies > 0 ? roundToCurrency(bc / copies) : bc, unitPricePerCopy: r.unitPrice, unitCostPerPage: tp > 0 ? roundToCurrency(bc / tp) : bc, unitPricePerPage: tp > 0 ? roundToCurrency(r.unitPrice / tp) : r.unitPrice, totalCost: bc, totalPrice: r.totalPrice, calculatedTotalPrice: r.totalPrice, adjustmentTotal: r.adjustmentTotal, adjustmentSnapshots: r.adjustmentSnapshots, marginAmount: r.marginAmount, rounding_difference: r.roundingDifference, components: [], serviceDetails: { pages, copies, totalPages: tp, unitCostPerPage: tp > 0 ? roundToCurrency(bc / tp) : bc, unitPricePerPage: tp > 0 ? roundToCurrency(r.unitPrice / tp) : r.unitPrice, unitCostPerCopy: copies > 0 ? roundToCurrency(bc / copies) : bc, unitPricePerCopy: r.unitPrice, totalCost: bc, totalPrice: r.totalPrice, calculatedTotalPrice: r.totalPrice, materials: [], adjustments: [] } }); } } catch (e) { logger.error('[ServiceCalculatorModal] Pricing engine error:', e); } }; calc(); return () => { m = false; }; }, [service, pages, copies, normalizedAdjustments, computePageScaledCost]);
 
-            return Number((paperCostVal + tonerCostVal + finishingCostVal).toFixed(2));
-        }
-        const flatCostPerCopy = config?.baseLaborCost || config?.baseRate || service.cost || 0;
-        const baselinePages = Number(service.pages) || 1;
-        const scaledCostPerCopy = flatCostPerCopy * (pageCount / baselinePages);
-        return scaledCostPerCopy * copyCount;
-    }, [service, inventory, config, sp, enabledFinishing, resolveFinishingCost]);
+    useEffect(() => { if (enginePricing && !priceManuallySet && enginePricing.totalPrice > 0) setSellingPrice(enginePricing.totalPrice); }, [enginePricing, priceManuallySet]);
 
-    useEffect(() => {
-        let mounted = true;
-        const calculate = async () => {
-            setIsCalculating(true);
-            try {
-                const baseCost = computePageScaledCost(pages, copies);
-
-                const result = await calculateServicePrice({
-                    itemId: service.id,
-                    categoryId: service.category,
-                    baseCost: baseCost,
-                    basePrice: undefined,
-                    pages: pages,
-                    copies: copies,
-                    adjustments: normalizedAdjustments,
-                    context: 'SERVICE'
-                });
-
-                if (mounted) {
-                    const totalPages = pages * copies;
-                    const unitCostPerCopy = copies > 0 ? roundToCurrency(baseCost / copies) : baseCost;
-                    const unitCostPerPage = totalPages > 0 ? roundToCurrency(baseCost / totalPages) : baseCost;
-                    const unitPricePerPage = totalPages > 0 ? roundToCurrency(result.unitPrice / totalPages) : result.unitPrice;
-
-                    const transformed: DynamicServicePricingResult = {
-                        pages,
-                        copies,
-                        totalPages,
-                        unitCostPerCopy,
-                        unitPricePerCopy: result.unitPrice,
-                        unitCostPerPage,
-                        unitPricePerPage,
-                        totalCost: baseCost,
-                        totalPrice: result.totalPrice,
-                        calculatedTotalPrice: result.totalPrice,
-                        adjustmentTotal: result.adjustmentTotal,
-                        adjustmentSnapshots: result.adjustmentSnapshots,
-                        marginAmount: result.marginAmount,
-                        rounding_difference: result.roundingDifference,
-                        components: [],
-                        serviceDetails: {
-                            pages,
-                            copies,
-                            totalPages,
-                            unitCostPerPage,
-                            unitPricePerPage,
-                            unitCostPerCopy,
-                            unitPricePerCopy: result.unitPrice,
-                            totalCost: baseCost,
-                            totalPrice: result.totalPrice,
-                            calculatedTotalPrice: result.totalPrice,
-                            materials: [],
-                            adjustments: []
-                        }
-                    };
-                    setEnginePricing(transformed);
-                }
-            } catch (err) {
-                logger.error('[ServiceCalculatorModal] Pricing engine error:', err);
-            } finally {
-                if (mounted) setIsCalculating(false);
-            }
-        };
-
-        calculate();
-        return () => { mounted = false; };
-    }, [service, pages, copies, normalizedAdjustments, computePageScaledCost]);
-
-    useEffect(() => {
-        if (enginePricing && !priceManuallySet && enginePricing.totalPrice > 0) {
-            setSellingPrice(enginePricing.totalPrice);
-        }
-    }, [enginePricing, priceManuallySet]);
-
-    const activePricing = enginePricing;
-    const formatCurrency = (value: number) => `${currencySymbol}${formatNumber(value)}`;
-    const profit = roundToCurrency(sellingPrice - (activePricing?.totalCost || 0));
+    const ap = enginePricing; if (!ap) return null;
+    const fc = (v: number) => `${currencySymbol}${formatNumber(v)}`;
+    const profit = roundToCurrency(sellingPrice - (ap?.totalCost || 0));
     const isLoss = profit < 0;
-    const profitMarginPct = (activePricing?.totalCost || 0) > 0
-        ? roundToCurrency((profit / (activePricing?.totalCost || 1)) * 100)
-        : 0;
-    const priceDiff = activePricing ? roundToCurrency(sellingPrice - activePricing.totalPrice) : 0;
-    const marginBaseAmount = roundToCurrency(
-        Number(activePricing?.totalCost || 0)
-        + Math.max(0, Number(activePricing?.adjustmentTotal || 0) - Number(activePricing?.marginAmount || 0))
-    );
-    const effectiveMarginPercent = marginBaseAmount > 0
-        ? roundToCurrency((Number(activePricing?.marginAmount || 0) / marginBaseAmount) * 100)
-        : 0;
-    const formatPercent = (value: number) => `${Number(value.toFixed(1)).toString()}%`;
+    const profitMarginPct = (ap?.totalCost || 0) > 0 ? roundToCurrency((profit / (ap?.totalCost || 1)) * 100) : 0;
+    const priceDiff = ap ? roundToCurrency(sellingPrice - ap.totalPrice) : 0;
 
-    const premiumCard = 'backdrop-blur-sm border border-slate-200/80 rounded-xl p-4 transition-all duration-200';
-    const premiumInput = 'w-full px-3 py-2 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all tabular-nums';
+    const card = 'backdrop-blur-sm border border-slate-200/80 rounded-xl p-4 transition-all duration-200';
+    const inputCls = 'w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums';
 
-    if (!activePricing) return null;
+    const handleConfirm = () => onConfirm({ ...ap, totalPrice: sellingPrice, unitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0, calculatedTotalPrice: ap.totalPrice, marginAmount: profit, priceLocked: true, lockedTotalPrice: sellingPrice, lockedUnitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0, lockedUnitCostPerCopy: copies > 0 ? roundToCurrency(ap.totalCost / copies) : 0 });
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/40">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200 font-sans" style={{ fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45 }}>
-                {/* Header */}
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200" style={{ fontSize: 13.5 }}>
                 <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10">
-                                <Calculator size={16} className="text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-[15px] font-bold text-white leading-snug">Service Configuration</h2>
-                                <p className="text-[11px] text-slate-400 font-medium">{service.name}</p>
-                            </div>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10"><Calculator size={16} className="text-white" /></div>
+                            <div><h2 className="text-[15px] font-bold text-white">Service Configuration</h2><p className="text-[11px] text-slate-400 font-medium">{service.name}</p></div>
                         </div>
-                        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white">
-                            <X size={18} />
-                        </button>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white"><X size={18} /></button>
                     </div>
                     <div className="flex gap-2 mt-3">
-                        <div className="flex-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1">
-                                <FileText size={11} /> Pages
-                            </label>
-                            <input type="number" min={1} step={1} value={pages}
-                                onChange={e => setPages(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums placeholder-slate-500" />
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1">
-                                <Layers size={11} /> Copies
-                            </label>
-                            <input type="number" min={1} value={copies}
-                                onChange={e => setCopies(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums placeholder-slate-500" />
-                        </div>
+                        {[{ label: 'Pages', icon: FileText, val: pages, set: setPages, step: 1 }, { label: 'Copies', icon: Layers, val: copies, set: setCopies }].map(f => {
+                            const Icon = f.icon;
+                            return (<div key={f.label} className="flex-1">
+                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1"><Icon size={11} /> {f.label}</label>
+                                <input type="number" min={1} step={f.step} value={f.val} onChange={e => f.set(Math.max(1, parseInt(e.target.value || '1', 10) || 1))} className={inputCls} />
+                            </div>);
+                        })}
                     </div>
                 </div>
 
                 <div className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1" style={{ background: '#F8FAFC' }}>
-                    {/* Paper & Toner */}
                     {hasSmartPricing && (
                         <div className="grid grid-cols-2 gap-3">
-                            <div className={`${premiumCard} bg-white`}>
-                                <div className="flex items-center gap-2 text-indigo-700 mb-2">
-                                    <Package size={13} />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider">Paper</span>
+                            {[{ icon: Package, label: 'Paper', item: paper, detail: `${fc(costBreakdown.costPerSheet)} / sheet · ${costBreakdown.totalSheets} sheets`, empty: 'No paper configured' }, { icon: Printer, label: 'Toner', item: toner, detail: `${fc(costBreakdown.tonerCostPerPage)} / page`, empty: 'No toner configured' }].map(s => (
+                                <div key={s.label} className={`${card} bg-white`}>
+                                    <div className="flex items-center gap-2 text-indigo-700 mb-2"><s.icon size={13} /><span className="text-[11px] font-bold uppercase tracking-wider">{s.label}</span></div>
+                                    {s.item ? <div><p className="text-[13px] font-semibold text-slate-800 truncate">{s.item.name}</p><p className="text-[10px] text-slate-500 mt-0.5">{s.detail}</p></div> : <p className="text-[12px] text-slate-400 italic">{s.empty}</p>}
                                 </div>
-                                {paper ? (
-                                    <div>
-                                        <p className="text-[13px] font-semibold text-slate-800 truncate">{paper.name}</p>
-                                        <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {formatCurrency(costBreakdown.costPerSheet)} / sheet · {costBreakdown.totalSheets} sheets
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="text-[12px] text-slate-400 italic">No paper configured</p>
-                                )}
-                            </div>
-                            <div className={`${premiumCard} bg-white`}>
-                                <div className="flex items-center gap-2 text-indigo-700 mb-2">
-                                    <Printer size={13} />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider">Toner</span>
-                                </div>
-                                {toner ? (
-                                    <div>
-                                        <p className="text-[13px] font-semibold text-slate-800 truncate">{toner.name}</p>
-                                        <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {formatCurrency(costBreakdown.tonerCostPerPage)} / page
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="text-[12px] text-slate-400 italic">No toner configured</p>
-                                )}
-                            </div>
+                            ))}
                         </div>
                     )}
 
-                    {/* Finishing Options */}
                     {hasSmartPricing && costBreakdown.finishingDetails.length > 0 && (
-                        <div className={`${premiumCard} bg-white`}>
-                            <div className="flex items-center gap-2 text-slate-700 mb-3">
-                                <Zap size={13} />
-                                <span className="text-[11px] font-bold uppercase tracking-wider">Finishing Options</span>
-                            </div>
+                        <div className={`${card} bg-white`}>
+                            <div className="flex items-center gap-2 text-slate-700 mb-3"><Zap size={13} /><span className="text-[11px] font-bold uppercase tracking-wider">Finishing Options</span></div>
                             <div className="flex flex-wrap gap-2">
                                 {costBreakdown.finishingDetails.map(fd => {
                                     const isOn = enabledFinishing.includes(fd.id);
-                                    return (
-                                        <button key={fd.id} type="button" onClick={() => {
-                                            setEnabledFinishing(prev =>
-                                                prev.includes(fd.id) ? prev.filter(id => id !== fd.id) : [...prev, fd.id]
-                                            );
-                                        }}
-                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border-2 transition-all ${
-                                                isOn
-                                                    ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-sm'
-                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                                            }`}>
-                                            <div className={`w-2 h-2 rounded-full ${isOn ? 'bg-indigo-500' : 'bg-slate-300'}`} />
-                                            {fd.name}
-                                            <span className={`text-[10px] ${isOn ? 'text-indigo-500' : 'text-slate-400'}`}>
-                                                {formatCurrency(fd.cost)}/copy
-                                            </span>
-                                        </button>
-                                    );
+                                    return (<button key={fd.id} type="button" onClick={() => setEnabledFinishing(prev => prev.includes(fd.id) ? prev.filter(id => id !== fd.id) : [...prev, fd.id])}
+                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border-2 transition-all ${isOn ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                                        <div className={`w-2 h-2 rounded-full ${isOn ? 'bg-indigo-500' : 'bg-slate-300'}`} />{fd.name}<span className={`text-[10px] ${isOn ? 'text-indigo-500' : 'text-slate-400'}`}>{fc(fd.cost)}/copy</span>
+                                    </button>);
                                 })}
                             </div>
                         </div>
                     )}
 
-                    {/* Cost Breakdown */}
-                    <div className={`${premiumCard} bg-white shadow-md border border-slate-200`}>
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                <Calculator size={13} /> Cost Breakdown
-                            </span>
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-md border border-emerald-200">
-                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                <span className="text-[10px] font-semibold text-emerald-700">Live</span>
-                            </div>
+                    {/* Cost Breakdown — matches PrintingServiceModal sidebar style */}
+                    <div className={`${card} bg-white shadow-md border border-slate-200`}>
+                        <div className="p-4 -m-4 mb-4 bg-gradient-to-r from-slate-800 to-slate-700 rounded-t-xl">
+                            <div className="flex items-center gap-2 text-white mb-1"><Calculator size={14} /><h4 className="text-[13px] font-bold">Cost Breakdown</h4></div>
+                            <p className="text-slate-400 text-[10px]">{pages} pages × {copies} {copies === 1 ? 'copy' : 'copies'}{hasSmartPricing ? ` · ${fc(costBreakdown.baseCost)} total cost` : ''}</p>
                         </div>
-
                         <div className="space-y-2">
                             {hasSmartPricing && (
                                 <>
-                                    <div className="flex justify-between items-center py-1">
-                                        <span className="text-[12px] text-slate-600">Paper Cost</span>
-                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.paperCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center py-1">
-                                        <span className="text-[12px] text-slate-600">Toner Cost</span>
-                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.tonerCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center py-1">
-                                        <span className="text-[12px] text-slate-600">Finishing Cost</span>
-                                        <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.finishingCost)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center py-1.5 border-t border-slate-100">
-                                        <span className="text-[13px] font-semibold text-slate-700">Base Cost</span>
-                                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">{formatCurrency(costBreakdown.baseCost)}</span>
-                                    </div>
+                                    <div className="flex justify-between text-xs"><span className="text-slate-500">{paper ? paper.name.replace(/\s*\d+gsm.*/i, '').trim() : 'Paper'}</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.paperCost)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className="text-slate-500">{toner ? toner.name.replace(/\s*Universal\s*/i, '').trim() : 'Toner'}</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.tonerCost)}</span></div>
+                                    <div className="flex justify-between text-xs"><span className="text-slate-500">Finishing</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.finishingCost)}</span></div>
+                                    <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-xs"><span>Cost Price</span><span className="font-mono text-base text-indigo-600">{fc(costBreakdown.baseCost)}</span></div>
                                 </>
                             )}
-                            {!hasSmartPricing && (
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-[12px] text-slate-600">Base Rate</span>
-                                    <span className="text-[12px] font-semibold text-slate-800 tabular-nums">{formatCurrency(activePricing.totalCost)}</span>
-                                </div>
-                            )}
+                            {!hasSmartPricing && <div className="flex justify-between text-xs"><span className="text-slate-500">Base Rate</span><span className="font-mono font-medium text-slate-700">{fc(ap.totalCost)}</span></div>}
 
-                            {activePricing.adjustmentSnapshots && activePricing.adjustmentSnapshots.length > 0 && (
-                                activePricing.adjustmentSnapshots
-                                    .filter((adj: any) => adj.name?.toLowerCase().includes('margin') ? false : true)
-                                    .map((adj: any, i: number) => (
-                                        <div key={i} className="flex justify-between items-center py-1">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[12px] text-emerald-700">{adj.name}</span>
-                                                {adj.type === 'PERCENTAGE' && (
-                                                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-semibold">+{adj.value}%</span>
-                                                )}
-                                            </div>
-                                            <span className="text-[12px] font-semibold text-emerald-700 tabular-nums">+{formatCurrency(adj.calculatedAmount)}</span>
-                                        </div>
-                                    ))
-                            )}
-
-                            {activePricing.marginAmount > 0 && activePricing.unitCostPerCopy > 0 && (
-                                <div className="flex justify-between items-center py-1">
+                            {/* Selling Price */}
+                            <div className="border-t border-slate-200 pt-2">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-blue-600 font-semibold text-xs">Selling Price</span>
                                     <div className="flex items-center gap-1.5">
-                                        <span className="text-[12px] text-blue-700">Profit Margin</span>
-                                        <span className="text-[9px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded font-semibold">
-                                            +{formatPercent(effectiveMarginPercent)}
-                                        </span>
+                                        <span className="text-[11px] text-slate-400">{currencySymbol}</span>
+                                        <input type="number" step="0.01" min={0} value={sellingPrice} onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }} className="w-28 px-2 py-1 bg-white border-2 border-blue-200 rounded-lg text-[13px] font-bold text-blue-700 text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all tabular-nums" />
                                     </div>
-                                    <span className="text-[12px] font-semibold text-blue-700 tabular-nums">+{formatCurrency(activePricing.marginAmount)}</span>
                                 </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-400">Calculated: {fc(ap.totalPrice)}</span>
+                                    {priceDiff !== 0 && <span className={`text-[10px] font-semibold ${priceDiff > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{priceDiff > 0 ? '+' : ''}{fc(priceDiff)}</span>}
+                                </div>
+                            </div>
+
+                            {/* Profit */}
+                            <div className={`flex justify-between font-semibold text-xs ${isLoss ? 'text-red-500' : 'text-emerald-600'}`}><span>Profit</span><span className="font-mono">{isLoss ? '-' : '+'}{fc(Math.abs(profit))}</span></div>
+
+                            {/* Margin */}
+                            <div className={`flex justify-between text-xs ${isLoss ? 'text-red-500' : ''}`}><span>Margin</span><span className="font-mono font-semibold">{profitMarginPct}%</span></div>
+
+                            {ap.adjustmentSnapshots?.filter((adj: any) => !adj.name?.toLowerCase().includes('margin')).length > 0 && (
+                                <><div className="border-t border-slate-100 pt-1"></div>
+                                {ap.adjustmentSnapshots.filter((adj: any) => !adj.name?.toLowerCase().includes('margin')).map((adj: any, i: number) => (
+                                    <div key={i} className="flex justify-between text-xs"><span className="text-emerald-600">{adj.name}{adj.type === 'PERCENTAGE' && <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-semibold ml-1">+{adj.value}%</span>}</span><span className="font-mono font-semibold text-emerald-700">+{fc(adj.calculatedAmount)}</span></div>
+                                ))}</>
                             )}
 
-                            {(activePricing.rounding_difference || 0) !== 0 && (
-                                <div className="flex justify-between items-center py-1">
-                                    <span className="text-[12px] text-slate-500">Round Up</span>
-                                    <span className="text-[12px] font-medium text-slate-500 tabular-nums">
-                                        +{formatCurrency(activePricing.rounding_difference * activePricing.copies)}
-                                    </span>
-                                </div>
+                            {(ap.rounding_difference || 0) !== 0 && (
+                                <div className="flex justify-between text-xs"><span className="text-slate-500">Round Up</span><span className="font-mono font-medium text-slate-500">+{fc(ap.rounding_difference * ap.copies)}</span></div>
                             )}
 
-                            <div className="pt-2.5 border-t border-slate-200">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <DollarSign size={13} className="text-indigo-600" />
-                                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Selling Price</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-semibold text-slate-500">{currencySymbol}</span>
-                                    <input type="number" step="0.01" min={0} value={sellingPrice}
-                                        onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }}
-                                        className="w-full px-3 py-2 bg-white border-2 border-indigo-200 rounded-xl text-[16px] font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all tabular-nums" />
-                                </div>
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-[11px] text-slate-500">Calculated: {formatCurrency(activePricing.totalPrice)}</span>
-                                    {priceDiff !== 0 && (
-                                        <span className={`text-[11px] font-semibold ${priceDiff > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                            {priceDiff > 0 ? '+' : ''}{formatCurrency(priceDiff)} {priceDiff > 0 ? 'above' : 'below'} calc.
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
+                            {isLoss && (
+                                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-medium flex items-center gap-1.5"><AlertTriangle size={11} />Below cost — expected loss of {fc(Math.abs(profit))}</div>
+                            )}
+                            {!isLoss && profit > 0 && profitMarginPct < 10 && (
+                                <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-700 font-medium flex items-center gap-1.5"><Info size={11} />Low margin ({profitMarginPct}%) — consider increasing price</div>
+                            )}
                         </div>
-                    </div>
-
-                    {/* Profit / Loss Indicator */}
-                    <div className={`${premiumCard} ${isLoss ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                {isLoss
-                                    ? <AlertTriangle size={16} className="text-red-500" />
-                                    : <TrendingUp size={16} className="text-emerald-600" />
-                                }
-                                <span className="text-[12px] font-semibold text-slate-700">Expected {isLoss ? 'Loss' : 'Profit'}</span>
-                            </div>
-                            <span className={`text-[15px] font-bold ${isLoss ? 'text-red-600' : 'text-emerald-600'} tabular-nums`}>
-                                {isLoss ? '-' : '+'}{formatCurrency(Math.abs(profit))}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                            <span className="text-[10px] text-slate-500">Margin on cost</span>
-                            <span className={`text-[11px] font-semibold ${isLoss ? 'text-red-600' : 'text-emerald-600'}`}>
-                                {isLoss ? '-' : ''}{profitMarginPct}%
-                            </span>
-                        </div>
-                        {isLoss && (
-                            <div className="mt-2 px-3 py-2 bg-red-100 rounded-lg text-[11px] text-red-700 font-medium flex items-center gap-1.5">
-                                <AlertTriangle size={12} />
-                                Selling price is below production cost. Expected loss: {formatCurrency(Math.abs(profit))}.
-                            </div>
-                        )}
-                        {!isLoss && profit > 0 && profitMarginPct < 10 && (
-                            <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
-                                <Info size={12} />
-                                Low margin ({profitMarginPct}%). Consider increasing the selling price.
-                            </div>
-                        )}
                     </div>
 
                     {/* Total Due */}
@@ -729,39 +403,20 @@ export const ServiceCalculatorModal: React.FC<{
                         <div className="relative flex justify-between items-end">
                             <div>
                                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Due</p>
-                                <h3 className="text-[24px] font-bold text-white tabular-nums">{formatCurrency(sellingPrice)}</h3>
-                                <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {formatCurrency(copies > 0 ? roundToCurrency(sellingPrice / copies) : 0)} / copy
-                                </p>
+                                <h3 className="text-[24px] font-bold text-white tabular-nums">{fc(sellingPrice)}</h3>
+                                <p className="text-[10px] text-slate-500 mt-0.5">{fc(copies > 0 ? roundToCurrency(sellingPrice / copies) : 0)} / copy</p>
                             </div>
                             <div className="text-right">
                                 <div className="text-[10px] font-medium text-slate-400">Total Pages</div>
-                                <div className="text-[14px] font-bold text-white tabular-nums">{activePricing.totalPages} <span className="text-[10px] text-slate-400 font-normal">pgs</span></div>
+                                <div className="text-[14px] font-bold text-white tabular-nums">{ap.totalPages} <span className="text-[10px] text-slate-400 font-normal">pgs</span></div>
                                 <div className="text-[10px] text-slate-500 mt-0.5">{Math.ceil(pages / 2) * copies} sheets</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-2 pt-1">
-                        <button onClick={onClose}
-                            className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98] shadow-sm">
-                            Cancel
-                        </button>
-                        <button onClick={() => onConfirm({
-                            ...activePricing,
-                            totalPrice: sellingPrice,
-                            unitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0,
-                            calculatedTotalPrice: activePricing.totalPrice,
-                            marginAmount: profit,
-                            priceLocked: true,
-                            lockedTotalPrice: sellingPrice,
-                            lockedUnitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0,
-                            lockedUnitCostPerCopy: copies > 0 ? roundToCurrency(activePricing.totalCost / copies) : 0
-                        })}
-                            className="flex-[1.5] py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-[13px] hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">
-                            Add to Order <ArrowRight size={16} />
-                        </button>
+                        <button onClick={onClose} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98] shadow-sm">Cancel</button>
+                        <button onClick={handleConfirm} className="flex-[1.5] py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-[13px] hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">Add to Order <ArrowRight size={16} /></button>
                     </div>
                 </div>
             </div>

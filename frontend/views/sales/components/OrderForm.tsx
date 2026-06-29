@@ -1003,94 +1003,24 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
     const handleServicePricingConfirm = async (pricing: DynamicServicePricingResult) => {
         if (!selectedServiceForCalculator) return;
-
         const service = selectedServiceForCalculator;
+        const pricedLine: CartItem = { ...service, quantity: pricing.copies, discount: 0, price: pricing.unitPricePerCopy, cost: pricing.unitCostPerCopy, basePrice: pricing.unitCostPerCopy, adjustmentSnapshots: pricing.adjustmentSnapshots || [], adjustmentTotal: pricing.adjustmentTotal, pagesOverride: pricing.pages, serviceDetails: pricing.serviceDetails, priceLocked: pricing.priceLocked || false, lockedTotalPrice: pricing.lockedTotalPrice, lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy, lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy } as CartItem;
 
-        const pricedLine: CartItem = {
-            ...service,
-            quantity: pricing.copies,
-            discount: 0,
-            price: pricing.unitPricePerCopy,
-            cost: pricing.unitCostPerCopy,
-            basePrice: pricing.unitCostPerCopy,
-            adjustmentSnapshots: pricing.adjustmentSnapshots || [],
-            adjustmentTotal: pricing.adjustmentTotal,
-            pagesOverride: pricing.pages,
-            serviceDetails: pricing.serviceDetails,
-            priceLocked: pricing.priceLocked || false,
-            lockedTotalPrice: pricing.lockedTotalPrice,
-            lockedUnitPricePerCopy: pricing.lockedUnitPricePerCopy,
-            lockedUnitCostPerCopy: pricing.lockedUnitCostPerCopy
-        } as CartItem;
+        const items = Array.isArray(formData.items) ? [...formData.items] : [];
 
-        const currentItems = Array.isArray(formData.items) ? [...formData.items] : [];
-
-        if (serviceEditIndex !== null && serviceEditIndex >= 0 && serviceEditIndex < currentItems.length) {
-            currentItems[serviceEditIndex] = {
-                ...currentItems[serviceEditIndex],
-                ...pricedLine
-            };
-            setFormData({ ...formData, items: currentItems });
-            notify(`${service.name} ${serviceEditIndex !== null ? 'updated' : 'added'}`, "success");
-            setSelectedServiceForCalculator(null);
-            setServiceEditIndex(null);
-            return;
-        }
-
-        const existingIdx = currentItems.findIndex((line: any) =>
-            line.type === 'Service'
-            && !line.parentId
-            && line.id === service.id
-            && Number(line.serviceDetails?.pages || line.pagesOverride || 0) === pricing.pages
-        );
-
-        if (existingIdx > -1 && !(pricing.priceLocked && pricing.lockedUnitPricePerCopy !== undefined)) {
-            const mergedCopies = Number(currentItems[existingIdx].quantity || 0) + pricing.copies;
-            const activeAdjs: any[] = [];
-
-            const baseCost = Number(service.cost) || 0;
-            const mergedPricing = await calculateServicePrice({
-                itemId: service.id,
-                categoryId: service.category,
-                baseCost: baseCost,
-                pages: pricing.pages,
-                copies: mergedCopies,
-                adjustments: activeAdjs,
-                marketAdjustments: activeAdjs,
-                context: 'SERVICE'
-            });
-
-            const totalPages = pricing.pages * mergedCopies;
-            currentItems[existingIdx] = {
-                ...currentItems[existingIdx],
-                quantity: mergedCopies,
-                price: mergedPricing.unitPrice,
-                cost: mergedPricing.cost,
-                basePrice: mergedPricing.cost,
-                pagesOverride: pricing.pages,
-                adjustmentSnapshots: mergedPricing.adjustmentSnapshots,
-                adjustmentTotal: mergedPricing.adjustmentTotal,
-                serviceDetails: {
-                    pages: pricing.pages,
-                    copies: mergedCopies,
-                    totalPages,
-                    unitCostPerPage: mergedPricing.cost / pricing.pages,
-                    unitPricePerCopy: mergedPricing.unitPrice,
-                    unitCostPerCopy: mergedPricing.cost,
-                    totalCost: baseCost,
-                    totalPrice: mergedPricing.totalPrice
-                }
-            };
-
-            setFormData({ ...formData, items: currentItems });
+        if (serviceEditIndex !== null && serviceEditIndex >= 0 && serviceEditIndex < items.length) {
+            items[serviceEditIndex] = { ...items[serviceEditIndex], ...pricedLine };
         } else {
-            currentItems.push(pricedLine);
-            setFormData({ ...formData, items: currentItems });
+            const existingIdx = items.findIndex((l: any) => l.type === 'Service' && !l.parentId && l.id === service.id && Number(l.serviceDetails?.pages || l.pagesOverride || 0) === pricing.pages);
+            if (existingIdx > -1 && !(pricing.priceLocked && pricing.lockedUnitPricePerCopy !== undefined)) {
+                const mergedCopies = Number(items[existingIdx].quantity || 0) + pricing.copies;
+                const mergedPricing = await calculateServicePrice({ itemId: service.id, categoryId: service.category, baseCost: Number(service.cost) || 0, pages: pricing.pages, copies: mergedCopies, adjustments: [], marketAdjustments: [], context: 'SERVICE' });
+                const totalPages = pricing.pages * mergedCopies;
+                items[existingIdx] = { ...items[existingIdx], quantity: mergedCopies, price: mergedPricing.unitPrice, cost: mergedPricing.cost, basePrice: mergedPricing.cost, pagesOverride: pricing.pages, adjustmentSnapshots: mergedPricing.adjustmentSnapshots, adjustmentTotal: mergedPricing.adjustmentTotal, serviceDetails: { pages: pricing.pages, copies: mergedCopies, totalPages, unitCostPerPage: mergedPricing.cost / pricing.pages, unitPricePerCopy: mergedPricing.unitPrice, unitCostPerCopy: mergedPricing.cost, totalCost: Number(service.cost) || 0, totalPrice: mergedPricing.totalPrice } };
+            } else items.push(pricedLine);
         }
 
-        notify(`${service.name} ${serviceEditIndex !== null ? 'updated' : 'added'}`, "success");
-        setSelectedServiceForCalculator(null);
-        setServiceEditIndex(null);
+        setFormData({ ...formData, items }); notify(`${service.name} updated`, "success"); setSelectedServiceForCalculator(null); setServiceEditIndex(null);
     };
 
     const handleEditServiceConfiguration = (idx: number) => {
