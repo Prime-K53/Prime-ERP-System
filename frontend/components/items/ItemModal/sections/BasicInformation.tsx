@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import type { Item } from '../../../types';
 import type { ItemFormData } from '../types/itemFormTypes';
 import { CLASSIFICATION_OPTIONS } from '../types/itemFormTypes';
 
@@ -8,12 +9,47 @@ interface Props {
   errors: Record<string, string>;
   onGenerateSku?: (category: string) => string;
   classificationReadOnly?: boolean;
+  allItems?: Item[];
 }
 
-export const BasicInformation: React.FC<Props> = ({ data, onChange, errors, onGenerateSku, classificationReadOnly }) => {
-  const handleGenerateSku = () => {
-    const sku = onGenerateSku?.(data.category) || '';
-    if (sku) onChange('code', sku);
+export const BasicInformation: React.FC<Props> = ({ data, onChange, errors, onGenerateSku, classificationReadOnly, allItems }) => {
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+
+  const existingCategories = useMemo(() => {
+    if (!allItems) return [];
+    const cats = new Set<string>();
+    allItems.forEach(item => { if (item.category) cats.add(item.category); });
+    return Array.from(cats).sort();
+  }, [allItems]);
+
+  const handleCategorySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === '__new__') {
+      setNewCategory('');
+      setIsAddingCategory(true);
+    } else {
+      onChange('category', value);
+    }
+  };
+
+  const handleNewCategorySave = () => {
+    const trimmed = newCategory.trim();
+    if (trimmed) {
+      onChange('category', trimmed);
+      setNewCategory('');
+      setIsAddingCategory(false);
+    }
+  };
+
+  const handleNewCategoryKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNewCategorySave();
+    } else if (e.key === 'Escape') {
+      setIsAddingCategory(false);
+      setNewCategory('');
+    }
   };
 
   const handleCategoryBlur = () => {
@@ -66,7 +102,10 @@ export const BasicInformation: React.FC<Props> = ({ data, onChange, errors, onGe
             />
             <button
               type="button"
-              onClick={handleGenerateSku}
+              onClick={() => {
+                const sku = onGenerateSku?.(data.category) || '';
+                if (sku) onChange('code', sku);
+              }}
               title="Generate SKU"
               style={{
                 padding: '7px 10px', borderRadius: 7, border: '1px solid #E5E8E1',
@@ -130,19 +169,69 @@ export const BasicInformation: React.FC<Props> = ({ data, onChange, errors, onGe
         </div>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Category</label>
-          <input
-            type="text"
-            value={data.category}
-            onChange={e => onChange('category', e.target.value)}
-            onBlur={handleCategoryBlur}
-            style={{
-              width: '100%', padding: '7px 10px', borderRadius: 7,
-              border: '1px solid #E5E8E1',
-              fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
-              color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
-            }}
-            placeholder="e.g. Paper, Ink, Binding"
-          />
+          {isAddingCategory ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="text"
+                value={newCategory}
+                onChange={e => setNewCategory(e.target.value)}
+                onKeyDown={handleNewCategoryKeyDown}
+                onBlur={handleNewCategorySave}
+                autoFocus
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 7,
+                  border: '1px solid #E5E8E1',
+                  fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+                  color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+                }}
+                placeholder="New category name"
+              />
+              <button
+                type="button"
+                onClick={handleNewCategorySave}
+                style={{
+                  padding: '7px 10px', borderRadius: 7, border: '1px solid #128C72',
+                  background: '#128C72', color: 'white', cursor: 'pointer',
+                  fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 500,
+                  lineHeight: 1, whiteSpace: 'nowrap'
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsAddingCategory(false); setNewCategory(''); }}
+                style={{
+                  padding: '7px 10px', borderRadius: 7, border: '1px solid #E5E8E1',
+                  background: 'white', color: '#6C766F', cursor: 'pointer',
+                  fontFamily: "'Inter',sans-serif", fontSize: 12, fontWeight: 500,
+                  lineHeight: 1
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <select
+                value={data.category || ''}
+                onChange={handleCategorySelect}
+                onBlur={handleCategoryBlur}
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 7,
+                  border: '1px solid #E5E8E1',
+                  fontFamily: "'Inter',sans-serif", fontSize: 13, fontWeight: 400,
+                  color: '#1E2A24', background: 'white', outline: 'none', lineHeight: 1.45
+                }}
+              >
+                <option value="">Select category</option>
+                {existingCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value="__new__">+ Add new category</option>
+              </select>
+            </div>
+          )}
         </div>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6C766F', marginBottom: 5, lineHeight: 1.45 }}>Tags</label>

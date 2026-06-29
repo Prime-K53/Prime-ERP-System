@@ -209,7 +209,7 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
   const SectionComponent = SECTION_COMPONENTS[currentStep];
 
   const sectionProps: Record<string, unknown> = {
-    basic: { data: formData, onChange: updateField, errors: stepErrors, onGenerateSku: handleGenerateSku, classificationReadOnly: lockClassification },
+    basic: { data: formData, onChange: updateField, errors: stepErrors, onGenerateSku: handleGenerateSku, classificationReadOnly: lockClassification, allItems },
     inventory: { data: formData, onChange: updateField, errors: stepErrors },
     units: {
       data: formData,
