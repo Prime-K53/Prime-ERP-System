@@ -1,12 +1,13 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { ShoppingCart, Trash2, User, Plus, Minus, ShoppingBag, PauseCircle, Undo2, ArrowRight, UserPlus, CreditCard, Clock, ChevronRight, Tag, School, Building2, AlertTriangle, X, TrendingUp, Truck, Scale } from 'lucide-react';
+import { ShoppingCart, User, Plus, Minus, ShoppingBag, Undo2, ArrowRight, UserPlus, ChevronRight, Tag, AlertTriangle, X, TrendingUp } from 'lucide-react';
 import { CartItem } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { PrintJobCartCard } from '../../../components/printing/PrintJobCartCard';
 
 import { formatNumber } from '../../../utils/helpers';
+import { roundToNearest, roundUpToStep } from '../../../utils/roundingUtils';
 import { displayPrice } from '../../../services/pricingDisplayService';
 
 interface CartSidebarProps {
@@ -53,93 +54,22 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     const { companyConfig } = useAuth();
     const { invoices } = useFinance();
     const currency = companyConfig.currencySymbol;
-    const [showManualOverrideCard, setShowManualOverrideCard] = useState(false);
-    const [selectedOverrideItemId, setSelectedOverrideItemId] = useState<string>('');
-    const [overrideValue, setOverrideValue] = useState<string>('');
+
+    const [roundingEnabled, setRoundingEnabled] = useState(false);
+    const [roundingMethod, setRoundingMethod] = useState('Nearest');
+    const roundingStep = 50;
 
     const grandTotal = totals.total;
-    const hasAdjustments = adjustmentSummary && adjustmentSummary.length > 0;
-    const roundingTotal = Number(pricingSummary?.roundingTotal || 0);
     const profitMarginTotal = Number(pricingSummary?.profitMarginTotal || 0);
-    const hasPricingBreakdown = Boolean(hasAdjustments || Math.abs(roundingTotal) > 0.0001 || Math.abs(profitMarginTotal) > 0.0001 || rounding?.enabled);
-    const overrideEligibleItems = useMemo(
-        () => cart.filter((item: any) => !item?.isVariantParent),
-        [cart]
-    );
+    const hasPricingBreakdown = Boolean(Math.abs(profitMarginTotal) > 0.0001);
 
-    const getPricingDisplayMeta = (label: string) => {
-        const normalized = String(label || '').toLowerCase();
+    const roundedTotal = useMemo(() => {
+        if (!roundingEnabled) return grandTotal;
+        if (roundingMethod === 'Up') return roundUpToStep(grandTotal, roundingStep);
+        return roundToNearest(grandTotal, roundingStep);
+    }, [grandTotal, roundingEnabled, roundingMethod, roundingStep]);
 
-        if (normalized.includes('transport') || normalized.includes('logistics') || normalized.includes('delivery')) {
-            return { priority: 0, Icon: Truck, iconClass: 'text-blue-500', textClass: 'text-blue-600' };
-        }
-        if (normalized.includes('waste') || normalized.includes('wastage') || normalized.includes('shrinkage')) {
-            return { priority: 1, Icon: Scale, iconClass: 'text-rose-500', textClass: 'text-rose-600' };
-        }
-        if (normalized.includes('round')) {
-            return { priority: 3, Icon: Tag, iconClass: 'text-purple-500', textClass: normalized.includes('-') ? 'text-rose-600' : 'text-purple-600' };
-        }
-        if (normalized.includes('profit') || normalized.includes('margin')) {
-            return { priority: 4, Icon: TrendingUp, iconClass: 'text-emerald-500', textClass: 'text-emerald-600' };
-        }
-        return { priority: 2, Icon: Tag, iconClass: 'text-indigo-500', textClass: 'text-indigo-600' };
-    };
-
-    const orderedAdjustmentSummary = useMemo(() => {
-        const rows = Array.isArray(adjustmentSummary) ? [...adjustmentSummary] : [];
-        return rows.sort((a, b) => {
-            const aMeta = getPricingDisplayMeta(a.adjustmentName);
-            const bMeta = getPricingDisplayMeta(b.adjustmentName);
-            if (aMeta.priority !== bMeta.priority) return aMeta.priority - bMeta.priority;
-            return a.adjustmentName.localeCompare(b.adjustmentName);
-        });
-    }, [adjustmentSummary]);
-
-    const selectedOverrideItem = useMemo(
-        () => overrideEligibleItems.find(item => item.id === selectedOverrideItemId) || overrideEligibleItems[0] || null,
-        [overrideEligibleItems, selectedOverrideItemId]
-    );
-
-    const getAutomaticUnitPrice = (item: CartItem | null) => {
-        if (!item) return 0;
-
-        const explicitOriginal = Number(item.originalPrice);
-        if (Number.isFinite(explicitOriginal) && explicitOriginal > 0) return explicitOriginal;
-
-        const storedSelling = Number(item.selling_price);
-        if (Number.isFinite(storedSelling) && storedSelling > 0) return storedSelling;
-
-        const calculatedPrice = Number(item.calculated_price);
-        if (Number.isFinite(calculatedPrice) && calculatedPrice > 0) return calculatedPrice;
-
-        return Number(item.price) || 0;
-    };
-
-    useEffect(() => {
-        if (!overrideEligibleItems.length) {
-            setSelectedOverrideItemId('');
-            return;
-        }
-
-        const currentExists = overrideEligibleItems.some(item => item.id === selectedOverrideItemId);
-        if (!selectedOverrideItemId || !currentExists) {
-            setSelectedOverrideItemId(overrideEligibleItems[0].id);
-        }
-    }, [overrideEligibleItems, selectedOverrideItemId]);
-
-    useEffect(() => {
-        if (selectedOverrideItem) {
-            setOverrideValue(String(Number(selectedOverrideItem.price || 0)));
-        } else {
-            setOverrideValue('');
-        }
-    }, [selectedOverrideItem]);
-
-    useEffect(() => {
-        if (!overrideEligibleItems.length) {
-            setShowManualOverrideCard(false);
-        }
-    }, [overrideEligibleItems.length]);
+    const roundingDifference = roundToNearest(roundedTotal - grandTotal, 0.01);
 
     const customerOutstanding = useMemo(() => {
         if (!selectedCustomerName) return 0;
@@ -238,116 +168,46 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
             {/* Checkout Totals Summary */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3 shrink-0 rounded-b-xl">
-                {showManualOverrideCard && selectedOverrideItem && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-3">
-                        <div className="space-y-1">
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Override Pricing</div>
-                            <div className="text-[11px] text-slate-600">
-                                Auto Price: <span className="font-semibold">{currency}{formatNumber(getAutomaticUnitPrice(selectedOverrideItem))}</span>
-                                <span className="mx-2 text-slate-400">|</span>
-                                Final Price: <span className="font-semibold">{currency}{formatNumber(Number(selectedOverrideItem.price || 0))}</span>
-                            </div>
-                            <div className={`text-[10px] font-bold uppercase tracking-wider ${selectedOverrideItem.manual_override ? 'text-amber-700' : 'text-slate-500'}`}>
-                                {selectedOverrideItem.manual_override ? 'Status: Manual Override Active' : 'Status: Auto Pricing'}
+                {roundingEnabled && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Rounding</span>
+                            <div className="flex items-center gap-1">
+                                <span className="text-[9px] text-slate-400 font-medium">On</span>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={roundingEnabled} onChange={e => setRoundingEnabled(e.target.checked)} />
+                                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
                             </div>
                         </div>
-
-                        <div className="grid grid-cols-1 gap-2">
-                            <select
-                                value={selectedOverrideItem.id}
-                                onChange={(e) => setSelectedOverrideItemId(e.target.value)}
-                                className="w-full p-2 border border-amber-200 rounded-lg bg-white text-[11px] font-semibold text-slate-700"
-                            >
-                                {overrideEligibleItems.map(item => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name} ({currency}{formatNumber(Number(item.price || 0))})
-                                    </option>
-                                ))}
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-purple-600 font-medium">Method</span>
+                            <select value={roundingMethod} onChange={e => setRoundingMethod(e.target.value)}
+                                className="text-[10px] p-1 border border-purple-200 rounded bg-white text-slate-700 font-semibold outline-none">
+                                <option value="Nearest">Nearest</option>
+                                <option value="Up">Round Up</option>
                             </select>
-
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={overrideValue}
-                                    onChange={(e) => setOverrideValue(e.target.value)}
-                                    className="flex-1 p-2 border border-amber-200 rounded-lg bg-white text-[11px] font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-amber-100"
-                                    placeholder="Override unit price"
-                                />
-                                <button
-                                    onClick={() => updatePrice(selectedOverrideItem.id, Number(overrideValue) || 0)}
-                                    className="px-3 py-2 rounded-lg bg-amber-600 text-white text-[11px] font-bold hover:bg-amber-700"
-                                >
-                                    {selectedOverrideItem.manual_override ? 'Update' : 'Apply'}
-                                </button>
-                                {selectedOverrideItem.manual_override && (
-                                    <button
-                                        onClick={() => resetPriceOverride(selectedOverrideItem.id)}
-                                        className="px-3 py-2 rounded-lg bg-white border border-amber-200 text-amber-700 text-[11px] font-bold hover:bg-amber-100"
-                                    >
-                                        Reset
-                                    </button>
-                                )}
-                            </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-purple-600 font-medium">Step</span>
+                            <span className="text-[10px] text-slate-700 font-semibold">{currency}{formatNumber(roundingStep)}</span>
                         </div>
                     </div>
                 )}
 
-                {/* Pricing Breakdown */}
+                {roundingEnabled && Math.abs(roundingDifference) > 0.001 && (
+                    <div className="flex justify-between items-center">
+                        <span className="text-purple-600 text-[11px] font-semibold">Rounding Adjustment</span>
+                        <span className={`font-mono text-[11px] font-semibold ${roundingDifference >= 0 ? 'text-purple-600' : 'text-rose-600'}`}>
+                            {roundingDifference >= 0 ? '+' : ''}{currency}{formatNumber(roundingDifference)}
+                        </span>
+                    </div>
+                )}
+
                 {hasPricingBreakdown && (
                     <div className="space-y-1.5 pt-2 border-t border-slate-50">
-                        {orderedAdjustmentSummary.map((adj, idx) => {
-                            const meta = getPricingDisplayMeta(adj.adjustmentName);
-                            const Icon = meta.Icon;
-                            return (
-                                <div key={idx} className="flex justify-between items-center">
-                                    <span className="text-slate-400 text-[11px] font-normal tracking-tight flex items-center gap-1.5">
-                                        <Icon size={10} className={meta.iconClass} /> {adj.adjustmentName}
-                                    </span>
-                                    <span className={`${meta.textClass} font-mono text-[11px] font-medium`}>+{currency}{formatNumber(adj.totalAmount)}</span>
-                                </div>
-                            );
-                        })}
-                        {(rounding?.enabled || Math.abs(roundingTotal) > 0.0001) && (
-                            <div className={`${orderedAdjustmentSummary.length > 0 ? 'space-y-1.5 pt-2 mt-2 border-t border-slate-100' : 'space-y-1.5'}`}>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-purple-600 text-[11px] font-semibold tracking-tight flex items-center gap-1.5">
-                                        <Tag size={10} className="text-purple-500" /> Round Up
-                                        {rounding?.enabled && (
-                                            <label className="inline-flex items-center gap-1 ml-1 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="rounded border-slate-300 text-purple-600 focus:ring-purple-500 w-3 h-3"
-                                                    checked={rounding.applyRounding}
-                                                    disabled={!rounding.manualOverrideAllowed}
-                                                    onChange={e => rounding.onToggle?.(e.target.checked)}
-                                                />
-                                                <span className="text-[9px] text-slate-400 font-normal">
-                                                    {rounding.manualOverrideAllowed ? (rounding.applyRounding ? 'On' : 'Off') : 'Locked'}
-                                                </span>
-                                            </label>
-                                        )}
-                                    </span>
-                                    <span className={`font-mono text-[11px] font-semibold ${roundingTotal >= 0 ? 'text-purple-600' : 'text-rose-600'}`}>
-                                        {roundingTotal >= 0 ? '+' : ''}{currency}{formatNumber(roundingTotal)}
-                                    </span>
-                                </div>
-                                {rounding?.enabled && rounding.manualOverrideAllowed && rounding.methodOptions && rounding.applyRounding && (
-                                    <select
-                                        className="w-full p-1 border border-purple-100 rounded-lg bg-white text-[10px] font-semibold text-slate-700"
-                                        value={rounding.method}
-                                        onChange={e => rounding.onMethodChange?.(e.target.value)}
-                                    >
-                                        {rounding.methodOptions.map(option => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
-                        )}
                         {profitMarginTotal !== 0 && (
-                            <div className={`flex justify-between items-center ${orderedAdjustmentSummary.length > 0 || rounding?.enabled || Math.abs(roundingTotal) > 0.0001 ? 'pt-2 mt-2 border-t border-slate-100' : ''}`}>
+                            <div className="flex justify-between items-center">
                                 <span className={`text-[11px] font-semibold tracking-tight flex items-center gap-1.5 ${profitMarginTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                     <TrendingUp size={10} className={profitMarginTotal < 0 ? 'text-rose-500' : 'text-emerald-500'} /> Profit Margin
                                 </span>
@@ -361,7 +221,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                                 <AlertTriangle size={12} className="text-rose-500 shrink-0 mt-0.5" />
                                 <p className="text-[10px] text-rose-700 leading-relaxed">
                                     {profitMarginTotal === 0
-                                        ? 'Zero profit margin — price equals cost plus adjustments.'
+                                        ? 'Zero profit margin — price equals cost.'
                                         : `Negative margin of ${currency}${formatNumber(Math.abs(profitMarginTotal))} — selling below cost.`}
                                 </p>
                             </div>
@@ -371,7 +231,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
                 <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-slate-800">Total</span>
-                    <span className="text-xl font-bold text-slate-800">{currency}{formatNumber(displayPrice(grandTotal, undefined, 'pos'))}</span>
+                    <span className="text-xl font-bold text-slate-800">{currency}{formatNumber(displayPrice(roundedTotal, undefined, 'pos'))}</span>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -385,11 +245,11 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
                     <div className={`grid gap-2 ${companyConfig.transactionSettings?.pos?.allowReturns !== false ? 'grid-cols-2' : 'grid-cols-1'}`}>
                         <button
-                            onClick={() => setShowManualOverrideCard(prev => !prev)}
-                            disabled={cart.length === 0 || !selectedOverrideItem}
-                            className={`flex items-center justify-center gap-2 py-2 rounded-full border font-bold text-xs transition-all disabled:opacity-50 ${showManualOverrideCard ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'}`}
+                            onClick={() => setRoundingEnabled(prev => !prev)}
+                            disabled={cart.length === 0}
+                            className={`flex items-center justify-center gap-2 py-2 rounded-full border font-bold text-xs transition-all disabled:opacity-50 ${roundingEnabled ? 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100' : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'}`}
                         >
-                            <Tag size={12} /> {showManualOverrideCard ? 'Close Override' : 'Override'}
+                            <Tag size={12} /> {roundingEnabled ? 'Rounding On' : 'Rounding'}
                         </button>
                         {companyConfig.transactionSettings?.pos?.allowReturns !== false && (
                             <button onClick={onReturn} className="flex items-center justify-center gap-2 py-2 rounded-full border border-slate-200 bg-white text-slate-800 font-bold text-xs hover:bg-slate-50 transition-all">
@@ -493,18 +353,13 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
             </div>
 
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center hover:bg-slate-50 border-r border-slate-200" title="Decrease quantity" aria-label="Decrease quantity"><Minus size={10} /></button>
-                        <input
-                            type="number"
-                            className="w-7 text-xs font-bold text-slate-800 text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={localQty}
-                            onChange={(e) => setLocalQty(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onBlur={handleBlur}
-                        />
-                        <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center hover:bg-slate-50 border-l border-slate-200" title="Increase quantity" aria-label="Increase quantity"><Plus size={10} /></button>
+                <div className="flex items-center gap-1">
+                    <div className="flex items-center border border-slate-200 rounded bg-white">
+                        <button onClick={() => updateQuantity(item.id, -1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-r border-slate-200 shrink-0" title="Decrease quantity" aria-label="Decrease quantity"><Minus size={8} /></button>
+                        <input type="number" value={localQty} onChange={(e) => setLocalQty(e.target.value)} onKeyDown={handleKeyDown} onBlur={handleBlur}
+                            style={{ width: 33, padding: 0, textAlign: 'center', border: 'none', outline: 'none', fontSize: 13, fontWeight: 700, color: '#1e293b', background: 'transparent' }}
+                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        <button onClick={() => updateQuantity(item.id, 1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-l border-slate-200 shrink-0" title="Increase quantity" aria-label="Increase quantity"><Plus size={8} /></button>
                     </div>
                     <span className="text-[11px] text-slate-500 flex items-center gap-1">
                         @ {currency}

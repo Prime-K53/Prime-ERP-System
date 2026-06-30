@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '@/services/logger';
 // PRICING RULE: Do NOT implement pricing logic here. All pricing MUST go through pricingEngine.ts
-import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Calculator, DollarSign, Tag, ShieldCheck, Plus, Search, Building2, FileText, Clock, Settings, Info, RefreshCw, Layers, Package, Zap, AlertTriangle, TrendingUp } from 'lucide-react';
+import { X, CheckCircle, Printer, Usb, Wallet, UserPlus, Save, ArrowRight, Plus, Search, Clock, Info, AlertTriangle } from 'lucide-react';
 import { HeldOrder, Sale, Invoice, Item, ProductVariant, BillOfMaterial, WorkOrder, BOMTemplate } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
@@ -285,140 +285,185 @@ export const ServiceCalculatorModal: React.FC<{
     const profitMarginPct = (ap?.totalCost || 0) > 0 ? roundToCurrency((profit / (ap?.totalCost || 1)) * 100) : 0;
     const priceDiff = ap ? roundToCurrency(sellingPrice - ap.totalPrice) : 0;
 
-    const card = 'backdrop-blur-sm border border-slate-200/80 rounded-xl p-4 transition-all duration-200';
-    const inputCls = 'w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-[13px] font-bold text-white focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 outline-none transition-all tabular-nums';
-
     const handleConfirm = () => onConfirm({ ...ap, totalPrice: sellingPrice, unitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0, calculatedTotalPrice: ap.totalPrice, marginAmount: profit, priceLocked: true, lockedTotalPrice: sellingPrice, lockedUnitPricePerCopy: copies > 0 ? roundToCurrency(sellingPrice / copies) : 0, lockedUnitCostPerCopy: copies > 0 ? roundToCurrency(ap.totalCost / copies) : 0 });
 
+    const ink900 = '#16191c', ink700 = '#3a4046', ink500 = '#6b7178', ink300 = '#aeb3b8', line = '#e7e5e1', canvas = '#eeece7', amber = '#b8742f', amberDeep = '#8f5a22', amberTint = '#fbf2e6', good = '#3f7d52', goodTint = '#eef6ef';
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/40">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-200" style={{ fontSize: 13.5 }}>
-                <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/10"><Calculator size={16} className="text-white" /></div>
-                            <div><h2 className="text-[15px] font-bold text-white">Service Configuration</h2><p className="text-[11px] text-slate-400 font-medium">{service.name}</p></div>
-                        </div>
-                        <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white"><X size={18} /></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md" style={{ background: 'rgba(22,25,28,0.55)' }}>
+            <div className="w-full max-w-[660px]" style={{ background: '#fff', borderRadius: 14, border: `1px solid ${line}`, boxShadow: '0 24px 48px -20px rgba(22,25,28,0.28)', overflow: 'hidden' }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px 14px 20px', borderBottom: `1px solid ${line}` }}>
+                    <div>
+                        <div style={{ fontFamily: "inherit", fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: amber, marginBottom: 5 }}>Printing Service</div>
+                        <div style={{ fontSize: 19, color: ink900, lineHeight: 1.1, fontWeight: 700 }}>{service.name}</div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                        {[{ label: 'Pages', icon: FileText, val: pages, set: setPages, step: 1 }, { label: 'Copies', icon: Layers, val: copies, set: setCopies }].map(f => {
-                            const Icon = f.icon;
-                            return (<div key={f.label} className="flex-1">
-                                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1"><Icon size={11} /> {f.label}</label>
-                                <input type="number" min={1} step={f.step} value={f.val} onChange={e => f.set(Math.max(1, parseInt(e.target.value || '1', 10) || 1))} className={inputCls} />
-                            </div>);
-                        })}
-                    </div>
+                    <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', color: ink500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: 2 }}
+                        onMouseOver={e => { e.currentTarget.style.background = canvas; e.currentTarget.style.color = ink900; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ink500; }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                 </div>
 
-                <div className="p-5 space-y-4 overflow-y-auto custom-scrollbar flex-1" style={{ background: '#F8FAFC' }}>
-                    {hasSmartPricing && (
-                        <div className="grid grid-cols-2 gap-3">
-                            {[{ icon: Package, label: 'Paper', item: paper, detail: `${fc(costBreakdown.costPerSheet)} / sheet · ${costBreakdown.totalSheets} sheets`, empty: 'No paper configured' }, { icon: Printer, label: 'Toner', item: toner, detail: `${fc(costBreakdown.tonerCostPerPage)} / page`, empty: 'No toner configured' }].map(s => (
-                                <div key={s.label} className={`${card} bg-white`}>
-                                    <div className="flex items-center gap-2 text-indigo-700 mb-2"><s.icon size={13} /><span className="text-[11px] font-bold uppercase tracking-wider">{s.label}</span></div>
-                                    {s.item ? <div><p className="text-[13px] font-semibold text-slate-800 truncate">{s.item.name}</p><p className="text-[10px] text-slate-500 mt-0.5">{s.detail}</p></div> : <p className="text-[12px] text-slate-400 italic">{s.empty}</p>}
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                {/* Two-column body */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr' }}>
+                    <div className="custom-scrollbar" style={{ padding: '16px 20px', maxHeight: '64vh', overflowY: 'auto' }}>
 
-                    {hasSmartPricing && costBreakdown.finishingDetails.length > 0 && (
-                        <div className={`${card} bg-white`}>
-                            <div className="flex items-center gap-2 text-slate-700 mb-3"><Zap size={13} /><span className="text-[11px] font-bold uppercase tracking-wider">Finishing Options</span></div>
-                            <div className="flex flex-wrap gap-2">
-                                {costBreakdown.finishingDetails.map(fd => {
-                                    const isOn = enabledFinishing.includes(fd.id);
-                                    return (<button key={fd.id} type="button" onClick={() => setEnabledFinishing(prev => prev.includes(fd.id) ? prev.filter(id => id !== fd.id) : [...prev, fd.id])}
-                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border-2 transition-all ${isOn ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
-                                        <div className={`w-2 h-2 rounded-full ${isOn ? 'bg-indigo-500' : 'bg-slate-300'}`} />{fd.name}<span className={`text-[10px] ${isOn ? 'text-indigo-500' : 'text-slate-400'}`}>{fc(fd.cost)}/copy</span>
-                                    </button>);
-                                })}
+                        {/* Quantities */}
+                        <div style={{ fontFamily: "inherit", fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Quantities</div>
+                        <div style={{ display: 'flex', border: `1px solid ${line}`, borderRadius: 10, overflow: 'hidden', marginBottom: 14 }}>
+                            <div style={{ flex: 1, padding: '8px 10px', borderRight: `1px solid ${line}` }}>
+                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Pages</div>
+                                <input type="number" min={1} value={pages} onChange={e => setPages(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                                    style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, fontFamily: "inherit", color: ink900, width: '100%', background: 'transparent', outline: 'none' }} />
+                            </div>
+                            <div style={{ flex: 1, padding: '8px 10px', borderRight: `1px solid ${line}` }}>
+                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Copies</div>
+                                <input type="number" min={1} value={copies} onChange={e => setCopies(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                                    style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, fontFamily: "inherit", color: ink900, width: '100%', background: 'transparent', outline: 'none' }} />
+                            </div>
+                            <div style={{ flex: '0 0 56px', padding: '8px 10px', borderRight: `1px solid ${line}`, background: canvas, textAlign: 'center' }}>
+                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Sheets</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: ink700 }}>{Math.ceil(pages / 2)}</div>
+                            </div>
+                            <div style={{ flex: '0 0 56px', padding: '8px 10px', background: canvas, textAlign: 'center' }}>
+                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Total</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: ink700 }}>{pages * copies}<span style={{ fontSize: 10, color: ink500, fontWeight: 400 }}>pg</span></div>
                             </div>
                         </div>
-                    )}
 
-                    {/* Cost Breakdown — matches PrintingServiceModal sidebar style */}
-                    <div className={`${card} bg-white shadow-md border border-slate-200`}>
-                        <div className="p-4 -m-4 mb-4 bg-gradient-to-r from-slate-800 to-slate-700 rounded-t-xl">
-                            <div className="flex items-center gap-2 text-white mb-1"><Calculator size={14} /><h4 className="text-[13px] font-bold">Cost Breakdown</h4></div>
-                            <p className="text-slate-400 text-[10px]">{pages} pages × {copies} {copies === 1 ? 'copy' : 'copies'}{hasSmartPricing ? ` · ${fc(costBreakdown.baseCost)} total cost` : ''}</p>
-                        </div>
-                        <div className="space-y-2">
-                            {hasSmartPricing && (
-                                <>
-                                    <div className="flex justify-between text-xs"><span className="text-slate-500">{paper ? paper.name.replace(/\s*\d+gsm.*/i, '').trim() : 'Paper'}</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.paperCost)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className="text-slate-500">{toner ? toner.name.replace(/\s*Universal\s*/i, '').trim() : 'Toner'}</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.tonerCost)}</span></div>
-                                    <div className="flex justify-between text-xs"><span className="text-slate-500">Finishing</span><span className="font-mono font-medium text-slate-700">{fc(costBreakdown.finishingCost)}</span></div>
-                                    <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-xs"><span>Cost Price</span><span className="font-mono text-base text-indigo-600">{fc(costBreakdown.baseCost)}</span></div>
-                                </>
-                            )}
-                            {!hasSmartPricing && <div className="flex justify-between text-xs"><span className="text-slate-500">Base Rate</span><span className="font-mono font-medium text-slate-700">{fc(ap.totalCost)}</span></div>}
+                        {/* BOM line */}
+                        {bomTemplate && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: ink500, paddingBottom: 14, marginBottom: 14, borderBottom: `1px solid ${line}` }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={amber} strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+                                Specs from <b style={{ color: ink900, fontWeight: 700 }}>BOM: {bomTemplate.name}</b>
+                            </div>
+                        )}
 
-                            {/* Selling Price */}
-                            <div className="border-t border-slate-200 pt-2">
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-blue-600 font-semibold text-xs">Selling Price</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-[11px] text-slate-400">{currencySymbol}</span>
-                                        <input type="number" step="0.01" min={0} value={sellingPrice} onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }} className="w-28 px-2 py-1 bg-white border-2 border-blue-200 rounded-lg text-[13px] font-bold text-blue-700 text-right focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all tabular-nums" />
+                        {/* Finishing Options */}
+                        {costBreakdown.finishingDetails.length > 0 && (
+                            <>
+                                <div style={{ fontFamily: "inherit", fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Finishing Options</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {costBreakdown.finishingDetails.map(fd => {
+                                        const isOn = enabledFinishing.includes(fd.id);
+                                        return (
+                                            <button key={fd.id} type="button" onClick={() => setEnabledFinishing(prev => prev.includes(fd.id) ? prev.filter(id => id !== fd.id) : [...prev, fd.id])}
+                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', background: isOn ? amberTint : canvas, transition: 'all .12s' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? amber : ink300 }}></div>
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: ink900 }}>{fd.name}</span>
+                                                </div>
+                                                <span style={{ fontFamily: "inherit", fontSize: 11, color: isOn ? amber : ink500 }}>{fc(fd.cost)}/copy</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ background: line }}></div>
+
+                    {/* Right column — Costing */}
+                    <div className="custom-scrollbar" style={{ padding: '16px 20px', maxHeight: '64vh', overflowY: 'auto' }}>
+                        <div style={{ fontFamily: "inherit", fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Cost Breakdown</div>
+
+                        {hasSmartPricing ? (
+                            <>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Paper</span>
+                                    <span style={{ fontFamily: "inherit", fontWeight: 600, color: ink900 }}>{fc(costBreakdown.paperCost)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Toner</span>
+                                    <span style={{ fontFamily: "inherit", fontWeight: 600, color: ink900 }}>{fc(costBreakdown.tonerCost)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Finishing</span>
+                                    <span style={{ fontFamily: "inherit", fontWeight: 600, color: ink900 }}>{fc(costBreakdown.finishingCost)}</span>
+                                </div>
+                                <div style={{ borderTop: `1px dashed ${line}`, margin: '4px 0' }}></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Cost Price</span>
+                                    <span style={{ fontFamily: "inherit", fontWeight: 600, color: ink900 }}>{fc(costBreakdown.baseCost)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Selling Price</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <span style={{ fontFamily: "inherit", fontSize: 11, color: ink500 }}>{currencySymbol}</span>
+                                        <input type="number" step="0.01" min={0} value={sellingPrice} onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }}
+                                            style={{ width: 80, textAlign: 'right', border: `1px solid ${line}`, borderRadius: 6, padding: '3px 7px', fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, color: ink900, outline: 'none' }}
+                                            onFocus={e => e.currentTarget.style.borderColor = amber}
+                                            onBlur={e => e.currentTarget.style.borderColor = line} />
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] text-slate-400">Calculated: {fc(ap.totalPrice)}</span>
-                                    {priceDiff !== 0 && <span className={`text-[10px] font-semibold ${priceDiff > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{priceDiff > 0 ? '+' : ''}{fc(priceDiff)}</span>}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Calculated</span>
+                                    <span style={{ fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: amberDeep }}>{fc(ap.totalPrice)}</span>
                                 </div>
-                            </div>
-
-                            {/* Profit */}
-                            <div className={`flex justify-between font-semibold text-xs ${isLoss ? 'text-red-500' : 'text-emerald-600'}`}><span>Profit</span><span className="font-mono">{isLoss ? '-' : '+'}{fc(Math.abs(profit))}</span></div>
-
-                            {/* Margin */}
-                            <div className={`flex justify-between text-xs ${isLoss ? 'text-red-500' : ''}`}><span>Margin</span><span className="font-mono font-semibold">{profitMarginPct}%</span></div>
-
-                            {ap.adjustmentSnapshots?.filter((adj: any) => !adj.name?.toLowerCase().includes('margin')).length > 0 && (
-                                <><div className="border-t border-slate-100 pt-1"></div>
-                                {ap.adjustmentSnapshots.filter((adj: any) => !adj.name?.toLowerCase().includes('margin')).map((adj: any, i: number) => (
-                                    <div key={i} className="flex justify-between text-xs"><span className="text-emerald-600">{adj.name}{adj.type === 'PERCENTAGE' && <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-semibold ml-1">+{adj.value}%</span>}</span><span className="font-mono font-semibold text-emerald-700">+{fc(adj.calculatedAmount)}</span></div>
-                                ))}</>
-                            )}
-
-                            {(ap.rounding_difference || 0) !== 0 && (
-                                <div className="flex justify-between text-xs"><span className="text-slate-500">Round Up</span><span className="font-mono font-medium text-slate-500">+{fc(ap.rounding_difference * ap.copies)}</span></div>
-                            )}
-
-                            {isLoss && (
-                                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-medium flex items-center gap-1.5"><AlertTriangle size={11} />Below cost — expected loss of {fc(Math.abs(profit))}</div>
-                            )}
-                            {!isLoss && profit > 0 && profitMarginPct < 10 && (
-                                <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-700 font-medium flex items-center gap-1.5"><Info size={11} />Low margin ({profitMarginPct}%) — consider increasing price</div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Total Due */}
-                    <div className="relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-xl p-4">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full -translate-y-1/3 translate-x-1/3"></div>
-                        <div className="relative flex justify-between items-end">
-                            <div>
-                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Due</p>
-                                <h3 className="text-[24px] font-bold text-white tabular-nums">{fc(sellingPrice)}</h3>
-                                <p className="text-[10px] text-slate-500 mt-0.5">{fc(copies > 0 ? roundToCurrency(sellingPrice / copies) : 0)} / copy</p>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-[10px] font-medium text-slate-400">Total Pages</div>
-                                <div className="text-[14px] font-bold text-white tabular-nums">{ap.totalPages} <span className="text-[10px] text-slate-400 font-normal">pgs</span></div>
-                                <div className="text-[10px] text-slate-500 mt-0.5">{Math.ceil(pages / 2) * copies} sheets</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-1">
-                        <button onClick={onClose} className="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98] shadow-sm">Cancel</button>
-                        <button onClick={handleConfirm} className="flex-[1.5] py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-[13px] hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5">Add to Order <ArrowRight size={16} /></button>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: goodTint, borderRadius: 8, padding: '9px 12px', marginTop: 12 }}>
+                                    <div style={{ fontSize: 11.5, color: good, fontWeight: 700 }}>
+                                        Profit <span style={{ fontFamily: "inherit" }}>{isLoss ? '-' : '+'}{fc(Math.abs(profit))}</span>
+                                    </div>
+                                    <div style={{ fontFamily: "inherit", fontSize: 11, fontWeight: 700, color: good, background: '#fff', padding: '3px 9px', borderRadius: 999 }}>{profitMarginPct}% margin</div>
+                                </div>
+                                {isLoss && (
+                                    <div style={{ marginTop: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 11, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <AlertTriangle size={12} /> Below cost — loss of {fc(Math.abs(profit))}
+                                    </div>
+                                )}
+                                {!isLoss && profit > 0 && profitMarginPct < 10 && (
+                                    <div style={{ marginTop: 8, padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, fontSize: 11, color: '#d97706', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <Info size={12} /> Low margin ({profitMarginPct}%) — increase price
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Base Rate</span>
+                                    <span style={{ fontFamily: "inherit", fontWeight: 600, color: ink900 }}>{fc(ap.totalCost)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                                    <span style={{ color: ink500 }}>Selling Price</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <span style={{ fontFamily: "inherit", fontSize: 11, color: ink500 }}>{currencySymbol}</span>
+                                        <input type="number" step="0.01" min={0} value={sellingPrice} onChange={e => { setSellingPrice(Math.max(0, parseFloat(e.target.value || '0'))); setPriceManuallySet(true); }}
+                                            style={{ width: 80, textAlign: 'right', border: `1px solid ${line}`, borderRadius: 6, padding: '3px 7px', fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, color: ink900, outline: 'none' }}
+                                            onFocus={e => e.currentTarget.style.borderColor = amber}
+                                            onBlur={e => e.currentTarget.style.borderColor = line} />
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
+
+                {/* Footer */}
+                <div style={{ padding: '14px 20px 18px 20px', borderTop: `1px solid ${line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                    <div>
+                        <div style={{ fontFamily: "inherit", fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500 }}>Total Due</div>
+                        <div style={{ fontSize: 23, color: ink900, lineHeight: 1.15, fontWeight: 700 }}>{fc(sellingPrice)}</div>
+                        <div style={{ fontFamily: "inherit", fontSize: 10, color: ink500 }}>{pages * copies} page{pages * copies !== 1 ? 's' : ''} · {Math.ceil(pages / 2) * copies} sheet{Math.ceil(pages / 2) * copies !== 1 ? 's' : ''} · {fc(copies > 0 ? roundToCurrency(sellingPrice / copies) : 0)}/copy</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <button onClick={onClose} style={{ border: `1px solid ${line}`, borderRadius: 8, padding: '10px 16px', fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: 'pointer', background: '#fff', color: ink700, whiteSpace: 'nowrap', transition: 'all .15s' }}
+                            onMouseOver={e => e.currentTarget.style.background = canvas}
+                            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+                            Cancel
+                        </button>
+                        <button onClick={handleConfirm} style={{ border: 'none', borderRadius: 8, padding: '10px 16px', fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: 'pointer', background: ink900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, whiteSpace: 'nowrap', transition: 'all .15s' }}
+                            onMouseOver={e => e.currentTarget.style.background = '#000'}
+                            onMouseOut={e => e.currentTarget.style.background = ink900}>
+                            Add to Order
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

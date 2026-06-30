@@ -70,11 +70,11 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const isPrintingService = (() => {
     if (!internalItem) return false;
     if ((internalItem as any).classification === 'printing_service') return true;
-    if (!internalItem.id && internalItem.type === 'Service' && lockClassification) return true;
     if (internalItem.type === 'Service') {
-      const ext = internalItem as Record<string, unknown>;
-      if (ext.printType || ext.printingServiceType || ext.printColorMode || (Array.isArray(ext.printFinishing) && (ext.printFinishing as any[]).length > 0)) return true;
-      if (ext.productType === 'SERVICE') return true;
+      if (!internalItem.id && lockClassification) return true;
+      if ((internalItem as any).printType || (internalItem as any).printingServiceType || (internalItem as any).printColorMode) return true;
+      if ((internalItem as any).productType === 'SERVICE') return true;
+      if (Number((internalItem as any).stock ?? 0) >= 0) return true;
     }
     return false;
   })();
@@ -135,7 +135,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                 {internalItem?.id ? 'Edit Item' : 'New Item'}
               </h2>
               <p style={{ fontSize: 13, color: '#6C766F', margin: 0, lineHeight: 1.45 }}>
-                {internalItem?.id ? `ID: ${internalItem.id}` : 'Create a new inventory item'}
+                {internalItem?.id ? internalItem.name || `ID: ${internalItem.id}` : 'Create a new inventory item'}
               </p>
             </div>
           </div>

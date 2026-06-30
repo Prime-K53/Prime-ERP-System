@@ -8,143 +8,149 @@ import { aiService } from '../services/aiService';
 
 const AI_TEMPLATES = [
   {
-    id: 'promo',
-    name: 'Sales Promotion',
-    description: 'Perfect for announcing new products or seasonal sales',
-    content: "Hi! 🌟 We have some exciting new offers at [Company Name]! Check out our latest premium collection and get exclusive deals. Reply 'YES' to see our catalog! 🛍️"
+    id: 'business_cards',
+    name: 'Business Card Quote',
+    description: 'Follow up on a business card printing inquiry',
+    content: "Hi [Customer Name]! Thanks for your business card inquiry at [Company Name]. We offer premium 14pt card stock with glossy, matte, or spot UV finish. Reply with quantity and we'll send a quote within hours!"
   },
   {
-    id: 'invoice',
-    name: 'Invoice Reminder',
-    description: 'A polite nudge for outstanding payments',
-    content: "Hello [Customer Name], this is a friendly reminder from [Company Name] regarding your outstanding invoice #[Invoice Number]. 📄 You can securely view and complete your payment online. Thank you! 🙏"
+    id: 'quote_sent',
+    name: 'Print Quote Sent',
+    description: 'Notify customer their print quote is ready',
+    content: "Hi [Customer Name]! Your print quote #[Quote Number] from [Company Name] is ready. [Product] — [Quantity] units — [Amount]. Quote includes design, printing, finishing, and delivery. Reply to accept or ask questions!"
   },
   {
-    id: 'order',
-    name: 'Order Confirmation',
-    description: 'Keep customers informed about their purchases',
-    content: "Great news! 🎉 Your order #[Order Number] has been successfully confirmed at [Company Name] and is now being processed. We'll notify you once it's on its way! 🚚"
+    id: 'order_confirmed',
+    name: 'Print Order Confirmed',
+    description: 'Confirm a new print order',
+    content: "Great news [Customer Name]! Your print order #[Order Number] for [Product] has been confirmed at [Company Name]. Files are being pre-flighted. We'll update you once production begins!"
   },
   {
-    id: 'greeting',
-    name: 'Welcome Message',
-    description: 'Greet new customers and build rapport',
-    content: "Hi there! Welcome to [Company Name]. 🤝 We're thrilled to have you with us. If you have any questions about our services, feel free to ask anytime. We're here to help! ✨"
+    id: 'proof_ready',
+    name: 'Design Proof Ready',
+    description: 'Notify customer their print proof is available',
+    content: "Hi [Customer Name]! Your design proof for [Product] at [Company Name] is ready for review. View it here: [Proof Link]. Please approve or request changes. We'll print once approved!"
   },
   {
-    id: 'payment_received',
-    name: 'Payment Received',
-    description: 'Confirm payment receipt for orders',
-    content: "Hi [Customer Name]! ✅ Payment of [Amount] has been successfully received for invoice #[Invoice Number] at [Company Name]. Thank you for your prompt payment! 🎉"
+    id: 'in_production',
+    name: 'Order In Production',
+    description: 'Let customer know their order is being printed',
+    content: "Hi [Customer Name]! Your order #[Order Number] at [Company Name] is now on press. [Product] — [Quantity] copies — [Finishing]. Estimated completion: [Date]. We'll notify you when it's ready!"
   },
   {
-    id: 'order_ready',
-    name: 'Order Ready for Pickup',
-    description: 'Notify customer their order is ready',
-    content: "Hi [Customer Name]! 📦 Your order #[Order Number] from [Company Name] is ready for pickup! Visit us during business hours to collect your order. Questions? Just reply! 😊"
+    id: 'ready_pickup',
+    name: 'Ready for Pickup',
+    description: 'Notify customer their prints are ready to collect',
+    content: "Hi [Customer Name]! Your order #[Order Number] at [Company Name] is printed, finished, and ready for pickup. We're open [Hours]. Please bring your order confirmation. See you soon!"
   },
   {
     id: 'order_shipped',
     name: 'Order Shipped',
-    description: 'Notify customer their order has been shipped',
-    content: "Hi [Customer Name]! 🚚 Great news! Your order #[Order Number] from [Company Name] has been shipped! Track it using: [Tracking Link]. Expected delivery: [Delivery Date]. 📦"
+    description: 'Notify customer their prints have been shipped',
+    content: "Hi [Customer Name]! Your print order #[Order Number] from [Company Name] is on its way! Carrier: [Carrier]. Tracking: [Tracking Link]. Estimated delivery: [Date]. Thank you for your business!"
   },
   {
-    id: 'quote_request',
-    name: 'Quote Request',
-    description: 'Follow up on a requested quote',
-    content: "Hi [Customer Name]! 📋 Thank you for your interest in [Company Name]. We'd love to provide you with a quote for [Product/Service]. Please reply with your requirements and we'll get back to you within 24 hours! 💼"
+    id: 'flyer_promo',
+    name: 'Flyer Printing Promo',
+    description: 'Promote flyer printing services',
+    content: "Hi [Customer Name]! Looking for flyer printing? [Company Name] is running a special: [Quantity] full-color flyers on 100lb gloss for just [Price]! Design service available. Offer ends [Date]. Reply to order!"
   },
   {
-    id: 'thank_you',
-    name: 'Thank You Message',
-    description: 'Express gratitude after a purchase',
-    content: "Hi [Customer Name]! 🙏 Thank you for choosing [Company Name]! We really appreciate your business. If you have any feedback or questions about [Product/Service], please don't hesitate to reach out. We'd love to hear from you! ⭐"
+    id: 'banner_sale',
+    name: 'Banner Printing Sale',
+    description: 'Promote banner and signage printing',
+    content: "Hi [Customer Name]! Need banners? [Company Name] offers weather-resistant vinyl banners starting at [Price] for [Size]. Full-color, hemmed, with grommets. Perfect for events, grand openings, and promotions!"
   },
   {
-    id: 'birthday',
-    name: 'Birthday Wish',
-    description: 'Send birthday greetings to customers',
-    content: "Hi [Customer Name]! 🎂 Happy Birthday from [Company Name]! 🎉 We hope you have an amazing day! As our special gift, enjoy [Discount/ Offer] on your next visit. Celebrate with us! 🎁"
+    id: 'reorder_reminder',
+    name: 'Reorder Reminder',
+    description: 'Remind customer to reorder print materials',
+    content: "Hi [Customer Name]! It's been a while since your last print order at [Company Name]. We still have your [Product] files on file — ready to reprint anytime. Reply to order more or request a revised quote!"
   },
   {
-    id: 'loyalty',
-    name: 'Loyalty Reward',
-    description: 'Reward loyal customers',
-    content: "Hi [Customer Name]! 🌟 As a valued customer of [Company Name], we want to thank you for your loyalty! 🎁 Here's an exclusive offer just for you: [Special Offer]. Valid until [Expiry Date]. Enjoy! 🎉"
+    id: 'file_format_help',
+    name: 'File Format Help',
+    description: 'Assist customer with artwork file submission',
+    content: "Hi [Customer Name]! Need help with your print files? We accept PDF, AI, PSD, and CDR with 3mm bleed. Reply with your file format and we'll guide you. We also offer design services if needed!"
   },
   {
-    id: 'restock',
-    name: 'Item Restocked',
-    description: 'Notify customers about restocked items',
-    content: "Hi [Customer Name]! 🔔 Great news from [Company Name]! Your favorite [Product Name] is back in stock! Supplies are limited, so order now before they run out! 🛒"
+    id: 'design_consult',
+    name: 'Design Consultation',
+    description: 'Offer graphic design services for print',
+    content: "Hi [Customer Name]! Need a design for your print project? Our in-house designers at [Company Name] can create professional layouts, logos, and artwork. Starting at [Price]. Reply with your requirements!"
   },
   {
-    id: 'appointment',
-    name: 'Appointment Reminder',
-    description: 'Remind customers about upcoming appointments',
-    content: "Hi [Customer Name]! 📅 This is a friendly reminder about your upcoming appointment at [Company Name] on [Date] at [Time]. We're looking forward to seeing you! ⏰ Reply to confirm or reschedule."
+    id: 'bulk_discount',
+    name: 'Bulk Print Discount',
+    description: 'Offer volume pricing for large print runs',
+    content: "Hi [Customer Name]! Printing in bulk? [Company Name] offers tiered pricing — the more you print, the more you save. Get up to [Discount]% off on orders over [Quantity] units. Request a bulk quote today!"
   },
   {
-    id: 'feedback',
-    name: 'Feedback Request',
-    description: 'Request feedback after service',
-    content: "Hi [Customer Name]! 💬 Thank you for visiting [Company Name]. We'd love to hear your feedback! Please take a moment to rate your experience or share your thoughts. Your input helps us serve you better! ⭐⭐⭐⭐⭐"
+    id: 'invoice_reminder',
+    name: 'Print Invoice Reminder',
+    description: 'Polite reminder about outstanding print invoice',
+    content: "Hi [Customer Name]! Gentle reminder about invoice #[Invoice Number] from [Company Name] for [Amount], due on [Due Date]. You can pay via bank transfer, card, or PayPal. Reply if you need the payment link!"
   },
   {
-    id: 'service_complete',
-    name: 'Service Complete',
-    description: 'Notify customer their service is complete',
-    content: "Hi [Customer Name]! ✅ Your [Service Name] at [Company Name] is complete! 🎉 Everything looks great. You can pick up your items anytime during business hours. Thank you for trusting us! 😊"
+    id: 'welcome_print',
+    name: 'Welcome to Our Print Shop',
+    description: 'Welcome new printing customers',
+    content: "Hi [Customer Name]! Welcome to [Company Name]! We offer business cards, flyers, brochures, banners, stickers, and more. Upload your artwork or describe your project and we'll get started. We're excited to work with you!"
   },
   {
-    id: 'subscription',
-    name: 'Subscription Renewal',
-    description: 'Remind about subscription renewal',
-    content: "Hi [Customer Name]! 🔄 Your subscription with [Company Name] is about to renew on [Renewal Date]. Continue enjoying [Benefits]! No action needed if you'd like to keep your plan. Questions? Reply here! 📧"
+    id: 'sticker_promo',
+    name: 'Sticker & Label Printing',
+    description: 'Promote sticker and label printing services',
+    content: "Hi [Customer Name]! Custom stickers and labels at [Company Name] — kiss cut, die cut, waterproof vinyl, matte or gloss. Small runs welcome. Perfect for branding, packaging, and promotions. Request a quote!"
   },
   {
-    id: 'abandoned_cart',
-    name: 'Cart Abandonment',
-    description: 'Recover abandoned shopping carts',
-    content: "Hi [Customer Name]! 🛒 You left something behind at [Company Name]! Your [Product(s)] are still in your cart. Complete your purchase today and enjoy [Special Offer]! Valid for [Time Period]. 😊"
+    id: 'proof_approved',
+    name: 'Proof Approved — Going to Print',
+    description: 'Confirm approval and start production',
+    content: "Thanks [Customer Name]! Your design proof for [Product] is approved. We'll begin printing shortly. Estimated completion: [Date]. We'll send a photo of the finished product before shipping!"
   },
-    {
-      id: 'referral',
-      name: 'Referral Program',
-      description: 'Invite customers to refer friends',
-      content: "Hi [Customer Name]! 🤝 Love [Company Name]? Share the goodness! Refer a friend and you'll both get [Reward] when they make their first purchase. Send them your unique link: [Referral Link]. Let's grow together! 🎉"
-    },
-    {
-      id: 'promotion',
-      name: 'General Promotion',
-      description: 'A generic promotional message for discounts or events',
-      content: "Hi [Customer Name]! 🎈 Don't miss our latest promotion at [Company Name] – enjoy [Discount]% off on selected items. Visit us today and save! 🚀"
-    },
-    {
-      id: 'top_customer',
-      name: 'Top Customer Appreciation',
-      description: 'Reward your best customers with a special offer',
-      content: "Hello [Customer Name]! 🌟 As one of our top customers, we’re delighted to give you an exclusive [Discount]% discount on your next purchase at [Company Name]. Thank you for your loyalty! 🎉"
-    },
-    {
-      id: 'year_end_offer',
-      name: 'Year-End Offer',
-      description: 'Seasonal year‑end discount promotion',
-      content: "Hi [Customer Name]! 🎉 Celebrate the end of the year with an exclusive [Discount]% off on all products at [Company Name]. Use code YEAREND2026 at checkout. Offer valid until Dec 31. Happy Holidays! 🎁"
-    },
-    {
-      id: 'special_offer',
-      name: 'Special Offer',
-      description: 'A limited‑time special deal',
-      content: "Hi [Customer Name]! 🎁 We're offering a special deal just for you: [Offer Detail] at [Company Name]. Grab it before it’s gone! 🕒"
-    },
-    {
-      id: 'new_arrival',
-      name: 'New Arrival Announcement',
-      description: 'Announce a brand‑new product',
-      content: "Hi [Customer Name]! 🌟 New arrivals are in at [Company Name]: [Product Name]. Explore now and enjoy an introductory [Discount]% off! 🎉"
-    }
+  {
+    id: 'satisfaction_check',
+    name: 'Print Quality Follow-up',
+    description: 'Check if customer is happy with their prints',
+    content: "Hi [Customer Name]! How are your prints from [Company Name] looking? We value your feedback. Reply with a photo or let us know if everything meets your expectations. We're here if you need adjustments!"
+  },
+  {
+    id: 'catalog_brochure',
+    name: 'Catalog & Brochure Printing',
+    description: 'Promote booklet and brochure printing',
+    content: "Hi [Customer Name]! Need catalogs or brochures? [Company Name] offers saddle-stitched, spiral-bound, and perfect-bound booklets. Full color, premium paper stocks. Design included. Request a sample pack!"
+  },
+  {
+    id: 'seasonal_print',
+    name: 'Seasonal Printing Special',
+    description: 'Promote seasonal/holiday printing services',
+    content: "Hi [Customer Name]! [Season] is here! [Company Name] is running specials on [Product] — perfect for [Occasion]. Order by [Date] to guarantee delivery. Reply to learn more or place your order!"
+  },
+  {
+    id: 'large_format',
+    name: 'Large Format Printing',
+    description: 'Promote large format and signage',
+    content: "Hi [Customer Name]! [Company Name] now offers large format printing — billboards, vehicle wraps, window graphics, trade show displays, and more. UV-resistant, weatherproof. Request a site survey and quote!"
+  },
+  {
+    id: 'referral_print',
+    name: 'Refer a Business',
+    description: 'Ask for referrals to other businesses',
+    content: "Hi [Customer Name]! Enjoying our print services? Refer another business to [Company Name] and you'll get [Reward] credit on your next order. Share your referral code: [Referral Code]. Thank you for your trust!"
+  },
+  {
+    id: 'packaging_print',
+    name: 'Custom Packaging Printing',
+    description: 'Promote custom box and packaging printing',
+    content: "Hi [Customer Name]! Elevate your brand with custom packaging from [Company Name]. We print boxes, bags, tissue paper, and labels. Short runs available. Make your unboxing experience unforgettable. Get a quote!"
+  },
+  {
+    id: 'color_matching',
+    name: 'PMS Color Matching',
+    description: 'Offer Pantone color matching service',
+    content: "Hi [Customer Name]! Need exact brand colors? [Company Name] offers Pantone PMS color matching on all print jobs. Provide your PMS codes and we'll match them precisely. Reply with your color requirements!"
+  }
 ];
 
 interface WhatsAppMarketingModalProps {

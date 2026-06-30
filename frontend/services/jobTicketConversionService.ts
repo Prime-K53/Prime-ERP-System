@@ -3,6 +3,7 @@ import { generateNextId } from '../utils/helpers';
 import { workflowService } from './workflowService';
 import { JobTicket } from '../types';
 import { examinationBatchService } from './examinationBatchService';
+import { getProductionDb } from './productionDb';
 
 type SourceType = 'quotation' | 'examination_batch';
 
@@ -418,6 +419,13 @@ const convertQuotationToJobTicket = async (quotationId: string, options: Convers
   const workflowStarted = conversion.workOrderId
     ? await startWorkflowForTicket(conversion.workOrderId, requestedBy, 'quotation', quotationId)
     : false;
+  try {
+    const prodDb = getProductionDb();
+    if (prodDb) {
+      const ticket = await dbService.get<JobTicket>('jobTickets', conversion.jobTicketId);
+      if (ticket) await prodDb.jobTickets.put(ticket);
+    }
+  } catch { /* non-critical sync to productionDb */ }
   return {
     success: true,
     sourceType: 'quotation',
@@ -506,6 +514,13 @@ const convertExaminationBatchToJobTicket = async (batchId: string, options: Conv
   const workflowStarted = conversion.workOrderId
     ? await startWorkflowForTicket(conversion.workOrderId, requestedBy, 'examination_batch', batchId)
     : false;
+  try {
+    const prodDb = getProductionDb();
+    if (prodDb) {
+      const ticket = await dbService.get<JobTicket>('jobTickets', conversion.jobTicketId);
+      if (ticket) await prodDb.jobTickets.put(ticket);
+    }
+  } catch { /* non-critical sync to productionDb */ }
   return {
     success: true,
     sourceType: 'examination_batch',

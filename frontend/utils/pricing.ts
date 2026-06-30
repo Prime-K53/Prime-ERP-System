@@ -11,6 +11,7 @@ type PricingCarrier = {
   calculated_price?: number | null;
   cost?: number | null;
   cost_price?: number | null;
+  cost_per_unit?: number | null;
   rounding_difference?: number | null;
   smartPricingSnapshot?: {
     roundedPrice?: number | null;
@@ -90,6 +91,7 @@ export function resolveStoredCost(source?: PricingCarrier | null): number {
   return pickPreferredNumber(
     toFiniteNumber(source.smartPricingSnapshot?.baseCost),
     toFiniteNumber(source.cost_price),
+    toFiniteNumber(source.cost_per_unit),
     toFiniteNumber(source.cost)
   );
 }
@@ -230,8 +232,8 @@ export function calculateItemFinancials(
   const toner = tonerId ? inventory.find((item: any) => item.id === tonerId) : null;
 
   // Calculate material costs
-  const paperCostPerPage = paper ? Number(paper.cost_price || paper.cost || 0) : 0;
-  const tonerCostPerPage = toner ? Number(toner.cost_price || toner.cost || 0) : 0;
+  const paperCostPerPage = paper ? Number(paper.cost_price ?? paper.cost_per_unit ?? paper.cost ?? 0) : 0;
+  const tonerCostPerPage = toner ? Number(toner.cost_price ?? toner.cost_per_unit ?? toner.cost ?? 0) : 0;
   const paperTotal = paperCostPerPage * totalPages;
   const tonerTotal = tonerCostPerPage * totalPages;
 

@@ -3,7 +3,7 @@ import { logger } from '@/services/logger';
 import { generateNextId } from '../utils/helpers';
 import { localFileStorage } from './localFileStorage';
 import { dbService } from './db';
-import { productionDb } from './productionDb';
+import { productionDb, getProductionDb } from './productionDb';
 
 export interface JobTicketNotification {
   id: string;
@@ -91,7 +91,14 @@ const migrateLegacyData = async () => {
 
 const getStoredTickets = async (): Promise<JobTicket[]> => {
   await migrateLegacyData();
-  try { return await productionDb.jobTickets.toArray(); } catch { return dbService.getAll<JobTicket>('jobTickets'); }
+  try {
+    const prod = getProductionDb();
+    if (prod) {
+      const prodTickets = await prod.jobTickets.toArray();
+      if (prodTickets.length > 0) return prodTickets;
+    }
+  } catch { /* fall through */ }
+  return dbService.getAll<JobTicket>('jobTickets');
 };
 
 const getStoredSettings = async (): Promise<JobTicketSettings> => {
@@ -118,7 +125,14 @@ export const jobTicketService = {
 
   getById: async (id: string): Promise<JobTicket | undefined> => {
     await migrateLegacyData();
-    try { return await productionDb.jobTickets.get(id); } catch { return dbService.get<JobTicket>('jobTickets', id); }
+    try {
+      const prod = getProductionDb();
+      if (prod) {
+        const ticket = await prod.jobTickets.get(id);
+        if (ticket) return ticket;
+      }
+    } catch { /* fall through */ }
+    return dbService.get<JobTicket>('jobTickets', id);
   },
 
   create: async (ticket: Partial<JobTicket>): Promise<JobTicket> => {

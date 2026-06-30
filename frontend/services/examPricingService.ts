@@ -88,6 +88,12 @@ const toSafeNumber = (value: unknown, fallback = 0): number => {
     return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const resolveItemCost = (item: Item | undefined): number => {
+    if (!item) return 0;
+    const raw = (item as any).cost_price ?? (item as any).cost_per_unit ?? item.cost;
+    return toSafeNumber(raw, 0);
+};
+
 const resolveBatchConfig = (batch: ExaminationBatch, inventory: Item[]): ExamBOMConfig => {
     const batchConfig = batch['bomConfig'] as Partial<ExamBOMConfig> | undefined;
     const defaults = getDefaultExamBOMConfig(undefined, inventory);
@@ -250,8 +256,8 @@ export function calculateClassCost(
     const paper = inventory.find(i => i.id === config.paperId);
     const toner = inventory.find(i => i.id === config.tonerId);
 
-    const paperCostPerReam = paper?.cost || 0;
-    const tonerCostPerKg = toner?.cost || 0;
+    const paperCostPerReam = resolveItemCost(paper);
+    const tonerCostPerKg = resolveItemCost(toner);
 
     // Calculate total sheets for all subjects
     let totalSheets = 0;
@@ -368,6 +374,7 @@ export function calculateBatchCost(
 
     if (paper && totalSheets > 0) {
         const paperReams = totalSheets / SHEETS_PER_REAM;
+        const paperUnitCost = resolveItemCost(paper);
         materialDeductions.push({
             id: `DED-${batch.id}-PAPER`,
             batchId: batch.id,
@@ -376,14 +383,15 @@ export function calculateBatchCost(
             materialName: paper.name,
             quantity: paperReams,
             unit: 'reams',
-            unitCost: paper.cost,
-            totalCost: paperReams * paper.cost,
+            unitCost: paperUnitCost,
+            totalCost: paperReams * paperUnitCost,
             deductionType: 'paper',
             deductedAt: new Date().toISOString()
         });
     }
 
     if (toner && totalTonerKg > 0) {
+        const tonerUnitCost = resolveItemCost(toner);
         materialDeductions.push({
             id: `DED-${batch.id}-TONER`,
             batchId: batch.id,
@@ -392,8 +400,8 @@ export function calculateBatchCost(
             materialName: toner.name,
             quantity: totalTonerKg,
             unit: 'kg',
-            unitCost: toner.cost,
-            totalCost: totalTonerKg * toner.cost,
+            unitCost: tonerUnitCost,
+            totalCost: totalTonerKg * tonerUnitCost,
             deductionType: 'toner',
             deductedAt: new Date().toISOString()
         });

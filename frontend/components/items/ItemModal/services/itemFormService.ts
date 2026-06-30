@@ -18,6 +18,7 @@ export function formDataToItem(data: ItemFormData, existingId?: string, original
   return {
     id,
     name: data.name,
+    classification: data.classification,
     sku: data.code,
     barcode: data.barcode || undefined,
     qrCode: data.qrCode || undefined,

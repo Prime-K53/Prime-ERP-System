@@ -383,7 +383,7 @@ const ExaminationPrinting: React.FC = () => {
     if (examBOM && examBOM.components) {
       examBOM.components.forEach((comp: any) => {
         const item = (inventory || []).find(i => i.id === comp.materialId);
-        const unitCost = item?.cost || 0;
+        const unitCost = Number((item as any)?.cost_price ?? (item as any)?.cost_per_unit ?? item?.cost ?? 0);
         let quantity = comp.quantity || 0;
 
         const formula = comp.formula ?? comp.quantityFormula;

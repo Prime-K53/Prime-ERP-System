@@ -1079,7 +1079,7 @@ const ExaminationJobForm: React.FC<ExaminationJobFormProps> = ({ isModal: propIs
                     <option value="">Select Paper...</option>
                     {paperMaterials.map((m: any) => (
                       <option key={m.id} value={m.id}>
-                        {m.name} (${m.cost}/unit)
+                        {m.name} (${Number(m.cost_price ?? m.cost_per_unit ?? m.cost ?? 0).toLocaleString()}/unit)
                       </option>
                     ))}
                   </select>
@@ -1096,7 +1096,7 @@ const ExaminationJobForm: React.FC<ExaminationJobFormProps> = ({ isModal: propIs
                     <option value="">Select Toner...</option>
                     {tonerMaterials.map((m: any) => (
                       <option key={m.id} value={m.id}>
-                        {m.name} (${m.cost}/unit)
+                        {m.name} (${Number(m.cost_price ?? m.cost_per_unit ?? m.cost ?? 0).toLocaleString()}/unit)
                       </option>
                     ))}
                   </select>
