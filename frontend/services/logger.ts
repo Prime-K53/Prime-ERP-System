@@ -1,5 +1,5 @@
 import { platform } from './platform';
-import { HAS_REMOTE_BACKEND } from '../config/api.js';
+import { HAS_REMOTE_BACKEND, SUPABASE_ANON_KEY } from '../config/api.js';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -107,6 +107,8 @@ class Logger {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'x-user-id': localStorage.getItem('prime_user_id') || 'unknown',
           'x-user-role': localStorage.getItem('prime_user_role') || 'Admin',
           ...(companyId ? { 'x-company-id': String(companyId) } : {}),
