@@ -3,14 +3,15 @@
  * Tests the three-level override hierarchy: line_item > category > global
  */
 
-const { describe, it, beforeEach, afterEach, expect } = require('vitest') ?? require('./testHelpers');
+const { describe, it, beforeEach, expect } = require('@jest/globals');
 
 // ─── In-memory mock of the DB for isolated unit testing ───────────────────────
 
-let _mockRows = [];
+let mockRows = [];
 
-jest.mock('../db.cjs', () => ({
-  db: {
+jest.mock('../db.cjs', () => {
+  const rowsRef = { current: [] };
+  const mockDb = {
     get: (query, params, cb) => {
       // Simulate SQLite row lookup
       const scope = query.includes("scope = 'line_item'")
@@ -19,29 +20,38 @@ jest.mock('../db.cjs', () => ({
         ? 'category'
         : 'global';
 
-      const match = _mockRows.find(r => {
+      const match = rowsRef.current.find(r => {
         if (r.scope !== scope) return false;
         if (scope === 'global') return true;
         return r.scope_ref_id === params[0];
       });
       cb(null, match || null);
     }
-  }
-}));
+  };
+  return {
+    db: mockDb,
+    getDatabase: () => mockDb,
+    initDb: () => Promise.resolve(),
+    reinitializeDatabase: () => {},
+    __setMockRows: (rows) => { rowsRef.current = rows.map(r => ({ ...r, is_active: 1, deleted_at: null })); },
+    __getMockRows: () => rowsRef.current,
+  };
+});
 
 const profitMarginService = require('../services/profitMarginService.cjs');
 
 // ─── Helper to seed mock DB rows ──────────────────────────────────────────────
 
 function seedRows(rows) {
-  _mockRows = rows.map(r => ({ ...r, is_active: 1, deleted_at: null }));
+  const mockedModule = require('../db.cjs');
+  mockedModule.__setMockRows(rows);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('getEffectiveMargin — precedence hierarchy', () => {
 
-  beforeEach(() => { _mockRows = []; });
+  beforeEach(() => { const m = require('../db.cjs'); m.__setMockRows([]); });
 
   // 1. Falls through all levels → returns system default
   it('returns system default when no overrides exist', async () => {
@@ -138,13 +148,17 @@ describe('getEffectiveMargin — precedence hierarchy', () => {
     expect(li.margin_value).toBe(30);
 
     // Remove line-item → category wins
-    _mockRows = _mockRows.filter(r => r.scope !== 'line_item');
+    const m1 = require('../db.cjs');
+    const filtered1 = m1.__getMockRows().filter(r => r.scope !== 'line_item');
+    m1.__setMockRows(filtered1);
     const cat = await profitMarginService.getEffectiveMargin('SKU-A', 'CAT-A');
     expect(cat.source).toBe('category');
     expect(cat.margin_value).toBe(20);
 
     // Remove category → global wins
-    _mockRows = _mockRows.filter(r => r.scope !== 'category');
+    const m2 = require('../db.cjs');
+    const filtered2 = m2.__getMockRows().filter(r => r.scope !== 'category');
+    m2.__setMockRows(filtered2);
     const global = await profitMarginService.getEffectiveMargin('SKU-A', 'CAT-A');
     expect(global.source).toBe('global');
     expect(global.margin_value).toBe(10);
@@ -153,7 +167,7 @@ describe('getEffectiveMargin — precedence hierarchy', () => {
 
 describe('createSetting — validation', () => {
 
-  beforeEach(() => { _mockRows = []; });
+  beforeEach(() => { const m = require('../db.cjs'); m.__setMockRows([]); });
 
   it('rejects percentage > 100', async () => {
     await expect(

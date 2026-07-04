@@ -46,11 +46,11 @@ describe('revenueAnalysisService', () => {
       ],
     });
 
-    expect(dataset.transactions).toHaveLength(1);
+    expect(dataset.transactions).toHaveLength(2);
     expect(dataset.transactions[0].source).toBe('POS');
     expect(dataset.adjustmentLedger).toHaveLength(1);
     expect(dataset.adjustmentLedger[0].adjustmentName).toBe('Paper uplift');
-    expect(dataset.adjustmentLedger[0].totalAmount).toBe(10);
+    expect(dataset.adjustmentLedger[0].totalAmount).toBe(20);
   });
 
   it('captures examination adjustments, rounding, margin, and sub-account tagging from batches', () => {
@@ -83,6 +83,7 @@ describe('revenueAnalysisService', () => {
               live_total_preview: 100,
               material_total_cost: 60,
               adjustment_total_cost: 10,
+              rounding_adjustment: 5,
             },
           ],
         },

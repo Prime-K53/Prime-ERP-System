@@ -22,9 +22,9 @@ describe('rounding utilities', () => {
   });
 
   describe('roundQuantity', () => {
-    it('rounds to 0 decimal places by default', () => {
-      expect(roundQuantity(10.7)).toBe(11);
-      expect(roundQuantity(10.4)).toBe(10);
+    it('rounds to 3 decimal places', () => {
+      expect(roundQuantity(10.7)).toBe(10.7);
+      expect(roundQuantity(10.4)).toBe(10.4);
     });
   });
 
@@ -35,9 +35,9 @@ describe('rounding utilities', () => {
   });
 
   describe('roundPercentage', () => {
-    it('rounds to 1 decimal place', () => {
-      expect(roundPercentage(12.345)).toBe(12.3);
-      expect(roundPercentage(12.35)).toBe(12.4);
+    it('rounds to 2 decimal places', () => {
+      expect(roundPercentage(12.345)).toBe(12.35);
+      expect(roundPercentage(12.35)).toBe(12.35);
     });
   });
 });

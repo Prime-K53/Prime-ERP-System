@@ -5,6 +5,8 @@ import { roundToCurrency } from '../utils/helpers';
 import { calculateItemFinancials } from '../utils/pricing';
 import { generateOpaqueId } from '../utils/idGeneration';
 import { resolveVolumeMarginValue, getVolumeDiscountTiers } from '../utils/pricingEngineShared';
+import { resolveOfflineEffectiveMargin } from '../services/offlineProfitMargins';
+import { applyMargin } from '../utils/getEffectiveMargin';
 import { SafeFormulaEngine } from './formulaEngine';
 import { dbService } from './db';
 import { API_BASE_URL } from '../config/api.js';
@@ -677,13 +679,94 @@ export const pricingService = {
             attrContext         // extraContext - variant attributes as formula variables
         );
 
-        // 6. Add calculation metadata
+        const rawBomCost = result.cost;
+
+        // 6. Add finishing options cost from parent smartPricing (mirrors ServiceCalculatorModal.computePageScaledCost)
+        const sp = parentItem.smartPricing;
+        let finishingCostPerCopy = 0;
+        const finishingBreakdown: { name: string; amount: number }[] = [];
+        if (sp?.finishingEnabled && sp.finishingEnabled.length > 0) {
+            const companyConfig = getCompanyConfig();
+            const globalFinishingOptions = companyConfig?.productionSettings?.finishingOptions || [];
+
+            sp.finishingEnabled.forEach((enabledId: string) => {
+                let perCopyCost = 0;
+
+                const savedCost = sp.finishingSelections?.find((o: any) => o?.id === enabledId)?.price;
+                if (savedCost && savedCost > 0) {
+                    perCopyCost = Number(savedCost);
+                } else {
+                    const optionCost = (sp.finishingOptionCosts || {})[enabledId];
+                    if (optionCost && optionCost > 0) {
+                        perCopyCost = Number(optionCost);
+                    } else {
+                        const globalOption = globalFinishingOptions.find((o: any) => o?.id === enabledId);
+                        if (globalOption?.price && globalOption.price > 0) {
+                            perCopyCost = Number(globalOption.price);
+                        }
+                    }
+                }
+
+                if (perCopyCost > 0) {
+                    finishingCostPerCopy += perCopyCost;
+                    finishingBreakdown.push({ name: enabledId, amount: perCopyCost });
+                }
+            });
+        }
+
+        const totalBaseCostPerCopy = rawBomCost + finishingCostPerCopy;
+
+        // 7. Apply profit margin (same engine as Smart Pricing / calculateSellingPrice)
+        const margin = resolveOfflineEffectiveMargin(parentItem.id, parentItem.category);
+        const marginAmount = margin.margin_type === 'percentage'
+            ? roundToCurrency(totalBaseCostPerCopy * (margin.margin_value / 100))
+            : roundToCurrency(margin.margin_value);
+        let sellingPrice = roundToCurrency(totalBaseCostPerCopy + marginAmount);
+
+        // 8. Apply volume / run-length discount
+        const discountTiers = getVolumeDiscountTiers(getCompanyConfig());
+        const pageCount = Number(variant.pages) || 0;
+        const volumeDiscountPct = resolveVolumeMarginValue(pageCount, discountTiers);
+        let volumeDiscountAmount = 0;
+        if (volumeDiscountPct > 0) {
+            volumeDiscountAmount = roundToCurrency(sellingPrice * (volumeDiscountPct / 100));
+            sellingPrice = roundToCurrency(sellingPrice - volumeDiscountAmount);
+        }
+
+        const adjustmentTotal = finishingCostPerCopy + marginAmount - volumeDiscountAmount;
+        const adjustmentSnapshots = [
+            ...(result.adjustmentSnapshots || []),
+            ...(finishingCostPerCopy > 0 ? [{
+                name: 'Finishing Options',
+                type: 'FIXED' as const,
+                value: finishingCostPerCopy,
+                calculatedAmount: roundToCurrency(finishingCostPerCopy)
+            }] : []),
+            {
+                name: 'Profit Margin',
+                type: (margin.margin_type === 'fixed_amount' ? 'FIXED' : 'PERCENTAGE') as const,
+                value: margin.margin_value,
+                calculatedAmount: roundToCurrency(marginAmount)
+            },
+            ...(volumeDiscountPct > 0 ? [{
+                name: 'Volume Discount',
+                type: 'PERCENTAGE' as const,
+                value: volumeDiscountPct,
+                calculatedAmount: roundToCurrency(-volumeDiscountAmount)
+            }] : [])
+        ];
+
+        // 9. Return final selling price; keep rawBomCost in `cost` for backward compatibility
+        //    with masterInventoryPricingService which reads only `cost` for inventory updates.
         return {
             ...result,
-            consumption: result.consumption ? {
-                ...result.consumption,
-                variantId: variant.id
-            } : null
+            price: sellingPrice,
+            basePrice: sellingPrice,
+            cost: rawBomCost,
+            breakdown: finishingBreakdown,
+            adjustmentTotal: roundToCurrency(adjustmentTotal),
+            adjustmentSnapshots,
+            transactionAdjustmentSnapshots: []
         };
     },
 

@@ -129,7 +129,7 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
         style={{ height: isTabletOrMobile ? '98vh' : 'min(90vh, 800px)' }}
       >
         {type !== 'ACCOUNT_STATEMENT' && type !== 'ACCOUNT_STATEMENT_SUMMARY' && (
-        <div className="flex shrink-0 items-center justify-between border-b border-[#d7d1c7] bg-[#f6f3ee] px-5 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#d7d1c7] bg-[#f6f3ee] px-3 sm:px-5 py-2 sm:py-3">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
               <FileText className="h-4 w-4" />
@@ -145,14 +145,14 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
             {hasContent && (
               <button 
                 onClick={handleDownload}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 transition-all hover:bg-blue-100 hover:text-blue-700"
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-2 sm:px-3 py-2 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 transition-all hover:bg-blue-100 hover:text-blue-700"
               >
                 <Download size={14}/>
-                <span>Download</span>
+                <span className="hidden sm:inline">Download</span>
               </button>
             )}
-            <button onClick={onClose} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" title="Close (Esc)">
-              <X className="h-4 w-4" />
+            <button onClick={onClose} className="rounded-lg p-2 sm:p-2.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700" title="Close (Esc)">
+              <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
           </div>

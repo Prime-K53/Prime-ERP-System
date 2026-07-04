@@ -13,7 +13,6 @@ export type WizardStep =
 
 export type ItemClassification =
   | 'raw_material'
-  | 'consumable'
   | 'product'
   | 'stationery'
   | 'printing_service'
@@ -21,7 +20,6 @@ export type ItemClassification =
 
 export const CLASSIFICATION_MAP: Record<ItemClassification, { type: ItemType; productType: ProductType; inventoryRole: InventoryRole; resourceSubtype?: ResourceSubtype }> = {
   raw_material: { type: 'Raw Material', productType: 'INVENTORY', inventoryRole: 'internal', resourceSubtype: 'raw_material' },
-  consumable: { type: 'Material', productType: 'INVENTORY', inventoryRole: 'internal', resourceSubtype: 'consumable' },
   product: { type: 'Product', productType: 'MANUFACTURED', inventoryRole: 'sellable' },
   stationery: { type: 'Stationery', productType: 'INVENTORY', inventoryRole: 'both' },
   printing_service: { type: 'Service', productType: 'SERVICE', inventoryRole: 'sellable' },
@@ -30,7 +28,6 @@ export const CLASSIFICATION_MAP: Record<ItemClassification, { type: ItemType; pr
 
 export const CLASSIFICATION_OPTIONS: { value: ItemClassification; label: string; description: string }[] = [
   { value: 'raw_material', label: 'Raw Material', description: 'Base material consumed in production' },
-  { value: 'consumable', label: 'Consumable', description: 'Supplies and consumable items' },
   { value: 'product', label: 'Product', description: 'Finished manufactured product' },
   { value: 'stationery', label: 'Stationery', description: 'Stationery with optional pack variants' },
   { value: 'printing_service', label: 'Printing Service', description: 'Printing / binding / finishing service' },
@@ -39,7 +36,6 @@ export const CLASSIFICATION_OPTIONS: { value: ItemClassification; label: string;
 
 export const CLASSIFICATION_STEPS: Record<ItemClassification, WizardStep[]> = {
   raw_material: ['basic', 'inventory', 'units', 'pricing', 'purchasing'],
-  consumable: ['basic', 'inventory', 'units', 'pricing', 'purchasing'],
   product: ['basic', 'inventory', 'units', 'recipe', 'pricing', 'variants'],
   stationery: ['basic', 'inventory', 'units', 'variants', 'pricing', 'purchasing'],
   printing_service: ['basic', 'printing', 'pricing', 'recipe', 'variants'],

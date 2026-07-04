@@ -5,7 +5,7 @@ import type { ValidationResult } from '../../../../services/pricingValidationSer
 import { aiService } from '../../../../services/ai/aiService';
 import { CLASSIFICATION_OPTIONS } from '../types/itemFormTypes';
 
-const STOCK_TRACKED = new Set(['raw_material', 'consumable', 'product', 'stationery']);
+const STOCK_TRACKED = new Set(['raw_material', 'product', 'stationery']);
 
 interface Props {
   formData: ItemFormData;
@@ -109,7 +109,8 @@ export const SummarySidebar: React.FC<Props> = ({ formData, variants, pricingVal
     setAiLoading('description');
     setAiDescription(null);
     try {
-      const prompt = `Generate a short professional product description for: name="${formData.name}", brand="${formData.brand}", category="${formData.category}", type="${formData.classification}", tags="${formData.tags}". 1-2 sentences only.`;
+      const typeLabel = formData.classification === 'raw_material' ? 'raw material' : formData.classification === 'stationery' ? 'stationery item' : formData.classification === 'printing_service' ? 'printing service' : formData.classification === 'non_stock_service' ? 'service' : 'product';
+      const prompt = `Generate a concise, professional ${typeLabel} description. Name: "${formData.name}". Category: "${formData.category}". Brand: "${formData.brand}". Tags: "${formData.tags}". Unit: "${formData.baseUnit || formData.purchaseUnit || 'unit'}". ${formData.costPrice > 0 ? `Cost: ${formData.currency || ''}${formData.costPrice}.` : ''} ${formData.description ? `Context: ${formData.description}` : ''} 1-2 sentences only. Do not repeat the name.`;
       const desc = await aiService.generateAIResponse(prompt);
       setAiDescription(desc);
     } catch {

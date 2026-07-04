@@ -76,7 +76,7 @@ export const ItemDetailPage: React.FC = () => {
   const ext = (item ?? {}) as Item & { classification?: string; productType?: string; averageMonthlyUsage?: number; brand?: string };
   const isRaw = useMemo(() => {
     const t = item?.type || '';
-    return t === 'Raw Material' || t === 'Material' || ext.classification === 'raw_material' || ext.classification === 'consumable' || ext.classification === 'material';
+    return t === 'Raw Material' || t === 'Material' || ext.classification === 'raw_material' || ext.classification === 'material';
   }, [item]);
 
   const isProduct = useMemo(() => {
@@ -406,7 +406,7 @@ export const ItemDetailPage: React.FC = () => {
         )}
       </div>
 
-      <ItemModal open={isEditing} item={item} onClose={() => setIsEditing(false)} onSave={handleEditSave} allItems={allItems} />
+      <ItemModal open={isEditing} item={item} onClose={() => setIsEditing(false)} onSave={handleEditSave} allItems={allItems} sourceTab={item?.type === 'Service' || (item as any)?.classification === 'printing_service' ? 'printing' : item?.type?.toLowerCase() || null} />
 
       <StockAdjustmentModal isOpen={isAdjustOpen} onClose={() => setIsAdjustOpen(false)} item={item} />
 

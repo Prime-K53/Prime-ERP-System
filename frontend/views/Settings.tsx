@@ -11,7 +11,7 @@ import {
     Globe, Clock, Key, Lock, Gauge, Binary, Plus, X, Percent,
     Cpu, Layers, Smartphone, Layout, Users, ShoppingBag, ShoppingCart, Palette, Monitor,
     Factory, Box, Cloud, Bell, Mail, MessageSquare, ShieldAlert, Webhook, Sun, Moon, Laptop, Info, Undo2,
-    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles
+    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles, Scissors
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
@@ -49,6 +49,8 @@ import { IntegrationsTab } from './settings/tabs/IntegrationsTab';
 import { AIProviderTab } from './settings/tabs/AIProviderTab';
 import { PricingAdminTab } from './settings/tabs/PricingAdminTab';
 import { AttributesTab } from './settings/tabs/AttributesTab';
+import { FinishingOptionsTab } from './settings/tabs/FinishingOptionsTab';
+import ComplianceSettings, { ComplianceConfig } from '../components/ComplianceSettings';
 
 // Pricing settings validation using reusable utility
 
@@ -249,6 +251,7 @@ const Settings: React.FC = () => {
         try { const v = parseInt(localStorage.getItem('prime:pagination:default') || '', 10); return !isNaN(v) && v > 0 ? v : 25; } catch { return 25; }
     });
     const restoreInputRef = useRef<HTMLInputElement>(null);
+    const [complianceConfig, setComplianceConfig] = useState<ComplianceConfig>({ gdprEnabled: false, dataRetentionDays: 365, autoAnonymizeAfterDays: 730, consentRequired: true, privacyPolicyUrl: '', dataDeletionEnabled: true });
 
     const readBackupStatus = () => {
         let restoreMeta: { restoredAt?: string; filename?: string; snapshotDate?: string } | null = null;
@@ -607,7 +610,8 @@ const Settings: React.FC = () => {
             title: 'Pricing',
             items: [
                 { id: 'ProfitMargins', icon: TrendingUp, label: 'Profit Markups', desc: 'Global, category and line-item markup overrides' },
-                { id: 'Pricing', icon: Percent, label: 'Discount & Pricing Rules', desc: 'Customer pricing tiers, discount rules, and tax rates' }
+                { id: 'Pricing', icon: Percent, label: 'Discount & Pricing Rules', desc: 'Customer pricing tiers, discount rules, and tax rates' },
+                { id: 'Finishing', icon: Scissors, label: 'Finishing Options', desc: 'Default pricing for binding, cutting, and other finishing services' }
             ]
         },
         {
@@ -622,6 +626,7 @@ const Settings: React.FC = () => {
                 { id: 'AIProvider', icon: Sparkles, label: 'AI Provider', desc: 'Configure AI service provider, model, and API key' },
                 { id: 'Integrations', icon: Globe, label: 'Integrations', desc: 'API and external services' },
                 { id: 'Security', icon: ShieldCheck, label: 'Backup & Security', desc: 'Data protection and recovery' },
+                { id: 'Privacy', icon: Lock, label: 'Privacy & Compliance', desc: 'GDPR, data retention, and privacy settings' },
                 { id: 'System', icon: Cpu, label: 'System Info', desc: 'Hardware and licensing' }
             ]
         }
@@ -2986,6 +2991,14 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
 
 
                         {
+                            activeTab === 'Privacy' && (
+                                <div className="animate-in fade-in slide-in-from-bottom-4 p-6 bg-white rounded-xl border border-slate-200">
+                                    <ComplianceSettings config={complianceConfig} onChange={setComplianceConfig} />
+                                </div>
+                            )
+                        }
+
+                        {
                             activeTab === 'System' && (
                                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
                                     <section>
@@ -3124,8 +3137,14 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                         }
 
                         {
+                            activeTab === 'Finishing' && (
+                                <FinishingOptionsTab config={config} setConfig={setConfig} notify={notify} />
+                            )
+                        }
+
+                        {
                             activeTab === 'Pricing' && (
-                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
                                     <PricingAdminTab config={config} setConfig={setConfig} notify={notify} />
                                 </div>
                             )

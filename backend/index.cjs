@@ -128,12 +128,12 @@ const { validateTransactionPrice, calculateSellingPrice } = require('./services/
 const { verifyToken, requireRole, requirePermission } = require('./middleware/auth.cjs');
 const { tenantContext } = require('./middleware/tenantContext.cjs');
 const { validateBody, sanitizeInput, inventorySchemas, salesSchemas, userSchemas, financialSchemas, productionSchemas, documentSchemas, exchangeSchemas, orderSchemas, classSchemas, subjectSchemas, notificationSchemas, accountSchemas, expenseSchemas, incomeSchemas, budgetSchemas, transferSchemas } = require('./middleware/validation.cjs');
-const { apiLimiter, authLimiter, sensitiveLimiter } = require('./middleware/rateLimiter.cjs');
+const { createLimiter, authLimiter, sensitiveLimiter } = require('./services/redisRateLimiter.cjs');
 const authRoutes = require('./routes/auth.cjs');
 app.use(auditContextMiddleware);
-app.use('/api', apiLimiter({ windowMs: 60 * 1000, maxRequests: 120 }));
+app.use('/api', createLimiter({ windowMs: 60 * 1000, maxRequests: 120 }));
 
-app.use('/api/auth', auditAuthMiddleware, authLimiter({ windowMs: 15 * 60 * 1000, maxAttempts: 10 }), authRoutes);
+app.use('/api/auth', auditAuthMiddleware, authLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }), authRoutes);
 
 // CORS configuration - accepts all local/LAN origins for browser-based access
 const corsOptions = {
@@ -290,18 +290,43 @@ app.get('/', (req, res) => {
 
 // Health check for monitoring and Docker orchestration
 app.get('/health', (req, res) => {
-  const checks = { server: 'ok', database: 'unknown', timestamp: new Date().toISOString() };
+  const checks = {
+    status: 'ok',
+    server: 'running',
+    database: 'unknown',
+    redis: 'not_configured',
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    node: process.version,
+    platform: process.platform,
+  };
   try {
     db.get('SELECT 1 AS alive', (err, row) => {
       if (err) {
         checks.database = 'error';
+        checks.status = 'degraded';
         return res.status(503).json({ ...checks, error: err.message });
       }
       checks.database = row?.alive === 1 ? 'connected' : 'error';
-      res.status(200).json(checks);
+      checks.status = checks.database === 'connected' ? 'ok' : 'degraded';
+
+      // Check Redis if configured
+      if (process.env.REDIS_URL) {
+        try {
+          const { isRedisAvailable } = require('./services/redisRateLimiter.cjs');
+          checks.redis = isRedisAvailable() ? 'connected' : 'disconnected';
+        } catch {
+          checks.redis = 'error';
+        }
+      }
+
+      res.status(checks.status === 'ok' ? 200 : 503).json(checks);
     });
   } catch (err) {
     checks.database = 'error';
+    checks.status = 'error';
     res.status(503).json({ ...checks, error: err.message });
   }
 });
@@ -616,6 +641,12 @@ async function startServer() {
   // --- WhatsApp Endpoints ---
   const whatsappRoutes = require('./routes/whatsapp.cjs');
   app.use('/api/whatsapp', verifyToken, whatsappRoutes);
+
+  const notificationsRoute = require('./routes/notifications.cjs');
+  app.use('/api/notifications', verifyToken, notificationsRoute);
+
+  const assetsRoute = require('./routes/assets.cjs');
+  app.use('/api/assets', verifyToken, assetsRoute);
 
   // --- Finance / Accounting Endpoints ---
   const FinanceService = require('./services/financeService.cjs');

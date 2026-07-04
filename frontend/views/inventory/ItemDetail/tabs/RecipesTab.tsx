@@ -16,7 +16,7 @@ export const RecipesTab: React.FC<Props> = ({ item }) => {
       <div className="flex flex-col items-center justify-center py-16 text-slate-400">
         <FlaskConical size={48} className="mb-4 opacity-50" />
         <p className="text-sm font-semibold">No Recipe Required</p>
-        <p className="text-xs mt-1">Raw materials and consumables do not require recipes.</p>
+        <p className="text-xs mt-1">Raw materials do not require recipes.</p>
       </div>
     );
   }

@@ -10,7 +10,6 @@ interface Props {
 
 const CLASSIFICATION_LABELS: Record<ItemClassification, string> = {
   raw_material: 'Raw Material',
-  consumable: 'Consumable',
   product: 'Product',
   stationery: 'Stationery',
   printing_service: 'Printing Service',

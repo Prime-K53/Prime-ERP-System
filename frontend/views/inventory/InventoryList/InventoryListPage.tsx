@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Loader2, LayoutDashboard, Boxes, Droplets, Package, PenTool, Printer, Sparkles, BrainCircuit } from 'lucide-react';
+import { Loader2, LayoutDashboard, Boxes, Package, PenTool, Printer, Sparkles, BrainCircuit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../../context/InventoryContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -34,7 +34,7 @@ function esc(s: any): string {
   return String(s == null ? '' : s);
 }
 
-type TabKey = 'dashboard' | 'raw' | 'consumable' | 'product' | 'stationery' | 'printing';
+type TabKey = 'dashboard' | 'raw' | 'product' | 'stationery' | 'printing';
 
 export const InventoryListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,6 +70,16 @@ export const InventoryListPage: React.FC = () => {
   const [printMode, setPrintMode] = useState<'barcode' | 'qrcode' | 'label'>('label');
   const [isSmartAdjustOpen, setIsSmartAdjustOpen] = useState(false);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const selectedItems = useMemo(() => allItems.filter(i => selectedIds.has(i.id)), [allItems, selectedIds]);
 
@@ -158,7 +168,6 @@ export const InventoryListPage: React.FC = () => {
 
   const typeForTab: Record<string, string> = {
     raw: 'Raw Material',
-    consumable: 'Material',
     product: 'Product',
     stationery: 'Stationery',
     printing: 'Service',
@@ -194,6 +203,13 @@ export const InventoryListPage: React.FC = () => {
   const handleEditItem = useCallback((item: Item) => {
     setEditingItem(item);
     setLockClassification(true);
+    if (item.type === 'Service' || item.classification === 'printing_service') {
+      setSourceTab('printing');
+    } else if (item.type === 'Product' || item.classification === 'product') {
+      setSourceTab('product');
+    } else {
+      setSourceTab(item.type === 'Raw Material' ? 'raw' : item.type?.toLowerCase() || null);
+    }
     setIsModalOpen(true);
   }, []);
 
@@ -298,7 +314,6 @@ const handleProduce = useCallback((item: Item) => {
 
   // Derived tab data
   const rawMaterials = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Raw Material'), [allItems]);
-  const consumables = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Consumable'), [allItems]);
   const products = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Product'), [allItems]);
   const stationery = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Stationery'), [allItems]);
   const printingServices = useMemo(() => allItems.filter(i => (i.type || i.classification) === 'Service' || (i as Record<string, unknown>).classification === 'Printing Service'), [allItems]);
@@ -344,7 +359,6 @@ const handleProduce = useCallback((item: Item) => {
   }
 
   const filteredForTab = activeTab === 'raw' ? rawMaterials
-    : activeTab === 'consumable' ? consumables
     : activeTab === 'product' ? products
     : activeTab === 'stationery' ? stationery
     : activeTab === 'printing' ? printingServices
@@ -371,7 +385,6 @@ const handleProduce = useCallback((item: Item) => {
             {([
               { key: 'dashboard', label: 'Overview', icon: LayoutDashboard },
               { key: 'raw', label: 'Raw Materials', icon: Boxes },
-              { key: 'consumable', label: 'Consumables', icon: Droplets },
               { key: 'product', label: 'Products', icon: Package },
               { key: 'stationery', label: 'Stationery', icon: PenTool },
               { key: 'printing', label: 'Printing Service', icon: Printer },
@@ -423,18 +436,16 @@ const handleProduce = useCallback((item: Item) => {
             <InventoryDashboard allItems={allItems} warehouses={warehouses} onViewItem={handleViewItem} />
           )}
 
-          {/* ============ RAW MATERIALS / CONSUMABLES ============ */}
-          {(activeTab === 'raw' || activeTab === 'consumable') && (
+          {/* ============ RAW MATERIALS ============ */}
+          {activeTab === 'raw' && (
             <>
               <div className="page-head">
                 <div>
                   <div className="eyebrow">Inputs &middot; Not For Sale</div>
-                  <h1 className="pp">
-                    {activeTab === 'raw' ? 'Raw Materials' : 'Consumables'}
-                  </h1>
+                  <h1 className="pp">Raw Materials</h1>
                 </div>
                 <button className="pp-btn pp-btn-primary" onClick={() => handleNewItem(activeTab)}>
-                   + Add {activeTab === 'raw' ? 'Raw Material' : 'Consumable'}
+                   + Add Raw Material
                  </button>
               </div>
               <BulkActionToolbar
@@ -455,15 +466,15 @@ const handleProduce = useCallback((item: Item) => {
               />
               <div className="pp-panel">
                 <div className="pp-panel-head">
-                  <h2 className="pp">{activeTab === 'raw' ? 'Raw Materials' : 'Consumables'} List</h2>
+                  <h2 className="pp">Raw Materials List</h2>
                   <div className="flex items-center gap-3">
-                    <input className="pp-search" placeholder={`Search ${activeTab === 'raw' ? 'raw materials' : 'consumables'}...`}
+                    <input className="pp-search" placeholder="Search raw materials..."
                       value={tabSearch} onChange={e => setTabSearch(e.target.value)} style={{marginBottom:0}} />
                     <span className="pp-muted">{searchFiltered.length} item(s)</span>
                   </div>
                 </div>
                 {searchFiltered.length === 0 ? (
-                  <div className="pp-empty">No {activeTab === 'raw' ? 'raw materials' : 'consumables'} yet.</div>
+                  <div className="pp-empty">No raw materials yet.</div>
                 ) : (
                   <table className="pp-table">
                     <thead>
@@ -621,43 +632,51 @@ const handleProduce = useCallback((item: Item) => {
                             onChange={() => handleTabSelectAll(searchFiltered)}
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                         </th>
-                        <th>SKU</th><th>Product</th><th>Variant</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
+                        <th>SKU</th><th>Product</th><th>Variants</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {searchFiltered.flatMap((p, parentIdx) => {
-                          const variants = (p as Record<string, unknown>).variants || [];
-                          const rows = variants.length > 0 ? variants : [{ ...p, name: 'Standard', id: p.id, _key: 'default' }];
-                          return rows.map((v: any, idx) => {
-                            const cp = v.costPrice || p.costPrice || p.cost || 0;
-                            const sp = v.sellingPrice || p.sellingPrice || p.price || 0;
-                            const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
-                            const low = (v.reorderPoint != null && num(v.stock) <= num(v.reorderPoint));
-                            const isLow = low || (!variants.length && lowStock(p));
-                            const rowKey = v.id || `${parentIdx}-${idx}`;
-                          const isMenuOpen = openActionMenu === rowKey;
-                          return (
-                            <tr key={rowKey} className={isLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
+                      {searchFiltered.map((p) => {
+                        const variants = ((p as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+                        const hasVariants = variants.length > 0;
+                        const isExpanded = expandedItems.has(p.id);
+                        const parentCp = p.costPrice || p.cost || 0;
+                        const parentSp = p.sellingPrice || p.price || 0;
+                        const parentMargin = parentCp > 0 ? ((parentSp - parentCp) / parentCp * 100).toFixed(1) : '0.0';
+                        const parentLow = lowStock(p);
+                        const isMenuOpen = openActionMenu === p.id;
+                        const parentStockTotal = hasVariants ? variants.reduce((s: number, v: any) => s + num(v.stock), 0) : num(p.stock);
+                        const variantLabel = hasVariants ? `${variants.length} variant${variants.length !== 1 ? 's' : ''}` : 'standard';
+                        return (
+                          <React.Fragment key={p.id}>
+                            <tr className={parentLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
                               <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)}
                                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                               </td>
-                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(p.sku)}</td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>
+                                {hasVariants && (
+                                  <button onClick={e => { e.stopPropagation(); toggleExpand(p.id); }} className="mr-1 text-slate-400 hover:text-slate-600 transition-colors" style={{background:'none', border:'none', cursor:'pointer', padding:0, verticalAlign:'middle'}}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{transform: isExpanded ? 'rotate(90deg)' : 'none', transition:'transform .15s'}}><polyline points="9 18 15 12 9 6"/></svg>
+                                  </button>
+                                )}
+                                {esc(p.sku)}
+                              </td>
                               <td>{esc(p.name)}</td>
-                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(v.name || 'Standard')}</td>
-                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
-                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
-                              <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                              <td>{variantLabel}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(parentCp)}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(parentSp)}</td>
+                              <td className={`num mono ${parentSp-parentCp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{parentMargin}%</td>
                               <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>
                                 <span className="pp-stepper">
-                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
-                                  <span>{esc(v.stock ?? p.stock)}</span>
-                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock(p, -1); }}>&minus;</button>
+                                  <span>{parentStockTotal}</span>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock(p, 1); }}>+</button>
                                 </span>
                               </td>
                               <td className="actions" onClick={e => e.stopPropagation()}>
                                 <div className="action-dropdown-container">
-                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(rowKey)}>
+                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(p.id)}>
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
                                       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
@@ -715,22 +734,44 @@ const handleProduce = useCallback((item: Item) => {
                                 </div>
                               </td>
                             </tr>
-                          );
-                        });
+                            {hasVariants && isExpanded && variants.map((v: any, vIdx: number) => {
+                              const vCp = v.costPrice || p.costPrice || p.cost || 0;
+                              const vSp = v.sellingPrice || p.sellingPrice || p.price || 0;
+                              const vMargin = vCp > 0 ? ((vSp - vCp) / vCp * 100).toFixed(1) : '0.0';
+                              return (
+                                <tr key={`${p.id}-v-${vIdx}`} className="pp-variant-row" onClick={() => handleViewItem(p)} style={{cursor:'pointer', background:'#F8FAFC'}}>
+                                  <td></td>
+                                  <td></td>
+                                  <td className="text-xs text-slate-500 pl-6">↳ {esc(v.name || 'Standard')}</td>
+                                  <td></td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(vCp)}</td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(vSp)}</td>
+                                  <td className={`num mono text-xs ${vSp-vCp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{vMargin}%</td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>
+                                    <span className="pp-stepper" style={{fontSize:12}}>
+                                      <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
+                                      <span>{esc(v.stock ?? 0)}</span>
+                                      <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                    </span>
+                                  </td>
+                                  <td></td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
+                        );
                       })}
                     </tbody>
                     <tfoot>
                       <tr className="pp-totals-row">
                         <td></td>
-                        <td>Total ({searchFiltered.length} products)</td>
+                        <td>Total ({searchFiltered.length} items)</td>
+                        <td></td>
                         <td></td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
                         <td></td>
-                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => {
-                          const v = (i as Record<string, unknown>).variants || [];
-                          return s + (v.length > 0 ? v.reduce((a:number, v:any) => a + num(v.stock), 0) : num(i.stock));
-                        }, 0)}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => s + num(i.stock), 0)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -786,43 +827,51 @@ const handleProduce = useCallback((item: Item) => {
                             onChange={() => handleTabSelectAll(searchFiltered)}
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                         </th>
-                        <th>SKU</th><th>Product</th><th>Variant</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
+                        <th>SKU</th><th>Product</th><th>Variants</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {searchFiltered.flatMap((p, parentIdx) => {
-                          const variants = (p as Record<string, unknown>).variants || [];
-                          const rows = variants.length > 0 ? variants : [{ ...p, name: 'Standard', id: p.id, _key: 'default' }];
-                          return rows.map((v: any, idx) => {
-                            const cp = v.costPrice || p.costPrice || p.cost || 0;
-                            const sp = v.sellingPrice || p.sellingPrice || p.price || 0;
-                            const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
-                            const low = (v.reorderPoint != null && num(v.stock) <= num(v.reorderPoint));
-                            const isLow = low || (!variants.length && lowStock(p));
-                            const rowKey = v.id || `${parentIdx}-${idx}`;
-                          const isMenuOpen = openActionMenu === rowKey;
-                          return (
-                            <tr key={rowKey} className={isLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
+                      {searchFiltered.map((p) => {
+                        const variants = ((p as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+                        const hasVariants = variants.length > 0;
+                        const isExpanded = expandedItems.has(p.id);
+                        const parentCp = p.costPrice || p.cost || 0;
+                        const parentSp = p.sellingPrice || p.price || 0;
+                        const parentMargin = parentCp > 0 ? ((parentSp - parentCp) / parentCp * 100).toFixed(1) : '0.0';
+                        const parentLow = lowStock(p);
+                        const isMenuOpen = openActionMenu === p.id;
+                        const parentStockTotal = hasVariants ? variants.reduce((s: number, v: any) => s + num(v.stock), 0) : num(p.stock);
+                        const variantLabel = hasVariants ? `${variants.length} variants` : 'standard';
+                        return (
+                          <React.Fragment key={p.id}>
+                            <tr className={parentLow ? 'pp-row-warn' : ''} onClick={() => handleViewItem(p)} style={{cursor:'pointer'}}>
                               <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)}
                                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                               </td>
-                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(p.sku)}</td>
+                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>
+                                {hasVariants && (
+                                  <button onClick={e => { e.stopPropagation(); toggleExpand(p.id); }} className="mr-1 text-slate-400 hover:text-slate-600 transition-colors" style={{background:'none', border:'none', cursor:'pointer', padding:0, verticalAlign:'middle'}}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{transform: isExpanded ? 'rotate(90deg)' : 'none', transition:'transform .15s'}}><polyline points="9 18 15 12 9 6"/></svg>
+                                  </button>
+                                )}
+                                {esc(p.sku)}
+                              </td>
                               <td>{esc(p.name)}</td>
-                              <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(v.name || 'Standard')}</td>
-                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
-                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
-                              <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                              <td>{variantLabel}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(parentCp)}</td>
+                              <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(parentSp)}</td>
+                              <td className={`num mono ${parentSp-parentCp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{parentMargin}%</td>
                               <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>
                                 <span className="pp-stepper">
-                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
-                                  <span>{esc(v.stock ?? p.stock)}</span>
-                                  <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock(p, -1); }}>&minus;</button>
+                                  <span>{parentStockTotal}</span>
+                                  <button onClick={e => { e.stopPropagation(); adjustStock(p, 1); }}>+</button>
                                 </span>
                               </td>
                               <td className="actions" onClick={e => e.stopPropagation()}>
                                 <div className="action-dropdown-container">
-                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(rowKey)}>
+                                  <button className="action-menu-btn" onClick={() => toggleActionMenu(p.id)}>
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
                                       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
@@ -876,8 +925,31 @@ const handleProduce = useCallback((item: Item) => {
                                 </div>
                               </td>
                             </tr>
-                          );
-                        });
+                            {hasVariants && isExpanded && variants.map((v: any, vIdx: number) => {
+                              const vCp = v.costPrice || p.costPrice || p.cost || 0;
+                              const vSp = v.sellingPrice || p.sellingPrice || p.price || 0;
+                              const vMargin = vCp > 0 ? ((vSp - vCp) / vCp * 100).toFixed(1) : '0.0';
+                              return (
+                                <tr key={`${p.id}-v-${vIdx}`} className="pp-variant-row" onClick={() => handleViewItem(p)} style={{cursor:'pointer', background:'#F8FAFC'}}>
+                                  <td></td>
+                                  <td className="text-xs text-slate-500 pl-6">↳ {esc(v.name || 'Standard')}</td>
+                                  <td></td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(vCp)}</td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(vSp)}</td>
+                                  <td className={`num mono text-xs ${vSp-vCp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{vMargin}%</td>
+                                  <td className="num mono text-xs" style={{fontFamily:'IBM Plex Mono,monospace'}}>
+                                    <span className="pp-stepper" style={{fontSize:12}}>
+                                      <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, -1); }}>&minus;</button>
+                                      <span>{esc(v.stock ?? 0)}</span>
+                                      <button onClick={e => { e.stopPropagation(); adjustStock({...p, stock: v.stock, id: v.id || p.id}, 1); }}>+</button>
+                                    </span>
+                                  </td>
+                                  <td></td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
+                        );
                       })}
                     </tbody>
                     <tfoot>
@@ -885,13 +957,11 @@ const handleProduce = useCallback((item: Item) => {
                         <td></td>
                         <td>Total ({searchFiltered.length} items)</td>
                         <td></td>
+                        <td></td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
                         <td></td>
-                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => {
-                          const v = (i as Record<string, unknown>).variants || [];
-                          return s + (v.length > 0 ? v.reduce((a:number, v:any) => a + num(v.stock), 0) : num(i.stock));
-                        }, 0)}</td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => s + num(i.stock), 0)}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -948,7 +1018,7 @@ const handleProduce = useCallback((item: Item) => {
                             onChange={() => handleTabSelectAll(searchFiltered)}
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                         </th>
-                        <th>SKU</th><th>Service</th><th className="num">Cost / Unit</th><th className="num">Selling Price</th><th className="num">Margin</th><th>Actions</th>
+                        <th>SKU</th><th>Product</th><th>Variants</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -964,9 +1034,11 @@ const handleProduce = useCallback((item: Item) => {
                             </td>
                             <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(s.sku)}</td>
                             <td>{esc(s.name)}</td>
+                            <td>standard</td>
                             <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp)}</td>
                             <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp)}</td>
                             <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
+                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(s.stock ?? 0)}</td>
                             <td className="actions" onClick={e => e.stopPropagation()}>
                               <div className="action-dropdown-container">
                                 <button className="action-menu-btn" onClick={() => toggleActionMenu(s.id)}>
@@ -1026,9 +1098,12 @@ const handleProduce = useCallback((item: Item) => {
                       <tr className="pp-totals-row">
                         <td></td>
                         <td>Total ({searchFiltered.length} services)</td>
+                        <td></td>
+                        <td></td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0))}</td>
                         <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0))}</td>
                         <td></td>
+                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => s + num(i.stock), 0)}</td>
                         <td></td>
                       </tr>
                     </tfoot>

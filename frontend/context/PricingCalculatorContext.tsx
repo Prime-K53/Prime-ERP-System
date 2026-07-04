@@ -166,7 +166,10 @@ export const PricingCalculatorProvider: React.FC<{ children: React.ReactNode }> 
 
                 // Find finishing materials from inventory and update options with real costs and conversion rates
                 const binding = inv.find(i => i.name?.toLowerCase().includes('binding'));
-                const pinning = inv.find(i => i.name?.toLowerCase().includes('staple') || i.name?.toLowerCase().includes('pin'));
+                const pinning = inv.find(i => {
+                    const name = i.name?.toLowerCase() || '';
+                    return name.includes('staple') || /\bpins?\b/.test(name);
+                });
                 const covers = inv.find(i => i.name?.toLowerCase().includes('cover') || i.name?.toLowerCase().includes('card'));
 
                 setFinishingOptions(prev => prev.map(opt => {

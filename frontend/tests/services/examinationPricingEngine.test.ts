@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 // CommonJS backend module
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const pricingEngine = require('../../server/services/examinationPricingEngine.cjs');
+const pricingEngine = require('../../../backend/services/examinationPricingEngine.cjs');
 
 describe('examinationPricingEngine', () => {
   it('calculates subject consumption correctly', () => {

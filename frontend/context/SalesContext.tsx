@@ -18,6 +18,7 @@ import { addDays, addMonths, addYears, isBefore, parseISO, format, isSameDay } f
 import { aggregateMarketAdjustmentSnapshots, attachPricingBreakdown, summarizePricingBreakdown } from '../utils/pricingBreakdown';
 
 import { customerNotificationService, type NotificationActivityType } from '../services/customerNotificationService';
+import { workflowService as autoWorkflowService } from '../services/automatedWorkflowService';
 import { isSupabaseConfigured } from '../services/cloudMode';
 
 type ApprovedQuotationResult = {
@@ -458,6 +459,13 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             await salesStore.fetchSalesData();
             await finance.fetchFinanceData?.();
 
+            await triggerCustomerActivityNotification('SALES_ORDER', {
+                id: id,
+                customerId: saleToProcess.customerId,
+                customerName: saleToProcess.customerName,
+                amount: formatNotificationAmount(saleToProcess.totalAmount),
+            });
+
             await pushTransactionAlert({
                 title: 'POS Sale Completed',
                 message: `Sale #${id} posted for ${saleToProcess.customerName || 'Walk-in Customer'} (${formatNotificationAmount(saleToProcess.totalAmount)}).`,
@@ -859,6 +867,7 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             await finance.fetchFinanceData?.();
 
             notify(`Job Order ${jo.id} converted to Invoice #${invId}`, "success");
+            autoWorkflowService.fireEvent('invoice.created', { invoiceId: invId, jobOrderId: jo.id, amount: totalAmount }).catch(() => {});
             return invId;
         } catch (err: any) {
             notify(`Conversion Failed: ${err.message}`, "error");

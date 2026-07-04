@@ -46,6 +46,58 @@ vi.mock('../../context/DataContext', () => ({
   })
 }));
 
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    companyConfig: { companyName: 'Prime ERP', currencySymbol: 'K' },
+    notify: mockNotify,
+    user: { id: 'test-user', email: 'test@example.com' },
+    isAuthenticated: true,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    register: vi.fn(),
+  }),
+}));
+
+vi.mock('../../context/FinanceContext', () => ({
+  useFinance: () => ({
+    deliveryNotes: [
+      {
+        id: 'DN-1',
+        invoiceId: 'INV-1',
+        date: '2026-02-22T09:00:00.000Z',
+        customerName: 'Acme Ltd',
+        shippingAddress: 'Area 3',
+        items: [{ id: 'I-1', name: 'A4 Paper', quantity: 3 }],
+        status: 'In Transit'
+      }
+    ],
+    employees: [{ id: 'EMP-1', name: 'Driver One', role: 'Driver', status: 'Active' }],
+    fetchFinanceData: mockFetchFinanceData,
+  }),
+}));
+
+vi.mock('../../context/SalesContext', () => ({
+  useSales: () => ({
+    shipments: [
+      {
+        id: 'SHP-1',
+        orderId: 'DN-1',
+        customerName: 'Acme Ltd',
+        carrier: 'Own Delivery',
+        trackingNumber: 'TRK-1',
+        weight: 1,
+        weightUnit: 'kg',
+        dimensions: { l: 1, w: 1, h: 1 },
+        status: 'In Transit',
+        shippingCost: 12
+      }
+    ],
+    customers: [{ id: 'C-1', name: 'Acme Ltd', contact: '+265991234567' }],
+    fetchSalesData: mockFetchSalesData,
+  }),
+}));
+
 vi.mock('../../hooks/useDocumentPreview', () => ({
   useDocumentPreview: () => ({
     handlePreview: mockHandlePreview

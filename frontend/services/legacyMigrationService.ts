@@ -47,7 +47,7 @@ const ITEM_TYPE_MAPPING: Record<string, TypeMapping> = {
   'Material': {
     productType: 'INVENTORY',
     inventoryRole: 'internal',
-    resourceSubtype: 'consumable',
+    resourceSubtype: 'raw_material',
     costingMethod: 'weighted_average',
   },
   'Stationery': {

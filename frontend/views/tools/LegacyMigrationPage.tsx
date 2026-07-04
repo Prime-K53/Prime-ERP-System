@@ -86,7 +86,7 @@ const LegacyMigrationPage: React.FC = () => {
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">M</div>
-                                <div><span className="font-bold">Material</span> → productType: INVENTORY, inventoryRole: internal, resourceSubtype: consumable</div>
+                                <div><span className="font-bold">Material</span> → productType: INVENTORY, inventoryRole: internal, resourceSubtype: raw_material</div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">S</div>

@@ -34,7 +34,8 @@ Object.defineProperty(global.navigator, 'serviceWorker', {
       active: {
         postMessage: vi.fn()
       }
-    })
+    }),
+    getRegistrations: vi.fn(async () => [])
   },
   configurable: true
 });

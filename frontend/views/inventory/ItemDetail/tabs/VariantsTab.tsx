@@ -8,7 +8,7 @@ interface Props {
 }
 
 const isProduct = (item: Item) => item.type === 'Product' || item.classification === 'product' || item.classification === 'finished_good';
-const isStationery = (item: Item) => item.type === 'Stationery' || item.classification === 'stationery' || item.classification === 'consumable';
+const isStationery = (item: Item) => item.type === 'Stationery' || item.classification === 'stationery';
 const showPages = (item: Item) => isProduct(item) || item.type === 'Service' || item.classification === 'printing_service';
 
 export const VariantsTab: React.FC<Props> = ({ item }) => {

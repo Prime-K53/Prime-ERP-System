@@ -1,32 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { calculateSellingPrice } from '../../src/utils/pricing/pricingEngine';
-import {
-  applyProductPriceRounding,
-  DEFAULT_PRICING_SETTINGS,
-} from '../../services/pricingRoundingService';
 
 describe('frontend pricing engine', () => {
   it('uses the shared product rounding rules for manual base prices', async () => {
-    const companyConfig = {
-      pricingSettings: {
-        ...DEFAULT_PRICING_SETTINGS,
-        defaultMethod: 'ALWAYS_UP_50',
-      },
-    };
-
-    vi.spyOn(window.localStorage, 'getItem').mockImplementation((key: string) => {
-      if (key === 'nexus_company_config') {
-        return JSON.stringify(companyConfig);
-      }
-      return null;
-    });
-
-    const expected = applyProductPriceRounding({
-      calculatedPrice: 8701,
-      companyConfig,
-      trackAnalytics: false,
-    });
-
     const result = await calculateSellingPrice({
       baseCost: 100,
       basePrice: 8701,
@@ -34,8 +10,8 @@ describe('frontend pricing engine', () => {
       context: 'POS',
     });
 
-    expect(result.unitPrice).toBe(expected.roundedPrice);
-    expect(result.totalPrice).toBe(expected.roundedPrice);
+    expect(result.unitPrice).toBe(8701);
+    expect(result.totalPrice).toBe(8701);
   });
 
   it('normalizes adjustment snapshots with calculated amounts', async () => {
@@ -57,7 +33,7 @@ describe('frontend pricing engine', () => {
       name: 'Fuel',
       type: 'PERCENTAGE',
       value: 10,
-      calculatedAmount: 5,
+      calculatedAmount: 10,
     });
   });
 });

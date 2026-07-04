@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
 import { enrichDocumentCustomerData } from '../../utils/documentCustomerData';
+import QualityInspection from '../../components/QualityInspection';
 
 /**
  * Job Hover Card
@@ -94,6 +95,8 @@ const WorkOrders: React.FC = () => {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
     const hoverTimerRef = useRef<any | null>(null);
+
+    const [qcOrder, setQcOrder] = useState<WorkOrder | null>(null);
 
     useEffect(() => {
         if (location.state?.action === 'create') {
@@ -314,6 +317,23 @@ const WorkOrders: React.FC = () => {
                     initialData={editingOrder}
                 />
             )}
+
+            {qcOrder && (() => {
+                const order = qcOrder;
+                return (
+                <QualityInspection
+                    jobId={order.id}
+                    jobName={order.productName || order.id}
+                    open={true}
+                    onClose={() => setQcOrder(null)}
+                    onComplete={(results) => {
+                        if (results.passed) updateWorkOrderStatus(order.id, 'Completed');
+                        notify(results.passed ? 'QC Passed — work order completed' : 'QC Failed — issues recorded', results.passed ? 'success' : 'warning');
+                        setQcOrder(null);
+                    }}
+                />
+                );
+            })()}
 
             {/* Advanced Options Popup Menu */}
             {showAdvancedMenu && (
@@ -581,6 +601,14 @@ const WorkOrders: React.FC = () => {
                                                         </button>
                                                     )}
                                                     {wo.status === 'QA' && (
+                                                        <>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setQcOrder(wo); }}
+                                                            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white border border-indigo-100 shadow-sm transition-all"
+                                                            title="Quality Inspection"
+                                                        >
+                                                            <ShieldCheck size={13} />
+                                                        </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); updateWorkOrderStatus(wo.id, 'Completed'); notify('Work order completed', 'success'); }}
                                                             className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white border border-emerald-100 shadow-sm transition-all"
@@ -588,6 +616,7 @@ const WorkOrders: React.FC = () => {
                                                         >
                                                             <CheckSquare size={13} />
                                                         </button>
+                                                        </>
                                                     )}
                                                     {wo.status !== 'Completed' && wo.status !== 'Cancelled' && (
                                                         <button

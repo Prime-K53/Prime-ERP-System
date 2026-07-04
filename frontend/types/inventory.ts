@@ -6,7 +6,7 @@
 export type InventoryRole = 'internal' | 'sellable' | 'both';
 
 /** Sub-classification for internal cost-source items */
-export type ResourceSubtype = 'raw_material' | 'consumable' | 'packaging' | 'spare_part';
+export type ResourceSubtype = 'raw_material' | 'packaging' | 'spare_part';
 
 /** Costing method for calculating normalized Cost Price */
 export type CostingMethod = 'weighted_average' | 'fifo' | 'standard';

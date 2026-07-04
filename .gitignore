@@ -6,6 +6,7 @@ build
 .env
 .env.local
 *.log
+*.err
 *.db
 *.db-journal
 .opencode

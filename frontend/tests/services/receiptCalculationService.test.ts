@@ -19,7 +19,7 @@ describe('receiptCalculationService.calculateCustomerPaymentSnapshot', () => {
     expect(snapshot.walletDeposit).toBe(0);
     expect(snapshot.changeGiven).toBe(0);
     expect(snapshot.amountRetained).toBe(100);
-    expect(snapshot.paymentStatus).toBe('PAID');
+    expect(snapshot.paymentStatus).toBe('Paid');
   });
 
   it('calculates partial payment with outstanding balance', () => {
@@ -30,7 +30,7 @@ describe('receiptCalculationService.calculateCustomerPaymentSnapshot', () => {
       ]
     });
 
-    expect(snapshot.paymentStatus).toBe('PARTIALLY PAID');
+    expect(snapshot.paymentStatus).toBe('Partial');
     expect(snapshot.balanceDueAfterPayment).toBe(40);
   });
 
@@ -46,7 +46,7 @@ describe('receiptCalculationService.calculateCustomerPaymentSnapshot', () => {
     expect(snapshot.walletDeposit).toBe(20);
     expect(snapshot.changeGiven).toBe(0);
     expect(snapshot.amountRetained).toBe(120);
-    expect(snapshot.paymentStatus).toBe('OVERPAID');
+    expect(snapshot.paymentStatus).toBe('Overpaid');
   });
 
   it('handles overpayment as change when excess policy is Change', () => {
@@ -61,7 +61,7 @@ describe('receiptCalculationService.calculateCustomerPaymentSnapshot', () => {
     expect(snapshot.walletDeposit).toBe(0);
     expect(snapshot.changeGiven).toBe(20);
     expect(snapshot.amountRetained).toBe(100);
-    expect(snapshot.paymentStatus).toBe('PAID');
+    expect(snapshot.paymentStatus).toBe('Paid');
   });
 
   it('handles wallet top-up with no allocations', () => {
@@ -75,7 +75,7 @@ describe('receiptCalculationService.calculateCustomerPaymentSnapshot', () => {
     expect(snapshot.amountApplied).toBe(0);
     expect(snapshot.walletDeposit).toBe(50);
     expect(snapshot.amountRetained).toBe(50);
-    expect(snapshot.paymentStatus).toBe('OVERPAID');
+    expect(snapshot.paymentStatus).toBe('Overpaid');
   });
 
   it('preserves explicit exam payment purpose', () => {
@@ -149,7 +149,7 @@ describe('receipt schemas', () => {
       paymentMethod: 'Cash',
       appliedInvoices: ['INV-001'],
       invoiceTotal: 100,
-      paymentStatus: 'PAID',
+      paymentStatus: 'Paid',
       balanceDue: 0,
       overpaymentAmount: 0,
       narrative: 'Test',

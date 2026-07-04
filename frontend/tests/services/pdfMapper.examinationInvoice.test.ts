@@ -37,6 +37,6 @@ describe('pdfMapper examination invoice mapping', () => {
     expect(mapped.conversionDetails?.sourceNumber).toBe('BATCH-2026-001');
     expect(mapped.conversionDetails?.acceptedBy).toBe('Northview Academy');
     expect(mapped.adjustmentSnapshots).toBeUndefined();
-    expect(mapped.roundingDifference).toBeUndefined();
+    expect(mapped.roundingDifference).toBe(0);
   });
 });

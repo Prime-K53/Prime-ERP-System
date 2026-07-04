@@ -68,7 +68,6 @@ export function useInventoryDashboard(allItems: Item[], warehouses: { id: string
     }
 
     const rawMaterials = allItems.filter(i => (i.type || i.classification) === 'Raw Material');
-    const consumables = allItems.filter(i => (i.type || i.classification) === 'Consumable' || i.type === 'Material');
     const products = allItems.filter(i => (i.type || i.classification) === 'Product');
     const stationery = allItems.filter(i => (i.type || i.classification) === 'Stationery');
     const printingServices = allItems.filter(i => i.type === 'Service' || (i as Item & { classification?: string }).classification === 'Printing Service');
@@ -91,10 +90,9 @@ export function useInventoryDashboard(allItems: Item[], warehouses: { id: string
 
     const catBreakdown: CategoryBreakdown[] = [
       { label: 'Raw Materials', items: rawMaterials.length, value: rawMaterials.reduce((s, m) => s + num(m.stock) * (m.costPrice || m.cost || 0), 0), color: categoryColors[0] },
-      { label: 'Consumables', items: consumables.length, value: consumables.reduce((s, m) => s + num(m.stock) * (m.costPrice || m.cost || 0), 0), color: categoryColors[1] },
-      { label: 'Products', items: products.length, value: products.reduce((s, p) => s + num(p.stock) * (p.costPrice || p.cost || 0), 0), color: categoryColors[2] },
-      { label: 'Stationery', items: stationery.length, value: stationery.reduce((s, p) => s + num(p.stock) * (p.costPrice || p.cost || 0), 0), color: categoryColors[3] },
-      { label: 'Printing Svc', items: printingServices.length, value: printingServices.length, color: categoryColors[5] },
+      { label: 'Products', items: products.length, value: products.reduce((s, p) => s + num(p.stock) * (p.costPrice || p.cost || 0), 0), color: categoryColors[1] },
+      { label: 'Stationery', items: stationery.length, value: stationery.reduce((s, p) => s + num(p.stock) * (p.costPrice || p.cost || 0), 0), color: categoryColors[2] },
+      { label: 'Printing Svc', items: printingServices.length, value: printingServices.length, color: categoryColors[4] },
     ];
 
     const warehouseStock: WarehouseStock[] = warehouses.length > 0

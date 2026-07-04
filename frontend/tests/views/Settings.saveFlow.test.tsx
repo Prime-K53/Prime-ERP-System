@@ -5,6 +5,7 @@ import Settings from '../../views/Settings';
 import type { PricingSettings } from '../../types';
 
 const mockUseData = vi.fn();
+const mockUseAuth = vi.fn();
 
 vi.mock('../../context/DataContext', () => ({
   useData: () => mockUseData()
@@ -24,11 +25,26 @@ vi.mock('../../services/api', () => ({
   }
 }));
 
-describe('Settings - Pricing Settings Save Flow Integration', () => {
-  const mockUpdateCompanyConfig = vi.fn();
-  const mockNotify = vi.fn();
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => mockUseAuth()
+}));
 
-  const defaultCompanyConfig = {
+vi.mock('../../context/FinanceContext', () => ({
+  useFinance: () => ({
+    ledger: [],
+  }),
+}));
+
+vi.mock('../../context/InventoryContext', () => ({
+  useInventory: () => ({
+    inventory: [],
+  }),
+}));
+
+const mockUpdateCompanyConfig = vi.fn();
+const mockNotify = vi.fn();
+
+const defaultCompanyConfig = {
     companyName: 'Test Company',
     currencySymbol: '$',
     taxNumber: 'TAX123',
@@ -51,10 +67,11 @@ describe('Settings - Pricing Settings Save Flow Integration', () => {
     }
   };
 
-  beforeEach(() => {
+beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-23T12:00:00.000Z'));
     mockUseData.mockReset();
+    mockUseAuth.mockReset();
     mockUpdateCompanyConfig.mockClear();
     mockNotify.mockClear();
 
@@ -69,12 +86,31 @@ describe('Settings - Pricing Settings Save Flow Integration', () => {
       auditLogs: [],
       allUsers: []
     });
+
+    mockUseAuth.mockReturnValue({
+      companyConfig: defaultCompanyConfig,
+      updateCompanyConfig: mockUpdateCompanyConfig,
+      validatePasswordStrength: vi.fn(),
+      manageUser: vi.fn(),
+      notify: mockNotify,
+      resetSystem: vi.fn(),
+      manualDownloadBackup: vi.fn(),
+      auditLogs: [],
+      allUsers: [],
+      user: { id: 'test-user', email: 'test@example.com' },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      register: vi.fn(),
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
+describe('Settings - Pricing Settings Save Flow Integration', () => {
   it('should save valid pricing settings successfully', async () => {
     render(<Settings />);
 

@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CurrencyService } from '../../../services/currencyService';
 
+vi.mock('../../../services/db', () => ({
+  dbService: {
+    getSetting: vi.fn().mockResolvedValue(null),
+  },
+}));
+
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),

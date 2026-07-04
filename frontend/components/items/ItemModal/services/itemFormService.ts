@@ -5,13 +5,19 @@ import { dbService } from '../../../../services/db';
 import { inventoryResourceService } from '../../../../services/inventoryResourceService';
 import { validateMinimumMarkup, resolveMinimumMarkup, type ValidationResult } from '../../../../services/pricingValidationService';
 import type { ServiceRecipe } from '../../../../types/service';
+import { generateSequentialId } from '../../../../utils/idGeneration';
 
-const generateId = (): string =>
-  'ITM-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+const CLASSIFICATION_TO_NUMBERING_TYPE: Record<ItemClassification, string> = {
+  raw_material: 'rawmaterial',
+  product: 'inventoryitem',
+  stationery: 'stationeryitem',
+  printing_service: 'printingserviceitem',
+  non_stock_service: 'serviceitem',
+};
 
-export function formDataToItem(data: ItemFormData, existingId?: string, originalItem?: Item | null): Item {
+export function formDataToItem(data: ItemFormData, existingId?: string, originalItem?: Item | null, allItems?: Item[]): Item {
   const classification = CLASSIFICATION_MAP[data.classification];
-  const id = existingId || generateId();
+  const id = existingId || (allItems ? generateSequentialId(CLASSIFICATION_TO_NUMBERING_TYPE[data.classification] || 'inventoryitem', allItems) : '');
 
   const isBom = data.recipeType === 'bom';
 
@@ -214,7 +220,7 @@ function parseConversions(item: Item): { fromUnit: string; toUnit: string; facto
 
 function determineClassification(item: Item): ItemClassification {
   if (item.type === 'Raw Material') return 'raw_material';
-  if (item.type === 'Material') return 'consumable';
+  if (item.type === 'Material') return 'raw_material';
   if (item.type === 'Stationery') return 'stationery';
   if (item.type === 'Service') {
     const itemExt = item as Record<string, unknown>;

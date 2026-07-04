@@ -34,14 +34,12 @@ const SmartPricing: React.FC = () => {
     const [selectedTonerId, setSelectedTonerId] = useState<string>('');
     const [finishingOptions, setFinishingOptions] = useState<FinishingOption[]>(defaultFinishingOptions);
     const [sellingPrice, setSellingPrice] = useState<number>(0);
-    const [showSettings, setShowSettings] = useState(false);
     const [productName, setProductName] = useState('Scheme Pad');
     const [selectedInventoryProductId, setSelectedInventoryProductId] = useState('');
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
     const [editingBomId, setEditingBomId] = useState<string | null>(null);
     const [itemType, setItemType] = useState<'Product' | 'Service'>('Product');
     const [isCreatingProduct, setIsCreatingProduct] = useState(false);
-    const [editingCosts, setEditingCosts] = useState<{ [key: string]: number }>({});
     const [inventory, setInventory] = useState<Item[]>([]);
     const [marketAdjustments, setMarketAdjustments] = useState<MarketAdjustment[]>([]);
     const [bomTemplates, setBOMTemplates] = useState<BOMTemplate[]>([]);
@@ -279,8 +277,9 @@ const SmartPricing: React.FC = () => {
         setItemType((product.type as 'Product' | 'Service') || 'Product');
     };
 
-    const handleSaveProduct = async () => {
-        if (!productName.trim()) {
+    const handleSaveProduct = async (nameOverride?: string) => {
+        const nameToUse = nameOverride || productName;
+        if (!nameToUse.trim()) {
             alert('Please enter a name');
             return;
         }
@@ -305,8 +304,8 @@ const SmartPricing: React.FC = () => {
             const newProduct: Item = {
                 ...(existingProduct || {}),
                 id: productId,
-                name: productName.trim(),
-                sku: existingProduct?.sku || generateAutoSKU(itemType, productName, undefined, inventory),
+                name: nameToUse.trim(),
+                sku: existingProduct?.sku || generateAutoSKU(itemType, nameToUse, undefined, inventory),
                 type: itemType,
                 classification: itemType === 'Service' ? 'printing_service' : existingProduct?.classification,
                 category: existingProduct?.category || (itemType === 'Service' ? 'Printing Service' : 'Printed Products'),
@@ -403,8 +402,8 @@ const SmartPricing: React.FC = () => {
             setSelectedInventoryProductId(newProduct.id);
 
             alert(editingProductId
-                ? `${itemType} "${productName.trim()}" updated and saved back to inventory.`
-                : `${itemType} "${productName.trim()}" created and saved to inventory with corresponding BOM recipe.`);
+                ? `${itemType} "${nameToUse.trim()}" updated and saved back to inventory.`
+                : `${itemType} "${nameToUse.trim()}" created and saved to inventory with corresponding BOM recipe.`);
             if (cameFromModal) {
                 navigate(-1);
             }
@@ -518,7 +517,7 @@ const SmartPricing: React.FC = () => {
 
         setIsCreatingProduct(true);
         try {
-            await handleSaveProduct();
+            await handleSaveProduct(name);
 
             if (variantsToSave.length > 0) {
                 const enabledFinishingOptions = finishingOptions.filter(o => o.enabled);
@@ -662,16 +661,11 @@ const SmartPricing: React.FC = () => {
                         )}
                     </div>
                     <button 
-                        onClick={() => {
-                            const costs: { [key: string]: number } = {};
-                            finishingOptions.forEach(opt => { costs[opt.id] = opt.price; });
-                            setEditingCosts(costs);
-                            setShowSettings(true);
-                        }}
+                        onClick={() => navigate('/settings', { state: { tab: 'Finishing' } })}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50"
                     >
                         <Settings size={18} />
-                        Settings
+                        Manage Prices
                     </button>
                 </div>
 
@@ -978,63 +972,6 @@ const SmartPricing: React.FC = () => {
                     </div>
                 </div>
             </div>
-
-            {showSettings && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                            <h2 className="text-xl font-bold text-slate-800">Finishing Options Settings</h2>
-                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-lg">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm text-slate-500 mb-4">Set the default cost for each finishing option (per unit):</p>
-                            {finishingOptions.map(option => (
-                                <div key={option.id} className="flex items-center justify-between">
-                                    <label className="text-sm font-medium text-slate-700">{option.name}</label>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-500">{currency}</span>
-                                        <input
-                                            type="number"
-                                            value={editingCosts[option.id] ?? option.price}
-                                            onChange={(e) => setEditingCosts(prev => ({ ...prev, [option.id]: parseFloat(e.target.value) || 0 }))}
-                                            className="w-24 px-3 py-2 border border-slate-200 rounded-lg text-right"
-                                            min={0}
-                                            step={0.01}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="p-6 border-t border-slate-100 flex gap-3">
-                            <button 
-                                onClick={() => setShowSettings(false)}
-                                className="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                onClick={async () => {
-                                    const newCosts: Record<string, number> = {};
-                                    finishingOptions.forEach(opt => {
-                                        newCosts[opt.id] = editingCosts[opt.id] ?? opt.price;
-                                    });
-                                    await dbService.saveSetting('finishingOptionCosts', newCosts);
-                                    setFinishingOptions(prev => prev.map(opt => ({
-                                        ...opt,
-                                        price: newCosts[opt.id] ?? opt.price
-                                    })));
-                                    setShowSettings(false);
-                                }}
-                                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
-                            >
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {showSaveDialog && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

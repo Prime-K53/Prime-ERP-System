@@ -23,6 +23,7 @@ interface Props {
   onRegenerate: () => void;
   errors: Record<string, string>;
   classification?: ItemClassification;
+  basePages?: number;
 }
 
 const isProduct = (c?: ItemClassification) => c === 'product';
@@ -72,6 +73,7 @@ export const VariantsSection: React.FC<Props> = ({
   onRegenerate,
   errors,
   classification,
+  basePages = 1,
 }) => {
   const hasAttributesSelected = selectedAttributes.some((a) => a.valueIds.length > 0);
 
@@ -250,21 +252,24 @@ export const VariantsSection: React.FC<Props> = ({
                   <label style={labelStyle}>SKU</label>
                   <div style={readonlyStyle}>{v.sku || '\u2014'}</div>
                 </div>
-                <div>
-                  <label style={labelStyle}>Pages</label>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={v.pages ?? 1}
-                    onChange={(e) => {
-                      const pages = Math.max(1, parseInt(e.target.value) || 1);
-                      const newCP = recipeCost > 0 ? recipeCost * pages : cp;
-                      onUpdate(v.id, { pages, costPrice: newCP });
-                    }}
-                    style={inputStyle}
-                  />
-                </div>
+                {showPages(classification) && (
+                  <div>
+                    <label style={labelStyle}>Pages</label>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={v.pages ?? 1}
+                      onChange={(e) => {
+                        const pages = Math.max(1, parseInt(e.target.value) || 1);
+                        const unitCost = recipeCost > 0 && basePages > 0 ? recipeCost / basePages : 0;
+                        const newCP = unitCost > 0 ? Math.round(unitCost * pages * 100) / 100 : cp;
+                        onUpdate(v.id, { pages, costPrice: newCP });
+                      }}
+                      style={inputStyle}
+                    />
+                  </div>
+                )}
                 <div>
                   <label style={labelStyle}>CP</label>
                   <div style={monoValueStyle}>
@@ -359,21 +364,24 @@ export const VariantsSection: React.FC<Props> = ({
                           placeholder="e.g. Custom variant"
                         />
                       </div>
-                      <div>
-                        <label style={labelStyle}>Pages</label>
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={v.pages ?? 1}
+                      {showPages(classification) && (
+                        <div>
+                          <label style={labelStyle}>Pages</label>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={v.pages ?? 1}
                           onChange={(e) => {
                             const pages = Math.max(1, parseInt(e.target.value) || 1);
-                            const newCP = recipeCost > 0 ? recipeCost * pages : Number(v.costPrice ?? 0);
+                            const unitCost = recipeCost > 0 && basePages > 0 ? recipeCost / basePages : 0;
+                            const newCP = unitCost > 0 ? Math.round(unitCost * pages * 100) / 100 : Number(v.costPrice ?? 0);
                             onUpdate(v.id, { pages, costPrice: newCP });
                           }}
-                          style={inputStyle}
-                        />
-                      </div>
+                            style={inputStyle}
+                          />
+                        </div>
+                      )}
                       <div>
                         <label style={labelStyle}>CP</label>
                         <input

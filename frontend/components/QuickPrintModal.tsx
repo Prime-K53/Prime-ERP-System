@@ -37,14 +37,15 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
 
   // Auto-calculate pinning/stapling cost per copy (based on settings) - not visible to customer
   const pinningCost = useMemo(() => {
-    // If staple price is defined in settings, charge per copy automatically
-    if (typeof staplePrice === 'number' && staplePrice > 0) {
-      return Number((quantity * staplePrice).toFixed(2));
+    // If staple price is explicitly set in settings, use it (0 means free/disabled)
+    if (typeof staplePrice === 'number') {
+      if (staplePrice > 0) return Number((quantity * staplePrice).toFixed(2));
+      return 0;
     }
-    // Fallback to inventory item if no settings price
+    // Fallback to inventory item only if staplePrice was not configured at all
     if (!pinningItem || pinningItem.conversionRate <= 0) return 0;
-    const unitsNeeded = Math.ceil(quantity / pinningItem.conversionRate);
-    return Number((unitsNeeded * pinningItem.costPerUnit).toFixed(2));
+    const costPerCopy = pinningItem.costPerUnit / pinningItem.conversionRate;
+    return Number((quantity * costPerCopy).toFixed(2));
   }, [quantity, pinningItem, staplePrice]);
 
   const finalTotal = printTotal + pinningCost;

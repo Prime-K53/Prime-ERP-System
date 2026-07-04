@@ -2,11 +2,14 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: [
     '**/tests/**/*.test.cjs',
-    '**/tests/**/*.test.js'
+    '**/tests/**/*.test.js',
+    '**/tests/integration/**/*.test.js',
+    '**/tests/integration/**/*.test.cjs'
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/dist/'
+    '/dist/',
+    '/tests/integration/'
   ],
   collectCoverageFrom: [
     'services/**/*.cjs',

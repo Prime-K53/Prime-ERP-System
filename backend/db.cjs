@@ -1,4 +1,16 @@
-const sqlite3 = require('sqlite3').verbose();
+let sqlite3;
+try {
+  sqlite3 = require('sqlite3').verbose();
+} catch (err) {
+  console.error('[Database] FATAL: sqlite3 native module failed to load.');
+  console.error('[Database] Run: cd backend && npm rebuild sqlite3');
+  console.error('[Database] Or in Docker: see backend/Dockerfile which handles this.');
+  console.error('[Database] Error:', err.message);
+  if (process.env.JEST_WORKER_ID !== undefined) {
+    throw new Error('sqlite3 native module not available - run: npm rebuild sqlite3');
+  }
+  process.exit(1);
+}
 const { getDbPath, ensureRuntimeDirs } = require('./runtimePaths.cjs');
 
 ensureRuntimeDirs();
@@ -1200,6 +1212,30 @@ const initDb = () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
         FOREIGN KEY (payroll_run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS assets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        asset_type TEXT NOT NULL CHECK(asset_type IN ('printer','vehicle','equipment','furniture','computer','other')),
+        serial_number TEXT,
+        model TEXT,
+        manufacturer TEXT,
+        purchase_date TEXT,
+        purchase_cost REAL DEFAULT 0,
+        current_value REAL DEFAULT 0,
+        depreciation_method TEXT DEFAULT 'straight_line',
+        useful_life_years INTEGER DEFAULT 5,
+        status TEXT DEFAULT 'active' CHECK(status IN ('active','maintenance','retired','sold')),
+        location TEXT,
+        assigned_to TEXT,
+        notes TEXT,
+        warranty_expiry TEXT,
+        last_maintenance TEXT,
+        next_maintenance TEXT,
+        company_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
 
       const migrationPromises = columns.map(col => {

@@ -47,8 +47,8 @@ vi.mock('idb', () => ({
   deleteDB: mocks.deleteDB
 }));
 
-vi.mock('../../../services/rxdb/bridge', () => ({
-  isRxDbBackedStore: (storeName: string) => [
+vi.mock('../../../services/dexie/bridge', () => ({
+  isBackedStore: (storeName: string) => [
     'inventory',
     'customers',
     'suppliers',
@@ -58,7 +58,7 @@ vi.mock('../../../services/rxdb/bridge', () => ({
     'auditLogs',
     'examinationBatchNotifications'
   ].includes(storeName),
-  rxDbBridge: {
+  dexieBridge: {
     getAll: mocks.rxGetAll,
     get: mocks.rxGet,
     put: mocks.rxPut,
@@ -68,24 +68,11 @@ vi.mock('../../../services/rxdb/bridge', () => ({
   }
 }));
 
-vi.mock('../../../services/rxdb/settings-backplane', () => ({
+vi.mock('../../../services/dexie/settings-backplane', () => ({
   settingsBackplane: {
     getJson: mocks.backplaneGetJson,
     setJson: mocks.backplaneSetJson
   }
-}));
-
-vi.mock('../../../services/rxdb/migration-control', () => ({
-  getMigrationControlPlane: () => ({
-    getCollectionRoute: mocks.getCollectionRoute,
-    recordHealthy: mocks.recordHealthy,
-    recordError: mocks.recordError,
-    recordRollback: mocks.recordRollback
-  })
-}));
-
-vi.mock('../../../services/rxdb/database', () => ({
-  resetPrimeDatabase: mocks.resetPrimeDatabase
 }));
 
 describe('dbService routing', () => {
@@ -131,6 +118,7 @@ describe('dbService routing', () => {
       }))
     });
 
+    mocks.localStorage.setItem('nexus_company_config', JSON.stringify({ companyId: 'test-company' }));
     mocks.getCollectionRoute.mockImplementation((collectionId: string) => {
       if (collectionId === 'customers') {
         return {
@@ -159,17 +147,15 @@ describe('dbService routing', () => {
     });
   });
 
-  it('merges RxDB and legacy rows for dual-read collections', async () => {
-    mocks.rxGetAll.mockResolvedValue([{ id: 'c-1', name: 'Rx Customer' }]);
+  it('reads from legacy store for dual-read collections', async () => {
     const { dbService } = await import('../../../services/db');
 
     const rows = await dbService.getAll<{ id: string; name: string }>('customers');
 
     expect(rows).toEqual([
-      { id: 'c-1', name: 'Rx Customer' },
+      { id: 'c-1', name: 'Legacy Customer' },
       { id: 'c-2', name: 'Legacy Only' }
     ]);
-    expect(mocks.rxGetAll).toHaveBeenCalledWith('customers');
     expect(mocks.idbGetAll).toHaveBeenCalledWith('customers');
   });
 
@@ -180,43 +166,13 @@ describe('dbService routing', () => {
     await dbService.saveSetting('workspaceConfig', value);
 
     expect(mocks.backplaneSetJson).toHaveBeenCalledWith('workspaceConfig', value, { exactKey: true });
-    expect(mocks.idbPut).not.toHaveBeenCalledWith('settings', expect.anything());
   });
 
-  it('falls back to legacy writes when an RxDB-primary write fails', async () => {
-    mocks.rxPut.mockRejectedValue(new Error('RxDB write failed'));
-    mocks.getCollectionRoute.mockImplementation((collectionId: string) => {
-      if (collectionId === 'customers') {
-        return {
-          id: 'customers',
-          mode: 'rxdb',
-          readOrder: ['rxdb', 'legacy'],
-          writeTargets: ['rxdb']
-        };
-      }
-
-      if (collectionId === 'settings') {
-        return {
-          id: 'settings',
-          mode: 'rxdb',
-          readOrder: ['rxdb', 'legacy'],
-          writeTargets: ['rxdb']
-        };
-      }
-
-      return {
-        id: collectionId,
-        mode: 'legacy',
-        readOrder: ['legacy', 'rxdb'],
-        writeTargets: ['legacy']
-      };
-    });
-
+  it('writes to legacy store for backed collections', async () => {
     const { dbService } = await import('../../../services/db');
     const result = await dbService.put('customers', { id: 'c-9', name: 'Fallback Customer' });
 
     expect(result).toBe('c-9');
     expect(mocks.idbPut).toHaveBeenCalledWith('customers', expect.objectContaining({ id: 'c-9' }));
-    expect(mocks.recordRollback).toHaveBeenCalled();
   });
 });

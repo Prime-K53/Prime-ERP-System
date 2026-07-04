@@ -18,7 +18,7 @@ import { PurchasingSection } from './sections/PurchasingSection';
 import { SummarySidebar } from './components/SummarySidebar';
 import { RecipeEditorModal } from './components/RecipeEditorModal';
 import { validateStep } from './validation/itemValidation';
-import { generateSku } from '../../../utils/helpers';
+import { generateAutoSKU, generateSku } from '../../../utils/skuGenerator';
 import { dbService } from '../../../services/db';
 
 interface Props {
@@ -49,7 +49,7 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
     steps, currentIndex, canGoNext, isDirty, pricingValidation,
     updateField, goNext, goBack, goToStep,
     toItem, loadItem,
-  } = useItemForm(item, currency);
+  } = useItemForm(item, currency, allItems);
 
   const variantsManager = useVariantManager(formData.id || 'new');
   const conversionsManager = useConversionManager();
@@ -126,6 +126,16 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
   const handleSave = async () => {
     setSaving(true);
     try {
+      const isInternal = formData.inventoryRole === 'internal';
+      const isStationery = formData.classification === 'stationery';
+      const isRawMaterial = formData.classification === 'raw_material';
+
+      if (!isInternal && !isStationery && !isRawMaterial && pricingValidation && !pricingValidation.valid) {
+        alert(`Cannot save: ${pricingValidation.message}`);
+        setSaving(false);
+        return;
+      }
+
       const finalItem = toItem(item?.id) as Item & Record<string, unknown>;
       finalItem.variants = variantsManager.variants.map((v) => {
         const clean: Record<string, unknown> = { ...v };
@@ -204,8 +214,16 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
   }, [formData.name, updateField]);
 
   const handleGenerateSku = useCallback((category: string) => {
-    return generateSku(category || 'GEN', allItems || []);
-  }, [allItems]);
+    const classificationToType: Record<string, string> = {
+      raw_material: 'Raw Material',
+      product: 'Product',
+      stationery: 'Stationery',
+      printing_service: 'Service',
+      non_stock_service: 'Service',
+    };
+    const type = classificationToType[formData.classification] || 'ITEM';
+    return generateAutoSKU(type, formData.name || category || 'UNK', undefined, allItems || []);
+  }, [allItems, formData.classification, formData.name]);
 
   const SectionComponent = SECTION_COMPONENTS[currentStep];
 
@@ -263,6 +281,7 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
       },
       errors: stepErrors,
       classification: formData.classification,
+      basePages: (formData as ItemFormData & Record<string, unknown>).smartPricing?.pages as number | undefined || 1,
     },
     pricing: { data: formData, onChange: updateField, pricingValidation },
     printing: { data: formData, onChange: updateField },

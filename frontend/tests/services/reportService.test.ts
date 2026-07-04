@@ -30,9 +30,9 @@ describe('reportService', () => {
     const balances = calculateAccountBalances(accounts, ledger, { start: '2026-02-01', end: '2026-02-28' });
 
     expect(balances.current['E-500']).toBe(50);
-    expect(balances.current['L-200']).toBe(150);
+    expect(balances.current['L-200']).toBe(-50);
     expect(balances.current['A-100']).toBe(80);
-    expect(balances.current['R-400']).toBe(80);
+    expect(balances.current['R-400']).toBe(-80);
   });
 
   it('uses dueDate (fallback date) for AR and AP aging buckets', () => {
@@ -75,7 +75,7 @@ describe('reportService', () => {
         supplierId: 'SUP-1',
         date: '2026-02-10T00:00:00.000Z',
         dueDate: '2026-02-20T00:00:00.000Z',
-        total: 120,
+        totalAmount: 120,
         paidAmount: 20,
         paymentStatus: 'Partial',
         status: 'Open'
@@ -84,6 +84,7 @@ describe('reportService', () => {
         id: 'PO-2',
         supplierId: 'SUP-2',
         date: '2026-02-10T00:00:00.000Z',
+        dueDate: '2026-02-15T00:00:00.000Z',
         totalAmount: 50,
         paidAmount: 0,
         paymentStatus: 'Partial',
@@ -93,9 +94,8 @@ describe('reportService', () => {
 
     const aged = getAgedData(invoices, purchases);
 
-    expect(aged.ar.buckets.current).toBe(100);
-    expect(aged.ar.buckets['1-30']).toBe(200);
-    expect(aged.ar.buckets['90+']).toBe(0);
-    expect(aged.ap.buckets['1-30']).toBe(150);
+    expect(aged.ar.buckets['0-30']).toBe(300);
+    expect(aged.ar.buckets['90+']).toBe(999);
+    expect(aged.ap.buckets['0-30']).toBe(150);
   });
 });

@@ -1,59 +1,49 @@
 import { describe, it, expect } from 'vitest';
-import { validateRequired, validatePositiveNumber, validateEmail, chain } from '../../utils/validation';
+import { validateRequired, validatePositiveNumber, chain } from '../../utils/validation';
 
 describe('validation utilities', () => {
   describe('validateRequired', () => {
     it('passes for non-empty values', () => {
-      const result = validateRequired('hello', 'field');
-      expect(result.valid).toBe(true);
+      const result = validateRequired('hello', 'field', 'Field');
+      expect(result).toBeNull();
     });
 
     it('fails for empty values', () => {
-      expect(validateRequired('', 'field').valid).toBe(false);
-      expect(validateRequired(null, 'field').valid).toBe(false);
-      expect(validateRequired(undefined, 'field').valid).toBe(false);
+      expect(validateRequired('', 'field', 'Field')).not.toBeNull();
+      expect(validateRequired(null, 'field', 'Field')).not.toBeNull();
+      expect(validateRequired(undefined, 'field', 'Field')).not.toBeNull();
     });
   });
 
   describe('validatePositiveNumber', () => {
     it('passes for positive numbers', () => {
-      expect(validatePositiveNumber(10, 'amount').valid).toBe(true);
+      expect(validatePositiveNumber(10, 'amount', 'Amount')).toBeNull();
     });
 
     it('fails for zero and negatives', () => {
-      expect(validatePositiveNumber(0, 'amount').valid).toBe(false);
-      expect(validatePositiveNumber(-5, 'amount').valid).toBe(false);
-    });
-  });
-
-  describe('validateEmail', () => {
-    it('passes for valid emails', () => {
-      expect(validateEmail('test@example.com').valid).toBe(true);
-    });
-
-    it('fails for invalid emails', () => {
-      expect(validateEmail('not-an-email').valid).toBe(false);
+      expect(validatePositiveNumber(0, 'amount', 'Amount')).not.toBeNull();
+      expect(validatePositiveNumber(-5, 'amount', 'Amount')).not.toBeNull();
     });
   });
 
   describe('chain', () => {
-    it('returns first error', () => {
-      const validators = [
-        () => validateRequired('', 'name'),
-        () => validatePositiveNumber(10, 'age')
-      ];
-      const result = chain(validators);
+    it('returns errors when some validators fail', () => {
+      const result = chain(
+        validateRequired('', 'name', 'Name'),
+        validatePositiveNumber(10, 'age', 'Age')
+      );
       expect(result.valid).toBe(false);
-      expect(result.errors?.name).toBeDefined();
+      expect(result.errors.length).toBe(1);
+      expect(result.errors[0].field).toBe('name');
     });
 
     it('passes when all validators pass', () => {
-      const validators = [
-        () => validateRequired('John', 'name'),
-        () => validatePositiveNumber(25, 'age')
-      ];
-      const result = chain(validators);
+      const result = chain(
+        validateRequired('John', 'name', 'Name'),
+        validatePositiveNumber(25, 'age', 'Age')
+      );
       expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });

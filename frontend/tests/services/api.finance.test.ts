@@ -1,20 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../services/dbService', () => ({
-  default: {
+vi.mock('../../services/db', () => ({
+  dbService: {
     getAll: vi.fn(),
     get: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
     executeAtomicOperation: vi.fn()
-  }
-}));
-
-vi.mock('../../services/transactionService', () => ({
-  default: {
-    addExpense: vi.fn(),
-    addIncome: vi.fn(),
-    executeTransfer: vi.fn()
   }
 }));
 
@@ -29,7 +21,7 @@ describe('api.finance HTTP fallback', () => {
 
   describe('getAccounts', () => {
     it('returns accounts from local DB when backend is unavailable', async () => {
-      const { default: dbService } = await import('../../services/dbService');
+      const { dbService } = await import('../../services/db');
       vi.mocked(dbService.getAll).mockResolvedValue([mockAccount]);
 
       const result = await api.finance.getAccounts();
@@ -39,7 +31,7 @@ describe('api.finance HTTP fallback', () => {
 
   describe('saveAccount', () => {
     it('saves locally and attempts backend sync', async () => {
-      const { default: dbService } = await import('../../services/dbService');
+      const { dbService } = await import('../../services/db');
       vi.mocked(dbService.put).mockResolvedValue(undefined);
 
       const result = await api.finance.saveAccount(mockAccount);
@@ -49,7 +41,7 @@ describe('api.finance HTTP fallback', () => {
 
   describe('deleteAccount', () => {
     it('deletes locally and attempts backend sync', async () => {
-      const { default: dbService } = await import('../../services/dbService');
+      const { dbService } = await import('../../services/db');
       vi.mocked(dbService.delete).mockResolvedValue(undefined);
 
       const result = await api.finance.deleteAccount('acct-1');

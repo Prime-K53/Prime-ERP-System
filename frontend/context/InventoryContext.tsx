@@ -11,6 +11,7 @@ import { useProductionStore } from '../stores/productionStore';
 import { isItemBomRelevant, syncBomRelevantInventoryToBackend } from '../services/examinationSyncService';
 import { logger } from '../services/logger';
 import { syncAllItemStockWithWarehouses } from '../services/inventorySyncService';
+import { checkAndSendLowStockAlerts } from '../services/lowStockAlertService';
 
 interface InventoryContextType {
     inventory: Item[];
@@ -153,6 +154,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             syncBomRelevantInventory('item creation', [itemToSave]).catch((error) => {
                 console.warn('Background inventory sync failed:', error);
             });
+            checkAndSendLowStockAlerts(inventory).catch(() => {});
         } catch (err: any) {
             throw err;
         }
@@ -183,6 +185,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     console.warn('Background inventory sync failed:', error);
                 });
             }
+            checkAndSendLowStockAlerts(inventory).catch(() => {});
         } catch (err: any) {
             throw err;
         }
@@ -299,6 +302,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     type: 'Stock', date: new Date().toISOString(), severity: 'High'
                 });
             }
+            checkAndSendLowStockAlerts(inventory).catch(() => {});
         } catch (err: any) {
             notify(`Stock update failed: ${err.message}`, "error");
         }

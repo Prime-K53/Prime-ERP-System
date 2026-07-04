@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, QrCode, Barcode, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { Item } from '../../../../types';
+import { generateBarcodeDataUrl } from '../../../../utils/barcodeGenerator';
+import { useAuth } from '../../../../context/AuthContext';
 
 interface Props {
   open: boolean;
@@ -11,21 +13,32 @@ interface Props {
 }
 
 export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose }) => {
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || '$';
   const [showPrice, setShowPrice] = useState(true);
   const [showName, setShowName] = useState(true);
   const [showSKU, setShowSKU] = useState(true);
   const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({});
+  const [barcodeDataUrls, setBarcodeDataUrls] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    if (!open || mode !== 'qrcode') return;
+    if (!open) return;
     const generate = async () => {
       setGenerating(true);
-      const urls: Record<string, string> = {};
+      const qrUrls: Record<string, string> = {};
+      const bcUrls: Record<string, string> = {};
       for (const item of items) {
-        try { urls[item.id] = await QRCode.toDataURL(item.id || item.sku || item.name, { width: 150, margin: 1 }); } catch { urls[item.id] = ''; }
+        const barcodeText = item.barcode || item.sku || item.id || item.name;
+        if (barcodeText) {
+          bcUrls[item.id] = generateBarcodeDataUrl(barcodeText, { height: 50, width: 2, margin: 5, fontSize: 10 });
+        }
+        if (mode === 'qrcode') {
+          try { qrUrls[item.id] = await QRCode.toDataURL(item.id || item.sku || item.name, { width: 150, margin: 1 }); } catch { qrUrls[item.id] = ''; }
+        }
       }
-      setQrDataUrls(urls);
+      setBarcodeDataUrls(bcUrls);
+      setQrDataUrls(qrUrls);
       setGenerating(false);
     };
     generate();
@@ -52,13 +65,11 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
     }
   `;
 
-  const renderBarcode = () => (
-    <div className="h-10 w-full flex justify-center items-end gap-[1.5px] overflow-hidden my-1 opacity-80">
-      {Array.from({ length: 50 }).map((_, i) => (
-        <div key={i} className="bg-black shrink-0" style={{ width: Math.random() > 0.5 ? '2.5px' : '1.5px', height: Math.random() > 0.5 ? '100%' : '75%' }} />
-      ))}
-    </div>
-  );
+  const renderBarcode = (item: Item) => {
+    const url = barcodeDataUrls[item.id];
+    if (!url) return null;
+    return <img src={url} alt={`Barcode ${item.barcode}`} className="h-10 w-full object-contain" />;
+  };
 
   const getLabelStyle = () => {
     if (mode === 'barcode' || mode === 'label') return { width: '50mm', height: '30mm' };
@@ -111,11 +122,11 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
                 <div key={`${item.id}-${idx}`} className="bg-white border border-[#E5E8E1] rounded-lg flex flex-col items-center justify-center text-center p-3 shadow-sm print-label" style={getLabelStyle()}>
                   {mode === 'qrcode' && qrDataUrls[item.id] ? (
                     <img src={qrDataUrls[item.id]} alt={`QR for ${item.name}`} className="w-24 h-24" />
-                  ) : mode === 'barcode' ? renderBarcode() : null}
-                  {mode === 'label' && renderBarcode()}
+                  ) : mode === 'barcode' ? renderBarcode(item) : null}
+                  {mode === 'label' && renderBarcode(item)}
                   {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2 mt-1" style={{ color: '#16201B' }}>{item.name}</div>}
                   {showSKU && <div className="text-[7px] font-mono mt-0.5" style={{ color: '#9CA59E' }}>{item.sku}</div>}
-                  {showPrice && <div className="text-[10px] font-bold mt-0.5" style={{ color: '#128C72' }}>${(item.sellingPrice || item.price || 0).toFixed(2)}</div>}
+                  {showPrice && <div className="text-[10px] font-bold mt-0.5" style={{ color: '#128C72' }}>{currency}{(item.sellingPrice || item.price || 0).toFixed(2)}</div>}
                 </div>
               ))}
             </div>

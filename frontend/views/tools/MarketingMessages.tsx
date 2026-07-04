@@ -46,6 +46,8 @@ const MarketingMessages: React.FC = () => {
   const [showTemplatePreview, setShowTemplatePreview] = useState<WhatsAppTemplate | null>(null);
   const [showCampaignPreview, setShowCampaignPreview] = useState(false);
   const [showTemplatePreviewModal, setShowTemplatePreviewModal] = useState(false);
+  const [showSendTemplateModal, setShowSendTemplateModal] = useState(false);
+  const [resolvedVars, setResolvedVars] = useState<Record<string, string>>({});
   const [viewingCampaign, setViewingCampaign] = useState<WhatsAppCampaign | null>(null);
   const [editingFlow, setEditingFlow] = useState<AutomationFlow | null>(null);
   const [campaignTarget, setCampaignTarget] = useState<'customers' | 'manual' | 'group'>('customers');
@@ -383,23 +385,125 @@ const MarketingMessages: React.FC = () => {
     initWhatsApp();
   }, []);
 
-  const quickReply = useCallback(async (template: WhatsAppTemplate) => {
+  const resolveCustomerVariables = useCallback(async (customerId: string, customerName: string): Promise<Record<string, string>> => {
+    const vars: Record<string, string> = {
+      name: customerName,
+      company: companyConfig?.companyName || 'Our Company',
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      location: companyConfig?.address || companyConfig?.companyName || 'Our Store',
+    };
+
+    try {
+      const salesStore = (await import('../../stores/salesStore')).useSalesStore.getState();
+      const customerSales = salesStore.sales.filter((s: any) =>
+        s.customerId === customerId || s.customerName?.toLowerCase() === customerName.toLowerCase()
+      );
+      const customerOrders = salesStore.salesOrders.filter((o: any) =>
+        o.customerId === customerId
+      );
+      const customerQuotes = salesStore.quotations.filter((q: any) =>
+        q.customerId === customerId || q.customerName?.toLowerCase() === customerName.toLowerCase()
+      );
+      const customerInvoices = salesStore.salesInvoices?.filter((i: any) =>
+        i.customerId === customerId || i.customerName?.toLowerCase() === customerName.toLowerCase()
+      ) || [];
+
+      const lastSale = customerSales[customerSales.length - 1];
+      const lastOrder = customerOrders[customerOrders.length - 1];
+      const lastQuote = customerQuotes[customerQuotes.length - 1];
+      const lastInvoice = customerInvoices[customerInvoices.length - 1];
+
+      if (lastSale) {
+        vars.orderId = lastSale.id;
+        vars.amount = lastSale.totalAmount?.toFixed(2) || '0.00';
+        vars.price = lastSale.totalAmount?.toFixed(2) || '0.00';
+        if (lastSale.items?.length > 0) {
+          vars.product = lastSale.items[0].productName || lastSale.items[0].name || lastSale.items[0].description || 'Product';
+          vars.quantity = String(lastSale.items[0].quantity || 1);
+        }
+      }
+      if (lastOrder) {
+        if (!vars.orderId) vars.orderId = lastOrder.id;
+        vars.dueDate = lastOrder.deliveryDate ? new Date(lastOrder.deliveryDate).toLocaleDateString() : '';
+        if (lastOrder.items?.length > 0) {
+          vars.product = lastOrder.items[0].description || vars.product || 'Product';
+          vars.quantity = String(lastOrder.items[0].quantity || vars.quantity || 1);
+        }
+        if (!vars.amount) vars.amount = lastOrder.total?.toFixed(2) || '';
+        if (!vars.price) vars.price = lastOrder.total?.toFixed(2) || '';
+      }
+      if (lastQuote) {
+        vars.quoteId = lastQuote.id;
+        if (!vars.amount) vars.amount = (lastQuote.totalAmount || lastQuote.total || 0).toFixed(2);
+        if (!vars.product && lastQuote.items?.length > 0) {
+          vars.product = lastQuote.items[0].productName || lastQuote.items[0].name || lastQuote.items[0].description || 'Product';
+        }
+        if (lastQuote.validUntil) vars.validUntil = new Date(lastQuote.validUntil).toLocaleDateString();
+      }
+      if (lastInvoice) {
+        vars.invoiceId = lastInvoice.id;
+        if (!vars.amount) vars.amount = (lastInvoice.totalAmount || lastInvoice.total || 0).toFixed(2);
+        if (lastInvoice.dueDate) vars.dueDate = new Date(lastInvoice.dueDate).toLocaleDateString();
+      }
+
+      if (customerSales.length > 1) {
+        const prevSale = customerSales[customerSales.length - 2];
+        if (prevSale) {
+          vars.originalDate = prevSale.date ? new Date(prevSale.date).toLocaleDateString() : '';
+        }
+      }
+    } catch {}
+
+    return vars;
+  }, [companyConfig]);
+
+  const handleSendTemplate = useCallback(async (template: WhatsAppTemplate) => {
     if (!selectedChat) return;
-    
+    const vars = await resolveCustomerVariables(selectedChat.customerId, selectedChat.customerName);
+
     let message = template.content;
-    message = message.replace(/{{name}}/g, selectedChat.customerName || 'Customer');
-    message = message.replace(/{{company}}/g, companyConfig?.companyName || 'Our Company');
-    
+    for (const [key, value] of Object.entries(vars)) {
+      if (value) message = message.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+
     await whatsAppMarketingService.sendMessage(selectedChat.id, message);
     await whatsAppMarketingService.incrementTemplateUsage(template.id);
-    
+
     const updatedChats = await whatsAppMarketingService.getChats();
     setChats(updatedChats);
     const updated = updatedChats.find(c => c.id === selectedChat.id);
     if (updated) setSelectedChat(updated);
     setShowTemplatePreview(null);
-    notify('Quick reply sent!', 'success');
-  }, [selectedChat, companyConfig?.companyName, notify]);
+    notify('Template sent!', 'success');
+  }, [selectedChat, resolveCustomerVariables, notify]);
+
+  const handlePreviewSendTemplate = useCallback(async (template: WhatsAppTemplate) => {
+    if (!selectedChat) return;
+    const vars = await resolveCustomerVariables(selectedChat.customerId, selectedChat.customerName);
+    setResolvedVars(vars);
+    setShowSendTemplateModal(true);
+  }, [selectedChat, resolveCustomerVariables]);
+
+  const handleConfirmSendTemplate = useCallback(async () => {
+    if (!showTemplatePreview || !selectedChat) return;
+
+    let message = showTemplatePreview.content;
+    for (const [key, value] of Object.entries(resolvedVars)) {
+      if (value) message = message.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+
+    await whatsAppMarketingService.sendMessage(selectedChat.id, message);
+    await whatsAppMarketingService.incrementTemplateUsage(showTemplatePreview.id);
+
+    const updatedChats = await whatsAppMarketingService.getChats();
+    setChats(updatedChats);
+    const updated = updatedChats.find(c => c.id === selectedChat.id);
+    if (updated) setSelectedChat(updated);
+    setShowTemplatePreview(null);
+    setShowSendTemplateModal(false);
+    notify('Template sent!', 'success');
+  }, [showTemplatePreview, selectedChat, resolvedVars, notify]);
 
   const handlePreviewCampaign = () => {
     if (!campaignForm.message.trim()) {
@@ -883,7 +987,7 @@ const MarketingMessages: React.FC = () => {
                 <p className="text-xs text-amber-700 mb-2 line-clamp-2">{showTemplatePreview.content}</p>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => quickReply(showTemplatePreview)}
+                    onClick={() => handlePreviewSendTemplate(showTemplatePreview)}
                     className="flex-1 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600"
                   >
                     Send Template
@@ -2463,9 +2567,98 @@ const MarketingMessages: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Send Template Preview Modal */}
+      {showSendTemplateModal && showTemplatePreview && selectedChat && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-auto shadow-2xl">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Send Template</h2>
+                <p className="text-xs text-slate-500">{showTemplatePreview.name}</p>
+              </div>
+              <button onClick={() => setShowSendTemplateModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">To</label>
+                <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3">
+                  <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 text-xs font-bold">
+                    {selectedChat.customerName?.charAt(0) || '?'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{selectedChat.customerName}</p>
+                    <p className="text-xs text-slate-400">{selectedChat.customerPhone}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Message Preview</label>
+                <div className="bg-slate-100 rounded-xl p-4">
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 max-w-sm ml-auto shadow-sm">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {(() => {
+                        let preview = showTemplatePreview.content;
+                        for (const [key, value] of Object.entries(resolvedVars)) {
+                          if (value) preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+                        }
+                        return preview;
+                      })()}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2 text-right">
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                  Variables <span className="text-slate-300 font-normal lowercase">(edit if needed)</span>
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {Object.entries(resolvedVars).filter(([, v]) => v).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1.5 rounded-lg shrink-0 min-w-[70px] text-center">
+                        {'{{'}{key}{'}}'}
+                      </span>
+                      <input
+                        type="text"
+                        value={resolvedVars[key] || ''}
+                        onChange={(e) => setResolvedVars(prev => ({ ...prev, [key]: e.target.value }))}
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                  ))}
+                  {Object.keys(resolvedVars).filter(k => resolvedVars[k]).length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-4">No variables used in this template</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowSendTemplateModal(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSendTemplate}
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <Send size={16} /> Send
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-
-
   );
 };
 

@@ -12,6 +12,7 @@ import { generateNextSalesInvoiceNumber } from '../services/documentNumberServic
 import { isBefore, isWithinInterval, parseISO } from 'date-fns';
 import { logger } from '../services/logger';
 import { workflowService } from '../services/workflowService';
+import { workflowService as autoWorkflowService } from '../services/automatedWorkflowService';
 import { customerNotificationService } from '../services/customerNotificationService';
 
 interface FinanceContextType {
@@ -417,6 +418,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
         
         notify(`Invoice #${invoiceId} processed successfully`, "success");
+        autoWorkflowService.fireEvent('invoice.created', { invoiceId, amount: finalizedInvoice.totalAmount, customerName: finalizedInvoice.customerName }).catch(() => {});
 
         // Trigger Customer Notification (Exclude POS if possible)
         const isPosInvoice = finalizedInvoice.notes?.includes('POS') || finalizedInvoice.sourceType === 'POS' || finalizedInvoice.reference?.includes('POS');

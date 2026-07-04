@@ -24,8 +24,7 @@ const DataImport: React.FC = () => {
 
   const typeMeta: Record<string, { inventoryRole: InventoryRole; productType: ProductType; resourceSubtype?: ResourceSubtype }> = {
     'Raw Material': { inventoryRole: 'internal', productType: 'INVENTORY', resourceSubtype: 'raw_material' },
-    'Material': { inventoryRole: 'internal', productType: 'INVENTORY', resourceSubtype: 'consumable' },
-    'Consumable': { inventoryRole: 'internal', productType: 'INVENTORY', resourceSubtype: 'consumable' },
+    'Material': { inventoryRole: 'internal', productType: 'INVENTORY', resourceSubtype: 'raw_material' },
     'Stationery': { inventoryRole: 'both', productType: 'INVENTORY' },
     'Product': { inventoryRole: 'sellable', productType: 'MANUFACTURED' },
     'Service': { inventoryRole: 'sellable', productType: 'SERVICE' },

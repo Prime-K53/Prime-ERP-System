@@ -394,17 +394,27 @@ dbService.getAll<BOMTemplate>('bomTemplates')
         logger.error('Failed to load BOM templates for variant pricing', err);
     })
     .finally(() => { if (mounted) setBomLoading(false); });
-        // Load finishing option costs (saved settings) to match SmartPricing UI
-        dbService.getSetting<Record<string, number>>('finishingOptionCosts')
-            .then(savedCosts => {
+        // Load finishing option costs: companyConfig > IndexedDB > hard-coded defaults
+        const resolveFinishingPrices = async () => {
+            const configOptions = companyConfig?.productionSettings?.finishingOptions;
+            if (configOptions && configOptions.length > 0) {
+                const merged = DEFAULT_FINISHING_BUTTONS.map(d => ({
+                    ...d,
+                    cost: configOptions.find(o => o.id === d.id)?.price ?? d.cost,
+                }));
+                if (mounted) setFinishingButtons(merged);
+                return;
+            }
+            try {
+                const savedCosts = await dbService.getSetting<Record<string, number>>('finishingOptionCosts');
                 if (!mounted) return;
                 const merged = DEFAULT_FINISHING_BUTTONS.map(d => ({ ...d, cost: savedCosts?.[d.id] ?? d.cost }));
                 setFinishingButtons(merged);
-            })
-            .catch(() => {
-                // fallback to defaults
-                setFinishingButtons(DEFAULT_FINISHING_BUTTONS);
-            });
+            } catch {
+                if (mounted) setFinishingButtons(DEFAULT_FINISHING_BUTTONS);
+            }
+        };
+        resolveFinishingPrices();
         return () => { mounted = false; };
     }, []);
 
@@ -1563,7 +1573,7 @@ dbService.getAll<BOMTemplate>('bomTemplates')
                                               >
                                                   <option value="">Select subtype...</option>
                                                   <option value="raw_material">Raw Material</option>
-                                                  <option value="consumable">Consumable</option>
+
                                                   <option value="packaging">Packaging</option>
                                                   <option value="spare_part">Spare Part</option>
                                               </select>

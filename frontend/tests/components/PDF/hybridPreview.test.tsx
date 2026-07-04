@@ -45,11 +45,11 @@ describe('NativePdfPreview', () => {
 
   it('renders empty state when no source provided', () => {
     render(<NativePdfPreview source={null} />);
-    expect(screen.getByText('No preview available yet.')).toBeInTheDocument();
+    expect(screen.getByText('No preview available')).toBeInTheDocument();
   });
 
   it('shows preparing state when source is provided', async () => {
     render(<NativePdfPreview source={mockPdfBlob} title="Test PDF" />);
-    expect(screen.getByText('Preparing PDF...')).toBeInTheDocument();
+    expect(screen.getByText('Preparing PDF\u2026')).toBeInTheDocument();
   });
 });

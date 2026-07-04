@@ -11,6 +11,14 @@ const localStorageMock = {
 };
 Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 
+// Mock db service
+vi.mock('../../../services/db', () => ({
+  dbService: {
+    getSetting: vi.fn(async () => undefined),
+    saveSetting: vi.fn(async () => undefined),
+  },
+}));
+
 // Mock notification service
 vi.mock('../../../services/notificationService', () => ({
   notify: vi.fn(),
@@ -473,8 +481,8 @@ describe('WorkflowService', () => {
         { amount: 50 } // Less than 100
       );
 
-      // Should have moved to step 2 or completed
-      expect(instance.status).not.toBe('pending');
+      // Should have moved to step 2 (but step 2 still requires approval)
+      expect(instance.currentStepId).toBe('STEP-2');
     });
 
     it('should not auto-approve when condition is not met', async () => {

@@ -5,6 +5,8 @@ import { dbService } from '../../../services/db';
 import { normalizeInventoryItemPricing } from '../../../utils/pricing';
 import { generateAutoSKU } from '../../../utils/skuGenerator';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup } from '../../../services/pricingValidationService';
+import { useAuth } from '../../../context/AuthContext';
+import { aiService } from '../../../services/ai/aiService';
 
 interface Props {
   item?: Item | null;
@@ -37,8 +39,10 @@ const defaultFinishingOptions: FinishingOption[] = [
 const DEFAULT_MARKUP_PCT = 25;
 
 const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems = [], sourceTab }) => {
-  const isProduct = sourceTab === 'product';
-  const entityType = isProduct ? 'Product' : 'Service';
+  const { companyConfig } = useAuth();
+  const isProduct = sourceTab === 'product' || item?.type === 'Product' || (item as any)?.classification === 'product';
+  const isStationery = sourceTab === 'stationery' || item?.type === 'Stationery' || (item as any)?.classification === 'stationery';
+  const entityType = isStationery ? 'Stationery' : isProduct ? 'Product' : 'Service';
   const inventory = useMemo(() => allItems.map(normalizeInventoryItemPricing), [allItems]);
   const [activeTab, setActiveTab] = useState<PrintingTab>('basicInfo');
   const [saving, setSaving] = useState(false);
@@ -46,32 +50,49 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [name, setName] = useState(item?.name || '');
   const [sku, setSku] = useState(item?.sku || '');
   const [description, setDescription] = useState(item?.description || '');
-  const [category, setCategory] = useState(item?.category || (isProduct ? 'Products' : 'Printing Service'));
+  const [category, setCategory] = useState(item?.category || (isStationery ? 'Stationery' : isProduct ? 'Products' : 'Printing Service'));
   const [status, setStatus] = useState<'Active' | 'Archived'>((item as any)?.status === 'Archived' ? 'Archived' : 'Active');
   const [favorite, setFavorite] = useState(!!(item as any)?.favorite);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [hasVariants, setHasVariants] = useState(false);
+  const [hasVariants, setHasVariants] = useState(!!(item as any)?.hasVariants || !!((item as any)?.variants?.length > 0));
   const [pages, setPages] = useState(() => (item as any)?.smartPricing?.pages || (item as any)?.pages || 1);
   const [copies] = useState(1);
   const [sellingPrice, setSellingPrice] = useState(() => Number((item as any)?.sellingPrice || (item as any)?.price || 0));
-  const [selectedPaperId, setSelectedPaperId] = useState('');
-  const [selectedTonerId, setSelectedTonerId] = useState('');
-  const [printSides, setPrintSides] = useState<'single' | 'double'>('double');
-  const [paperType, setPaperType] = useState<'paper' | 'cover'>('paper');
-  const [fileType, setFileType] = useState<'excel' | 'word'>('excel');
+  const [selectedPaperId, setSelectedPaperId] = useState(() => (item as any)?.pricingConfig?.paperId || (item as any)?.smartPricing?.paperItemId || '');
+  const [selectedTonerId, setSelectedTonerId] = useState(() => (item as any)?.pricingConfig?.tonerId || (item as any)?.smartPricing?.tonerItemId || '');
+  const [printSides, setPrintSides] = useState<'single' | 'double'>((item as any)?.printSides || 'double');
+  const [paperType, setPaperType] = useState<'paper' | 'cover'>((item as any)?.paperType || 'paper');
+  const [fileType, setFileType] = useState<'excel' | 'word'>((item as any)?.fileType || 'excel');
   const [finishingOptions, setFinishingOptions] = useState<FinishingOption[]>(() => {
     const saved = (item as any)?.printFinishing || (item as any)?.pricingConfig?.finishingOptions || [];
+    const configOptions = companyConfig?.productionSettings?.finishingOptions;
+    const baseOptions = configOptions?.length ? configOptions : defaultFinishingOptions;
     if (saved.length > 0) {
-      return defaultFinishingOptions.map(o => ({
+      return baseOptions.map(o => ({
         ...o,
         enabled: saved.some((f: any) => f.id === o.id || f === o.name),
         price: saved.find((f: any) => f.id === o.id)?.price ?? o.price,
       }));
     }
-    return structuredClone(defaultFinishingOptions);
+    return structuredClone(baseOptions);
   });
-  const [saveVariants, setSaveVariants] = useState<Array<{ id: string; attribute: string; pages: number; basePrice: number; sellingPrice: number; suggestedPrice?: number }>>([]);
+  const [saveVariants, setSaveVariants] = useState<Array<{ id: string; attribute: string; pages: number; basePrice: number; sellingPrice: number; suggestedPrice?: number }>>(() => {
+    const existingVariants = (item as any)?.variants;
+    if (existingVariants?.length > 0) {
+      const flatCost = 0;
+      const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + DEFAULT_MARKUP_PCT / 100)).toFixed(2)) : 0;
+      return existingVariants.map((v: any) => ({
+        id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        attribute: v.attribute || '',
+        pages: v.pages || 1,
+        basePrice: 0,
+        sellingPrice: v.sellingPrice || 0,
+        suggestedPrice: suggested,
+      }));
+    }
+    return [];
+  });
 
   const [paperExpanded, setPaperExpanded] = useState(true);
   const [finishingExpanded, setFinishingExpanded] = useState(true);
@@ -82,6 +103,14 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   useEffect(() => {
     (async () => {
+      const configOptions = companyConfig?.productionSettings?.finishingOptions;
+      if (configOptions?.length) {
+        setFinishingOptions(prev => prev.map(o => ({
+          ...o,
+          price: configOptions.find(c => c.id === o.id)?.price ?? o.price,
+        })));
+        return;
+      }
       try {
         const savedCosts = await dbService.getSetting<Record<string, number>>('finishingOptionCosts');
         if (savedCosts) {
@@ -89,7 +118,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         }
       } catch {}
     })();
-  }, []);
+  }, [companyConfig]);
 
   const isRawMat = (i: Item) => i.type === 'Raw Material' || i.type === 'Material';
 
@@ -235,10 +264,18 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [generatedDescription, setGeneratedDescription] = useState(item?.description || description || '');
   const [showAiDescription, setShowAiDescription] = useState(false);
 
-  const handleAiDescribe = () => {
-    const desc = autoGenerateDescription();
-    setDescription(desc);
-    setGeneratedDescription(desc);
+  const handleAiDescribe = async () => {
+    const enabledFinishing = finishingOptions.filter(o => o.enabled).map(o => o.name.toLowerCase()).join(', ');
+    const prompt = `Generate a short professional printing service description for: name="${name}", category="${category || 'General Printing'}", sides="${printSides}", paper="${selectedPaper?.name || paperType}", finishing="${enabledFinishing || 'none'}". 1-2 sentences only.`;
+    try {
+      const desc = await aiService.generateAIResponse(prompt);
+      setDescription(desc);
+      setGeneratedDescription(desc);
+    } catch {
+      const desc = autoGenerateDescription();
+      setDescription(desc);
+      setGeneratedDescription(desc);
+    }
   };
 
   const formatCurrency = (value: number) => `${currency} ${value.toFixed(2)}`;
@@ -325,8 +362,8 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         name: nameTrimmed,
         sku: sku.trim() || generateAutoSKU(entityType, nameTrimmed, undefined, inventory),
         type: entityType as any,
-        classification: isProduct ? 'Product' : 'printing_service',
-        category: category || (isProduct ? 'Products' : 'Printing Service'),
+        classification: isStationery ? 'Stationery' : isProduct ? 'Product' : 'printing_service',
+        category: category || (isStationery ? 'Stationery' : isProduct ? 'Products' : 'Printing Service'),
         unit: item?.unit || 'Booklet',
         description: description || generatedDescription || item?.description,
         status,
@@ -374,7 +411,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             baseCost,
           } as Item['smartPricing'],
         } : {}),
-        ...(isProduct ? {} : {
+        ...(isProduct || isStationery ? {} : {
           printType: 'Digital' as const,
           printingServiceType: 'printing' as const,
           printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
@@ -429,8 +466,8 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             name: `${nameTrimmed} - ${variant.attribute.trim()}`,
             sku: generateAutoSKU(entityType, `${nameTrimmed} ${variant.attribute.trim()}`, undefined, inventory),
             type: entityType as any,
-            classification: isProduct ? 'Product' : 'printing_service',
-            category: category || (isProduct ? 'Products' : 'Printing Service'),
+            classification: isStationery ? 'Stationery' : isProduct ? 'Product' : 'printing_service',
+            category: category || (isStationery ? 'Stationery' : isProduct ? 'Products' : 'Printing Service'),
             unit: 'Booklet',
             status,
             favorite,
@@ -476,7 +513,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               finishingInventoryCost: finishingInventoryCost,
               baseCost: varCost,
             } as Item['smartPricing'],
-            ...(isProduct ? {} : {
+            ...(isProduct || isStationery ? {} : {
               printType: 'Digital' as const,
               printingServiceType: 'printing' as const,
               printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
@@ -537,7 +574,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const renderBasicInfoTab = () => (
     <div className="space-y-4">
       <div className={premiumCard}>
-        {renderCardHeader(<FileText size={15} className="text-white" />, `${isProduct ? 'Product' : 'Service'} Information`)}
+        {renderCardHeader(<FileText size={15} className="text-white" />, `${isStationery ? 'Stationery' : isProduct ? 'Product' : 'Service'} Information`)}
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1">
             <label className={premiumLabel}><FileText size={12} /> {entityType} Name *</label>
@@ -743,7 +780,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               {availablePaperItems.length > 0 ? (
                 <div className="relative">
                   <select value={selectedPaperId} onChange={e => setSelectedPaperId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200/80 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-sm bg-white/80 backdrop-blur-sm appearance-none cursor-pointer">
+                    className={premiumSelect}>
                     {availablePaperItems.map(p => (
                       <option key={p.id} value={p.id}>{p.name} - {currency} {getItemCost(p).toFixed(2)}/{p.unit || 'unit'} (Stock: {p.stock || 0})</option>
                     ))}
@@ -767,7 +804,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               {tonerItems.length > 0 ? (
                 <div className="relative">
                   <select value={selectedTonerId} onChange={e => setSelectedTonerId(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200/80 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-sm bg-white/80 backdrop-blur-sm appearance-none cursor-pointer">
+                    className={premiumSelect}>
                     {tonerItems.map(t => (
                       <option key={t.id} value={t.id}>{t.name} - {currency} {getItemCost(t).toFixed(2)}/{t.unit || 'unit'} (Stock: {t.stock || 0})</option>
                     ))}
@@ -1032,14 +1069,14 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             <div className="flex gap-3 mt-6">
               {activeTab !== 'variants' && (
                 <button type="button" onClick={handleSave} disabled={saving || (!hasVariants && (sellingPrice <= 0 || !validation.valid))}
-                  className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:shadow-none text-sm flex items-center justify-center gap-2">
-                  {saving ? <>Saving...</> : <><Zap size={16} /> Save {entityType}</>}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+                  {saving ? <>Saving...</> : <><Zap size={14} /> Save {entityType}</>}
                 </button>
               )}
               {activeTab === 'variants' && (
                 <button type="button" onClick={handleSave} disabled={saving}
-                  className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:shadow-none text-sm flex items-center justify-center gap-2">
-                  {saving ? <>Saving...</> : <><Zap size={16} /> Save {entityType}</>}
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+                  {saving ? <>Saving...</> : <><Zap size={14} /> Save {entityType}</>}
                 </button>
               )}
             </div>
@@ -1139,7 +1176,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             )}
 
             <button type="button" onClick={handleSave} disabled={saving || (!hasVariants && (sellingPrice <= 0 || !validation.valid))}
-              className="w-full mt-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:shadow-none text-xs flex items-center justify-center gap-2">
+              className="w-full mt-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2">
               {saving ? 'Saving...' : <><Zap size={14} /> Save</>}
             </button>
           </div>

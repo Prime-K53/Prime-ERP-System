@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, CreditCard, Barcode, Upload, MessageSquare, TrendingUp, Database } from 'lucide-react';
+import { Wrench, CreditCard, Barcode, Upload, MessageSquare, TrendingUp, Database, Package, FileText, Activity } from 'lucide-react';
 import GenericHub from './GenericHub';
 
 const InternalToolsHub: React.FC = () => {
@@ -38,6 +38,27 @@ const InternalToolsHub: React.FC = () => {
       path: '/internal-tools/legacy-migration',
       icon: <Database />,
       color: 'bg-amber-50 text-amber-500'
+    },
+    {
+      label: 'Asset Management',
+      description: 'Track printers, vehicles, equipment, and other physical assets.',
+      path: '/internal-tools/assets',
+      icon: <Package />,
+      color: 'bg-indigo-50 text-indigo-500'
+    },
+    {
+      label: 'Document Templates',
+      description: 'Design custom document layouts for invoices, receipts, and reports.',
+      path: '/internal-tools/template-builder',
+      icon: <FileText />,
+      color: 'bg-purple-50 text-purple-500'
+    },
+    {
+      label: 'API Usage Monitor',
+      description: 'Monitor API consumption, rate limits, latency, and error rates.',
+      path: '/internal-tools/api-usage',
+      icon: <Activity />,
+      color: 'bg-rose-50 text-rose-500'
     }
   ];
 

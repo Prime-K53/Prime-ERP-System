@@ -464,9 +464,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
                 const isPopup = item.isPopup;
                 const active = (item.path && isActive(item.path)) || item.subItems?.some(s => isActive(s.path));
 
+                const tourAttr = item.label === 'Dashboard' ? 'dashboard' : item.label === 'Sales Flow' ? 'sales' : item.label === 'Production' ? 'production' : item.label === 'System Settings' ? 'settings' : undefined;
+
                 return (
                     <div key={item.label} ref={isPopup ? settingsMenuRef : undefined}>
                     <button
+                      data-tour={tourAttr}
                       ref={isPopup ? settingsButtonRef : undefined}
                       title={isCompressed ? item.label : undefined}
                       onClick={(e) => {
@@ -554,6 +557,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
                           return (
                             <button
                               key={sub.path}
+                              data-tour={sub.label === 'Master Inventory' ? 'inventory' : undefined}
                               onClick={() => {
                                 if (sub.path === '/sales-flow/pos') {
                                   setIsPosModalOpen(true);

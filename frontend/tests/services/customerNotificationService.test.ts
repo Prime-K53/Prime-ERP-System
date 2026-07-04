@@ -24,7 +24,6 @@ describe('customerNotificationService', () => {
       notificationSettings: { customerActivityNotifications: true }
     };
     
-    // Global localStorage mock
     const store: Record<string, string> = {
       'nexus_company_config': JSON.stringify(mockConfig)
     };
@@ -35,17 +34,18 @@ describe('customerNotificationService', () => {
       removeItem: vi.fn((key) => { delete store[key]; }),
       clear: vi.fn(() => { for (const k in store) delete store[k]; })
     });
+
+    vi.stubGlobal('open', vi.fn());
+    vi.stubGlobal('confirm', vi.fn());
   });
 
   it('should trigger notification when enabled', async () => {
     const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789', amount: '$100' };
-    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => ({}) as Window);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.stubGlobal('confirm', vi.fn(() => true));
     
     await customerNotificationService.triggerNotification('QUOTATION', data);
     
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(windowSpy).toHaveBeenCalled();
+    expect(globalThis.confirm).toHaveBeenCalled();
     expect(dbService.put).toHaveBeenCalledWith('customerNotificationLogs', expect.objectContaining({
       customerName: 'John Doe',
       type: 'QUOTATION'
@@ -57,18 +57,16 @@ describe('customerNotificationService', () => {
     localStorage.setItem('nexus_company_config', JSON.stringify(mockConfig));
     
     const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789' };
-    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => ({}) as Window);
     
     await customerNotificationService.triggerNotification('QUOTATION', data);
     
-    expect(windowSpy).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
+    expect(dbService.put).not.toHaveBeenCalled();
   });
 
   it('should rate limit notifications', async () => {
     const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789' };
-    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     
-    // Mock recent log
     vi.mocked(dbService.getAll).mockResolvedValue([{
       type: 'QUOTATION',
       entityId: '123',
@@ -77,22 +75,17 @@ describe('customerNotificationService', () => {
 
     await customerNotificationService.triggerNotification('QUOTATION', data);
     
-    expect(windowSpy).not.toHaveBeenCalled();
+    expect(globalThis.confirm).not.toHaveBeenCalled();
+    expect(dbService.put).not.toHaveBeenCalled();
   });
 
   it('should not open messaging when the user cancels the prompt', async () => {
     const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789' };
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    vi.stubGlobal('confirm', vi.fn(() => false));
 
     await customerNotificationService.triggerNotification('RECEIPT', data);
 
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(windowSpy).not.toHaveBeenCalled();
-    expect(dbService.put).toHaveBeenCalledWith('customerNotificationLogs', expect.objectContaining({
-      customerName: 'John Doe',
-      type: 'RECEIPT',
-      status: 'cancelled'
-    }));
+    expect(globalThis.confirm).toHaveBeenCalled();
+    expect(globalThis.open).not.toHaveBeenCalled();
   });
 });

@@ -28,6 +28,7 @@ import { format, parseISO, isAfter } from 'date-fns';
 import { attachDocumentSecurity } from '../../../utils/documentSecurity';
 import { AuditTimeline } from '../../shared/components/AuditTimeline';
 import AICustomerInsights from '../../../components/ai/AICustomerInsights';
+import CRMSegmentation from '../../../components/CRM/CRMSegmentation';
 
 interface CustomerWorkspaceProps {
   customer: Customer;
@@ -46,7 +47,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
   const { addAuditLog, companyConfig, auditLogs, notify } = useAuth();
   const currency = companyConfig?.currencySymbol || '$';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Settings' | 'Security Audit'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit'>('Overview');
   const [accountMenu, setAccountMenu] = useState<{ id: string, type: 'debit' | 'credit', x: number, y: number } | null>(null);
   const [viewingAccountId, setViewingAccountId] = useState<string | null>(null);
 
@@ -491,7 +492,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
         {/* Tab Navigation */}
         <div className="px-6 border-b border-slate-200 bg-white sticky top-[65px] z-10">
           <div className="flex items-center gap-8">
-            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Documents', 'Settings', 'Security Audit'] as const).map(tab => (
+            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Documents', 'Segmentation', 'Settings', 'Security Audit'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -787,6 +788,9 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           )}
 
+          {activeTab === 'Segmentation' && (
+            <CRMSegmentation />
+          )}
           {activeTab === 'Settings' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">

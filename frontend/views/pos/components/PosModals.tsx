@@ -91,8 +91,10 @@ export const PrintingVariantModal: React.FC<{
                 adjustmentsList
             );
 
+            const finishingCost = (result.breakdown || []).reduce((sum, item: any) => sum + (Number(item.amount) || 0), 0);
+
             setPricingState({
-                baseCost: result.cost,
+                baseCost: result.cost + finishingCost,
                 adjustmentTotal: result.adjustmentTotal,
                 sellingPrice: result.price,
                 adjustmentBreakdown: result.breakdown,

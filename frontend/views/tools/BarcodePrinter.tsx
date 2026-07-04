@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Printer, Plus, Minus, X, ScanLine, Box, FileText, Loader2, Download } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +7,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { useInventoryStore } from '../../stores/inventoryStore';
 import { Item } from '../../types';
 import html2canvas from 'html2canvas';
+import { generateBarcodeDataUrl } from '../../utils/barcodeGenerator';
 
 const BarcodePrinter: React.FC = () => {
     const { companyConfig, notify } = useAuth();
@@ -22,8 +23,21 @@ const BarcodePrinter: React.FC = () => {
     const [showName, setShowName] = useState(true);
     const [showSKU, setShowSKU] = useState(true);
 
+    const [barcodeDataUrls, setBarcodeDataUrls] = useState<Record<string, string>>({});
     const [searchParams] = useSearchParams();
     const initialized = useRef(false);
+
+    useEffect(() => {
+      const urls: Record<string, string> = {};
+      for (const p of printQueue) {
+        if (urls[p.item.id]) continue;
+        const barcodeText = p.item.barcode || p.item.sku || p.item.id || p.item.name;
+        if (barcodeText) {
+          urls[p.item.id] = generateBarcodeDataUrl(barcodeText, { height: 40, width: 1.5, margin: 3, fontSize: 8 });
+        }
+      }
+      setBarcodeDataUrls(urls);
+    }, [printQueue]);
 
     useEffect(() => {
         if ((!inventory || inventory.length === 0) && !isLoading) {
@@ -102,14 +116,11 @@ const BarcodePrinter: React.FC = () => {
 
     const remove = (id: string) => setPrintQueue(prev => prev.filter(p => p.item.id !== id));
 
-    // Simple visual barcode generation (CSS Stripes)
-    const BarcodeStrip = () => (
-        <div className="h-8 w-full flex justify-center items-end gap-[1px] overflow-hidden my-1 opacity-80">
-            {Array.from({ length: 40 }).map((_, i) => (
-                <div key={i} className="bg-black" style={{ width: Math.random() > 0.5 ? '2px' : '1px', height: Math.random() > 0.5 ? '100%' : '80%' }}></div>
-            ))}
-        </div>
-    );
+    const renderBarcode = (item: Item) => {
+        const url = barcodeDataUrls[item.id];
+        if (!url) return null;
+        return <img src={url} alt={`Barcode ${item.barcode}`} className="h-8 w-full object-contain my-1" />;
+    };
 
     const printStyles = `
         @media print {
@@ -233,7 +244,7 @@ const BarcodePrinter: React.FC = () => {
                                     }}
                                 >
                                     {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2">{item.name}</div>}
-                                    <BarcodeStrip/>
+                                    {renderBarcode(item)}
                                     {showSKU && <div className="text-[8px] font-mono text-slate-500">{item.sku}</div>}
                                     {showPrice && <div className="text-xs font-bold">{currency}{(item.sellingPrice || item.price || 0).toFixed(2)}</div>}
                                 </div>

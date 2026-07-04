@@ -694,7 +694,7 @@ export const BOMDialog: React.FC<BOMDialogProps> = ({ isOpen, onClose, batch }) 
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-slate-900">Material Section</div>
-                        <div className="text-xs text-slate-500">Raw materials and consumables</div>
+                        <div className="text-xs text-slate-500">Raw materials</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

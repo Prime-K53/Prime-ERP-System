@@ -15,8 +15,8 @@ interface Props {
   warehouses: string[];
 }
 
-const CLASSIFICATIONS = ['Raw Material', 'Consumable', 'Material', 'Product', 'Stationery', 'Service'];
-const INVENTORY_ROLES = ['raw_material', 'consumable', 'product', 'stationery'];
+const CLASSIFICATIONS = ['Raw Material', 'Product', 'Stationery', 'Service'];
+const INVENTORY_ROLES = ['raw_material', 'product', 'stationery'];
 const STATUSES = ['Active', 'Inactive', 'Pending'];
 const STOCK_STATUSES = ['in_stock', 'low_stock', 'out_of_stock', 'overstocked'];
 const TRACKING_OPTS = [

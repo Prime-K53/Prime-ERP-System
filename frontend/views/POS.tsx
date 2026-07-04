@@ -475,8 +475,8 @@ const POS: React.FC = () => {
 const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: number, printType: 'photocopy' | 'printing', pinningCost?: number, pinningCount?: number) => {
         const isPhotocopy = printType === 'photocopy';
         const pricePerPage = isPhotocopy 
-          ? (companyConfig.transactionSettings?.pos?.photocopyPrice || 2.00)
-          : (companyConfig.transactionSettings?.pos?.typePrintingPrice || 5.00);
+          ? (companyConfig.transactionSettings?.pos?.photocopyPrice ?? 2.00)
+          : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00);
 
         const costPerPage = isPhotocopy
           ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
@@ -1178,6 +1178,17 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
         fetchFinanceData?.()
       ]);
 
+      // Trigger customer notification if customer has a phone number
+      const customerPhone = selectedCustomer?.phone;
+      if (customerPhone) {
+        customerNotificationService.triggerNotification('SALES_ORDER', {
+          id: saleId,
+          customerName: selectedCustomerName || 'Walk-in',
+          phoneNumber: customerPhone,
+          amount: `${currency}${formatNumber(payableTotal)}`,
+        }).catch((err: any) => logger.error('[POS] Notification failed', err));
+      }
+
       const persistedSale = await dbService.get<Sale>('sales', saleId);
       const receiptSale: Sale = persistedSale || {
         ...saleData,
@@ -1534,15 +1545,18 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           open={quickPrintModal.open}
           type={quickPrintModal.type}
           pricePerPage={quickPrintModal.type === 'photocopy'
-            ? (companyConfig.transactionSettings?.pos?.photocopyPrice || 2.00)
-            : (companyConfig.transactionSettings?.pos?.typePrintingPrice || 5.00)}
+            ? (companyConfig.transactionSettings?.pos?.photocopyPrice ?? 2.00)
+            : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00)}
           costPerPage={quickPrintModal.type === 'photocopy'
             ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
             : (companyConfig.transactionSettings?.pos?.typePrintingCostPerPage ?? 1.20)}
           currency={currency}
           staplePrice={companyConfig.transactionSettings?.pos?.staplePrice}
           pinningItem={(() => {
-            const pinning = inventory.find(i => i.name?.toLowerCase().includes('staple') || i.name?.toLowerCase().includes('pin'));
+            const pinning = inventory.find(i => {
+                const name = i.name?.toLowerCase() || '';
+                return name.includes('staple') || /\bpins?\b/.test(name);
+            });
             if (!pinning) return null;
             const conversionRate = Number(pinning.conversionRate ?? pinning.conversion_rate ?? 1);
             return {

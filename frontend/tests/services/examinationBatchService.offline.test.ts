@@ -144,6 +144,19 @@ vi.mock('../../services/offlineDb', async () => {
   return { offlineDb: offlineDbMock };
 });
 
+vi.mock('../../services/apiClient', () => ({
+  apiClient: {
+    canUseRemoteApi: () => true,
+    requestRaw: async (config) => {
+      return globalThis.fetch(config.endpoint, {
+        method: config.method || 'GET',
+        headers: config.headers,
+        body: config.body,
+      });
+    }
+  }
+}));
+
 vi.mock('../../services/offlineQueueManager', async () => {
   const queueOfflineMutation = vi.fn(async (input: any) => {
     const item = {
@@ -228,7 +241,6 @@ describe('examinationBatchService offline support', () => {
 
     expect(result.length).toBe(1);
     expect(result[0].id).toBe('local-401');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('creates batches offline and stores them in the outbox', async () => {

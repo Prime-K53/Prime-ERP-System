@@ -6,7 +6,7 @@ import { EMPTY_FORM, CLASSIFICATION_STEPS } from '../types/itemFormTypes';
 import { formDataToItem, itemToFormData, calculatePricing } from '../services/itemFormService';
 import { canProceed } from '../validation/itemValidation';
 
-export function useItemForm(existingItem?: Item | null, currency?: string) {
+export function useItemForm(existingItem?: Item | null, currency?: string, allItems?: Item[]) {
   const [formData, setFormData] = useState<ItemFormData>(() => {
     if (existingItem) return itemToFormData(existingItem);
     return { ...EMPTY_FORM, ...(currency ? { currency } : {}) };
@@ -51,14 +51,14 @@ export function useItemForm(existingItem?: Item | null, currency?: string) {
 
   const pricingValidation = useMemo((): ValidationResult | null => {
     if (formData.sellingPrice > 0) {
-      return calculatePricing(formData.costPrice, formData.sellingPrice);
+      return calculatePricing(formData.costPrice, formData.sellingPrice, { category: formData.category, id: formData.id });
     }
     return null;
-  }, [formData.costPrice, formData.sellingPrice]);
+  }, [formData.costPrice, formData.sellingPrice, formData.category, formData.id]);
 
   const toItem = useCallback((id?: string): Item => {
-    return formDataToItem(formData, id, existingItem);
-  }, [formData, existingItem]);
+    return formDataToItem(formData, id, existingItem, allItems);
+  }, [formData, existingItem, allItems]);
 
   const reset = useCallback(() => {
     setFormData({ ...EMPTY_FORM, ...(currency ? { currency } : {}) });

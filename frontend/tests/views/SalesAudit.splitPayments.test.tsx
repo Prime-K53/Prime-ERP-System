@@ -4,9 +4,14 @@ import { render, screen, within } from '@testing-library/react';
 import SalesAudit from '../../views/reports/SalesAudit';
 
 const mockUseData = vi.fn();
+const mockUseAuth = vi.fn();
 
 vi.mock('../../context/DataContext', () => ({
   useData: () => mockUseData()
+}));
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => mockUseAuth()
 }));
 
 describe('SalesAudit split payment aggregation', () => {
@@ -14,6 +19,7 @@ describe('SalesAudit split payment aggregation', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-23T12:00:00.000Z'));
     mockUseData.mockReset();
+    mockUseAuth.mockReset();
   });
 
   afterEach(() => {
@@ -54,6 +60,17 @@ describe('SalesAudit split payment aggregation', () => {
       customerPayments: [],
       companyConfig: { currencySymbol: '$' },
       allUsers: [{ id: 'USER-1', name: 'Cashier One', fullName: 'Cashier One' }]
+    });
+
+    mockUseAuth.mockReturnValue({
+      companyConfig: { currencySymbol: '$' },
+      allUsers: [{ id: 'USER-1', name: 'Cashier One', fullName: 'Cashier One' }],
+      user: { id: 'test-user', email: 'test@example.com' },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      register: vi.fn(),
     });
 
     render(<SalesAudit />);

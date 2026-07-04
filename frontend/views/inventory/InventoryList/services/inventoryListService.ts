@@ -11,7 +11,6 @@ export interface InventoryStats {
   reservedStock: number;
   lowStockMaterials: number;
   rawValue?: number;
-  consumableValue?: number;
   productValue?: number;
   stationeryValue?: number;
   printingProfit?: number;
@@ -30,7 +29,7 @@ export async function fetchAllItems(): Promise<Item[]> {
 export function calculateStats(items: Item[]): InventoryStats {
   let rawMaterials = 0, nonStockServices = 0;
   let inventoryValue = 0, reservedStock = 0, lowStockMaterials = 0;
-  let rawValue = 0, consumableValue = 0, productValue = 0, stationeryValue = 0, printingProfit = 0;
+  let rawValue = 0, productValue = 0, stationeryValue = 0, printingProfit = 0;
 
   for (const item of items) {
     const type = item.type || item.classification || '';
@@ -50,7 +49,6 @@ export function calculateStats(items: Item[]): InventoryStats {
     inventoryValue += val;
     // bucket by classification for refined KPIs
     if (type === 'Raw Material' || role === 'raw_material') rawValue += val;
-    else if (type === 'Consumable') consumableValue += val;
     else if (type === 'Product') productValue += val;
     else if (type === 'Stationery') stationeryValue += val;
 
@@ -71,7 +69,6 @@ export function calculateStats(items: Item[]): InventoryStats {
     reservedStock,
     lowStockMaterials,
     rawValue,
-    consumableValue,
     productValue,
     stationeryValue,
     printingProfit,
@@ -110,26 +107,31 @@ export function getItemMargin(item: Item): number {
 }
 
 export function exportItemsToCSV(items: Item[]): void {
-  const data = items.map(item => ({
-    Name: item.name,
-    SKU: item.sku || '',
-    Barcode: item.barcode || '',
-    Type: item.type || '',
-    Category: item.category || '',
-    Brand: (item as Item & Record<string, unknown>).brand || '',
-    Unit: item.unit || '',
-    Stock: item.stock || 0,
-    Reserved: item.reserved || 0,
-    Available: (item.stock || 0) - (item.reserved || 0),
-    'Cost Price': item.costPrice || item.cost || 0,
-    'Selling Price': item.sellingPrice || item.price || 0,
-    'Inventory Value': (item.stock || 0) * (item.costPrice || item.cost || 0),
-    Status: item.status || 'Active',
-    Supplier: item.preferredSupplierId || '',
-    'Min Stock': item.minStockLevel || 0,
-    'Reorder Point': item.reorderPoint || 0,
-    Description: (item.description || '').replace(/,/g, ';'),
-  }));
+  const data = items.map(item => {
+    const variants = ((item as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+    const variantLabel = variants.length > 0 ? `${variants.length} variant${variants.length !== 1 ? 's' : ''}` : 'standard';
+    return {
+      Name: item.name,
+      SKU: item.sku || '',
+      Barcode: item.barcode || '',
+      Type: item.type || '',
+      Category: item.category || '',
+      Brand: (item as Item & Record<string, unknown>).brand || '',
+      Unit: item.unit || '',
+      Variants: variantLabel,
+      Stock: item.stock || 0,
+      Reserved: item.reserved || 0,
+      Available: (item.stock || 0) - (item.reserved || 0),
+      'Cost Price': item.costPrice || item.cost || 0,
+      'Selling Price': item.sellingPrice || item.price || 0,
+      'Inventory Value': (item.stock || 0) * (item.costPrice || item.cost || 0),
+      Status: item.status || 'Active',
+      Supplier: item.preferredSupplierId || '',
+      'Min Stock': item.minStockLevel || 0,
+      'Reorder Point': item.reorderPoint || 0,
+      Description: (item.description || '').replace(/,/g, ';'),
+    };
+  });
   exportToCSV(data, `inventory-export-${Date.now()}`);
 }
 

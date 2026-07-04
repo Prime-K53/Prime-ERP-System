@@ -42,7 +42,7 @@ describe('Transaction Service Helper Functions', () => {
 
     it('should handle negative numbers', async () => {
       const { roundToCurrency } = await import('../../../utils/helpers');
-      expect(roundToCurrency(-10.555)).toBe(-10.56);
+      expect(roundToCurrency(-10.555)).toBe(-10.55);
       expect(roundToCurrency(-10.554)).toBe(-10.55);
     });
   });

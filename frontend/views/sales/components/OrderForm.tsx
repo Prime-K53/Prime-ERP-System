@@ -1297,8 +1297,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: number, printType: 'photocopy' | 'printing', pinningCost?: number, pinningCount?: number) => {
         const isPhotocopy = printType === 'photocopy';
         const pricePerPage = isPhotocopy 
-          ? (companyConfig.transactionSettings?.pos?.photocopyPrice || 2.00)
-          : (companyConfig.transactionSettings?.pos?.typePrintingPrice || 5.00);
+          ? (companyConfig.transactionSettings?.pos?.photocopyPrice ?? 2.00)
+          : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00);
 
         const costPerPage = isPhotocopy
           ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
@@ -2839,15 +2839,18 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         onClose={() => setQuickPrintModal({ open: false, type: 'photocopy' })}
                         type={quickPrintModal.type}
                         pricePerPage={quickPrintModal.type === 'photocopy' 
-                            ? (companyConfig.transactionSettings?.pos?.photocopyPrice || 2.00)
-                            : (companyConfig.transactionSettings?.pos?.typePrintingPrice || 5.00)}
+                            ? (companyConfig.transactionSettings?.pos?.photocopyPrice ?? 2.00)
+                            : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00)}
                         costPerPage={quickPrintModal.type === 'photocopy'
                             ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
                             : (companyConfig.transactionSettings?.pos?.typePrintingCostPerPage ?? 1.20)}
                         currency={currency}
                         staplePrice={companyConfig.transactionSettings?.pos?.staplePrice}
                         pinningItem={(() => {
-                            const pinning = inventory.find(i => i.name?.toLowerCase().includes('staple') || i.name?.toLowerCase().includes('pin'));
+                            const pinning = inventory.find(i => {
+                                const name = i.name?.toLowerCase() || '';
+                                return name.includes('staple') || /\bpins?\b/.test(name);
+                            });
                             if (!pinning) return null;
                             const conversionRate = Number(pinning.conversionRate ?? pinning.conversion_rate ?? 1);
                             return {

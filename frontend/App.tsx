@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
+import OnboardingTour from './components/OnboardingTour';
 import { logger } from '@/services/logger';
 
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -131,6 +132,11 @@ const Tasks = lazyWithRetry('./views/Tasks', () => import('./views/Tasks'));
 const Reports = lazyWithRetry('./views/Reports', () => import('./views/Reports'));
 const Settings = lazyWithRetry('./views/Settings', () => import('./views/Settings'));
 const ChatApp = lazyWithRetry('./views/apps/ChatApp', () => import('./views/apps/ChatApp'));
+const AssetManagement = lazyWithRetry('./views/AssetManagement', () => import('./views/AssetManagement'));
+const CustomerPortal = lazyWithRetry('./views/portal/CustomerPortal', () => import('./views/portal/CustomerPortal'));
+const DocumentTemplateBuilder = lazyWithRetry('./views/tools/DocumentTemplateBuilder', () => import('./views/tools/DocumentTemplateBuilder'));
+const APIUsageDashboard = lazyWithRetry('./views/admin/APIUsageDashboard', () => import('./views/admin/APIUsageDashboard'));
+const SubscriptionsView = lazyWithRetry('./components/subscriptions/RecurringBilling', () => import('./components/subscriptions/RecurringBilling'));
 const UserManagement = lazyWithRetry('./views/admin/UserManagement', () => import('./views/admin/UserManagement'));
 const ProfileActivity = lazyWithRetry('./views/admin/ProfileActivity', () => import('./views/admin/ProfileActivity'));
 const Profile = lazyWithRetry('./views/Profile', () => import('./views/Profile'));
@@ -446,6 +452,8 @@ const AppLayout: React.FC = () => {
                 <Route path="/" element={<ErrorBoundary name="Dashboard"><Dashboard /></ErrorBoundary>} />
                 <Route path="/install" element={<PwaInstallPage />} />
                 <Route path="/search" element={<ErrorBoundary name="Search"><GlobalSearch /></ErrorBoundary>} />
+                <Route path="/portal" element={<CustomerPortal />} />
+                <Route path="/portal/:invoiceId" element={<CustomerPortal />} />
 
                 {/* Hierarchical Redirects - no error boundary needed */}
                 <Route path="/inventory" element={<Navigate to="/supply-chain/inventory" replace />} />
@@ -533,7 +541,7 @@ const AppLayout: React.FC = () => {
                   <Route path="/sales-flow/quotations" element={<ProtectedRoute permission="sales.view"><Orders /></ProtectedRoute>} />
                   <Route path="/sales-flow/orders" element={<ProtectedRoute permission="sales.view"><Orders /></ProtectedRoute>} />
                   <Route path="/sales-flow/invoices" element={<ProtectedRoute permission="sales.view"><Orders /></ProtectedRoute>} />
-                  <Route path="/sales-flow/subscriptions" element={<ProtectedRoute permission="sales.view"><Orders /></ProtectedRoute>} />
+                  <Route path="/sales-flow/subscriptions" element={<ProtectedRoute permission="sales.view"><SubscriptionsView /></ProtectedRoute>} />
                   <Route path="/sales-flow/exchanges" element={<ProtectedRoute permission="sales.view"><SalesExchanges /></ProtectedRoute>} />
                   <Route path="/sales-flow/leads" element={<ProtectedRoute permission="sales.view"><LeadBoard /></ProtectedRoute>} />
                   <Route path="/sales-flow/sales-orders" element={<ProtectedRoute permission="sales.view"><SalesOrdersView /></ProtectedRoute>} />
@@ -571,6 +579,9 @@ const AppLayout: React.FC = () => {
                   <Route path="/internal-tools/import" element={<DataImport />} />
                   <Route path="/internal-tools/chat" element={<ChatApp />} />
                   <Route path="/internal-tools/legacy-migration" element={<LegacyMigrationPage />} />
+                  <Route path="/internal-tools/assets" element={<AssetManagement />} />
+                  <Route path="/internal-tools/template-builder" element={<DocumentTemplateBuilder />} />
+                  <Route path="/internal-tools/api-usage" element={<APIUsageDashboard />} />
                 </Route>
 
                 {/* Smart Operations */}
@@ -622,6 +633,7 @@ const AppLayout: React.FC = () => {
         </main>
       </div>
       </div>
+      <OnboardingTour />
     </div>
   );
 };
