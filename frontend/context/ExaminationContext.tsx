@@ -120,15 +120,16 @@ interface ExaminationProviderProps {
 }
 
 const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  let timerId: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
     promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms)
-    )
-  ]);
+    new Promise<never>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms);
+    })
+  ]).finally(() => clearTimeout(timerId));
 };
 
-const EXAMINATION_REFRESH_TTL_MS = 3000;
+const EXAMINATION_REFRESH_TTL_MS = 60000;
 
 export const ExaminationProvider: React.FC<ExaminationProviderProps> = ({ children }) => {
   const { companyConfig, user, notify } = useAuth();

@@ -237,8 +237,15 @@ export const useSalesStore = create<SalesState>((set, get) => ({
   },
 
   addHeldOrder: async (order) => {
-      const newOrder = { ...order, id: order.id || generateNextId('HELD', get().heldOrders) };
-      set(state => ({ heldOrders: [...state.heldOrders, newOrder] }));
+    const prev = get().heldOrders;
+    const newOrder = { ...order };
+    set(state => ({ heldOrders: [...state.heldOrders, newOrder] }));
+    try {
+      await api.sales.saveHeldOrder(newOrder);
+    } catch (error) {
+      set({ heldOrders: prev });
+      throw error;
+    }
   },
   deleteHeldOrder: async (id) => {
       set(state => ({ heldOrders: state.heldOrders.filter(h => h.id !== id) }));

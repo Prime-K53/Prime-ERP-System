@@ -174,8 +174,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 reason: reason
             });
 
-            const previousCost = Number(oldVal?.cost_price ?? oldVal?.cost ?? 0);
-            const nextCost = Number(item.cost_price ?? item.cost ?? 0);
+            const normalizePrice = (item: any) => {
+              if (item == null) return 0;
+              const val = item.cost_price ?? item.costPrice ?? item.cost ?? item.sellingPrice ?? 0;
+              return Number(val);
+            };
+            const previousCost = normalizePrice(oldVal);
+            const nextCost = normalizePrice(item);
             const costChanged = Math.abs(previousCost - nextCost) > 0.00001;
             const wasBomRelevant = oldVal ? isItemBomRelevant(oldVal) : false;
             const isNowBomRelevant = isItemBomRelevant(item);

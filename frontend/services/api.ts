@@ -542,7 +542,7 @@ export const api = {
     getAllItems: () => handle(() => dbService.getAll<Item>('inventory'), 'Inventory.GetAll'),
     createItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Create');
-      const isSellable = !['Raw Material', 'Material', 'Consumable', 'Stationery'].includes(item.type);
+      const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
       const validation = isSellable
         ? validateMinimumMarkup(
             Number(item.costPrice || item.cost || 0),
@@ -570,7 +570,7 @@ export const api = {
     }, 'Inventory.Create'),
     updateItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Update');
-      const isSellable = !['Raw Material', 'Material', 'Consumable', 'Stationery'].includes(item.type);
+      const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
       const validation = isSellable
         ? validateMinimumMarkup(
             Number(item.costPrice || item.cost || 0),
@@ -684,10 +684,54 @@ export const api = {
       return dbService.delete('jobOrders', id);
     }, 'Sales.DeleteJobOrder'),
 
-    getCustomerPayments: () => handle(() => dbService.getAll<CustomerPayment>('customerPayments'), 'Sales.GetCustomerPayments'),
-    saveCustomerPayment: (r: CustomerPayment) => handle(() => {
+    getCustomerPayments: () => handle(async () => {
+      if (shouldPreferLocalReadModels()) {
+        return dbService.getAll<CustomerPayment>('customerPayments');
+      }
+      try {
+        const response = await apiClient.get(getApiPath('customer-payments'));
+        const backendPayments = Array.isArray(response.data) ? response.data : [];
+        // Sync backend payments to IndexedDB for offline use
+        for (const p of backendPayments) {
+          await dbService.put('customerPayments', {
+            id: p.id,
+            customerId: p.customer_id || p.customerId,
+            customerName: p.customer_name || p.customerName || '',
+            amount: Number(p.amount || 0),
+            date: p.date || new Date().toISOString(),
+            method: p.method || p.payment_method || p.paymentMethod || 'Cash',
+            reference: p.reference || '',
+            allocations: p.allocations || [],
+            notes: p.notes || '',
+            status: p.status || 'Cleared',
+            reconciled: p.reconciled || false
+          });
+        }
+        return backendPayments;
+      } catch {
+        return dbService.getAll<CustomerPayment>('customerPayments');
+      }
+    }, 'Sales.GetCustomerPayments'),
+    saveCustomerPayment: (r: CustomerPayment) => handle(async () => {
       checkAuth(['Admin', 'Accountant'], 'Sales.SaveCustomerPayment');
-      return transactionService.addCustomerPayment(r);
+      const result = await transactionService.addCustomerPayment(r);
+      // Try to sync to backend
+      try {
+        await apiClient.post(getApiPath('customer-payments'), {
+          id: r.id,
+          customer_id: r.customerId,
+          customer_name: r.customerName,
+          amount: r.amount,
+          date: r.date,
+          payment_method: r.method,
+          reference: r.reference,
+          notes: r.notes,
+          status: r.status || 'Cleared'
+        });
+      } catch {
+        // Backend sync is best-effort; data is safely in IndexedDB
+      }
+      return result;
     }, 'Sales.SaveCustomerPayment'),
     updateCustomerPayment: (r: CustomerPayment) => handle(() => {
       checkAuth(['Admin', 'Accountant'], 'Sales.UpdateCustomerPayment');
@@ -1837,7 +1881,19 @@ export const api = {
       }
     }, 'Finance.SaveLedger'),
 
-    getInvoices: () => handle(() => dbService.getAll<Invoice>('invoices'), 'Finance.GetInvoices'),
+    getInvoices: () => handle(async () => {
+      if (shouldPreferLocalReadModels()) {
+        return dbService.getAll<Invoice>('invoices');
+      }
+      try {
+        const response = await apiClient.get(getApiPath('invoices'));
+        const remote = Array.isArray(response.data) ? response.data : [];
+        for (const inv of remote) { await dbService.put('invoices', inv); }
+        return remote;
+      } catch {
+        return dbService.getAll<Invoice>('invoices');
+      }
+    }, 'Finance.GetInvoices'),
     saveInvoice: (i: Invoice) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Finance.SaveInvoice');
       const existing = await dbService.get<Invoice>('invoices', i.id);

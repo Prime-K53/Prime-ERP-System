@@ -32,7 +32,8 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
   const [pagesPerCopy, setPagesPerCopy] = useState(1);
 
   const totalPages = quantity * pagesPerCopy;
-  const printTotal = totalPages * pricePerPage;
+  const totalSheets = type === 'photocopy' ? quantity * Math.ceil(pagesPerCopy / 2) : totalPages;
+  const printTotal = totalSheets * pricePerPage;
   const materialCost = costPerPage ? totalPages * costPerPage : 0;
 
   // Auto-calculate pinning/stapling cost per copy (based on settings) - not visible to customer
@@ -85,7 +86,7 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
                 {type === 'photocopy' ? 'Quick Photocopy' : 'Type & Printing'}
               </h2>
               <p className="modal-sub text-[12.5px] font-medium text-slate-500 leading-tight">
-                {currency}{pricePerPage} per page
+                {currency}{pricePerPage} per {type === 'photocopy' ? 'sheet' : 'page'}
               </p>
             </div>
           </div>
@@ -137,13 +138,19 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
 
 <div className="p-3 bg-slate-50/80 rounded-lg space-y-1.5" style={{ lineHeight: '1.45' }}>
             <div className="flex justify-between items-center">
-              <span className="text-[13px] font-medium text-slate-600">Total Pages:</span>
-              <span className="font-semibold text-slate-800 tabular-nums text-right">{totalPages}</span>
+              <span className="text-[13px] font-medium text-slate-600">Total {type === 'photocopy' ? 'Sheets' : 'Pages'}:</span>
+              <span className="font-semibold text-slate-800 tabular-nums text-right">{type === 'photocopy' ? totalSheets : totalPages}</span>
             </div>
+            {type === 'photocopy' && (
+              <div className="flex justify-between items-center">
+                <span className="text-[12px] text-slate-500">Total Pages:</span>
+                <span className="font-medium text-slate-600 tabular-nums text-right text-[12px]">{totalPages} (toner basis)</span>
+              </div>
+            )}
             {costPerPage ? (
               <>
                 <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
-                  <span className="text-[12px] text-slate-500">Material Cost ({currency}{costPerPage.toFixed(2)}/pg)</span>
+                  <span className="text-[12px] text-slate-500">Toner Cost ({currency}{costPerPage.toFixed(2)}/pg)</span>
                   <span className="font-medium text-slate-600 tabular-nums text-right text-[12px]">{currency}{materialCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">

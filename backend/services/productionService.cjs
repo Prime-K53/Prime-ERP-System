@@ -5,6 +5,83 @@ class ProductionService {
     this.db = db;
   }
 
+  async _saveLedgerEntry(entry, companyId) {
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO ledger_entries (id, account_id, entry_type, amount, currency, description, reference_type, reference_id, entry_date, company_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, entry.account_id, entry.entry_type, entry.amount, entry.currency || 'USD',
+         entry.description || null, entry.reference_type || null,
+         entry.reference_id || null, entry.entry_date || new Date().toISOString(), companyId],
+        function(err) {
+          if (err) reject(err);
+          else resolve(id);
+        }
+      );
+    });
+  }
+
+  async postWipLedger(workOrder, companyId) {
+    const accounts = await this._all(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%wip%'",
+      [companyId]
+    );
+    const wipAccount = accounts && accounts.length > 0 ? accounts[0] : null;
+    const invAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%inventory%'",
+      [companyId]
+    );
+    if (!wipAccount || !invAccount) return;
+    const qty = workOrder.quantity_planned || 0;
+    const unitCost = workOrder.unit_cost || workOrder.estimated_unit_cost || 0;
+    let totalAmount = qty * unitCost || workOrder.total_estimated_cost || workOrder.total_cost || qty;
+    if (qty > 0 && totalAmount === qty) {
+      console.warn(`[Production] WIP ledger amount equals quantity (${totalAmount}) — no cost data for work order ${workOrder.id}`);
+    }
+    if (totalAmount <= 0) return;
+    await this._saveLedgerEntry({
+      account_id: wipAccount.id, entry_type: 'debit', amount: totalAmount,
+      description: `WIP for Work Order ${workOrder.id}`,
+      reference_type: 'work_order', reference_id: workOrder.id
+    }, companyId);
+    await this._saveLedgerEntry({
+      account_id: invAccount.id, entry_type: 'credit', amount: totalAmount,
+      description: `Raw materials for Work Order ${workOrder.id}`,
+      reference_type: 'work_order', reference_id: workOrder.id
+    }, companyId);
+  }
+
+  async postCogsLedger(workOrder, companyId) {
+    const cogsAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%cogs%' OR code = '5000')",
+      [companyId]
+    );
+    const accounts = await this._all(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%wip%'",
+      [companyId]
+    );
+    const wipAccount = accounts && accounts.length > 0 ? accounts[0] : null;
+    if (!cogsAccount || !wipAccount) return;
+    const qty = workOrder.quantity_completed || workOrder.quantity_planned || 0;
+    const unitCost = workOrder.unit_cost || workOrder.actual_unit_cost || 0;
+    let totalAmount = qty * unitCost || workOrder.total_actual_cost || workOrder.total_cost || qty;
+    if (qty > 0 && totalAmount === qty) {
+      console.warn(`[Production] COGS ledger amount equals quantity (${totalAmount}) — no cost data for work order ${workOrder.id}`);
+    }
+    if (totalAmount <= 0) return;
+    await this._saveLedgerEntry({
+      account_id: cogsAccount.id, entry_type: 'debit', amount: totalAmount,
+      description: `COGS for Work Order ${workOrder.id}`,
+      reference_type: 'work_order_cogs', reference_id: workOrder.id
+    }, companyId);
+    await this._saveLedgerEntry({
+      account_id: wipAccount.id, entry_type: 'credit', amount: totalAmount,
+      description: `WIP reversal for Work Order ${workOrder.id}`,
+      reference_type: 'work_order_cogs', reference_id: workOrder.id
+    }, companyId);
+  }
+
   _run(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
@@ -113,7 +190,13 @@ class ProductionService {
       `UPDATE work_orders SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`,
       params
     );
-    return this.getWorkOrderById(id, companyId);
+    const workOrder = await this.getWorkOrderById(id, companyId);
+    if (data.status === 'In Progress') {
+      await this.postWipLedger(workOrder, companyId);
+    } else if (data.status === 'Completed') {
+      await this.postCogsLedger(workOrder, companyId);
+    }
+    return workOrder;
   }
 
   async deleteWorkOrder(id, companyId) {

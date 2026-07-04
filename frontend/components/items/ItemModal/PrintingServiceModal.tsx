@@ -4,7 +4,7 @@ import type { Item, FinishingOption } from '../../../types';
 import { dbService } from '../../../services/db';
 import { normalizeInventoryItemPricing } from '../../../utils/pricing';
 import { generateAutoSKU } from '../../../utils/skuGenerator';
-import { calculateProfit, calculateMarkup, validateMinimumMarkup } from '../../../services/pricingValidationService';
+import { calculateProfit, calculateMarkup, validateMinimumMarkup, resolveMinimumMarkup } from '../../../services/pricingValidationService';
 import { useAuth } from '../../../context/AuthContext';
 import { aiService } from '../../../services/ai/aiService';
 
@@ -17,13 +17,14 @@ interface Props {
   sourceTab?: string | null;
 }
 
-type PrintingTab = 'basicInfo' | 'printSettings' | 'bomMaterials' | 'finishing' | 'variants';
+type PrintingTab = 'basicInfo' | 'pricing' | 'printSettings' | 'bomMaterials' | 'finishing' | 'variants';
 
 const TABS: { key: PrintingTab; label: string; icon: React.ReactNode }[] = [
-  { key: 'basicInfo', label: 'Basic Info', icon: <FileText size={13} /> },
-  { key: 'printSettings', label: 'Print Settings', icon: <Printer size={13} /> },
+  { key: 'basicInfo', label: 'Basic Infos', icon: <FileText size={13} /> },
+  { key: 'pricing', label: 'Pricing', icon: <Calculator size={13} /> },
   { key: 'bomMaterials', label: 'BOM Materials', icon: <Package size={13} /> },
   { key: 'finishing', label: 'Finishing Options', icon: <Zap size={13} /> },
+  { key: 'printSettings', label: 'Print Setting', icon: <Printer size={13} /> },
   { key: 'variants', label: 'Variants', icon: <Brain size={13} /> },
 ];
 
@@ -35,8 +36,6 @@ const defaultFinishingOptions: FinishingOption[] = [
   { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [] },
   { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
 ];
-
-const DEFAULT_MARKUP_PCT = 25;
 
 const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems = [], sourceTab }) => {
   const { companyConfig } = useAuth();
@@ -59,6 +58,15 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [pages, setPages] = useState(() => (item as any)?.smartPricing?.pages || (item as any)?.pages || 1);
   const [copies] = useState(1);
   const [sellingPrice, setSellingPrice] = useState(() => Number((item as any)?.sellingPrice || (item as any)?.price || 0));
+  // Stationery-specific fields
+  const [unit, setUnit] = useState(item?.unit || 'pcs');
+  const [isStationeryPack, setIsStationeryPack] = useState(!!(item as any)?.isStationeryPack);
+  const [costPerPack, setCostPerPack] = useState(Number((item as any)?.costPerPack || 0));
+  const [unitsPerPack, setUnitsPerPack] = useState(Number((item as any)?.unitsPerPack || 0));
+  const [stationeryCostPrice, setStationeryCostPrice] = useState(() => {
+    if (isStationery) return Number((item as any)?.cost || (item as any)?.cost_price || (item as any)?.costPerPiece || 0);
+    return 0;
+  });
   const [selectedPaperId, setSelectedPaperId] = useState(() => (item as any)?.pricingConfig?.paperId || (item as any)?.smartPricing?.paperItemId || '');
   const [selectedTonerId, setSelectedTonerId] = useState(() => (item as any)?.pricingConfig?.tonerId || (item as any)?.smartPricing?.tonerItemId || '');
   const [printSides, setPrintSides] = useState<'single' | 'double'>((item as any)?.printSides || 'double');
@@ -81,7 +89,8 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     const existingVariants = (item as any)?.variants;
     if (existingVariants?.length > 0) {
       const flatCost = 0;
-      const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + DEFAULT_MARKUP_PCT / 100)).toFixed(2)) : 0;
+      const targetPct = resolveMinimumMarkup();
+      const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + targetPct / 100)).toFixed(2)) : 0;
       return existingVariants.map((v: any) => ({
         id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         attribute: v.attribute || '',
@@ -176,6 +185,19 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const totalSheets = Math.ceil(pages / 2);
 
   const calculateCosts = () => {
+    if (isStationery) {
+      const derivedCost = isStationeryPack && unitsPerPack > 0
+        ? costPerPack / unitsPerPack
+        : stationeryCostPrice;
+      return {
+        paperCost: 0,
+        tonerCost: 0,
+        finishingCost: 0,
+        finishingInventoryCost: 0,
+        baseCost: derivedCost,
+      };
+    }
+
     let paperCostVal = 0;
     if (selectedPaper) {
       const sheetsPerCopy = Math.ceil(pages / 2);
@@ -228,7 +250,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   const suggestedSellingPrice = useMemo(() => {
     if (costPrice <= 0) return 0;
-    const minMarkup = Math.max(validation.minimumMarkup, DEFAULT_MARKUP_PCT);
+    const minMarkup = Math.max(validation.minimumMarkup, resolveMinimumMarkup());
     return parseFloat((costPrice * (1 + minMarkup / 100)).toFixed(2));
   }, [costPrice, validation.minimumMarkup]);
 
@@ -278,6 +300,19 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     }
   };
 
+  const handleStationeryAiDescribe = async () => {
+    const prompt = `Generate a short professional stationery product description for: name="${name}", category="${category || 'Stationery'}", unit="${unit}"${isStationeryPack ? `, sold in packs of ${unitsPerPack}` : ''}. Include details about typical use cases. 1-2 sentences only.`;
+    try {
+      const desc = await aiService.generateAIResponse(prompt);
+      setDescription(desc);
+      setGeneratedDescription(desc);
+    } catch {
+      const desc = `${name} - Premium quality stationery item. Ideal for office, school, and professional use.`;
+      setDescription(desc);
+      setGeneratedDescription(desc);
+    }
+  };
+
   const formatCurrency = (value: number) => `${currency} ${value.toFixed(2)}`;
 
   const toggleFinishing = (id: string) => {
@@ -291,12 +326,13 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   const addVariantRow = () => {
     if (saveVariants.length >= 5) return;
-    const flatCost = paperCost + tonerCost + finishingCost + finishingInventoryCost;
-    const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + DEFAULT_MARKUP_PCT / 100)).toFixed(2)) : 0;
+    const flatCost = isStationery ? (stationeryCostPrice || 0) : (paperCost + tonerCost + finishingCost + finishingInventoryCost);
+    const targetPct = resolveMinimumMarkup();
+    const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + targetPct / 100)).toFixed(2)) : 0;
     setSaveVariants(prev => [...prev, {
       id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       attribute: '',
-      pages: pages || 1,
+      pages: isStationery ? 0 : (pages || 1),
       basePrice: parseFloat(flatCost.toFixed(2)),
       sellingPrice: 0,
       suggestedPrice: suggested,
@@ -311,7 +347,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         const pageCost = (paperCost + tonerCost) / (pages || 1);
         const newBase = parseFloat((pageCost * (value as number) + finishingCost + finishingInventoryCost).toFixed(2));
         updated.basePrice = newBase;
-        updated.suggestedPrice = newBase > 0 ? parseFloat((newBase * (1 + DEFAULT_MARKUP_PCT / 100)).toFixed(2)) : 0;
+        updated.suggestedPrice = newBase > 0 ? parseFloat((newBase * (1 + resolveMinimumMarkup() / 100)).toFixed(2)) : 0;
       }
       return updated;
     }));
@@ -340,7 +376,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
       return;
     }
 
-    if (!hasVariants && !validation.valid && sellingPrice > 0) {
+    if (!isStationery && !hasVariants && !validation.valid && sellingPrice > 0) {
       alert(`Unable to save.\n\nCalculated markup: ${profitMarkup.toFixed(1)}%\nMinimum required markup: ${validation.minimumMarkup}%\n\n${validation.message}`);
       return;
     }
@@ -364,68 +400,84 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         type: entityType as any,
         classification: isStationery ? 'Stationery' : isProduct ? 'Product' : 'printing_service',
         category: category || (isStationery ? 'Stationery' : isProduct ? 'Products' : 'Printing Service'),
-        unit: item?.unit || 'Booklet',
+        unit: isStationery ? unit : (item?.unit || 'Booklet'),
         description: description || generatedDescription || item?.description,
         status,
         favorite,
-        cost: hasVariants ? 0 : baseCost,
-        cost_price: hasVariants ? 0 : baseCost,
-        costPrice: hasVariants ? 0 : baseCost,
-        price: hasVariants ? 0 : sellingPrice,
-        selling_price: hasVariants ? 0 : sellingPrice,
-        sellingPrice: hasVariants ? 0 : sellingPrice,
         stock: item?.stock || 0,
-        pages: hasVariants ? 0 : pages,
-        printSides,
-        paperType,
-        fileType,
         hasVariants,
-        ...(!hasVariants ? {
+        ...(isStationery ? {
+          cost: costPrice,
+          cost_price: costPrice,
+          costPrice,
+          price: sellingPrice,
+          selling_price: sellingPrice,
+          sellingPrice,
+          isStationeryPack,
+          costPerPack: isStationeryPack ? costPerPack : 0,
+          unitsPerPack: isStationeryPack ? unitsPerPack : 0,
           profitAmount: profit,
           profitMargin: profitMarkup,
           minimumMargin: validation.minimumMarkup,
           pricingValidated: validation.valid,
-          validationTimestamp: new Date().toISOString(),
-          aiDescription: generatedDescription,
-          pricingConfig: {
-            paperId: selectedPaperId,
-            tonerId: selectedTonerId,
-            finishingOptions: enabledFinishingOptions,
-            manualOverride: false,
-            marketAdjustment: 0,
-          },
-          smartPricing: {
-            pages,
-            copies: 1,
-            totalPages: pages,
-            totalSheets: Math.ceil(pages / 2),
-            paperItemId: selectedPaperId,
-            tonerItemId: selectedTonerId,
-            finishingEnabled: enabledFinishingOptions.map(o => o.id),
-            finishingOptionCosts,
-            bomTemplateId: '',
-            paperCost,
-            tonerCost,
-            finishingCost,
-            finishingInventoryCost,
-            baseCost,
-          } as Item['smartPricing'],
-        } : {}),
-        ...(isProduct || isStationery ? {} : {
-          printType: 'Digital' as const,
-          printingServiceType: 'printing' as const,
-          printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+        } : {
+          cost: hasVariants ? 0 : baseCost,
+          cost_price: hasVariants ? 0 : baseCost,
+          costPrice: hasVariants ? 0 : baseCost,
+          price: hasVariants ? 0 : sellingPrice,
+          selling_price: hasVariants ? 0 : sellingPrice,
+          sellingPrice: hasVariants ? 0 : sellingPrice,
+          pages: hasVariants ? 0 : pages,
+          printSides,
+          paperType,
+          fileType,
+          ...(!hasVariants ? {
+            profitAmount: profit,
+            profitMargin: profitMarkup,
+            minimumMargin: validation.minimumMarkup,
+            pricingValidated: validation.valid,
+            validationTimestamp: new Date().toISOString(),
+            aiDescription: generatedDescription,
+            pricingConfig: {
+              paperId: selectedPaperId,
+              tonerId: selectedTonerId,
+              finishingOptions: enabledFinishingOptions,
+              manualOverride: false,
+              marketAdjustment: 0,
+            },
+            smartPricing: {
+              pages,
+              copies: 1,
+              totalPages: pages,
+              totalSheets: Math.ceil(pages / 2),
+              paperItemId: selectedPaperId,
+              tonerItemId: selectedTonerId,
+              finishingEnabled: enabledFinishingOptions.map(o => o.id),
+              finishingOptionCosts,
+              bomTemplateId: '',
+              paperCost,
+              tonerCost,
+              finishingCost,
+              finishingInventoryCost,
+              baseCost,
+            } as Item['smartPricing'],
+          } : {}),
+          ...(isProduct || isStationery ? {} : {
+            printType: 'Digital' as const,
+            printingServiceType: 'printing' as const,
+            printFinishing: enabledFinishingOptions.map(o => ({ id: o.id, name: o.name, price: o.price })),
+          }),
+          paperCost: hasVariants ? 0 : paperCost,
+          tonerCost: hasVariants ? 0 : tonerCost,
         }),
-        paperCost: hasVariants ? 0 : paperCost,
-        tonerCost: hasVariants ? 0 : tonerCost,
         variants: hasVariants ? saveVariants.filter(v => v.attribute.trim() && v.sellingPrice > 0).map(v => ({
           attribute: v.attribute.trim(),
-          pages: v.pages,
+          pages: isStationery ? undefined : v.pages,
           sellingPrice: v.sellingPrice,
         })) : [],
       } as unknown as Item & Record<string, unknown>;
 
-      if (!hasVariants) {
+      if (!isStationery && !hasVariants) {
         const bomId = `BOM-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
         const components: any[] = [];
         if (selectedPaper) {
@@ -452,6 +504,38 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
       const variantsToSave = saveVariants.filter(v => v.attribute.trim() && v.sellingPrice > 0);
       if (variantsToSave.length > 0) {
         for (const variant of variantsToSave) {
+          if (isStationery) {
+            const varCost = stationeryCostPrice;
+            const varId = `VAR-${productId}-${variant.attribute.replace(/\s+/g, '')}-${Date.now()}`;
+            const varProfit = parseFloat((variant.sellingPrice - varCost).toFixed(2));
+            const varItem: Item = {
+              id: varId,
+              name: `${nameTrimmed} - ${variant.attribute.trim()}`,
+              sku: generateAutoSKU(entityType, `${nameTrimmed} ${variant.attribute.trim()}`, undefined, inventory),
+              type: entityType as any,
+              classification: 'Stationery',
+              category: category || 'Stationery',
+              unit,
+              status,
+              favorite,
+              cost: varCost,
+              cost_price: varCost,
+              costPrice: varCost,
+              price: variant.sellingPrice,
+              selling_price: variant.sellingPrice,
+              sellingPrice: variant.sellingPrice,
+              profitAmount: varProfit,
+              profitMargin: varCost > 0 ? parseFloat(((varProfit / varCost) * 100).toFixed(2)) : 0,
+              minimumMargin: validation.minimumMarkup,
+              pricingValidated: validation.valid,
+              stock: 0,
+              isStationeryPack,
+              costPerPack: isStationeryPack ? costPerPack : 0,
+              unitsPerPack: isStationeryPack ? unitsPerPack : 0,
+              description: description || generatedDescription,
+            } as unknown as Item;
+            await dbService.put('inventory', varItem);
+          } else {
           const varPages = variant.pages;
           const varTotalSheets = Math.ceil(varPages / 2);
           const varPaperCost = parseFloat((paperCost * (varPages / (pages || 1))).toFixed(2));
@@ -541,6 +625,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             components: varComponents,
             lastUpdated: new Date().toISOString(),
           });
+          }
         }
       }
     } catch (error) {
@@ -581,7 +666,15 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             <input type="text" value={name} onChange={e => setName(e.target.value)} className={premiumInput} placeholder="e.g. A4 Full Colour Flyers" />
           </div>
           <div className="col-span-2">
-            <label className={premiumLabel}><FileText size={12} /> Description</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className={premiumLabel}><FileText size={12} /> Description</label>
+              {isStationery && (
+                <button type="button" onClick={handleStationeryAiDescribe}
+                  className="flex items-center gap-1 text-[10px] text-indigo-600 hover:text-indigo-800 font-medium px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 transition-colors">
+                  <Sparkles size={10} /> AI Generate
+                </button>
+              )}
+            </div>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               className={`${premiumInput} resize-none`} rows={2} placeholder="Brief description..." />
           </div>
@@ -624,6 +717,16 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               ))}
             </div>
           </div>
+          {isStationery && (
+            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200">
+              <div>
+                <label className={premiumLabel}><Package size={12} /> Unit</label>
+                <select value={unit} onChange={e => setUnit(e.target.value)} className={premiumSelect}>
+                  {['pcs', 'packs', 'boxes', 'reams'].map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200/60">
             <div className="flex items-center gap-2">
               <Star size={16} className="text-amber-500" />
@@ -649,6 +752,66 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               <input type="checkbox" checked={hasVariants} onChange={e => { setHasVariants(e.target.checked); if (!e.target.checked) setSaveVariants([]); }} className="sr-only peer" />
               <div className={`w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${hasVariants ? toggleActiveBg : toggleInactiveBg}`} />
             </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPricingTab = () => (
+    <div className="space-y-4">
+      <div className={premiumCard}>
+        {renderCardHeader(<Calculator size={15} className="text-white" />, `Pricing (${entityType})`, '', 'from-emerald-500 to-teal-600')}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={premiumLabel}><Calculator size={12} /> Cost Price ({currency})</label>
+            <input type="number" value={isStationeryPack ? '' : (stationeryCostPrice || '')}
+              onChange={e => setStationeryCostPrice(parseFloat(e.target.value) || 0)}
+              disabled={isStationeryPack}
+              className={premiumInput} min={0} step={0.01} placeholder="Enter cost price..." />
+          </div>
+          <div>
+            <label className={premiumLabel}><TrendingUp size={12} /> Selling Price ({currency})</label>
+            <input type="number" value={sellingPrice || ''} onChange={e => setSellingPrice(parseFloat(e.target.value) || 0)}
+              className={`${premiumInput} text-lg font-bold`} min={0} step={0.01} placeholder="Enter selling price..." />
+          </div>
+          <div className="col-span-2 flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/60">
+            <div className="flex items-center gap-2">
+              <Package size={14} className="text-indigo-600" />
+              <div>
+                <p className="text-sm font-medium text-indigo-800">Pack-Based Pricing</p>
+                <p className="text-xs text-indigo-600/70">Set cost per pack instead of per piece</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={isStationeryPack} onChange={e => setIsStationeryPack(e.target.checked)} className="sr-only peer" />
+              <div className={`w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${isStationeryPack ? toggleActiveBg : toggleInactiveBg}`} />
+            </label>
+          </div>
+          {isStationeryPack && (
+            <>
+              <div>
+                <label className={premiumLabel}><Calculator size={12} /> Cost per Pack ({currency})</label>
+                <input type="number" value={costPerPack || ''} onChange={e => setCostPerPack(parseFloat(e.target.value) || 0)}
+                  className={premiumInput} min={0} step={0.01} placeholder="Enter cost per pack..." />
+              </div>
+              <div>
+                <label className={premiumLabel}><Package size={12} /> Units per Pack</label>
+                <input type="number" value={unitsPerPack || ''} onChange={e => setUnitsPerPack(parseInt(e.target.value) || 0)}
+                  className={premiumInput} min={1} placeholder="e.g. 10" />
+              </div>
+            </>
+          )}
+          <div className="col-span-2 flex items-center gap-4 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5">
+            <span>Cost: <span className="font-semibold text-indigo-600">{formatCurrency(costPrice)}</span></span>
+            <span className="text-slate-300">|</span>
+            <span className={`font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              Profit: {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+            </span>
+            <span className="text-slate-300">|</span>
+            <span className={`font-semibold ${validation.valid ? 'text-emerald-600' : 'text-red-500'}`}>
+              {profitMarkup.toFixed(1)}% margin
+            </span>
           </div>
         </div>
       </div>
@@ -918,7 +1081,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                     <thead>
                       <tr className="border-b border-slate-200">
                         <th className="text-left py-2.5 pr-2 text-slate-500 font-semibold">Attribute</th>
-                        <th className="text-left py-2.5 px-2 text-slate-500 font-semibold">Pages</th>
+                        {!isStationery && <th className="text-left py-2.5 px-2 text-slate-500 font-semibold">Pages</th>}
                         <th className="text-right py-2.5 px-2 text-slate-500 font-semibold">Base Price</th>
                         <th className="text-right py-2.5 px-2 text-slate-500 font-semibold">Selling Price</th>
                         <th className="text-right py-2.5 px-2 text-slate-500 font-semibold">Margin</th>
@@ -934,10 +1097,10 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                               <input type="text" value={v.attribute} onChange={e => updateVariantRow(v.id, 'attribute', e.target.value)}
                                 className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white/80" placeholder="e.g. A4" />
                             </td>
-                            <td className="py-1.5 px-2">
+                            {!isStationery && <td className="py-1.5 px-2">
                               <input type="number" value={v.pages} onChange={e => updateVariantRow(v.id, 'pages', parseInt(e.target.value) || 1)}
                                 className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white/80" min={1} />
-                            </td>
+                            </td>}
                             <td className="py-1.5 px-2 text-right text-slate-500 font-mono text-[11px]">{formatCurrency(v.basePrice)}</td>
                             <td className="py-1.5 px-2">
                               <div className="flex items-center gap-1">
@@ -951,7 +1114,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                                 )}
                               </div>
                             </td>
-                            <td className={`py-1.5 px-2 text-right font-mono text-[11px] font-semibold ${varMargin >= DEFAULT_MARKUP_PCT ? 'text-emerald-600' : varMargin > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                            <td className={`py-1.5 px-2 text-right font-mono text-[11px] font-semibold ${varMargin >= resolveMinimumMarkup() ? 'text-emerald-600' : varMargin > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
                               {v.sellingPrice > 0 ? `${varMargin.toFixed(1)}%` : '—'}
                             </td>
                             <td className="py-1.5 pl-2">
@@ -967,7 +1130,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                 </div>
               )}
               <div className="flex items-center justify-between mt-3">
-                <p className="text-[10px] text-slate-400">Base price auto-calculated (double-sided). Finishing flat per item.</p>
+                <p className="text-[10px] text-slate-400">{isStationery ? 'Set selling price per variant attribute above cost.' : 'Base price auto-calculated (double-sided). Finishing flat per item.'}</p>
               </div>
             </div>
           )}
@@ -996,12 +1159,12 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         <div className="space-y-2">
           {activeVariants.map(v => {
             const varMargin = v.sellingPrice > 0 && v.basePrice > 0 ? ((v.sellingPrice - v.basePrice) / v.sellingPrice * 100) : 0;
-            const marginColor = varMargin >= DEFAULT_MARKUP_PCT ? 'text-emerald-500' : varMargin > 0 ? 'text-amber-500' : 'text-slate-400';
+            const marginColor = varMargin >= resolveMinimumMarkup() ? 'text-emerald-500' : varMargin > 0 ? 'text-amber-500' : 'text-slate-400';
             return (
               <div key={v.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold text-slate-700">{v.attribute || 'Unnamed'}</span>
-                  <span className="text-[10px] text-slate-400">{v.pages} pages</span>
+                  {!isStationery && <span className="text-[10px] text-slate-400">{v.pages} pages</span>}
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-500">CP: <span className="font-mono font-medium text-slate-700">{formatCurrency(v.basePrice)}</span></span>
@@ -1022,8 +1185,8 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             <span className="font-mono font-semibold text-indigo-600">{formatCurrency(totalSelling)}</span>
           </div>
           <div className="flex justify-between text-xs font-medium">
-            <span className={`${overallMargin >= DEFAULT_MARKUP_PCT ? 'text-emerald-600' : 'text-amber-600'}`}>Overall Margin</span>
-            <span className={`font-mono font-semibold ${overallMargin >= DEFAULT_MARKUP_PCT ? 'text-emerald-600' : 'text-amber-600'}`}>{overallMargin.toFixed(1)}%</span>
+            <span className={`${overallMargin >= resolveMinimumMarkup() ? 'text-emerald-600' : 'text-amber-600'}`}>Overall Margin</span>
+            <span className={`font-mono font-semibold ${overallMargin >= resolveMinimumMarkup() ? 'text-emerald-600' : 'text-amber-600'}`}>{overallMargin.toFixed(1)}%</span>
           </div>
         </div>
       </div>
@@ -1032,6 +1195,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   const tabContent: Record<PrintingTab, () => React.ReactNode> = {
     basicInfo: renderBasicInfoTab,
+    pricing: renderPricingTab,
     printSettings: renderPrintSettingsTab,
     bomMaterials: renderBomMaterialsTab,
     finishing: renderFinishingTab,
@@ -1042,7 +1206,10 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     <div className="flex flex-col h-full overflow-hidden">
       {/* Premium Tabs */}
       <div className="relative flex items-center gap-0 shrink-0 flex-wrap border-b border-slate-200/80 -mx-4 px-4">
-        {TABS.map(tab => (
+        {TABS.filter(tab => {
+          if (isStationery) return tab.key === 'basicInfo' || tab.key === 'pricing' || tab.key === 'variants';
+          return tab.key !== 'pricing';
+        }).map(tab => (
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             className={`shrink-0 px-4 py-3.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === tab.key ? 'border-indigo-600 text-indigo-700 bg-gradient-to-b from-indigo-50/50 to-transparent' : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300'
@@ -1068,7 +1235,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
             <div className="flex gap-3 mt-6">
               {activeTab !== 'variants' && (
-                <button type="button" onClick={handleSave} disabled={saving || (!hasVariants && (sellingPrice <= 0 || !validation.valid))}
+                <button type="button" onClick={handleSave} disabled={saving || (!isStationery && !hasVariants && (sellingPrice <= 0 || !validation.valid))}
                   className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
                   {saving ? <>Saving...</> : <><Zap size={14} /> Save {entityType}</>}
                 </button>
@@ -1098,7 +1265,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               {hasVariants ? (
                 <p className="text-slate-400 text-[10px]">{saveVariants.length} variant(s) · Variant-based pricing</p>
               ) : (
-                <p className="text-slate-400 text-[10px]">{pages} pages · {formatCurrency(costPrice)} total cost</p>
+                <p className="text-slate-400 text-[10px]">{isStationery ? `${unit} unit` : `${pages} pages`} · {formatCurrency(costPrice)} total cost</p>
               )}
             </div>
             {hasVariants ? (
@@ -1118,6 +1285,17 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
               </div>
             ) : (
               <div className="space-y-2">
+                {isStationery ? (
+                  <>
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">Unit</span><span className="font-mono font-medium text-slate-700">{unit}</span></div>
+                    {isStationeryPack && <div className="flex justify-between text-xs"><span className="text-slate-500">Pack</span><span className="font-mono font-medium text-slate-700">{unitsPerPack} units @ {formatCurrency(costPerPack)}/pack</span></div>}
+                    <div className="border-t border-slate-200 pt-2 flex justify-between font-semibold text-xs">
+                      <span>Cost Price</span>
+                      <span className="font-mono text-base text-indigo-600">{formatCurrency(costPrice)}</span>
+                    </div>
+                  </>
+                ) : (
+                <>
                 <div className="flex justify-between text-xs"><span className="text-slate-500">{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span><span className="font-mono font-medium text-slate-700">{formatCurrency(paperCost)}</span></div>
                 <div className="flex justify-between text-xs"><span className="text-slate-500">{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span><span className="font-mono font-medium text-slate-700">{formatCurrency(tonerCost)}</span></div>
                 <div className="flex justify-between text-xs"><span className="text-slate-500">Finishing</span><span className="font-mono font-medium text-slate-700">{formatCurrency(finishingCost)}</span></div>
@@ -1126,6 +1304,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                   <span>Cost Price</span>
                   <span className="font-mono text-base text-indigo-600">{formatCurrency(costPrice)}</span>
                 </div>
+                </>)}
                 <div className="flex justify-between text-xs">
                   <span className="text-blue-600 font-semibold">Selling Price</span>
                   <span className="font-mono text-base font-bold text-blue-700">{formatCurrency(sellingPrice)}</span>
@@ -1139,7 +1318,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                   <span className="font-mono font-semibold">{profitMarkup.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-400">
-                  <span>Target ({DEFAULT_MARKUP_PCT}%)</span>
+                  <span>Target ({resolveMinimumMarkup()}%)</span>
                   <span className="font-medium">{validation.minimumMarkup}% min</span>
                 </div>
 
@@ -1159,6 +1338,8 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                   </div>
                 </div>
 
+                {!isStationery && (
+                <>
                 {/* AI Suggest Button */}
                 {suggestedSellingPrice > 0 && sellingPrice !== suggestedSellingPrice && (
                   <button type="button" onClick={() => setSellingPrice(suggestedSellingPrice)}
@@ -1172,10 +1353,12 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
                   className="w-full py-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-violet-200 flex items-center justify-center gap-1.5">
                   <Sparkles size={13} /> Generate Description
                 </button>
+                </>
+                )}
               </div>
             )}
 
-            <button type="button" onClick={handleSave} disabled={saving || (!hasVariants && (sellingPrice <= 0 || !validation.valid))}
+            <button type="button" onClick={handleSave} disabled={saving || (!isStationery && !hasVariants && (sellingPrice <= 0 || !validation.valid))}
               className="w-full mt-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2">
               {saving ? 'Saving...' : <><Zap size={14} /> Save</>}
             </button>
@@ -1190,7 +1373,9 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
           Cancel
         </button>
         <div className="flex items-center gap-3 text-[10px] text-slate-400">
-          {hasVariants ? (
+          {isStationery ? (
+            <span className="text-indigo-600 font-semibold">CP: {formatCurrency(costPrice)}</span>
+          ) : hasVariants ? (
             <span className="flex items-center gap-1"><Brain size={12} /> {saveVariants.length} variant(s)</span>
           ) : (
             <>

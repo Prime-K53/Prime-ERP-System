@@ -399,7 +399,7 @@ const expenseSchemas = {
     amount: z.number().positive('Amount must be positive'),
     currency: z.string().length(3).default('USD'),
     description: z.string().max(1000).optional(),
-    expense_date: z.string().min(1, 'Date is required'),
+    expense_date: z.string().datetime('Invalid datetime format'),
     account_id: z.string().optional(),
     payment_method: z.string().optional(),
     status: z.enum(['pending', 'paid', 'cancelled']).default('pending'),
@@ -425,7 +425,7 @@ const incomeSchemas = {
     amount: z.number().positive('Amount must be positive'),
     currency: z.string().length(3).default('USD'),
     description: z.string().max(1000).optional(),
-    income_date: z.string().min(1, 'Date is required'),
+    income_date: z.string().datetime('Invalid datetime format'),
     account_id: z.string().optional(),
     payment_method: z.string().optional(),
     reference: z.string().optional()
@@ -456,9 +456,12 @@ const transferSchemas = {
     from_account_id: z.string().min(1, 'Source account is required'),
     to_account_id: z.string().min(1, 'Destination account is required'),
     amount: z.number().positive('Amount must be positive'),
-    currency: z.string().length(3).default('USD'),
+    currency: z.string().length(3, 'Currency must be 3-letter ISO code').default('USD'),
     description: z.string().max(500).optional(),
     reference: z.string().optional()
+  }).refine(data => data.from_account_id !== data.to_account_id, {
+    message: 'Source and destination accounts cannot be the same',
+    path: ['to_account_id']
   })
 };
 

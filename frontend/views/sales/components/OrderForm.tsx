@@ -1316,7 +1316,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
           name: isPhotocopy ? 'Quick Photocopy' : 'Type & Printing',
           sku: isPhotocopy ? 'QUICK-PHOTO' : 'QUICK-PRINT',
           desc: isPhotocopy 
-            ? `Quick Photocopy (${pagesPerCopy} pages x ${quantity} copies)`
+            ? `Quick Photocopy (${pagesPerCopy} pages, ${Math.ceil(pagesPerCopy / 2)} sheets x ${quantity} copies)`
             : `Type & Printing (${pagesPerCopy} pages x ${quantity} copies)`,
           price: finalPrice,
           cost: materialCost,
@@ -1325,7 +1325,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
           pagesOverride: pagesPerCopy,
           category: 'Service',
           type: 'Service',
-          unit: 'page',
+          unit: isPhotocopy ? 'sheet' : 'page',
           pages: pagesPerCopy,
           stock: 9999,
           minStockLevel: 0,

@@ -49,21 +49,23 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       ]);
 
       const seedIds = new Set(SEED_ITEM_IDS);
-      const userItems = loadedItems.filter(i => !seedIds.has(i.id));
-      if (userItems.length < loadedItems.length) {
-        await Promise.all(Array.from(seedIds).map(id => dbService.delete('inventory', id).catch(() => {})));
-      }
+      const normalizedItems = loadedItems.map((item) => {
+        const base = normalizeInventoryItemPricing(item);
+        return {
+          ...base,
+          isSeed: seedIds.has(item.id),
+        };
+      });
 
       if (loadedItems.length === 0 && loadedWarehouses.length === 0) {
         if (!isSupabaseConfigured()) {
-          set({ inventory: userItems, warehouses: MOCK_WAREHOUSES });
+          set({ inventory: normalizedItems, warehouses: MOCK_WAREHOUSES });
           for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
         } else {
           set({ inventory: [], warehouses: [] });
         }
       } else {
-        const normalizedItems = userItems.map(normalizeInventoryItemPricing);
-        const repairedItems = normalizedItems.filter((item, index) => JSON.stringify(item) !== JSON.stringify(userItems[index]));
+        const repairedItems = normalizedItems.filter((item, index) => JSON.stringify(item) !== JSON.stringify(loadedItems[index]));
 
         if (repairedItems.length > 0) {
           await Promise.all(repairedItems.map((item) => dbService.put('inventory', item)));
@@ -80,7 +82,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   addItem: async (item: Item) => {
-    const isSellable = !['Raw Material', 'Material', 'Consumable', 'Stationery'].includes(item.type);
+    const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
     const validation = isSellable
       ? validateMinimumMarkup(
           Number(item.costPrice || item.cost || 0),
@@ -123,7 +125,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   updateItem: async (item: Item) => {
-    const isSellable = !['Raw Material', 'Material', 'Consumable', 'Stationery'].includes(item.type);
+    const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
     const validation = isSellable
       ? validateMinimumMarkup(
           Number(item.costPrice || item.cost || 0),

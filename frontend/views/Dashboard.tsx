@@ -396,6 +396,7 @@ const PremiumKpiCard = ({
 const SlidingInfoCard = ({ slides, compact, animDelay = 0 }: { slides: any[], compact: boolean, animDelay?: number }) => {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1); // 1 for next, -1 for prev
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -406,6 +407,16 @@ const SlidingInfoCard = ({ slides, compact, animDelay = 0 }: { slides: any[], co
   }, [slides.length, animDelay]);
 
   const slide = slides[index];
+
+  const routeMap: Record<string, string> = {
+    'Active Jobs': '/industrial/shop-floor',
+    'Subscription': '/sales-flow/subscriptions',
+  };
+
+  const handleCardClick = () => {
+    const route = routeMap[slide.label];
+    if (route) navigate(route);
+  };
 
   return (
     <div
@@ -428,6 +439,7 @@ const SlidingInfoCard = ({ slides, compact, animDelay = 0 }: { slides: any[], co
         minHeight: compact ? 150 : 170,
         transition: 'all 0.5s ease-in-out',
       }}
+      onClick={handleCardClick}
     >
       <div key={index} className="animate-in fade-in slide-in-from-right-4 duration-1000" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         {slide.render ? slide.render(compact) : (
@@ -844,7 +856,7 @@ const DashboardContent: React.FC = () => {
 
   const { cashBalance, bankBalance, chequeBalance, walletBalance } = (() => {
     if (!accounts || accounts.length === 0) {
-      return { cashBalance: 2_300_000, bankBalance: 5_600_000, chequeBalance: 1_200_000, walletBalance: 1_200_000 };
+      return { cashBalance: 0, bankBalance: 0, chequeBalance: 0, walletBalance: 0 };
     }
     let cash = 0, bank = 0, cheque = 0, wallet = 0;
     accounts.forEach((acc: any) => {
@@ -972,6 +984,11 @@ const DashboardContent: React.FC = () => {
   // Count pending queue
   const pendingJobsCount = jobOrders.filter(j => String(j.status || '').toLowerCase() === 'pending').length;
 
+  // Active job orders with descriptions for info card
+  const activeJobOrdersList = jobOrders.filter(
+    (j: any) => !['Completed', 'Cancelled', 'Closed', 'Delivered'].includes(String(j.status || ''))
+  );
+
   // ── sparkline seeds ───────────────────────────────────────────────────────
   const spark1 = [{ v: 10 }, { v: 15 }, { v: 12 }, { v: 25 }, { v: 18 }, { v: 30 }, { v: 28 }];
   const spark2 = [{ v: 20 }, { v: 18 }, { v: 25 }, { v: 22 }, { v: 35 }, { v: 30 }, { v: 40 }];
@@ -1091,12 +1108,26 @@ const DashboardContent: React.FC = () => {
               {lastActiveJob ? (lastActiveJob.status || 'Active') : 'Stable'}
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Queue</div>
-            <div style={{ fontSize: 11, color: '#0f172a', fontWeight: 700 }}>
-              {pendingJobsCount} pending
+          {activeJobOrdersList.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In Production</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {activeJobOrdersList.slice(0, 3).map((job: any, idx: number) => (
+                  <div key={idx} style={{ fontSize: 10.5, color: '#334155', lineHeight: 1.3, display: 'flex', gap: 4 }}>
+                    <span style={{ color: '#a855f7', flexShrink: 0 }}>·</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {job.jobTitle || job.jobDescription || job.notes || job.productName || `${job.jobNo || job.orderNo || ''}`}
+                    </span>
+                  </div>
+                ))}
+                {activeJobOrdersList.length > 3 && (
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
+                    +{activeJobOrdersList.length - 3} more
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )
     },

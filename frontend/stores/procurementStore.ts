@@ -56,14 +56,26 @@ export const useProcurementStore = create<ProcurementState>((set, get) => ({
   },
 
   addPurchase: async (purchase) => {
+    const prev = get().purchases;
     const newPurchase = { ...purchase, id: purchase.id || generateNextId('PO', get().purchases) };
     set(state => ({ purchases: [...state.purchases, newPurchase] }));
-    await api.procurement.savePurchase(newPurchase);
+    try {
+      await api.procurement.savePurchase(newPurchase);
+    } catch (error) {
+      set({ purchases: prev });
+      throw error;
+    }
   },
 
   updatePurchase: async (purchase) => {
+    const prev = get().purchases;
     set(state => ({ purchases: state.purchases.map(p => p.id === purchase.id ? purchase : p) }));
-    await api.procurement.savePurchase(purchase);
+    try {
+      await api.procurement.savePurchase(purchase);
+    } catch (error) {
+      set({ purchases: prev });
+      throw error;
+    }
   },
 
   approvePurchase: async (id: string) => {
@@ -91,49 +103,104 @@ export const useProcurementStore = create<ProcurementState>((set, get) => ({
   },
 
   addGoodsReceipt: async (gr) => {
+    const prev = get().goodsReceipts;
     const newGR = { ...gr, id: gr.id || generateNextId('GRN', get().goodsReceipts) };
     set(state => ({ goodsReceipts: [...state.goodsReceipts, newGR] }));
-    await transactionService.processGoodsReceipt(newGR);
+    try {
+      await transactionService.processGoodsReceipt(newGR);
+    } catch (error) {
+      set({ goodsReceipts: prev });
+      throw error;
+    }
   },
 
   updateGoodsReceipt: async (gr) => {
+    const prev = get().goodsReceipts;
     set(state => ({ goodsReceipts: state.goodsReceipts.map(g => g.id === gr.id ? gr : g) }));
-    await api.procurement.saveGoodsReceipt(gr);
+    try {
+      await api.procurement.saveGoodsReceipt(gr);
+    } catch (error) {
+      set({ goodsReceipts: prev });
+      throw error;
+    }
   },
 
   deleteGoodsReceipt: async (id) => {
+    const prev = get().goodsReceipts;
     set(state => ({ goodsReceipts: state.goodsReceipts.filter(g => g.id !== id) }));
+    try {
+      await api.procurement.deleteGoodsReceipt(id);
+    } catch (error) {
+      set({ goodsReceipts: prev });
+      throw error;
+    }
   },
 
   addSubcontractOrder: async (order) => {
+    const prev = get().subcontractOrders;
     const newOrder = { ...order, id: order.id || generateNextId('SUB', get().subcontractOrders) };
     set(state => ({ subcontractOrders: [...state.subcontractOrders, newOrder] }));
-    await api.procurement.saveSubcontractOrder(newOrder);
+    try {
+      await api.procurement.saveSubcontractOrder(newOrder);
+    } catch (error) {
+      set({ subcontractOrders: prev });
+      throw error;
+    }
   },
 
   updateSubcontractOrder: async (order) => {
+    const prev = get().subcontractOrders;
     set(state => ({ subcontractOrders: state.subcontractOrders.map(o => o.id === order.id ? order : o) }));
-    await api.procurement.saveSubcontractOrder(order);
+    try {
+      await api.procurement.saveSubcontractOrder(order);
+    } catch (error) {
+      set({ subcontractOrders: prev });
+      throw error;
+    }
   },
 
   deleteSubcontractOrder: async (id) => {
+    const prev = get().subcontractOrders;
     set(state => ({ subcontractOrders: state.subcontractOrders.filter(o => o.id !== id) }));
-    await api.procurement.deleteSubcontractOrder(id);
+    try {
+      await api.procurement.deleteSubcontractOrder(id);
+    } catch (error) {
+      set({ subcontractOrders: prev });
+      throw error;
+    }
   },
 
   addSupplier: async (supplier) => {
+    const prev = get().suppliers;
     const newSupplier = { ...supplier, id: supplier.id || generateNextId('SUP', get().suppliers) };
     set(state => ({ suppliers: [...state.suppliers, newSupplier] }));
-    await api.suppliers.save(newSupplier);
+    try {
+      await api.suppliers.save(newSupplier);
+    } catch (error) {
+      set({ suppliers: prev });
+      throw error;
+    }
   },
 
   updateSupplier: async (supplier) => {
+    const prev = get().suppliers;
     set(state => ({ suppliers: state.suppliers.map(s => s.id === supplier.id ? supplier : s) }));
-    await api.suppliers.save(supplier);
+    try {
+      await api.suppliers.save(supplier);
+    } catch (error) {
+      set({ suppliers: prev });
+      throw error;
+    }
   },
 
   deleteSupplier: async (id) => {
+    const prev = get().suppliers;
     set(state => ({ suppliers: state.suppliers.filter(s => s.id !== id) }));
-    await api.suppliers.deleteSupplier(id);
+    try {
+      await api.suppliers.deleteSupplier(id);
+    } catch (error) {
+      set({ suppliers: prev });
+      throw error;
+    }
   }
 }));

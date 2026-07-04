@@ -612,6 +612,44 @@ const writeAuditLog = async ({
   }
 };
 
+const saveLedgerEntry = async (entry, companyId) => {
+  const id = randomUUID();
+  await runRun(
+    `INSERT INTO ledger_entries (id, account_id, entry_type, amount, currency, description, reference_type, reference_id, entry_date, company_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, entry.account_id, entry.entry_type, entry.amount, entry.currency || 'USD',
+     entry.description || null, entry.reference_type || null,
+     entry.reference_id || null, entry.entry_date || new Date().toISOString(), companyId]
+  );
+  return id;
+};
+
+const postInvoiceLedger = async (invoiceId, invoiceData, companyId) => {
+  companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+  if (!companyId) return;
+  const arAccount = await runGet(
+    "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%receivable%' OR code = '1100')",
+    [companyId]
+  );
+  const revenueAccount = await runGet(
+    "SELECT * FROM accounts WHERE company_id = ? AND (type = 'revenue' OR name LIKE '%revenue%' OR code = '4000')",
+    [companyId]
+  );
+  if (!arAccount || !revenueAccount) return;
+  const totalAmount = toNumericValue(invoiceData?.total_amount) ?? 0;
+  if (totalAmount <= 0) return;
+  await saveLedgerEntry({
+    account_id: arAccount.id, entry_type: 'debit', amount: totalAmount,
+    currency: invoiceData?.currency || 'USD', description: `Invoice #${invoiceId}`,
+    reference_type: 'invoice', reference_id: String(invoiceId)
+  }, companyId);
+  await saveLedgerEntry({
+    account_id: revenueAccount.id, entry_type: 'credit', amount: totalAmount,
+    currency: invoiceData?.currency || 'USD', description: `Invoice #${invoiceId} Revenue`,
+    reference_type: 'invoice', reference_id: String(invoiceId)
+  }, companyId);
+};
+
 const clearTableCache = (tableName) => {
   if (tableName) {
     const normalized = String(tableName).trim().toLowerCase();
@@ -4486,6 +4524,9 @@ const examinationService = {
       entityId: batchId,
       details: `Generated Invoice #${invoiceId}`
     });
+
+    // Post ledger entries
+    await postInvoiceLedger(invoiceId, invoiceRow, companyId);
 
     return {
       success: true,

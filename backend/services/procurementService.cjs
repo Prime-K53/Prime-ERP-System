@@ -5,6 +5,50 @@ class ProcurementService {
     this.db = db;
   }
 
+  async _saveLedgerEntry(entry, companyId) {
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO ledger_entries (id, account_id, entry_type, amount, currency, description, reference_type, reference_id, entry_date, company_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, entry.account_id, entry.entry_type, entry.amount, entry.currency || 'USD',
+         entry.description || null, entry.reference_type || null,
+         entry.reference_id || null, entry.entry_date || new Date().toISOString(), companyId],
+        function(err) {
+          if (err) reject(err);
+          else resolve(id);
+        }
+      );
+    });
+  }
+
+  async postGoodsReceiptLedger(grn, companyId) {
+    const items = await this._all('SELECT * FROM purchase_order_items WHERE purchase_order_id = ?', [grn.purchase_order_id]);
+    const totalAmount = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    if (totalAmount <= 0) return;
+    const inventoryAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%inventory%' OR code = '1200')",
+      [companyId]
+    );
+    const apAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'liability' AND (name LIKE '%payable%' OR code = '2000')",
+      [companyId]
+    );
+    if (inventoryAccount && apAccount) {
+      const po = await this._get('SELECT * FROM purchase_orders WHERE id = ?', [grn.purchase_order_id]);
+      await this._saveLedgerEntry({
+        account_id: inventoryAccount.id, entry_type: 'debit', amount: totalAmount,
+        currency: po?.currency || 'USD', description: 'Inventory receipt',
+        reference_type: 'goods_receipt', reference_id: grn.id
+      }, companyId);
+      await this._saveLedgerEntry({
+        account_id: apAccount.id, entry_type: 'credit', amount: totalAmount,
+        currency: po?.currency || 'USD', description: 'AP accrual',
+        reference_type: 'goods_receipt', reference_id: grn.id
+      }, companyId);
+    }
+  }
+
   _run(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
@@ -112,22 +156,29 @@ class ProcurementService {
   async createPurchase(data, companyId, userId) {
     const id = data.id || crypto.randomUUID();
     const items = data.items || [];
-    await this._run(
-      `INSERT INTO purchase_orders (id, supplier_id, order_date, expected_date, status, currency, notes, company_id, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.supplier_id, data.order_date || new Date().toISOString(),
-       data.expected_date || null, data.status || 'Draft',
-       data.currency || 'USD', data.notes || null, companyId, userId]
-    );
-    for (const item of items) {
+    try {
+      await this._run("BEGIN TRANSACTION");
       await this._run(
-        `INSERT INTO purchase_order_items (id, purchase_order_id, item_id, item_name, quantity, unit_price, total_price)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [item.id || crypto.randomUUID(), id, item.item_id || null, item.item_name || '',
-         item.quantity || 0, item.unit_price || 0, (item.quantity || 0) * (item.unit_price || 0)]
+        `INSERT INTO purchase_orders (id, supplier_id, order_date, expected_date, status, currency, notes, company_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, data.supplier_id, data.order_date || new Date().toISOString(),
+         data.expected_date || null, data.status || 'Draft',
+         data.currency || 'USD', data.notes || null, companyId, userId]
       );
+      for (const item of items) {
+        await this._run(
+          `INSERT INTO purchase_order_items (id, purchase_order_id, item_id, item_name, quantity, unit_price, total_price)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [item.id || crypto.randomUUID(), id, item.item_id || null, item.item_name || '',
+           item.quantity || 0, item.unit_price || 0, (item.quantity || 0) * (item.unit_price || 0)]
+        );
+      }
+      await this._run("COMMIT");
+      return this.getPurchaseById(id, companyId);
+    } catch (err) {
+      await this._run("ROLLBACK");
+      throw err;
     }
-    return this.getPurchaseById(id, companyId);
   }
 
   async updatePurchaseStatus(id, status, companyId) {
@@ -157,7 +208,9 @@ class ProcurementService {
       [id, data.purchase_order_id, data.received_date || new Date().toISOString(),
        'Received', data.notes || null, companyId, userId]
     );
-    return this._get('SELECT * FROM goods_receipts WHERE id = ?', [id]);
+    const grn = await this._get('SELECT * FROM goods_receipts WHERE id = ?', [id]);
+    await this.postGoodsReceiptLedger(grn, companyId);
+    return grn;
   }
 }
 

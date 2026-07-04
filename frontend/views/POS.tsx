@@ -483,6 +483,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           : (companyConfig.transactionSettings?.pos?.typePrintingCostPerPage ?? 1.20);
 
         const totalPages = pagesPerCopy * quantity;
+        const totalSheets = isPhotocopy ? quantity * Math.ceil(pagesPerCopy / 2) : totalPages;
         const materialCost = costPerPage * totalPages;
 
         const finalPrice = total;
@@ -494,7 +495,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           name: isPhotocopy ? 'Quick Photocopy' : 'Type & Printing',
           sku: isPhotocopy ? 'QUICK-PHOTO' : 'QUICK-PRINT',
           desc: isPhotocopy 
-            ? `Quick Photocopy (${pagesPerCopy} pages × ${quantity} copies)`
+            ? `Quick Photocopy (${pagesPerCopy} pages, ${Math.ceil(pagesPerCopy / 2)} sheets × ${quantity} copies)`
             : `Type & Printing (${pagesPerCopy} pages × ${quantity} copies)`,
           price: finalPrice,
           cost: materialCost,
@@ -503,7 +504,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           pagesOverride: pagesPerCopy,
           category: 'Service',
           type: 'Service',
-          unit: 'page',
+          unit: isPhotocopy ? 'sheet' : 'page',
           pages: pagesPerCopy,
           stock: 9999,
           minStockLevel: 0,

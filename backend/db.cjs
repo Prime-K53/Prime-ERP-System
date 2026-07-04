@@ -1016,12 +1016,15 @@ const initDb = () => {
         category TEXT,
         subtype TEXT,
         parent_id TEXT,
+        balance REAL DEFAULT 0,
         is_active INTEGER DEFAULT 1,
         description TEXT,
         company_id TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
+
+      db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON chart_of_accounts(code)`);
 
       db.run(`CREATE TABLE IF NOT EXISTS ledger_entries (
         id TEXT PRIMARY KEY,
@@ -1041,6 +1044,24 @@ const initDb = () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id) ON DELETE CASCADE
       )`);
+
+      db.run(`CREATE TRIGGER IF NOT EXISTS trg_update_account_balance_insert
+        AFTER INSERT ON ledger_entries
+        FOR EACH ROW
+      BEGIN
+        UPDATE chart_of_accounts
+        SET balance = COALESCE(balance, 0) + CASE NEW.entry_type WHEN 'debit' THEN NEW.amount WHEN 'credit' THEN -NEW.amount ELSE 0 END
+        WHERE id = NEW.account_id;
+      END`);
+
+      db.run(`CREATE TRIGGER IF NOT EXISTS trg_update_account_balance_delete
+        AFTER DELETE ON ledger_entries
+        FOR EACH ROW
+      BEGIN
+        UPDATE chart_of_accounts
+        SET balance = COALESCE(balance, 0) + CASE OLD.entry_type WHEN 'debit' THEN -OLD.amount WHEN 'credit' THEN OLD.amount ELSE 0 END
+        WHERE id = OLD.account_id;
+      END`);
 
       db.run(`CREATE TABLE IF NOT EXISTS budgets (
         id TEXT PRIMARY KEY,
@@ -1069,6 +1090,7 @@ const initDb = () => {
         company_id TEXT NOT NULL,
         created_by TEXT,
         executed_at DATETIME,
+        ledger_journal_id TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (from_account_id) REFERENCES chart_of_accounts(id),
         FOREIGN KEY (to_account_id) REFERENCES chart_of_accounts(id)
@@ -1214,6 +1236,30 @@ const initDb = () => {
         FOREIGN KEY (payroll_run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE
       )`);
 
+      db.run(`CREATE TABLE IF NOT EXISTS customer_payments (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        customer_name TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        date TEXT NOT NULL,
+        method TEXT DEFAULT 'Cash',
+        account_id TEXT,
+        reference TEXT,
+        allocations_json TEXT,
+        excess_amount REAL DEFAULT 0,
+        excess_handling TEXT,
+        notes TEXT,
+        status TEXT DEFAULT 'Cleared',
+        reconciled INTEGER DEFAULT 0,
+        company_id TEXT NOT NULL,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_company ON customer_payments(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_customer ON customer_payments(customer_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_date ON customer_payments(date)`);
+
       db.run(`CREATE TABLE IF NOT EXISTS assets (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -1247,8 +1293,21 @@ const initDb = () => {
         });
       });
 
+      function runIndex(sql) {
+        return new Promise(res => db.run(sql, () => res()));
+      }
       Promise.all(migrationPromises).then(() => {
-        resolve();
+        Promise.all([
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_invoices_company_id ON invoices(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON invoices(customer_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_company_id ON sales(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_category_date ON expenses(category, expense_date)`)
+        ]).then(() => {
+          resolve();
+        });
       });
     });
   });

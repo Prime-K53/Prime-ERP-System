@@ -128,11 +128,13 @@ const ClientLedger: React.FC = () => {
     const now = new Date();
     const aging: AgingBucket = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0 };
 
+    const defaultPaymentTerms = 30;
     customerInvoices
       .filter((i: any) => i.status !== 'Paid' && i.status !== 'Cancelled')
       .forEach((inv: any) => {
-        const invoiceDate = inv.dueDate || inv.date;
-        const days = differenceInDays(now, parseISO(invoiceDate));
+        const dueDate = inv.dueDate || (inv.date ? new Date(new Date(inv.date).getTime() + defaultPaymentTerms * 86400000).toISOString() : inv.date);
+        if (!dueDate) return;
+        const days = differenceInDays(now, parseISO(dueDate));
         const balance = (inv.totalAmount || 0) - (inv.paidAmount || 0);
 
         if (days <= 0) aging.current += balance;

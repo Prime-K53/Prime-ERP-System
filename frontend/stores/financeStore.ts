@@ -165,7 +165,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           accounts: finalAccounts, 
           ledger, invoices, recurringInvoices, expenses, income,
           scheduledPayments, walletTransactions, deliveryNotes, budgets,
-          openingBalance: parseFloat(localStorage.getItem('nexus_opening_balance') || '500'),
+          openingBalance: parseFloat(localStorage.getItem('nexus_opening_balance') || '500'), // Note: openingBalance stored locally will differ across devices. In multi-user setups, a backend endpoint should provide this.
           transfers, employees, payrollRuns, payslips, cheques, supplierPayments
       });
 

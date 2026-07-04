@@ -778,6 +778,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ── Inactivity timeout ──
   const lastActivityRef = useRef(Date.now());
+  const companyConfigRef = useRef(companyConfig);
 
   useEffect(() => {
     const update = () => { lastActivityRef.current = Date.now(); };
@@ -786,22 +787,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => { events.forEach(e => window.removeEventListener(e, update)); };
   }, []);
 
+  useEffect(() => { companyConfigRef.current = companyConfig; }, [companyConfig]);
+
   useEffect(() => {
     if (!user) return;
     lastActivityRef.current = Date.now(); // reset timer on login
 
-    const timeoutMin = companyConfig?.securitySettings?.sessionTimeoutMinutes ?? 30;
-    if (timeoutMin <= 0) return;
-
     const id = setInterval(() => {
       const elapsed = (Date.now() - lastActivityRef.current) / 60000;
-      if (elapsed >= timeoutMin) {
+      const config = companyConfigRef.current?.securitySettings?.sessionTimeoutMinutes ?? 30;
+      if (config <= 0) return;
+      if (elapsed >= config) {
         logout();
       }
     }, 60000);
 
     return () => clearInterval(id);
-  }, [user, companyConfig?.securitySettings?.sessionTimeoutMinutes]);
+  }, [user]);
 
   const notify = useCallback((message: string, type: 'success' | 'error' | 'info' | 'warning') => {
     setNotification({ id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, message, type });
@@ -947,23 +949,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const hashPassword = async (text: string): Promise<string> => {
           if (!text) return '';
-          if (!window.isSecureContext || !crypto.subtle) {
-            let hash = 0;
-            const salt = 'PrimeERP2024';
-            for (let i = 0; i < text.length; i++) {
-              const code = text.charCodeAt(i);
-              hash = ((hash << 7) - hash) + code + (salt.charCodeAt(i % salt.length) << 4);
-              hash = hash & 0x7FFFFFFF;
-            }
-            let h2 = 0;
-            for (let i = 0; i < text.length; i++) {
-              h2 = ((h2 << 5) - h2) + text.charCodeAt(i);
-              h2 = h2 & 0x7FFFFFFF;
-            }
-            return `INSECURE_${Math.abs(hash).toString(16).padStart(8, '0')}${Math.abs(h2).toString(16).padStart(8, '0')}`;
-          }
-          const msgBuffer = new TextEncoder().encode(text);
-          const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+          const encoder = new TextEncoder();
+          const data = encoder.encode(text);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', data);
           const hashArray = Array.from(new Uint8Array(hashBuffer));
           return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         };
@@ -974,10 +962,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const hashedInput = await hashPassword(password);
-        const expectedPassword = isStoredHash(foundUser.password) ? foundUser.password : await hashPassword(foundUser.password);
-        if (foundUser.password !== expectedPassword) {
-            await dbService.put('users', { ...foundUser, password: expectedPassword });
-        }
+        const isHash = (s: string) => /^[a-f0-9]{64}$/i.test(s) || isStoredHash(s);
+        const expectedPassword = isHash(foundUser.password)
+          ? foundUser.password
+          : (async () => {
+              const hashed = await hashPassword(foundUser.password);
+              await dbService.put('users', { ...foundUser, password: hashed });
+              return hashed;
+            })();
         if (expectedPassword !== hashedInput) {
             return 'INVALID';
         }
@@ -1014,7 +1006,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     if (user) {
         addAuditLog({
-            action: 'LOGIN',
+            action: 'LOGOUT',
             entityType: 'User',
             entityId: user.id,
             details: `User ${user.username} logged out.`
@@ -1105,6 +1097,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteUser = async (id: string) => {
+    // Check for related records
+    const relatedSales = await dbService.getAll('sales').catch(() => []);
+    const hasSales = relatedSales.some((s: any) => s.createdBy === id || s.salesPerson === id);
+    if (hasSales) {
+      notify('Cannot delete user with existing sales transactions', 'error');
+      return;
+    }
     await dbService.delete('users', id);
     setAllUsers(prev => prev.filter(u => u.id !== id));
     notify('User account terminated', 'info');
@@ -1342,7 +1341,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (!SUPABASE_ENABLED) {
-      setUser(null);
+      // Keep user logged in after initial setup
+      if (adminUser) {
+        setUser({ ...adminUser, authMode: 'local' });
+      } else {
+        setUser(null);
+      }
     } else {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {

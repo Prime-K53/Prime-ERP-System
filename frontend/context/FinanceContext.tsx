@@ -241,39 +241,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const nextPaid = Number(invoice.paidAmount || 0);
           const paidDelta = roundFinancial(nextPaid - prevPaid);
 
-          if (existing && paidDelta > 0 && invoice.status !== 'Draft' && invoice.status !== 'Cancelled') {
-              // Update non-payment fields first without changing paid totals
-              const invoiceForUpdate: Invoice = {
-                  ...invoice,
-                  paidAmount: prevPaid,
-                  status: existing.status
-              };
-              await transactionService.updateInvoice(invoiceForUpdate);
+          await transactionService.updateInvoice(invoice);
 
+          if (paidDelta > 0 && invoice.status !== 'Draft' && invoice.status !== 'Cancelled') {
               const allPayments = await dbService.getAll<CustomerPayment>('customerPayments');
               const paymentId = generateNextId('RCPT', allPayments, companyConfig);
-              const paymentMethod = invoice.paymentMethod || invoice.payment_method || 'Cash';
-              const accountId = invoice.accountId;
-
               const payment: CustomerPayment = {
                   id: paymentId,
                   date: new Date().toISOString(),
                   customerId: invoice.customerId || invoice.customerName,
                   customerName: invoice.customerName,
                   amount: paidDelta,
-                  paymentMethod,
-                  accountId,
+                  paymentMethod: invoice.paymentMethod || invoice.payment_method || 'Cash',
+                  accountId: invoice.accountId,
                   reference: invoice.id,
                   notes: `Invoice payment for #${invoice.id}`,
                   allocations: [{ invoiceId: invoice.id, amount: paidDelta }],
                   status: 'Cleared',
                   reconciled: false
               };
-
               await transactionService.addCustomerPayment(payment);
               await salesStore.fetchSalesData();
-          } else {
-              await transactionService.updateInvoice(invoice);
           }
           await financeStore.fetchFinanceData();
           addAuditLog({

@@ -874,7 +874,7 @@ const Settings: React.FC = () => {
                                                 <p className="text-[11px] text-slate-500 mt-0.5">Switch between light, dark, or system preferences.</p>
                                             </div>
                                             <div className="flex p-1 bg-slate-100 rounded-lg">
-                                                {['Light', 'Dark', 'Auto'].map(mode => (
+                                                 {['Light', 'Dark', 'System'].map(mode => (
                                                     <button
                                                         key={mode}
                                                         onClick={() => setConfig({ 

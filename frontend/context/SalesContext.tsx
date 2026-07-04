@@ -132,6 +132,7 @@ const SalesContext = createContext<SalesContextType | undefined>(undefined);
 export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const salesStore = useSalesStore();
     const [isPosModalOpen, setIsPosModalOpen] = React.useState(false);
+    const inFlightApprovals = React.useRef<Set<string>>(new Set());
 
     const finance = useFinance();
     const productionStore = useProductionStore();
@@ -192,8 +193,8 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const customer = findCustomerForNotification(details.customerId, details.customerName);
         const customerName = details.customerName || customer?.name || 'Valued Customer';
 
-        if (!customer?.phone) {
-            return;
+        if (!customer?.phone && !customer?.email) {
+          return;
         }
 
         try {
@@ -569,6 +570,10 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const approveQuotation = async (id: string): Promise<ApprovedQuotationResult> => {
+        if (inFlightApprovals.current.has(id)) {
+            throw new Error('Quotation approval is already in progress');
+        }
+        inFlightApprovals.current.add(id);
         try {
             const quotation = salesStore.quotations.find((entry) => entry.id === id);
             if (!quotation) {
@@ -681,6 +686,8 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } catch (err: any) {
             notify(`Approval Failed: ${err.message}`, "error");
             throw err;
+        } finally {
+            inFlightApprovals.current.delete(id);
         }
     };
 

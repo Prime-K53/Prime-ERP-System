@@ -1916,7 +1916,12 @@ export const transactionService = {
                 // Normalize paid amount and status before final save
                 const totalAmount = Number(invoice.totalAmount || 0);
                 const rawPaidAmount = Number(invoice.paidAmount || 0);
-                const paidAmount = Math.max(0, Math.min(rawPaidAmount, totalAmount));
+                const paidAmount = Math.min(rawPaidAmount, totalAmount);
+                const overpayment = Math.max(0, rawPaidAmount - totalAmount);
+                if (overpayment > 0.01) {
+                    const { processOverpaymentToWallet } = require('./transactionService');
+                    await processOverpaymentToWallet(invoice, overpayment);
+                }
                 invoice.paidAmount = paidAmount;
 
                 if (invoice.status !== 'Draft' && invoice.status !== 'Cancelled') {
@@ -2810,6 +2815,9 @@ export const transactionService = {
 
                 const invoice = await invoiceStore.get(id);
                 if (!invoice) throw new Error("Invoice not found");
+                if (invoice.status === 'Cancelled' || invoice.status === 'Voided') {
+                    throw new Error('Invoice is already voided/cancelled');
+                }
 
                 // 1. Reverse Inventory
                 for (const item of invoice.items) {
@@ -4907,5 +4915,25 @@ export const transactionService = {
                 return { success: true };
             }
         );
+    },
+
+    async processOverpaymentToWallet(invoice, overpaymentAmount) {
+        const walletTx = {
+            id: `WALLET-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            customerId: invoice.customerId || invoice.customerName,
+            customerName: invoice.customerName,
+            amount: overpaymentAmount,
+            type: 'deposit',
+            reference: invoice.id,
+            description: `Overpayment credit from invoice #${invoice.id}`,
+            date: new Date().toISOString()
+        };
+        await dbService.put('walletTransactions', walletTx);
+        const customer = await dbService.get('customers', walletTx.customerId);
+        if (customer) {
+            customer.walletBalance = (customer.walletBalance || 0) + overpaymentAmount;
+            await dbService.put('customers', customer);
+        }
+        return walletTx;
     }
 };

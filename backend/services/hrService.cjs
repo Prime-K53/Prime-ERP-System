@@ -5,6 +5,46 @@ class HRService {
     this.db = db;
   }
 
+  async _saveLedgerEntry(entry, companyId) {
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO ledger_entries (id, account_id, entry_type, amount, currency, description, reference_type, reference_id, entry_date, company_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, entry.account_id, entry.entry_type, entry.amount, entry.currency || 'USD',
+         entry.description || null, entry.reference_type || null,
+         entry.reference_id || null, entry.entry_date || new Date().toISOString(), companyId],
+        function(err) {
+          if (err) reject(err);
+          else resolve(id);
+        }
+      );
+    });
+  }
+
+  async postPayrollLedger(run, companyId) {
+    let expenseAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%wage%' OR name LIKE '%salary%' OR code = '6300')",
+      [companyId]
+    );
+    let liabilityAccount = await this._get(
+      "SELECT * FROM accounts WHERE company_id = ? AND type = 'liability' AND name LIKE '%payable%'",
+      [companyId]
+    );
+    const totalAmount = (run.total_gross || 0);
+    if (totalAmount <= 0 || !expenseAccount || !liabilityAccount) return;
+    await this._saveLedgerEntry({
+      account_id: expenseAccount.id, entry_type: 'debit', amount: totalAmount,
+      description: `Payroll ${run.name || run.id}`,
+      reference_type: 'payroll', reference_id: run.id
+    }, companyId);
+    await this._saveLedgerEntry({
+      account_id: liabilityAccount.id, entry_type: 'credit', amount: totalAmount,
+      description: `Payroll liability ${run.name || run.id}`,
+      reference_type: 'payroll', reference_id: run.id
+    }, companyId);
+  }
+
   _run(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
@@ -82,7 +122,9 @@ class HRService {
        data.total_gross || 0, data.total_deductions || 0, data.total_net || 0,
        data.employee_count || 0, companyId]
     );
-    return this._get('SELECT * FROM payroll_runs WHERE id = ?', [id]);
+    const run = await this._get('SELECT * FROM payroll_runs WHERE id = ?', [id]);
+    await this.postPayrollLedger(run, companyId);
+    return run;
   }
 
   async getPayslips(companyId) {

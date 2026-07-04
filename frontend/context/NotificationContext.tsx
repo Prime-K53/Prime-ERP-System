@@ -106,7 +106,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       const mappedSystem: UnifiedNotification[] = systemAlerts.map(a => ({
         id: a.id,
         type: a.type?.toUpperCase() || 'SYSTEM',
-        priority: (a.priority || a.severity || (a.type === 'error' ? 'High' : (a.type === 'warning' ? 'Medium' : 'Low'))) as UnifiedNotification['priority'],
+        priority: (() => {
+          const priorityMap: Record<string, 'High' | 'Medium' | 'Low'> = {
+            ERROR: 'High',
+            WARNING: 'Medium',
+            INFO: 'Low'
+          };
+          const typeKey = (a.priority || a.severity || a.type || 'info').toUpperCase();
+          return priorityMap[typeKey] || 'Low';
+        })(),
         title: a.title || 'System Alert',
         message: a.message,
         is_read: !!a.read,
