@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, TrendingUp, Calculator, MessageSquare, Brain } from 'lucide-react';
+import { Sparkles, TrendingUp, Calculator, MessageSquare, Brain, BarChart3 } from 'lucide-react';
 import GenericHub from './GenericHub';
 
 const SmartOperationsHub: React.FC = () => {
@@ -10,6 +10,13 @@ const SmartOperationsHub: React.FC = () => {
       path: '/smart-operations/ai',
       icon: <Brain />,
       color: 'bg-purple-50 text-purple-500'
+    },
+    {
+      label: 'AI Analytics',
+      description: 'Gang Run, Cash Flow, Anomaly Detection, Churn, Reorder, PO Match, Schedule, Query, Audit, BOM.',
+      path: '/smart-operations/ai/analytics',
+      icon: <BarChart3 />,
+      color: 'bg-fuchsia-50 text-fuchsia-500'
     },
     {
       label: 'Market Adjustments',

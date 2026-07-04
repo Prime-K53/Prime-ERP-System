@@ -14,3 +14,4 @@ build
 coverage
 .DS_Store
 Thumbs.db
+*_REPORT.md

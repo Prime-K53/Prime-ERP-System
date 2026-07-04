@@ -153,6 +153,17 @@ const SmartPricing = lazyWithRetry('./views/tools/SmartPricing', () => import('.
 const SmartOperationsHub = lazyWithRetry('./views/SmartOperationsHub', () => import('./views/SmartOperationsHub'));
 const MarketingMessages = lazyWithRetry('./views/tools/MarketingMessages', () => import('./views/tools/MarketingMessages'));
 const AIAssistant = lazyWithRetry('./views/tools/AIAssistant', () => import('./views/tools/AIAssistant'));
+const AnalyticsHub = lazyWithRetry('./views/ai/AnalyticsHub', () => import('./views/ai/AnalyticsHub'));
+const GangRunOptimizer = lazyWithRetry('./views/ai/GangRunOptimizer', () => import('./views/ai/GangRunOptimizer'));
+const CashFlowForecaster = lazyWithRetry('./views/ai/CashFlowForecaster', () => import('./views/ai/CashFlowForecaster'));
+const AnomalyDetectorComp = lazyWithRetry('./views/ai/AnomalyDetector', () => import('./views/ai/AnomalyDetector'));
+const ChurnPredictor = lazyWithRetry('./views/ai/ChurnPredictor', () => import('./views/ai/ChurnPredictor'));
+const ReorderOptimizer = lazyWithRetry('./views/ai/ReorderOptimizer', () => import('./views/ai/ReorderOptimizer'));
+const POMatcher = lazyWithRetry('./views/ai/POMatcher', () => import('./views/ai/POMatcher'));
+const SmartScheduler = lazyWithRetry('./views/ai/SmartScheduler', () => import('./views/ai/SmartScheduler'));
+const ConversationalQuery = lazyWithRetry('./views/ai/ConversationalQuery', () => import('./views/ai/ConversationalQuery'));
+const AuditInvestigator = lazyWithRetry('./views/ai/AuditInvestigator', () => import('./views/ai/AuditInvestigator'));
+const BOMGenerator = lazyWithRetry('./views/ai/BOMGenerator', () => import('./views/ai/BOMGenerator'));
 const ServiceJobsPage = lazyWithRetry('./views/service/ServiceJobsPage', () => import('./views/service/ServiceJobsPage'));
 const ServiceRecipeEditorPage = lazyWithRetry('./views/service/ServiceRecipeEditorPage', () => import('./views/service/ServiceRecipeEditorPage'));
 
@@ -588,6 +599,17 @@ const AppLayout: React.FC = () => {
                 <Route element={<ErrorBoundary name="Smart Operations"><Outlet /></ErrorBoundary>}>
                   <Route path="/smart-operations" element={<SmartOperationsHub />} />
                   <Route path="/smart-operations/ai" element={<AIAssistant />} />
+                  <Route path="/smart-operations/ai/analytics" element={<AnalyticsHub />} />
+                  <Route path="/smart-operations/ai/gang-run" element={<GangRunOptimizer />} />
+                  <Route path="/smart-operations/ai/cash-flow" element={<CashFlowForecaster />} />
+                  <Route path="/smart-operations/ai/anomalies" element={<AnomalyDetectorComp />} />
+                  <Route path="/smart-operations/ai/churn" element={<ChurnPredictor />} />
+                  <Route path="/smart-operations/ai/reorder" element={<ReorderOptimizer />} />
+                  <Route path="/smart-operations/ai/po-match" element={<POMatcher />} />
+                  <Route path="/smart-operations/ai/scheduler" element={<SmartScheduler />} />
+                  <Route path="/smart-operations/ai/query" element={<ConversationalQuery />} />
+                  <Route path="/smart-operations/ai/audit" element={<AuditInvestigator />} />
+                  <Route path="/smart-operations/ai/bom" element={<BOMGenerator />} />
                   <Route path="/smart-operations/adjustments" element={<MarketAdjustments />} />
                   <Route path="/smart-operations/pricing" element={<SmartPricing />} />
                   <Route path="/smart-operations/messages" element={<MarketingMessages />} />

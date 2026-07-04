@@ -1,3 +1,4 @@
+try { require('dotenv').config({ path: require('path').join(__dirname, '.env') }); } catch {}
 console.log('--- SERVER SCRIPT STARTING ---');
 console.log('Requiring express...');
 const express = require('express');
@@ -162,7 +163,7 @@ const corsOptions = {
     return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'x-user-role', 'x-user-email', 'x-correlation-id', 'x-company-id', 'x-idempotency-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id', 'x-company-id', 'x-idempotency-key'],
   credentials: true
 };
 
@@ -332,7 +333,7 @@ app.get('/health', (req, res) => {
 });
 
 function validateEnv() {
-  const required = ['JWT_SECRET', 'SESSION_SECRET', 'ENCRYPTION_KEY'];
+  const required = ['JWT_SECRET', 'SESSION_SECRET'];
   const missing = required.filter(k => !process.env[k] || process.env[k] === 'your-secret-key-here');
   if (missing.length) {
     console.error(`[ENV] FATAL: Missing or default secrets: ${missing.join(', ')}`);
@@ -512,9 +513,11 @@ async function startServer() {
 
     console.log(`[BACKEND] Creating POS sale #${id} for ${customerName}. Revenue: ${totalAmount}, Margin: ${profitMarginTotal}`);
 
-    db.serialize(() => {
-      db.run("BEGIN TRANSACTION");
-
+    db.run("BEGIN TRANSACTION", (err) => {
+      if (err) {
+        console.error(`[BACKEND] Error beginning transaction for sale #${id}:`, err.message);
+        return res.status(500).json({ error: 'Failed to begin transaction' });
+      }
       db.run(
         `INSERT OR REPLACE INTO sales (
           id, date, customer_id, customer_name, sub_account_name, 
@@ -532,24 +535,30 @@ async function startServer() {
             console.error(`[BACKEND] Error creating sale #${id}:`, error.message);
             return res.status(500).json({ error: 'Failed to create sale' });
           }
-          db.run("COMMIT");
-          res.json({
-            id,
-            date,
-            customerId,
-            customerName,
-            subAccountName,
-            totalAmount,
-            materialTotal,
-            adjustmentTotal,
-            profitMarginTotal,
-            roundingTotal,
-            status,
-            paymentMethod,
-            source,
-            items: payload.items || [],
-            payments: payload.payments || [],
-            adjustmentSnapshots: payload.adjustmentSnapshots || []
+          db.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              db.run("ROLLBACK");
+              console.error(`[BACKEND] Error committing sale #${id}:`, commitErr.message);
+              return res.status(500).json({ error: 'Failed to commit sale' });
+            }
+            res.json({
+              id,
+              date,
+              customerId,
+              customerName,
+              subAccountName,
+              totalAmount,
+              materialTotal,
+              adjustmentTotal,
+              profitMarginTotal,
+              roundingTotal,
+              status,
+              paymentMethod,
+              source,
+              items: payload.items || [],
+              payments: payload.payments || [],
+              adjustmentSnapshots: payload.adjustmentSnapshots || []
+            });
           });
         }
       );
@@ -596,12 +605,16 @@ async function startServer() {
 
   app.delete('/api/sales/:id', (req, res) => {
     const { id } = req.params;
-    db.run(`UPDATE sales SET status = 'Voided' WHERE id = ?`, [id], (error) => {
-      if (error) {
-        console.error(`[BACKEND] Error voiding sale #${id}:`, error.message);
-        return res.status(500).json({ error: 'Failed to void sale' });
-      }
-      res.json({ id, success: true, status: 'Voided' });
+    db.get(`SELECT id FROM sales WHERE id = ?`, [id], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Sale not found' });
+      db.run(`UPDATE sales SET status = 'Voided' WHERE id = ?`, [id], (error) => {
+        if (error) {
+          console.error(`[BACKEND] Error voiding sale #${id}:`, error.message);
+          return res.status(500).json({ error: 'Failed to void sale' });
+        }
+        res.json({ id, success: true, status: 'Voided' });
+      });
     });
   });
 
@@ -648,12 +661,16 @@ async function startServer() {
   const assetsRoute = require('./routes/assets.cjs');
   app.use('/api/assets', verifyToken, assetsRoute);
 
+  // --- AI-Powered Features ---
+  const aiRoutes = require('./routes/aiRoutes.cjs');
+  app.use('/api/ai', verifyToken, aiRoutes);
+
   // --- Finance / Accounting Endpoints ---
   const FinanceService = require('./services/financeService.cjs');
   const finance = new FinanceService(db);
 
   // Chart of Accounts
-  app.get('/api/accounts', async (req, res) => {
+  app.get('/api/accounts', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await finance.getAccounts(req.companyId || '');
       res.json(rows);
@@ -663,7 +680,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/accounts/:id', async (req, res) => {
+  app.get('/api/accounts/:id', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const row = await finance.getAccountById(req.params.id, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Account not found' });
@@ -674,7 +691,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/accounts', validateBody(accountSchemas.create), async (req, res) => {
+  app.post('/api/accounts', requireRole('Admin', 'Accountant', 'Manager'), validateBody(accountSchemas.create), async (req, res) => {
     try {
       const row = await finance.createAccount(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -684,7 +701,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/accounts/:id', validateBody(accountSchemas.update), async (req, res) => {
+  app.put('/api/accounts/:id', requireRole('Admin', 'Accountant', 'Manager'), validateBody(accountSchemas.update), async (req, res) => {
     try {
       const row = await finance.updateAccount(req.params.id, req.body, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Account not found' });
@@ -695,7 +712,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/accounts/:id', async (req, res) => {
+  app.delete('/api/accounts/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await finance.deleteAccount(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -706,7 +723,7 @@ async function startServer() {
   });
 
   // Ledger
-  app.get('/api/ledger', async (req, res) => {
+  app.get('/api/ledger', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const accountId = req.query.account_id;
       const rows = await finance.getLedger(req.companyId || '', accountId);
@@ -717,9 +734,14 @@ async function startServer() {
     }
   });
 
-  app.post('/api/ledger', validateBody(financialSchemas.journalEntry), async (req, res) => {
+  app.post('/api/ledger', requireRole('Admin', 'Accountant', 'Manager'), validateBody(financialSchemas.journalEntry), async (req, res) => {
     try {
       const { lines, ...meta } = req.body;
+      const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
+      const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
+      if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        return res.status(400).json({ error: 'Unbalanced journal entry', totalDebit, totalCredit });
+      }
       const companyId = req.companyId || '';
       const results = [];
       for (const line of lines) {
@@ -740,7 +762,7 @@ async function startServer() {
   });
 
   // Expenses
-  app.get('/api/expenses', async (req, res) => {
+  app.get('/api/expenses', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await finance.getExpenses(req.companyId || '');
       res.json(rows);
@@ -750,7 +772,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/expenses', validateBody(expenseSchemas.create), async (req, res) => {
+  app.post('/api/expenses', requireRole('Admin', 'Accountant', 'Manager'), validateBody(expenseSchemas.create), async (req, res) => {
     try {
       const row = await finance.createExpense({ ...req.body, created_by: req.user?.id }, req.companyId || '');
       res.status(201).json(row);
@@ -760,7 +782,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/expenses/:id', validateBody(expenseSchemas.update), async (req, res) => {
+  app.put('/api/expenses/:id', requireRole('Admin', 'Accountant', 'Manager'), validateBody(expenseSchemas.update), async (req, res) => {
     try {
       const row = await finance.updateExpense(req.params.id, req.body, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Expense not found' });
@@ -771,7 +793,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/expenses/:id', async (req, res) => {
+  app.delete('/api/expenses/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await finance.deleteExpense(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -782,7 +804,7 @@ async function startServer() {
   });
 
   // Income
-  app.get('/api/income', async (req, res) => {
+  app.get('/api/income', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await finance.getIncome(req.companyId || '');
       res.json(rows);
@@ -792,7 +814,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/income', validateBody(incomeSchemas.create), async (req, res) => {
+  app.post('/api/income', requireRole('Admin', 'Accountant', 'Manager'), validateBody(incomeSchemas.create), async (req, res) => {
     try {
       const row = await finance.createIncome({ ...req.body, created_by: req.user?.id }, req.companyId || '');
       res.status(201).json(row);
@@ -802,7 +824,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/income/:id', async (req, res) => {
+  app.delete('/api/income/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await finance.deleteIncome(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -813,7 +835,7 @@ async function startServer() {
   });
 
   // Budgets
-  app.get('/api/budgets', async (req, res) => {
+  app.get('/api/budgets', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await finance.getBudgets(req.companyId || '');
       res.json(rows);
@@ -823,7 +845,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/budgets', validateBody(budgetSchemas.create), async (req, res) => {
+  app.post('/api/budgets', requireRole('Admin', 'Accountant', 'Manager'), validateBody(budgetSchemas.create), async (req, res) => {
     try {
       const row = await finance.createBudget(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -833,7 +855,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/budgets/:id', validateBody(budgetSchemas.update), async (req, res) => {
+  app.put('/api/budgets/:id', requireRole('Admin', 'Accountant', 'Manager'), validateBody(budgetSchemas.update), async (req, res) => {
     try {
       const row = await finance.updateBudget(req.params.id, req.body, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Budget not found' });
@@ -844,7 +866,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/budgets/:id', async (req, res) => {
+  app.delete('/api/budgets/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await finance.deleteBudget(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -855,7 +877,7 @@ async function startServer() {
   });
 
   // Transfers
-  app.get('/api/transfers', async (req, res) => {
+  app.get('/api/transfers', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await finance.getTransfers(req.companyId || '');
       res.json(rows);
@@ -865,7 +887,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/transfers', validateBody(transferSchemas.create), async (req, res) => {
+  app.post('/api/transfers', requireRole('Admin', 'Accountant', 'Manager'), validateBody(transferSchemas.create), async (req, res) => {
     try {
       const row = await finance.createTransfer(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
@@ -875,12 +897,142 @@ async function startServer() {
     }
   });
 
+  // --- Invoice Endpoints ---
+  app.get('/api/invoices', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const status = req.query.status;
+      let sql = `SELECT i.*, c.name as customer_name FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id WHERE i.company_id = ?`;
+      const params = [req.companyId || ''];
+      if (status) {
+        sql += ` AND LOWER(i.status) = ?`;
+        params.push(status.toLowerCase());
+      }
+      sql += ` ORDER BY i.created_at DESC LIMIT 500`;
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Invoices] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve invoices' }); }
+        res.json(rows || []);
+      });
+    } catch (err) {
+      console.error('[Invoices] GET error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch invoices' });
+    }
+  });
+
+  app.post('/api/invoices', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { body } = req;
+      const id = body.id || randomUUID();
+      db.run(
+        `INSERT INTO invoices (id, customer_id, customer_name, subtotal, total_amount, currency, status, payment_method, due_date, invoice_number, line_items_json, notes, document_title, company_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, body.customer_id || null, body.customer_name || null, body.subtotal || 0,
+         body.total_amount || 0, body.currency || 'MWK', body.status || 'unpaid',
+         body.payment_method || null, body.due_date || null, body.invoice_number || null,
+         JSON.stringify(body.line_items || []), body.notes || null, body.document_title || null,
+         req.companyId || '', req.user?.id || null],
+        function (err) {
+          if (err) { console.error('[Invoices] POST error:', err); return res.status(500).json({ error: 'Failed to create invoice' }); }
+          res.status(201).json({ id, ...body });
+        }
+      );
+    } catch (err) {
+      console.error('[Invoices] POST error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to create invoice' });
+    }
+  });
+
+  app.put('/api/invoices/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { body } = req;
+      const fields = [];
+      const params = [];
+      const allowed = ['customer_id', 'customer_name', 'subtotal', 'total_amount', 'currency', 'status', 'payment_method', 'paid_amount', 'due_date', 'invoice_number', 'notes', 'document_title', 'line_items_json'];
+      for (const field of allowed) {
+        if (body[field] !== undefined) {
+          fields.push(`${field} = ?`);
+          params.push(body[field]);
+        }
+      }
+      if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+      params.push(id, req.companyId || '');
+      db.run(`UPDATE invoices SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`, params, function (err) {
+        if (err) { console.error('[Invoices] PUT error:', err); return res.status(500).json({ error: 'Failed to update invoice' }); }
+        if (this.changes === 0) return res.status(404).json({ error: 'Invoice not found' });
+        res.json({ success: true, id });
+      });
+    } catch (err) {
+      console.error('[Invoices] PUT error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to update invoice' });
+    }
+  });
+
+  app.delete('/api/invoices/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      db.get('SELECT status FROM invoices WHERE id = ? AND company_id = ?', [id, req.companyId || ''], (err, row) => {
+        if (err) { console.error('[Invoices] DELETE error:', err); return res.status(500).json({ error: 'Failed to void invoice' }); }
+        if (!row) return res.status(404).json({ error: 'Invoice not found' });
+        db.run('UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?', ['Voided', id, req.companyId || ''], (err) => {
+          if (err) { console.error('[Invoices] DELETE error:', err); return res.status(500).json({ error: 'Failed to void invoice' }); }
+          // Reverse ledger entries if present
+          try {
+            finance.reverseLedgerEntriesByReference('invoice', id, req.companyId || '');
+          } catch (reversalErr) {
+            console.warn('[Invoices] Ledger reversal skipped:', reversalErr?.message);
+          }
+          res.json({ success: true, status: 'Voided' });
+        });
+      });
+    } catch (err) {
+      console.error('[Invoices] DELETE error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to void invoice' });
+    }
+  });
+
+  // --- Customer Payment Endpoints ---
+  app.get('/api/customer-payments', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const companyId = req.companyId || '';
+      db.all(`SELECT * FROM customer_payments WHERE company_id = ? ORDER BY date DESC LIMIT 500`, [companyId], (err, rows) => {
+        if (err) { console.error('[CustomerPayments] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve payments' }); }
+        res.json(rows || []);
+      });
+    } catch (err) {
+      console.error('[CustomerPayments] GET error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch payments' });
+    }
+  });
+
+  app.post('/api/customer-payments', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { body } = req;
+      const id = body.id || randomUUID();
+      const companyId = req.companyId || '';
+      db.run(
+        `INSERT INTO customer_payments (id, date, customer_id, customer_name, amount, payment_method, account_id, reference, notes, status, company_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, body.date || new Date().toISOString(), body.customer_id || body.customerId || null,
+         body.customer_name || body.customerName || null, body.amount || 0,
+         body.payment_method || body.paymentMethod || 'Cash', body.account_id || body.accountId || null,
+         body.reference || null, body.notes || null, body.status || 'Cleared', companyId, req.user?.id || null],
+        function (err) {
+          if (err) { console.error('[CustomerPayments] POST error:', err); return res.status(500).json({ error: 'Failed to create payment' }); }
+          res.status(201).json({ id, ...body });
+        }
+      );
+    } catch (err) {
+      console.error('[CustomerPayments] POST error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to create payment' });
+    }
+  });
+
   // --- Procurement / Purchases Endpoints ---
   const ProcurementService = require('./services/procurementService.cjs');
   const procurement = new ProcurementService(db);
 
   // Suppliers
-  app.get('/api/suppliers', async (req, res) => {
+  app.get('/api/suppliers', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await procurement.getSuppliers(req.companyId || '');
       res.json(rows);
@@ -901,7 +1053,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/suppliers', async (req, res) => {
+  app.post('/api/suppliers', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await procurement.createSupplier(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -911,7 +1063,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/suppliers/:id', async (req, res) => {
+  app.put('/api/suppliers/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await procurement.updateSupplier(req.params.id, req.body, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Supplier not found' });
@@ -922,7 +1074,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/suppliers/:id', async (req, res) => {
+  app.delete('/api/suppliers/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await procurement.deleteSupplier(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -933,7 +1085,7 @@ async function startServer() {
   });
 
   // Purchase Orders
-  app.get('/api/purchases', async (req, res) => {
+  app.get('/api/purchases', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await procurement.getPurchases(req.companyId || '');
       res.json(rows);
@@ -955,7 +1107,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/purchases', async (req, res) => {
+  app.post('/api/purchases', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await procurement.createPurchase(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
@@ -965,7 +1117,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/purchases/:id/status', async (req, res) => {
+  app.put('/api/purchases/:id/status', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await procurement.updatePurchaseStatus(req.params.id, req.body.status, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Purchase order not found' });
@@ -977,7 +1129,7 @@ async function startServer() {
   });
 
   // Goods Receipts
-  app.get('/api/grn', async (req, res) => {
+  app.get('/api/grn', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await procurement.getGoodsReceipts(req.companyId || '');
       res.json(rows);
@@ -987,7 +1139,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/grn', async (req, res) => {
+  app.post('/api/grn', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await procurement.createGoodsReceipt(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
@@ -1028,7 +1180,7 @@ async function startServer() {
 
   // Production fallback endpoint: return a basic set of work centers/resources
   // Production: fetch real work centers from database
-  app.get('/api/production/work-centers', async (req, res) => {
+  app.get('/api/production/work-centers', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const companyId = req.companyId || '';
       const rows = await new Promise((resolve, reject) => {
@@ -1049,7 +1201,7 @@ async function startServer() {
   });
 
   // Production: fetch real resources from database
-  app.get('/api/production/resources', async (req, res) => {
+  app.get('/api/production/resources', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const companyId = req.companyId || '';
       const rows = await new Promise((resolve, reject) => {
@@ -1073,7 +1225,7 @@ async function startServer() {
   const ProductionService = require('./services/productionService.cjs');
   const production = new ProductionService(db);
 
-  app.post('/api/production/work-centers', async (req, res) => {
+  app.post('/api/production/work-centers', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await production.createWorkCenter(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1083,7 +1235,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/production/resources', async (req, res) => {
+  app.post('/api/production/resources', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await production.createResource(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1093,7 +1245,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/production/work-orders', async (req, res) => {
+  app.get('/api/production/work-orders', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await production.getWorkOrders(req.companyId || '');
       res.json(rows);
@@ -1103,7 +1255,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/production/work-orders/:id', async (req, res) => {
+  app.get('/api/production/work-orders/:id', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const row = await production.getWorkOrderById(req.params.id, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Work order not found' });
@@ -1114,7 +1266,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/production/work-orders', async (req, res) => {
+  app.post('/api/production/work-orders', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await production.createWorkOrder(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
@@ -1124,7 +1276,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/production/work-orders/:id', async (req, res) => {
+  app.put('/api/production/work-orders/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await production.updateWorkOrder(req.params.id, req.body, req.companyId || '');
       if (!row) return res.status(404).json({ error: 'Work order not found' });
@@ -1135,7 +1287,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/production/work-orders/:id', async (req, res) => {
+  app.delete('/api/production/work-orders/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await production.deleteWorkOrder(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -1145,7 +1297,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/production/batches', async (req, res) => {
+  app.get('/api/production/batches', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await production.getBatches(req.companyId || '');
       res.json(rows);
@@ -1155,7 +1307,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/production/batches', async (req, res) => {
+  app.post('/api/production/batches', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await production.createBatch(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1169,7 +1321,7 @@ async function startServer() {
   const HRService = require('./services/hrService.cjs');
   const hr = new HRService(db);
 
-  app.get('/api/employees', async (req, res) => {
+  app.get('/api/employees', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await hr.getEmployees(req.companyId || '');
       res.json(rows);
@@ -1179,7 +1331,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/employees', async (req, res) => {
+  app.post('/api/employees', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await hr.createEmployee(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1189,10 +1341,31 @@ async function startServer() {
     }
   });
 
-  app.put('/api/employees/:id', async (req, res) => {
+  app.put('/api/employees/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
+      if (req.body.salary !== undefined && (Number(req.body.salary) < 0)) {
+        return res.status(400).json({ error: 'Salary cannot be negative' });
+      }
+      const existing = await hr._get('SELECT id, salary FROM employees WHERE id = ?', [req.params.id]);
+      if (!existing) return res.status(404).json({ error: 'Employee not found' });
       const row = await hr.updateEmployee(req.params.id, req.body, req.companyId || '');
-      if (!row) return res.status(404).json({ error: 'Employee not found' });
+      if (req.body.salary !== undefined && Number(req.body.salary) !== Number(existing.salary)) {
+        const { randomUUID } = require('crypto');
+        db.run(
+          `INSERT INTO audit_logs (id, timestamp, correlation_id, user_id, user_role, action, entity_type, entity_id, details, old_value, new_value, delta, integrity_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            randomUUID(), new Date().toISOString(), req.headers['x-correlation-id'] || '',
+            req.user?.id || 'system', req.user?.role || 'UNKNOWN', 'SALARY_UPDATE',
+            'Employee', req.params.id,
+            `Salary updated for employee ${req.params.id}`,
+            JSON.stringify({ salary: existing.salary }),
+            JSON.stringify({ salary: req.body.salary }),
+            JSON.stringify({ from: existing.salary, to: req.body.salary }),
+            ''
+          ]
+        );
+      }
       res.json(row);
     } catch (err) {
       console.error('[HR] updateEmployee error:', err?.message || err);
@@ -1200,7 +1373,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/employees/:id', async (req, res) => {
+  app.delete('/api/employees/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       await hr.deleteEmployee(req.params.id, req.companyId || '');
       res.json({ success: true });
@@ -1210,7 +1383,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/payroll-runs', async (req, res) => {
+  app.get('/api/payroll-runs', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await hr.getPayrollRuns(req.companyId || '');
       res.json(rows);
@@ -1220,7 +1393,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/payroll-runs', async (req, res) => {
+  app.post('/api/payroll-runs', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await hr.createPayrollRun(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1230,7 +1403,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/payslips', async (req, res) => {
+  app.get('/api/payslips', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
       const rows = await hr.getPayslips(req.companyId || '');
       res.json(rows);
@@ -1240,7 +1413,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/payslips', async (req, res) => {
+  app.post('/api/payslips', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
       const row = await hr.createPayslip(req.body, req.companyId || '');
       res.status(201).json(row);
@@ -1473,8 +1646,9 @@ async function startServer() {
 
         // Automatically open the file using OS-specific shell
         try {
-          const command = process.platform === 'win32' ? 'start ""' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-          require('child_process').exec(`${command} "${filePath}"`);
+          const command = process.platform === 'win32' ? 'explorer.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+          const args = process.platform === 'win32' ? [filePath] : [filePath];
+          spawn(command, args, { detached: true, stdio: 'ignore' }).unref();
           console.log(`[Export] Opened file: ${filePath}`);
         } catch (openErr) {
           console.error(`[Export] Failed to open file: ${openErr.message}`);
@@ -1606,8 +1780,8 @@ async function startServer() {
       const exchange_number = `SE-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 4)}`;
 
       const exchangeId = await new Promise((resolve, reject) => {
-        db.serialize(() => {
-          db.run("BEGIN TRANSACTION");
+        db.run("BEGIN TRANSACTION", (err) => {
+          if (err) return reject(err);
 
           db.run(
             `INSERT INTO sales_exchanges (exchange_number, invoice_id, customer_id, customer_name, reason, remarks, created_by, company_id) 
@@ -1639,8 +1813,13 @@ async function startServer() {
                   db.run("ROLLBACK");
                   return reject(err || itemError);
                 }
-                db.run("COMMIT");
-                resolve(newId);
+                db.run("COMMIT", (commitErr) => {
+                  if (commitErr) {
+                    db.run("ROLLBACK");
+                    return reject(commitErr);
+                  }
+                  resolve(newId);
+                });
               });
             }
           );
@@ -1899,14 +2078,14 @@ async function startServer() {
   */
 
   // --- End of Document Engine Endpoints ---
-  app.get('/api/classes', (req, res) => {
+  app.get('/api/classes', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), (req, res) => {
     db.all("SELECT * FROM classes WHERE company_id = ? ORDER BY name", [req.companyId || ''], (err, rows) => {
       if (err) { console.error('[Classes] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve classes' }); }
       res.json(rows);
     });
   });
 
-  app.post('/api/classes', validateBody(classSchemas.create), (req, res) => {
+  app.post('/api/classes', requireRole('Admin', 'Accountant', 'Manager'), validateBody(classSchemas.create), (req, res) => {
     const { name } = req.body;
     db.run("INSERT INTO classes (name, company_id) VALUES (?, ?)", [name, req.companyId || ''], function(err) {
       if (err) { console.error('[Classes] POST error:', err); return res.status(500).json({ error: 'Failed to create class' }); }
@@ -1914,7 +2093,7 @@ async function startServer() {
     });
   });
 
-  app.delete('/api/classes/:id', (req, res) => {
+  app.delete('/api/classes/:id', requireRole('Admin', 'Accountant', 'Manager'), (req, res) => {
     db.run("DELETE FROM classes WHERE id = ? AND company_id = ?", [req.params.id, req.companyId || ''], (err) => {
       if (err) { console.error('[Classes] DELETE error:', err); return res.status(500).json({ error: 'Failed to delete class' }); }
       res.json({ success: true });
@@ -1929,7 +2108,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/subjects', validateBody(subjectSchemas.create), (req, res) => {
+  app.post('/api/subjects', requireRole('Admin', 'Accountant', 'Manager'), validateBody(subjectSchemas.create), (req, res) => {
     const { name, code } = req.body;
     db.run("INSERT INTO subjects (name, code, company_id) VALUES (?, ?, ?)", [name, code, req.companyId || ''], function(err) {
       if (err) { console.error('[Subjects] POST error:', err); return res.status(500).json({ error: 'Failed to create subject' }); }
@@ -1937,7 +2116,7 @@ async function startServer() {
     });
   });
 
-  app.delete('/api/subjects/:id', (req, res) => {
+  app.delete('/api/subjects/:id', requireRole('Admin', 'Accountant', 'Manager'), (req, res) => {
     db.run("DELETE FROM subjects WHERE id = ? AND company_id = ?", [req.params.id, req.companyId || ''], (err) => {
       if (err) { console.error('[Subjects] DELETE error:', err); return res.status(500).json({ error: 'Failed to delete subject' }); }
       res.json({ success: true });
@@ -1945,7 +2124,7 @@ async function startServer() {
   });
 
   // 1. GET Schools
-  app.get('/api/schools', checkPermission('view_schools'), (req, res) => {
+  app.get('/api/schools', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), checkPermission('view_schools'), (req, res) => {
     db.all("SELECT * FROM schools WHERE company_id = ?", [req.companyId || ''], (err, rows) => {
     if (err) { console.error('[Schools] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve schools' }); }
     res.json(rows);
@@ -1963,9 +2142,27 @@ async function startServer() {
 // 11. Delete Examination Batch
 app.delete('/api/examinations/batch/:batch_id', (req, res) => {
   const { batch_id } = req.params;
-  db.run("DELETE FROM examinations WHERE batch_id = ? AND status = 'pending' AND company_id = ?", [batch_id, req.companyId || ''], (err) => {
-    if (err) { console.error('[Examination] delete batch error:', err); return res.status(500).json({ error: 'Failed to delete batch' }); }
-    res.json({ success: true });
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION");
+    db.run("DELETE FROM examination_bom_calculations WHERE batch_id = ?", [batch_id]);
+    db.run("DELETE FROM examination_subjects WHERE batch_id = ?", [batch_id]);
+    db.run("DELETE FROM examination_classes WHERE batch_id = ?", [batch_id]);
+    db.run("DELETE FROM examinations WHERE batch_id = ? AND company_id = ?", [batch_id, req.companyId || ''], (err) => {
+      if (err) {
+        console.error('[Examination] delete batch error:', err);
+        db.run("ROLLBACK");
+        return res.status(500).json({ error: 'Failed to delete batch' });
+      }
+      db.run("DELETE FROM examination_batches WHERE id = ? AND company_id = ?", [batch_id, req.companyId || ''], (err) => {
+        if (err) {
+          console.error('[Examination] delete batch error:', err);
+          db.run("ROLLBACK");
+          return res.status(500).json({ error: 'Failed to delete batch' });
+        }
+        db.run("COMMIT");
+        res.json({ success: true });
+      });
+    });
   });
 });
 
@@ -2000,11 +2197,11 @@ app.get('/api/invoices/:id/details', (req, res) => {
       if (err) { console.error('[Stats] pending count error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
       stats.pending_jobs = row?.count || 0;
       
-      db.get("SELECT SUM(total_amount) as total FROM invoices WHERE status = 'paid' AND company_id = ?", [companyId], (err, row) => {
+      db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'paid' AND company_id = ?", [companyId], (err, row) => {
         if (err) { console.error('[Stats] revenue error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
         stats.total_revenue = row?.total || 0;
         
-        db.get("SELECT SUM(total_amount) as total FROM invoices WHERE status = 'unpaid' AND company_id = ?", [companyId], (err, row) => {
+        db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'unpaid' AND company_id = ?", [companyId], (err, row) => {
           if (err) { console.error('[Stats] outstanding error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
           stats.outstanding_amount = row?.total || 0;
           
@@ -2081,24 +2278,24 @@ app.get('/api/invoices/:id/details', (req, res) => {
       }
 
       const currentQuantity = item.quantity || 0;
-      const isDeduction = quantity < 0 || type === 'OUT';
+      const effectiveQuantity = type === 'OUT' ? -Math.abs(quantity) : Math.abs(quantity);
 
       // Check if sufficient quantity for deductions
-      if (isDeduction && currentQuantity < Math.abs(quantity)) {
+      if (effectiveQuantity < 0 && currentQuantity < Math.abs(quantity)) {
         return res.status(400).json({ 
           error: `Insufficient stock. Available: ${currentQuantity}, Requested: ${Math.abs(quantity)}` 
         });
       }
 
-      const newQuantity = Math.max(0, currentQuantity + (isDeduction ? -Math.abs(quantity) : Math.abs(quantity)));
+      const newQuantity = Math.max(0, currentQuantity + effectiveQuantity);
       const unitCost = item.cost_per_unit || item.cost || 0;
       const totalCost = Math.abs(quantity) * unitCost;
       const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       // Create transaction record and update inventory atomically
       await new Promise((resolve, reject) => {
-        db.serialize(() => {
-          db.run("BEGIN TRANSACTION");
+        db.run("BEGIN TRANSACTION", (err) => {
+          if (err) return reject(err);
 
           db.run(`INSERT INTO inventory_transactions 
             (id, item_id, warehouse_id, batch_id, type, quantity, previous_quantity, new_quantity, 
@@ -2193,7 +2390,8 @@ app.get('/api/invoices/:id/details', (req, res) => {
   const isPathAllowed = (requestedPath) => {
     if (!requestedPath || typeof requestedPath !== 'string') return false;
     const resolved = path.resolve(requestedPath);
-    return ALLOWED_FILE_DIRS.some(allowed => resolved.startsWith(allowed));
+    const realPath = fs.realpathSync(resolved);
+    return ALLOWED_FILE_DIRS.some(allowed => realPath.startsWith(allowed));
   };
 
   app.get('/api/read-file', (req, res) => {
@@ -2217,19 +2415,28 @@ app.get('/api/invoices/:id/details', (req, res) => {
     }
   });
 
-  app.post('/api/write-temp-pdf', (req, res) => {
+  app.post('/api/write-temp-pdf', verifyToken, async (req, res) => {
     try {
       const { data, filename } = req.body;
       if (!data || !Array.isArray(data)) {
         return res.status(400).json({ success: false, error: 'Invalid data' });
       }
+      if (data.length > 50 * 1024 * 1024) {
+        return res.status(413).json({ success: false, error: 'File size exceeds 50MB limit' });
+      }
       const safeName = String(filename || `gen_${Date.now()}.pdf`).replace(/[^a-zA-Z0-9._-]/g, '_');
+      if (!safeName.toLowerCase().endsWith('.pdf')) {
+        return res.status(400).json({ success: false, error: 'Filename must end with .pdf' });
+      }
+      const buffer = Buffer.from(data);
+      if (buffer.length > 0 && buffer[0] !== 0x25 && buffer[1] !== 0x50) {
+        console.warn('[File] write-temp-pdf: data does not start with PDF magic bytes');
+      }
       const tempDirPath = tempDir;
       if (!fs.existsSync(tempDirPath)) {
         fs.mkdirSync(tempDirPath, { recursive: true });
       }
       const filePath = path.join(tempDirPath, safeName);
-      const buffer = Buffer.from(data);
       fs.writeFileSync(filePath, buffer);
       res.json({ success: true, path: filePath, size: buffer.length });
     } catch (err) {
