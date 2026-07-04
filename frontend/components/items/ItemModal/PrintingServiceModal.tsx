@@ -110,10 +110,65 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     return [];
   });
 
+  const [variantExpanded, setVariantExpanded] = useState(true);
   const [paperExpanded, setPaperExpanded] = useState(true);
   const [finishingExpanded, setFinishingExpanded] = useState(true);
   const [bomExpanded, setBomExpanded] = useState(true);
-  const [variantExpanded, setVariantExpanded] = useState(true);
+
+  // Sync all state from item whenever it changes (covers edit flow)
+  useEffect(() => {
+    if (!item) return;
+    setName(item?.name || '');
+    setSku(item?.sku || '');
+    setDescription(item?.description || '');
+    setCategory(item?.category || (isStationery ? 'Stationery' : isProduct ? 'Products' : 'Printing Service'));
+    setStatus(((item as any)?.status === 'Archived' ? 'Archived' : 'Active') as 'Active' | 'Archived');
+    setFavorite(!!(item as any)?.favorite);
+    setHasVariants(!!(item as any)?.hasVariants || !!((item as any)?.variants?.length > 0));
+    setPages((item as any)?.smartPricing?.pages || (item as any)?.pages || 1);
+    setSellingPrice(Number((item as any)?.sellingPrice || (item as any)?.price || 0));
+    if (isStationery) {
+      setUnit(item?.unit || 'pcs');
+      setIsStationeryPack(!!(item as any)?.isStationeryPack);
+      setCostPerPack(Number((item as any)?.costPerPack || 0));
+      setUnitsPerPack(Number((item as any)?.unitsPerPack || 0));
+      const c = (item as any)?.cost; const cp = (item as any)?.cost_price; const cpp = (item as any)?.costPerPiece;
+      setStationeryCostPrice(c != null ? Number(c) : cp != null ? Number(cp) : cpp != null ? Number(cpp) : 0);
+    }
+    setSelectedPaperId((item as any)?.pricingConfig?.paperId || (item as any)?.smartPricing?.paperItemId || '');
+    setSelectedTonerId((item as any)?.pricingConfig?.tonerId || (item as any)?.smartPricing?.tonerItemId || '');
+    setPrintSides(((item as any)?.printSides || 'double') as 'single' | 'double');
+    setPaperType(((item as any)?.paperType || 'paper') as 'paper' | 'cover');
+    setFileType(((item as any)?.fileType || 'excel') as 'excel' | 'word');
+    // Restore finishing options from saved data
+    const savedFinishing = (item as any)?.printFinishing || (item as any)?.pricingConfig?.finishingOptions || [];
+    if (savedFinishing.length > 0) {
+      setFinishingOptions(prev => prev.map(o => ({
+        ...o,
+        enabled: savedFinishing.some((f: any) => f.id === o.id || f === o.name),
+        price: savedFinishing.find((f: any) => f.id === o.id)?.price ?? o.price,
+      })));
+    }
+    // Restore variants
+    const existingVariants = (item as any)?.variants;
+    if (existingVariants?.length > 0) {
+      const targetPct = resolveMinimumMarkup();
+      setSaveVariants(existingVariants.map((v: any) => {
+        const bp = v.basePrice != null ? Number(v.basePrice) : 0;
+        const suggested = bp > 0 ? parseFloat((bp * (1 + targetPct / 100)).toFixed(2)) : 0;
+        return {
+          id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          attribute: v.attribute || '',
+          pages: v.pages || 1,
+          basePrice: bp,
+          sellingPrice: v.sellingPrice || 0,
+          suggestedPrice: suggested,
+        };
+      }));
+    } else {
+      setSaveVariants([]);
+    }
+  }, [item?.id, isStationery]);
 
   const currency = 'K';
 
@@ -414,9 +469,9 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         stock: item?.stock || 0,
         hasVariants,
         ...(isStationery ? {
-          cost: costPrice,
-          cost_price: costPrice,
-          costPrice,
+          cost: stationeryCostPrice,
+          cost_price: stationeryCostPrice,
+          costPrice: stationeryCostPrice,
           price: sellingPrice,
           selling_price: sellingPrice,
           sellingPrice,

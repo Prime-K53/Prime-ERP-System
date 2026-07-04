@@ -558,13 +558,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
                             <button
                               key={sub.path}
                               data-tour={sub.label === 'Master Inventory' ? 'inventory' : undefined}
-                              onClick={() => {
-                                if (sub.path === '/sales-flow/pos') {
-                                  setIsPosModalOpen(true);
-                                } else {
-                                  navigate(sub.path);
-                                }
-                              }}
+                              onClick={() => navigate(sub.path)}
                               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] transition-all
                                             ${subActive
                                   ? 'text-white bg-white/10 font-bold'

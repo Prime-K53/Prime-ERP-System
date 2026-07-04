@@ -207,6 +207,8 @@ export const InventoryListPage: React.FC = () => {
       setSourceTab('printing');
     } else if (item.type === 'Product' || item.classification === 'product') {
       setSourceTab('product');
+    } else if (item.type === 'Stationery' || item.classification === 'stationery' || item.classification === 'Stationery') {
+      setSourceTab('stationery');
     } else {
       setSourceTab(item.type === 'Raw Material' ? 'raw' : item.type?.toLowerCase() || null);
     }
