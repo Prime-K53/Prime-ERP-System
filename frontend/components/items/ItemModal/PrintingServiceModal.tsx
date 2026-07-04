@@ -64,7 +64,12 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [costPerPack, setCostPerPack] = useState(Number((item as any)?.costPerPack || 0));
   const [unitsPerPack, setUnitsPerPack] = useState(Number((item as any)?.unitsPerPack || 0));
   const [stationeryCostPrice, setStationeryCostPrice] = useState(() => {
-    if (isStationery) return Number((item as any)?.cost || (item as any)?.cost_price || (item as any)?.costPerPiece || 0);
+    if (isStationery) {
+      const c = (item as any)?.cost;
+      const cp = (item as any)?.cost_price;
+      const cpp = (item as any)?.costPerPiece;
+      return c != null ? Number(c) : cp != null ? Number(cp) : cpp != null ? Number(cpp) : 0;
+    }
     return 0;
   });
   const [selectedPaperId, setSelectedPaperId] = useState(() => (item as any)?.pricingConfig?.paperId || (item as any)?.smartPricing?.paperItemId || '');
@@ -88,17 +93,19 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   const [saveVariants, setSaveVariants] = useState<Array<{ id: string; attribute: string; pages: number; basePrice: number; sellingPrice: number; suggestedPrice?: number }>>(() => {
     const existingVariants = (item as any)?.variants;
     if (existingVariants?.length > 0) {
-      const flatCost = 0;
       const targetPct = resolveMinimumMarkup();
-      const suggested = flatCost > 0 ? parseFloat((flatCost * (1 + targetPct / 100)).toFixed(2)) : 0;
-      return existingVariants.map((v: any) => ({
-        id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        attribute: v.attribute || '',
-        pages: v.pages || 1,
-        basePrice: 0,
-        sellingPrice: v.sellingPrice || 0,
-        suggestedPrice: suggested,
-      }));
+      return existingVariants.map((v: any) => {
+        const bp = v.basePrice != null ? Number(v.basePrice) : 0;
+        const suggested = bp > 0 ? parseFloat((bp * (1 + targetPct / 100)).toFixed(2)) : 0;
+        return {
+          id: `v${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          attribute: v.attribute || '',
+          pages: v.pages || 1,
+          basePrice: bp,
+          sellingPrice: v.sellingPrice || 0,
+          suggestedPrice: suggested,
+        };
+      });
     }
     return [];
   });
@@ -188,7 +195,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     if (isStationery) {
       const derivedCost = isStationeryPack && unitsPerPack > 0
         ? costPerPack / unitsPerPack
-        : stationeryCostPrice;
+        : (stationeryCostPrice || 0);
       return {
         paperCost: 0,
         tonerCost: 0,
@@ -473,6 +480,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         variants: hasVariants ? saveVariants.filter(v => v.attribute.trim() && v.sellingPrice > 0).map(v => ({
           attribute: v.attribute.trim(),
           pages: isStationery ? undefined : v.pages,
+          basePrice: v.basePrice,
           sellingPrice: v.sellingPrice,
         })) : [],
       } as unknown as Item & Record<string, unknown>;
@@ -505,7 +513,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
       if (variantsToSave.length > 0) {
         for (const variant of variantsToSave) {
           if (isStationery) {
-            const varCost = stationeryCostPrice;
+            const varCost = variant.basePrice > 0 ? variant.basePrice : stationeryCostPrice;
             const varId = `VAR-${productId}-${variant.attribute.replace(/\s+/g, '')}-${Date.now()}`;
             const varProfit = parseFloat((variant.sellingPrice - varCost).toFixed(2));
             const varItem: Item = {
