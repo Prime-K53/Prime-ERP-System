@@ -1019,7 +1019,7 @@ const Orders: React.FC = () => {
         }
         if (searchText) {
             const lower = searchText.toLowerCase();
-            data = data.filter(i => i.customerName.toLowerCase().includes(lower) || i.id.toLowerCase().includes(lower));
+            data = data.filter(i => (i.customerName || '').toLowerCase().includes(lower) || (i.id || '').toLowerCase().includes(lower));
         }
         data.sort((a, b) => {
             const valA = a[sortField];

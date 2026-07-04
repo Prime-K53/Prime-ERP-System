@@ -46,9 +46,9 @@ const SalesExchanges: React.FC = () => {
 
   const filteredExchanges = salesExchanges.filter(ex => {
     const matchesSearch = 
-      ex.exchange_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ex.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ex.invoice_id.toLowerCase().includes(searchTerm.toLowerCase());
+      (ex.exchange_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ex.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ex.invoice_id || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || ex.status.toLowerCase() === statusFilter.toLowerCase();
     

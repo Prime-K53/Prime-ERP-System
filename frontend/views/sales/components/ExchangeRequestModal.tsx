@@ -56,14 +56,14 @@ export const ExchangeRequestModal: React.FC<ExchangeRequestModalProps> = ({ onCl
     const searchLower = searchTerm.toLowerCase();
     
     const matchedCustomers = customers.filter(c => 
-      c.name.toLowerCase().includes(searchLower) ||
-      c.email?.toLowerCase().includes(searchLower) ||
-      c.phone?.toLowerCase().includes(searchLower)
+      (c.name || '').toLowerCase().includes(searchLower) ||
+      (c.email || '').toLowerCase().includes(searchLower) ||
+      (c.phone || '').toLowerCase().includes(searchLower)
     ).slice(0, 3);
 
     const matchedInvoices = invoices.filter(inv => {
-      const matchesSearch = inv.id.toLowerCase().includes(searchLower) ||
-        inv.customerName.toLowerCase().includes(searchLower);
+      const matchesSearch = (inv.id || '').toLowerCase().includes(searchLower) ||
+        (inv.customerName || '').toLowerCase().includes(searchLower);
       
       const matchesCustomer = selectedCustomer ? inv.customerId === selectedCustomer.id : true;
       

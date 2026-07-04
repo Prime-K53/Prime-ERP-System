@@ -71,9 +71,9 @@ export const JobTickets: React.FC = () => {
   const filteredTickets = useMemo(() => {
     return tickets.filter(ticket => {
       const matchesSearch = !searchTerm || 
-        ticket.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
+        (ticket.ticketNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (ticket.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (ticket.description || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'All' || ticket.status === statusFilter;
       const matchesPriority = priorityFilter === 'All' || ticket.priority === priorityFilter;
       return matchesSearch && matchesStatus && matchesPriority;

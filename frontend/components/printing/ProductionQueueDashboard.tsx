@@ -108,7 +108,7 @@ const ProductionQueueDashboard: React.FC<ProductionQueueDashboardProps> = ({ job
 
   const filteredJobs = jobs.filter(j => {
     if (statusFilter !== 'All' && j.status !== statusFilter) return false;
-    if (searchTerm && !j.productionRef.toLowerCase().includes(searchTerm.toLowerCase()) && !j.customerName.toLowerCase().includes(searchTerm.toLowerCase()) && !j.spec.jobName.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (searchTerm && !(j.productionRef || '').toLowerCase().includes(searchTerm.toLowerCase()) && !(j.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) && !(j.spec?.jobName || '').toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 

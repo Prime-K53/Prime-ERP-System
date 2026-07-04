@@ -75,8 +75,8 @@ const ShippingManager: React.FC = () => {
     [deliveryNotes]);
 
     const filteredDeliveries = pendingDeliveries.filter(dn => 
-        dn.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dn.id.toLowerCase().includes(searchTerm.toLowerCase())
+        (dn.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (dn.id || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const filteredShipments = useMemo(() => {
@@ -86,9 +86,9 @@ const ShippingManager: React.FC = () => {
         else if (activeTab === 'Pipeline') list = []; // Pipeline shows pending delivery notes, not shipments
         
         return list.filter(s => 
-            s.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase())
+            (s.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (s.trackingNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [shipments, activeTab, searchTerm]);
 
