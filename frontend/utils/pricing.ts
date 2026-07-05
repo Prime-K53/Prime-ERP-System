@@ -446,3 +446,43 @@ export function formatMaterialItemCost(item: Item, currency: string = 'K'): stri
   const maxFormatted = costInfo.max.toLocaleString(undefined, { minimumFractionDigits: 2 });
   return `${currency}${minFormatted} - ${currency}${maxFormatted}`;
 }
+
+const DEFAULT_REAM_SIZE = 500;
+const DEFAULT_TONER_CAPACITY = 20000;
+
+function findDefaultPaper(items: Item[]): Item | undefined {
+  return items.find(i =>
+    i.name?.toLowerCase().includes('paper') ||
+    i.category?.toLowerCase().includes('paper')
+  );
+}
+
+function findDefaultToner(items: Item[]): Item | undefined {
+  return items.find(i =>
+    i.name?.toLowerCase().includes('toner') ||
+    i.category?.toLowerCase().includes('toner')
+  );
+}
+
+function resolveItemCost(item: Item): number {
+  return Number((item as any).cost_price ?? (item as any).cost_per_unit ?? (item as any).cost ?? 0);
+}
+
+function resolveConversionRate(item: Item): number {
+  return Number((item as any).conversionRate ?? (item as any).conversion_rate ?? DEFAULT_REAM_SIZE);
+}
+
+export function calculatePhotocopyCostPerPage(inventory: Item[]): number {
+  const paper = findDefaultPaper(inventory);
+  const toner = findDefaultToner(inventory);
+  const paperUnitCost = paper ? resolveItemCost(paper) : 0;
+  const conversionRate = paper ? resolveConversionRate(paper) : DEFAULT_REAM_SIZE;
+  const paperCostPerPage = conversionRate > 0 ? paperUnitCost / (conversionRate * 2) : 0;
+  const tonerUnitCost = toner ? resolveItemCost(toner) : 0;
+  const tonerCostPerPage = tonerUnitCost / DEFAULT_TONER_CAPACITY;
+  return parseFloat((paperCostPerPage + tonerCostPerPage).toFixed(4));
+}
+
+export function calculateTypePrintingCostPerPage(inventory: Item[]): number {
+  return calculatePhotocopyCostPerPage(inventory);
+}

@@ -28,6 +28,7 @@ import { dbService } from '../services/db';
 import cloudDb from '../services/cloudDb';
 import { getPlaceholder } from '../constants/placeholders';
 import { isPasswordProtectionEnabled, normalizeSecuritySettings, withNormalizedSecurityConfig } from '../utils/securitySettings';
+import { calculatePhotocopyCostPerPage, calculateTypePrintingCostPerPage } from '../utils/pricing';
 import {
     createSharedNumberingConfig,
     DEFAULT_SHARED_NUMBERING_RULE,
@@ -1520,13 +1521,14 @@ const Settings: React.FC = () => {
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
                                                 <input
                                                     type="number"
-                                                    className="settings-input pl-10"
-                                                    placeholder="e.g. 1.00 (material cost)"
-                                                    value={config.transactionSettings?.pos?.photocopyCostPerPage ?? ''}
-                                                       onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, photocopyCostPerPage: parseFloat(e.target.value) || 0 } } })}
+                                                    className="settings-input pl-10 bg-slate-50 text-slate-500"
+                                                    placeholder="Auto-calculated"
+                                                    value={calculatePhotocopyCostPerPage(inventory)}
+                                                    readOnly
+                                                    tabIndex={-1}
                                                 />
                                             </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Paper + toner cost per page. Profit = selling price âˆ’ this cost.</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">Paper + toner cost per page. Auto-calculated from inventory item costs.</p>
                                         </div>
                                         <div>
                                             <label className="settings-label">Type & Printing Price ({currency})</label>
@@ -1547,13 +1549,14 @@ const Settings: React.FC = () => {
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
                                                 <input
                                                     type="number"
-                                                    className="settings-input pl-10"
-                                                    placeholder="e.g. 2.50 (material + labor cost)"
-                                                    value={config.transactionSettings?.pos?.typePrintingCostPerPage ?? ''}
-                                                       onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, typePrintingCostPerPage: parseFloat(e.target.value) || 0 } } })}
+                                                    className="settings-input pl-10 bg-slate-50 text-slate-500"
+                                                    placeholder="Auto-calculated"
+                                                    value={calculateTypePrintingCostPerPage(inventory)}
+                                                    readOnly
+                                                    tabIndex={-1}
                                                 />
                                             </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Material + labor cost per page. Profit = selling price âˆ’ this cost.</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">Material + labor cost per page. Auto-calculated from inventory item costs.</p>
                                         </div>
                                         <div>
                                             <label className="settings-label">Stapling Price per Copy ({currency})</label>

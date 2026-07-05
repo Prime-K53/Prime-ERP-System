@@ -19,7 +19,7 @@ import { Loader2 } from 'lucide-react';
 import QuickPrintModal from '../../../components/QuickPrintModal';
 import { calculateSellingPrice, calculateServicePrice } from '../../../utils/pricing/pricingEngine';
 import { getPlaceholder } from '../../../constants/placeholders';
-import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredSellingPrice } from '../../../utils/pricing';
+import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredSellingPrice, calculatePhotocopyCostPerPage, calculateTypePrintingCostPerPage } from '../../../utils/pricing';
 import { aggregateMarketAdjustmentSnapshots, attachPricingBreakdown, getMarketAdjustmentSnapshots, getSnapshotCalculatedAmount, resolveItemAdjustmentSnapshots, summarizePricingBreakdown } from '../../../utils/pricingBreakdown';
 import { displayPrice } from '../../../services/pricingDisplayService';
 import { resolveCustomerPrice, getApplicableDiscounts, applyDiscounts, incrementDiscountUsage, getCustomerPricingTier } from '../../../services/customerPricingService';
@@ -1301,8 +1301,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
           : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00);
 
         const costPerPage = isPhotocopy
-          ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
-          : (companyConfig.transactionSettings?.pos?.typePrintingCostPerPage ?? 1.20);
+          ? calculatePhotocopyCostPerPage(inventory)
+          : calculateTypePrintingCostPerPage(inventory);
 
         const totalPages = pagesPerCopy * quantity;
         const materialCost = costPerPage * totalPages;
@@ -2842,8 +2842,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             ? (companyConfig.transactionSettings?.pos?.photocopyPrice ?? 2.00)
                             : (companyConfig.transactionSettings?.pos?.typePrintingPrice ?? 5.00)}
                         costPerPage={quickPrintModal.type === 'photocopy'
-                            ? (companyConfig.transactionSettings?.pos?.photocopyCostPerPage ?? 0.50)
-                            : (companyConfig.transactionSettings?.pos?.typePrintingCostPerPage ?? 1.20)}
+                            ? calculatePhotocopyCostPerPage(inventory)
+                            : calculateTypePrintingCostPerPage(inventory)}
                         currency={currency}
                         staplePrice={companyConfig.transactionSettings?.pos?.staplePrice}
                         pinningItem={(() => {
