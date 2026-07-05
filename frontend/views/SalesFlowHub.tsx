@@ -2,15 +2,15 @@
 import React from 'react';
 import { Coins, FileText, FileCheck, Banknote as PaymentIcon, RefreshCw, MessageSquare, UserPlus, CheckSquare, Award, Target, Printer } from 'lucide-react';
 import GenericHub from './GenericHub';
-import { useSales } from '../context/SalesContext';
+import { useNavigate } from 'react-router-dom';
 
 const SalesFlowHub: React.FC = () => {
-  const { setIsPosModalOpen } = useSales();
+  const navigate = useNavigate();
   const options = [
     {
       label: 'Point of Sale',
       description: 'Quick terminal for retail transactions, barcoding, and instant payment processing.',
-      onClick: () => setIsPosModalOpen(true),
+      path: '/sales-flow/pos',
       icon: <Coins />,
       color: 'bg-emerald-50 text-emerald-500'
     },
