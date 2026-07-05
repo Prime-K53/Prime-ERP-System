@@ -630,61 +630,70 @@ const SmartPricing: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="h-full flex items-center justify-center bg-slate-50">
-                <div className="flex flex-col items-center gap-4">
-                    <Calculator className="w-12 h-12 text-indigo-500 animate-pulse" />
-                    <p className="text-slate-500">Loading pricing engine...</p>
+            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50/50">
+                <div className="flex flex-col items-center gap-4 p-8 bg-white/60 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-indigo-400/20 rounded-full blur-xl animate-pulse" />
+                        <Calculator className="w-12 h-12 text-indigo-500 relative animate-pulse" />
+                    </div>
+                    <p className="text-slate-500 font-medium tracking-wide">Loading pricing engine...</p>
+                    <div className="flex gap-1.5">
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full bg-gradient-to-br from-slate-50 to-indigo-50 overflow-auto">
+        <div className="h-full bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 overflow-auto">
             <div className="max-w-4xl mx-auto p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
-                        <div className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-200">
-                            <Calculator className="w-8 h-8 text-white" />
+                        <div className="p-4 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl shadow-lg shadow-indigo-200/50 ring-1 ring-white/20">
+                            <Calculator className="w-8 h-8 text-white drop-shadow-sm" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-800">Smart Pricing Engine</h1>
-                            <p className="text-slate-500">Calculate job pricing with BOM cost analysis</p>
+                            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Smart Pricing Engine</h1>
+                            <p className="text-slate-500 text-sm tracking-wide">Calculate job pricing with BOM cost analysis</p>
                             {editingProductId && (
-                                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700">
+                                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50/80 backdrop-blur-sm border border-blue-200/60 text-xs font-semibold text-blue-700 shadow-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                     Editing Inventory {itemType}: {productName || inventory.find(item => item.id === editingProductId)?.name || editingProductId}
                                 </div>
                             )}
                         </div>
                         {editingProductId && !validation.valid && sellingPrice > 0 && (
-                            <div className="mt-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-center gap-2">
-                                <Info size={16} /> Markup {profitMarkup.toFixed(1)}% below minimum {validation.minimumMarkup}%
+                            <div className="mt-2 px-4 py-2 bg-amber-50/80 backdrop-blur-sm border border-amber-200/60 rounded-lg text-sm text-amber-700 flex items-center gap-2 shadow-sm">
+                                <Info size={16} className="shrink-0" /> Markup {profitMarkup.toFixed(1)}% below minimum {validation.minimumMarkup}%
                             </div>
                         )}
                     </div>
                     <button 
                         onClick={() => navigate('/settings', { state: { tab: 'Finishing' } })}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                     >
                         <Settings size={18} />
                         Manage Prices
                     </button>
                 </div>
 
-                <div id="smart-pricing-inventory-loader" className="mb-6 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50">
+                <div id="smart-pricing-inventory-loader" className="mb-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow duration-300">
+                    <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-white/80 to-indigo-50/80">
                         <div className="flex flex-col gap-1">
-                            <h2 className="text-lg font-bold text-slate-800">Load from Inventory</h2>
+                            <h2 className="text-lg font-bold text-slate-800 tracking-tight">Load from Inventory</h2>
                             <p className="text-sm text-slate-500">Pick any existing product or service, configure it here, then save it back with its Smart Pricing BOM.</p>
                         </div>
                     </div>
                     <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] gap-3 items-end">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Load Existing Product or Service</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2 tracking-wide">Load Existing Product or Service</label>
                             <select
                                 value={selectedInventoryProductId}
                                 onChange={(e) => setSelectedInventoryProductId(e.target.value)}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm"
                             >
                                 <option value="">Select a product or service...</option>
                                 {editableInventoryProducts.map(product => (
@@ -694,7 +703,7 @@ const SmartPricing: React.FC = () => {
                                 ))}
                             </select>
                             {editableInventoryProducts.length === 0 && (
-                                <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                                <div className="mt-2 text-sm text-amber-700 bg-amber-50/80 backdrop-blur-sm border border-amber-200/60 rounded-xl px-3 py-2 shadow-sm">
                                     No products or services were found in inventory yet.
                                 </div>
                             )}
@@ -702,13 +711,13 @@ const SmartPricing: React.FC = () => {
                         <button
                             onClick={() => loadInventoryProduct(selectedInventoryProductId)}
                             disabled={!selectedInventoryProductId}
-                            className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50"
+                            className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-indigo-200/50 hover:shadow-lg hover:shadow-indigo-300/50 active:scale-[0.98]"
                         >
                             Load Item
                         </button>
                         <button
                             onClick={clearLoadedProduct}
-                            className="px-5 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50"
+                            className="px-5 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
                         >
                             New Item
                         </button>
@@ -717,77 +726,82 @@ const SmartPricing: React.FC = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div className="lg:col-span-3 space-y-4">
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
                             <button 
                                 onClick={() => setPaperExpanded(!paperExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                    <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg ring-1 ring-blue-200/50 group-hover:ring-blue-300/50 transition-all duration-200">
                                         <Calculator size={18} className="text-blue-600" />
                                     </div>
                                     <h3 className="font-semibold text-slate-800">Print Settings</h3>
                                 </div>
-                                {paperExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                <div className={`transition-transform duration-300 ${paperExpanded ? '' : 'rotate-180'}`}>
+                                    {paperExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                                </div>
                             </button>
                             {paperExpanded && (
-                                <div className="px-6 pb-6 space-y-4">
+                                <div className="px-6 pb-6 space-y-4 animate-slideDown">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-600 mb-2">Pages per Copy</label>
+                                            <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Pages per Copy</label>
                                             <input
                                                 type="number"
                                                 value={pages}
                                                 onChange={handlePagesChange}
-                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
                                                 min={1}
                                                 max={10000}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-600 mb-2">Selling Price ({currency})</label>
+                                            <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Selling Price ({currency})</label>
                                             <input
                                                 type="number"
                                                 value={sellingPrice || ''}
                                                 onChange={handleSellingPriceChange}
-                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-lg font-bold"
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 text-lg font-bold shadow-sm hover:shadow-md"
                                                 min={0}
                                                 step={0.01}
                                                 placeholder="Enter selling price..."
                                             />
                                         </div>
                                     </div>
-                                    <p className="text-sm text-slate-500">
-                                        Sheets needed: <span className="font-medium text-slate-700">{totalSheets}</span> | 
-                                        Cost price: <span className="font-medium text-slate-700">{formatCurrency(costPrice)}</span>
+                                    <p className="text-sm text-slate-500 bg-slate-50/80 rounded-lg px-3 py-2">
+                                        Sheets needed: <span className="font-semibold text-slate-700">{totalSheets}</span> 
+                                        <span className="mx-2 text-slate-300">|</span> 
+                                        Cost price: <span className="font-semibold text-slate-700">{formatCurrency(costPrice)}</span>
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
                             <button 
                                 onClick={() => setBomExpanded(!bomExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-amber-100 rounded-lg">
+                                    <div className="p-2 bg-gradient-to-br from-amber-100 to-amber-50 rounded-lg ring-1 ring-amber-200/50 group-hover:ring-amber-300/50 transition-all duration-200">
                                         <Package size={18} className="text-amber-600" />
                                     </div>
                                     <h3 className="font-semibold text-slate-800">BOM Materials (Auto-selected)</h3>
-                                    <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">Active</span>
+                                    <span className="text-xs bg-green-100/80 backdrop-blur-sm text-green-600 px-2.5 py-0.5 rounded-full font-medium border border-green-200/50 shadow-sm">Active</span>
                                 </div>
-                                {bomExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                <div className={`transition-transform duration-300 ${bomExpanded ? '' : 'rotate-180'}`}>
+                                    {bomExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                                </div>
                             </button>
                             {bomExpanded && (
-                                <div className="px-6 pb-6 space-y-4">
+                                <div className="px-6 pb-6 space-y-4 animate-slideDown">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-2">Paper</label>
+                                        <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Paper</label>
                                         {paperItems.length > 0 ? (
                                             <select
                                                 value={selectedPaperId}
                                                 onChange={(e) => setSelectedPaperId(e.target.value)}
-                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
                                             >
                                                 {paperItems.map(item => (
                                                     <option key={item.id} value={item.id}>
@@ -796,29 +810,29 @@ const SmartPricing: React.FC = () => {
                                                 ))}
                                             </select>
                                         ) : (
-                                            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm">No paper items found</div>
+                                            <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-sm border border-red-200/50">No paper items found</div>
                                         )}
                                         {selectedPaper && (
-                                            <div className="mt-2 p-3 bg-blue-50 rounded-xl">
+                                            <div className="mt-2 p-3 bg-gradient-to-r from-blue-50/80 to-blue-100/30 backdrop-blur-sm rounded-xl border border-blue-100/50 shadow-sm">
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-slate-600">Sheets needed:</span>
-                                                    <span className="font-medium text-slate-800">{totalSheets} sheets</span>
+                                                    <span className="font-semibold text-slate-800">{totalSheets} sheets</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm">
+                                                <div className="flex justify-between text-sm mt-1">
                                                     <span className="text-slate-600">Paper cost:</span>
-                                                    <span className="font-medium text-blue-600">{formatCurrency(paperCost)}</span>
+                                                    <span className="font-semibold text-blue-600">{formatCurrency(paperCost)}</span>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-2">Toner/Ink</label>
+                                        <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Toner/Ink</label>
                                         {tonerItems.length > 0 ? (
                                             <select
                                                 value={selectedTonerId}
                                                 onChange={(e) => setSelectedTonerId(e.target.value)}
-                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
                                             >
                                                 {tonerItems.map(item => (
                                                     <option key={item.id} value={item.id}>
@@ -827,17 +841,17 @@ const SmartPricing: React.FC = () => {
                                                 ))}
                                             </select>
                                         ) : (
-                                            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm">No toner items found</div>
+                                            <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-sm border border-red-200/50">No toner items found</div>
                                         )}
                                         {selectedToner && (
-                                            <div className="mt-2 p-3 bg-purple-50 rounded-xl">
+                                            <div className="mt-2 p-3 bg-gradient-to-r from-purple-50/80 to-purple-100/30 backdrop-blur-sm rounded-xl border border-purple-100/50 shadow-sm">
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-slate-600">Pages to print:</span>
-                                                    <span className="font-medium text-slate-800">{totalPages} pages</span>
+                                                    <span className="font-semibold text-slate-800">{totalPages} pages</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm">
+                                                <div className="flex justify-between text-sm mt-1">
                                                     <span className="text-slate-600">Toner cost:</span>
-                                                    <span className="font-medium text-purple-600">{formatCurrency(tonerCost)}</span>
+                                                    <span className="font-semibold text-purple-600">{formatCurrency(tonerCost)}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -846,41 +860,47 @@ const SmartPricing: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
                             <button 
                                 onClick={() => setFinishingExpanded(!finishingExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-purple-100 rounded-lg">
+                                    <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg ring-1 ring-purple-200/50 group-hover:ring-purple-300/50 transition-all duration-200">
                                         <Info size={18} className="text-purple-600" />
                                     </div>
                                     <h3 className="font-semibold text-slate-800">Finishing Options</h3>
                                 </div>
-                                {finishingExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                <div className={`transition-transform duration-300 ${finishingExpanded ? '' : 'rotate-180'}`}>
+                                    {finishingExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                                </div>
                             </button>
                             {finishingExpanded && (
-                                <div className="px-6 pb-6">
+                                <div className="px-6 pb-6 animate-slideDown">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {finishingOptions.map(option => (
                                             <label 
                                                 key={option.id} 
-                                                className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all ${
-                                                    option.enabled ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                                                className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200 ${
+                                                    option.enabled 
+                                                        ? 'bg-gradient-to-br from-purple-50/80 to-purple-100/30 border-purple-200 shadow-sm' 
+                                                        : 'bg-slate-50/50 border-slate-100 hover:bg-slate-100/80 hover:shadow-sm'
                                                 } border`}
                                             >
                                                 <div className="flex-1">
-                                                    <div className="font-medium text-slate-800">{option.name}</div>
-                                                    <div className="text-xs text-slate-500">{option.description}</div>
+                                                    <div className="font-semibold text-slate-800">{option.name}</div>
+                                                    <div className="text-xs text-slate-500 mt-0.5">{option.description}</div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-sm font-medium text-slate-600">{currency} {option.price}</span>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={option.enabled}
-                                                        onChange={() => toggleFinishingOption(option.id)}
-                                                        className="w-5 h-5 text-purple-600 rounded"
-                                                    />
+                                                <div className="flex items-center gap-3 ml-3">
+                                                    <span className="text-sm font-semibold text-slate-600">{currency} {option.price}</span>
+                                                    <div className="relative">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={option.enabled}
+                                                            onChange={() => toggleFinishingOption(option.id)}
+                                                            className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </label>
                                         ))}
@@ -892,57 +912,60 @@ const SmartPricing: React.FC = () => {
                     </div>
 
                     <div className="lg:col-span-2 space-y-4">
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden sticky top-6">
-                            <div className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600">
-                                <h3 className="text-white font-semibold text-lg">Price Summary</h3>
-                                <p className="text-indigo-200 text-sm">{pages} pages · Cost: {formatCurrency(costPrice)}</p>
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-100 overflow-hidden sticky top-6 hover:shadow-xl transition-shadow duration-300">
+                            <div className="p-6 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]" />
+                                <h3 className="text-white font-bold text-lg tracking-tight relative">Price Summary</h3>
+                                <p className="text-indigo-200/90 text-sm mt-1 relative">{pages} pages  <span className="mx-1.5 text-indigo-300/50">·</span>  Cost: {formatCurrency(costPrice)}</p>
                             </div>
                             
                             <div className="p-6 space-y-4">
-                                <div className="flex justify-between text-slate-600">
-                                    <span>{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span>
-                                    <span className="font-medium">{formatCurrency(paperCost)}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-600">
-                                    <span>{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span>
-                                    <span className="font-medium">{formatCurrency(tonerCost)}</span>
-                                </div>
-                                <div className="flex justify-between text-slate-600">
-                                    <span>Finishing</span>
-                                    <span className="font-medium">{formatCurrency(finishingCost)}</span>
-                                </div>
-                                {finishingInventoryCost > 0 && (
-                                    <div className="flex justify-between text-slate-600">
-                                        <span className="pl-4">Finishing Materials</span>
-                                        <span className="font-medium">{formatCurrency(finishingInventoryCost)}</span>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center py-1.5">
+                                        <span className="text-slate-500 text-sm">{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span>
+                                        <span className="font-semibold text-slate-800">{formatCurrency(paperCost)}</span>
                                     </div>
-                                )}
-                                <div className="border-t border-slate-200 pt-3 flex justify-between font-semibold text-slate-800">
-                                    <span>Cost Price (CP)</span>
-                                    <span className="text-lg">{formatCurrency(costPrice)}</span>
+                                    <div className="flex justify-between items-center py-1.5">
+                                        <span className="text-slate-500 text-sm">{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span>
+                                        <span className="font-semibold text-slate-800">{formatCurrency(tonerCost)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-1.5">
+                                        <span className="text-slate-500 text-sm">Finishing</span>
+                                        <span className="font-semibold text-slate-800">{formatCurrency(finishingCost)}</span>
+                                    </div>
+                                    {finishingInventoryCost > 0 && (
+                                        <div className="flex justify-between items-center py-1.5 pl-4 border-l-2 border-purple-200">
+                                            <span className="text-slate-500 text-sm">Finishing Materials</span>
+                                            <span className="font-semibold text-slate-800">{formatCurrency(finishingInventoryCost)}</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex justify-between text-blue-600 font-semibold">
-                                    <span>Selling Price (SP)</span>
-                                    <span className="text-lg">{formatCurrency(sellingPrice)}</span>
+                                <div className="border-t border-slate-200 pt-4 flex justify-between items-center">
+                                    <span className="font-semibold text-slate-700">Cost Price (CP)</span>
+                                    <span className="text-lg font-bold text-slate-800">{formatCurrency(costPrice)}</span>
                                 </div>
-                                <div className={`flex justify-between font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span>Profit</span>
-                                    <span>{profit >= 0 ? '+' : ''}{formatCurrency(profit)}</span>
+                                <div className="flex justify-between items-center py-1.5 px-3 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-lg border border-blue-100/50">
+                                    <span className="font-semibold text-blue-700">Selling Price (SP)</span>
+                                    <span className="text-lg font-bold text-blue-700">{formatCurrency(sellingPrice)}</span>
                                 </div>
-                                <div className={`flex justify-between ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span>Profit Margin</span>
-                                    <span className="font-semibold">{profitMarkup.toFixed(1)}%</span>
+                                <div className={`flex justify-between items-center py-1.5 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span className="font-semibold">Profit</span>
+                                    <span className="text-lg font-bold">{profit >= 0 ? '+' : ''}{formatCurrency(profit)}</span>
                                 </div>
-                                <div className="flex justify-between text-slate-500">
+                                <div className={`flex justify-between items-center py-1.5 ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span className="font-semibold">Profit Margin</span>
+                                    <span className="text-lg font-bold">{profitMarkup.toFixed(1)}%</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1.5 text-slate-400 text-sm">
                                     <span>Minimum Required Markup</span>
-                                    <span className="font-medium">{validation.minimumMarkup}%</span>
+                                    <span className="font-medium text-slate-500">{validation.minimumMarkup}%</span>
                                 </div>
-                                <div className={`p-3 rounded-xl text-sm font-medium text-center ${
+                                <div className={`p-3 rounded-xl text-sm font-medium text-center transition-all duration-200 ${
                                     validation.valid
-                                        ? 'bg-green-50 text-green-700 border border-green-200'
+                                        ? 'bg-green-50/80 backdrop-blur-sm text-green-700 border border-green-200/60 shadow-sm'
                                         : sellingPrice > 0
-                                        ? 'bg-red-50 text-red-700 border border-red-200'
-                                        : 'bg-slate-50 text-slate-400 border border-slate-200'
+                                        ? 'bg-red-50/80 backdrop-blur-sm text-red-700 border border-red-200/60 shadow-sm'
+                                        : 'bg-slate-50/50 text-slate-400 border border-slate-200'
                                 }`}>
                                     {sellingPrice > 0
                                         ? (validation.valid
@@ -955,7 +978,7 @@ const SmartPricing: React.FC = () => {
                             <div className="px-6 pb-6 space-y-3">
                                 <button 
                                     onClick={() => setShowSummaryCard(true)}
-                                    className="w-full flex items-center justify-center gap-2 py-3 border border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 py-3 border border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50/80 transition-all duration-200 hover:border-indigo-300 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled={!validation.valid || sellingPrice <= 0}
                                 >
                                     <Download size={18} />
@@ -964,7 +987,7 @@ const SmartPricing: React.FC = () => {
                                 <button 
                                     onClick={handleOpenSaveDialog}
                                     disabled={!validation.valid || sellingPrice <= 0}
-                                    className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50"
+                                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                     title={!validation.valid && sellingPrice > 0 ? `Markup ${profitMarkup.toFixed(1)}% below minimum ${validation.minimumMarkup}%` : ''}
                                 >
                                     {editingProductId ? `Save ${itemType}` : 'Save to Inventory'}
@@ -976,59 +999,59 @@ const SmartPricing: React.FC = () => {
             </div>
 
             {showSaveDialog && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold text-slate-800">Save to Inventory</h2>
-                            <button onClick={() => setShowSaveDialog(false)} className="p-2 hover:bg-slate-100 rounded-lg">
-                                <X size={20} />
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 backdrop-blur-md rounded-2xl w-full max-w-md shadow-2xl shadow-indigo-500/10 border border-white/20 p-6 animate-in">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Save to Inventory</h2>
+                            <button onClick={() => setShowSaveDialog(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm">
+                                <X size={20} className="text-slate-400" />
                             </button>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="p-4 bg-slate-50 rounded-xl space-y-2">
-                                <p className="text-sm font-medium text-slate-600">Pricing Summary</p>
+                            <div className="p-4 bg-gradient-to-br from-slate-50/80 to-indigo-50/30 backdrop-blur-sm rounded-xl border border-slate-100 shadow-sm space-y-2">
+                                <p className="text-sm font-semibold text-slate-600 tracking-wide">Pricing Summary</p>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="flex justify-between"><span className="text-slate-500">Cost:</span><span className="font-medium">{formatCurrency(costPrice)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Selling:</span><span className="font-medium">{formatCurrency(sellingPrice)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Profit:</span><span className={`font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(profit)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Margin:</span><span className={`font-medium ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>{profitMarkup.toFixed(1)}%</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-400">Cost:</span><span className="font-semibold">{formatCurrency(costPrice)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-400">Selling:</span><span className="font-semibold">{formatCurrency(sellingPrice)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-400">Profit:</span><span className={`font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(profit)}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-400">Margin:</span><span className={`font-semibold ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>{profitMarkup.toFixed(1)}%</span></div>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Item Name</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5 tracking-wide">Item Name</label>
                                 <input
                                     type="text"
                                     value={saveItemName}
                                     onChange={e => setSaveItemName(e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm"
                                     placeholder="Enter item name..."
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5 tracking-wide">Type</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setSaveDialogType('Product')}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
-                                            saveDialogType === 'Product' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ${
+                                            saveDialogType === 'Product' ? 'border-indigo-500 bg-gradient-to-br from-indigo-50/80 to-indigo-100/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'
                                         }`}
                                     >
                                         <Package size={20} className={saveDialogType === 'Product' ? 'text-indigo-600' : 'text-slate-400'} />
-                                        <span className={`font-medium ${saveDialogType === 'Product' ? 'text-indigo-700' : 'text-slate-600'}`}>Product</span>
+                                        <span className={`font-semibold ${saveDialogType === 'Product' ? 'text-indigo-700' : 'text-slate-600'}`}>Product</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setSaveDialogType('Service')}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
-                                            saveDialogType === 'Service' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ${
+                                            saveDialogType === 'Service' ? 'border-indigo-500 bg-gradient-to-br from-indigo-50/80 to-indigo-100/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'
                                         }`}
                                     >
                                         <Printer size={20} className={saveDialogType === 'Service' ? 'text-indigo-600' : 'text-slate-400'} />
-                                        <span className={`font-medium ${saveDialogType === 'Service' ? 'text-indigo-700' : 'text-slate-600'}`}>Printing Service</span>
+                                        <span className={`font-semibold ${saveDialogType === 'Service' ? 'text-indigo-700' : 'text-slate-600'}`}>Printing Service</span>
                                     </button>
                                 </div>
                             </div>
@@ -1036,37 +1059,37 @@ const SmartPricing: React.FC = () => {
                             {!editingProductId && (
                                 <div>
                                     <div className="flex items-center justify-between mb-1.5">
-                                        <label className="block text-sm font-medium text-slate-700">Variants</label>
+                                        <label className="block text-sm font-medium text-slate-700 tracking-wide">Variants</label>
                                         <button
                                             type="button"
                                             onClick={addVariantRow}
                                             disabled={saveVariants.length >= 5}
-                                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
+                                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:text-slate-300 transition-all duration-200 font-medium"
                                         >
                                             <Plus size={14} /> Add Variant
                                         </button>
                                     </div>
                                     {saveVariants.length > 0 && (
-                                        <div className="overflow-x-auto">
+                                        <div className="overflow-x-auto rounded-lg border border-slate-100">
                                             <table className="w-full text-sm">
                                                 <thead>
-                                                    <tr className="border-b border-slate-200">
-                                                        <th className="text-left py-2 pr-2 text-slate-500 font-medium">Attribute</th>
-                                                        <th className="text-left py-2 px-2 text-slate-500 font-medium">Pages</th>
-                                                        <th className="text-right py-2 px-2 text-slate-500 font-medium">Base Price</th>
-                                                        <th className="text-right py-2 px-2 text-slate-500 font-medium">Selling Price</th>
-                                                        <th className="py-2 pl-2"></th>
+                                                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                                                        <th className="text-left py-2.5 pr-2 pl-3 text-slate-500 font-medium text-xs uppercase tracking-wider">Attribute</th>
+                                                        <th className="text-left py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Pages</th>
+                                                        <th className="text-right py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Base Price</th>
+                                                        <th className="text-right py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Selling Price</th>
+                                                        <th className="py-2.5 pl-2 pr-3"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {saveVariants.map(v => (
-                                                        <tr key={v.id} className="border-b border-slate-100">
-                                                            <td className="py-1.5 pr-2">
+                                                        <tr key={v.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                                            <td className="py-1.5 pr-2 pl-3">
                                                                 <input
                                                                     type="text"
                                                                     value={v.attribute}
                                                                     onChange={e => updateVariantRow(v.id, 'attribute', e.target.value)}
-                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm"
+                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
                                                                     placeholder="e.g. A4"
                                                                 />
                                                             </td>
@@ -1075,11 +1098,11 @@ const SmartPricing: React.FC = () => {
                                                                     type="number"
                                                                     value={v.pages}
                                                                     onChange={e => updateVariantRow(v.id, 'pages', parseInt(e.target.value) || 1)}
-                                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-sm"
+                                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
                                                                     min={1}
                                                                 />
                                                             </td>
-                                                            <td className="py-1.5 px-2 text-right text-slate-600">
+                                                            <td className="py-1.5 px-2 text-right text-slate-600 font-medium">
                                                                 {formatCurrency(v.basePrice)}
                                                             </td>
                                                             <td className="py-1.5 px-2">
@@ -1087,14 +1110,14 @@ const SmartPricing: React.FC = () => {
                                                                     type="number"
                                                                     value={v.sellingPrice || ''}
                                                                     onChange={e => updateVariantRow(v.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
-                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right"
+                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
                                                                     min={0}
                                                                     step={0.01}
                                                                     placeholder="0.00"
                                                                 />
                                                             </td>
-                                                            <td className="py-1.5 pl-2">
-                                                                <button type="button" onClick={() => removeVariantRow(v.id)} className="p-1 text-red-400 hover:text-red-600">
+                                                            <td className="py-1.5 pl-2 pr-3">
+                                                                <button type="button" onClick={() => removeVariantRow(v.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200 hover:bg-red-50 rounded-lg">
                                                                     <X size={14} />
                                                                 </button>
                                                             </td>
@@ -1104,7 +1127,7 @@ const SmartPricing: React.FC = () => {
                                             </table>
                                         </div>
                                     )}
-                                    <p className="text-[11px] text-slate-400 mt-1">Base price auto-calculated from cost per page. Add up to 5 variants.</p>
+                                    <p className="text-[11px] text-slate-400 mt-1.5">Base price auto-calculated from cost per page. Add up to 5 variants.</p>
                                 </div>
                             )}
                         </div>
@@ -1113,7 +1136,7 @@ const SmartPricing: React.FC = () => {
                             <button
                                 type="button"
                                 onClick={() => setShowSaveDialog(false)}
-                                className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 text-sm"
+                                className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm text-sm font-medium active:scale-[0.98]"
                             >
                                 Cancel
                             </button>
@@ -1121,7 +1144,7 @@ const SmartPricing: React.FC = () => {
                                 type="button"
                                 onClick={handleSaveFromDialog}
                                 disabled={isCreatingProduct || !saveItemName.trim()}
-                                className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
+                                className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-indigo-200/50 text-sm font-medium active:scale-[0.98]"
                             >
                                 {isCreatingProduct ? 'Saving...' : editingProductId ? 'Update' : 'Save'}
                             </button>
@@ -1131,57 +1154,57 @@ const SmartPricing: React.FC = () => {
             )}
 
             {showSummaryCard && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/95 backdrop-blur-md rounded-2xl w-full max-w-sm shadow-2xl shadow-indigo-500/10 border border-white/20">
                         <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                            <h2 className="text-xl font-bold text-slate-800">Price Summary Card</h2>
+                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Price Summary Card</h2>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleSaveCardImage}
-                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 hover:shadow-sm"
                                     title="Save as Image"
                                 >
                                     <Download size={20} />
                                 </button>
-                                <button onClick={() => setShowSummaryCard(false)} className="p-2 hover:bg-slate-100 rounded-lg">
-                                    <X size={20} />
+                                <button onClick={() => setShowSummaryCard(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm">
+                                    <X size={20} className="text-slate-400" />
                                 </button>
                             </div>
                         </div>
                         <div id="price-summary-card" className="p-6">
                             <div className="space-y-4">
                                 <div className="text-center pb-4 border-b border-slate-100">
-                                    <h3 className="text-lg font-bold text-slate-800">Pricing Summary</h3>
-                                    <p className="text-xs text-slate-400">{new Date().toLocaleDateString()}</p>
+                                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">Pricing Summary</h3>
+                                    <p className="text-xs text-slate-400 mt-1">{new Date().toLocaleDateString()}</p>
                                 </div>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-600">Pages per Copy</span>
-                                        <span className="font-medium text-slate-800">{pages}</span>
+                                    <div className="flex justify-between py-1">
+                                        <span className="text-slate-500">Pages per Copy</span>
+                                        <span className="font-semibold text-slate-800">{pages}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-600">Sheets Needed</span>
-                                        <span className="font-medium text-slate-800">{totalSheets}</span>
+                                    <div className="flex justify-between py-1">
+                                        <span className="text-slate-500">Sheets Needed</span>
+                                        <span className="font-semibold text-slate-800">{totalSheets}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-600">Toner</span>
-                                        <span className="font-medium text-slate-800">{selectedToner?.name || 'None'}</span>
+                                    <div className="flex justify-between py-1">
+                                        <span className="text-slate-500">Toner</span>
+                                        <span className="font-semibold text-slate-800">{selectedToner?.name || 'None'}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-600">Finishing</span>
-                                        <span className="font-medium text-slate-800">{finishingOptions.filter(o => o.enabled).map(o => o.name).join(', ') || 'None'}</span>
+                                    <div className="flex justify-between py-1">
+                                        <span className="text-slate-500">Finishing</span>
+                                        <span className="font-semibold text-slate-800">{finishingOptions.filter(o => o.enabled).map(o => o.name).join(', ') || 'None'}</span>
                                     </div>
                                 </div>
-                                <div className="mt-4 pt-3 border-t border-slate-200 flex justify-between">
-                                    <span className="font-bold text-2xl text-slate-900">Total</span>
-                                    <span className="font-bold text-2xl text-slate-900">{formatCurrency(sellingPrice)}</span>
+                                <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
+                                    <span className="font-bold text-2xl text-slate-900 tracking-tight">Total</span>
+                                    <span className="font-bold text-2xl text-slate-900 tracking-tight">{formatCurrency(sellingPrice)}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="p-6 border-t border-slate-100">
                             <button
                                 onClick={() => setShowSummaryCard(false)}
-                                className="w-full py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+                                className="w-full py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] font-medium"
                             >
                                 Close
                             </button>
