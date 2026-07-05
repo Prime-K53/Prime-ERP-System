@@ -5,6 +5,7 @@ import { useSales } from '../../context/SalesContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useFinance } from '../../context/FinanceContext';
 import { useProduction } from '../../context/ProductionContext';
+import { useAuth } from '../../context/AuthContext';
 import { generateAIResponse } from '../../services/geminiService';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
@@ -18,6 +19,8 @@ const EXAMPLE_QUESTIONS = [
 
 const ConversationalQuery: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || 'K';
   const { sales, customers } = useSales();
   const { inventory } = useInventory();
   const { invoices, expenses, income, ledger } = useFinance();
@@ -32,14 +35,14 @@ const ConversationalQuery: React.FC = () => {
   const buildContext = () => {
     const parts: string[] = [];
     const salesTotal = (sales || []).reduce((s: number, x: any) => s + Number(x.total_amount || x.total || 0), 0);
-    parts.push(`Sales: ${(sales || []).length} transactions totaling $${Math.round(salesTotal)}`);
+    parts.push(`Sales: ${(sales || []).length} transactions totaling ${currency}${Math.round(salesTotal)}`);
     const topCust = [...(customers || [])].slice(0, 5).map((c: any) => c.customer_name || c.name).filter(Boolean);
     if (topCust.length) parts.push(`Customers: ${topCust.join(', ')}`);
     const invVal = (inventory || []).reduce((s: number, i: any) => s + Number(i.quantity || 0) * Number(i.cost_per_unit || 0), 0);
-    parts.push(`Inventory: ${(inventory || []).length} items valued at $${Math.round(invVal)}`);
+    parts.push(`Inventory: ${(inventory || []).length} items valued at ${currency}${Math.round(invVal)}`);
     const exp30 = (expenses || []).filter((e: any) => e.expense_date && new Date(e.expense_date) > new Date(Date.now() - 30 * 86400000)).reduce((s: number, e: any) => s + Number(e.amount || 0), 0);
     const inc30 = (income || []).filter((i: any) => i.income_date && new Date(i.income_date) > new Date(Date.now() - 30 * 86400000)).reduce((s: number, i: any) => s + Number(i.amount || 0), 0);
-    parts.push(`Last 30 days: Expenses $${Math.round(exp30)}, Income $${Math.round(inc30)}`);
+    parts.push(`Last 30 days: Expenses ${currency}${Math.round(exp30)}, Income ${currency}${Math.round(inc30)}`);
     const activeWO = (workOrders || []).filter((w: any) => w.status !== 'completed' && w.status !== 'cancelled').length;
     parts.push(`Active work orders: ${activeWO}`);
     return parts.join('\n');

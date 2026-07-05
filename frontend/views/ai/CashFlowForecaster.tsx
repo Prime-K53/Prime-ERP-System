@@ -3,10 +3,13 @@ import { Loader2, TrendingUp, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { useSales } from '../../context/SalesContext';
+import { useAuth } from '../../context/AuthContext';
 import { forecastCashFlow } from '../../services/aiAnalyticsUtils';
 
 const CashFlowForecaster: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || 'K';
   const { invoices, expenses, income, ledger } = useFinance();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -53,9 +56,9 @@ const CashFlowForecaster: React.FC = () => {
       {result && !loading && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Start Balance</div><div className="text-lg font-bold text-slate-800">${(result.summary.startingBalance || 0).toLocaleString()}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Projected ({days}d)</div><div className={`text-lg font-bold ${result.summary.finalProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${(result.summary.finalProjectedBalance || 0).toLocaleString()}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Min Balance</div><div className={`text-lg font-bold ${result.summary.minimumProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${(result.summary.minimumProjectedBalance || 0).toLocaleString()}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Start Balance</div><div className="text-lg font-bold text-slate-800">{currency}{(result.summary.startingBalance || 0).toLocaleString()}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Projected ({days}d)</div><div className={`text-lg font-bold ${result.summary.finalProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{currency}{(result.summary.finalProjectedBalance || 0).toLocaleString()}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Min Balance</div><div className={`text-lg font-bold ${result.summary.minimumProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{currency}{(result.summary.minimumProjectedBalance || 0).toLocaleString()}</div></div>
             <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500 capitalize">Risk: {result.summary.riskLevel}</div><div className={`text-lg font-bold capitalize ${result.summary.riskLevel === 'low' ? 'text-emerald-600' : result.summary.riskLevel === 'medium' ? 'text-amber-600' : 'text-red-600'}`}>{result.summary.riskLevel}</div></div>
           </div>
 
@@ -74,10 +77,10 @@ const CashFlowForecaster: React.FC = () => {
                 <tbody>{result.projection?.map((p: any, i: number) => (
                   <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                     <td className="p-2 text-slate-700">{p.date}</td>
-                    <td className="p-2 text-right text-emerald-600">${(p.inflow || 0).toLocaleString()}</td>
-                    <td className="p-2 text-right text-red-600">${(p.outflow || 0).toLocaleString()}</td>
-                    <td className={`p-2 text-right font-medium ${(p.netFlow || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>${(p.netFlow || 0).toLocaleString()}</td>
-                    <td className={`p-2 text-right font-medium ${(p.balance || 0) >= 0 ? 'text-slate-800' : 'text-red-600'}`}>${(p.balance || 0).toLocaleString()}</td>
+                    <td className="p-2 text-right text-emerald-600">{currency}{(p.inflow || 0).toLocaleString()}</td>
+                    <td className="p-2 text-right text-red-600">{currency}{(p.outflow || 0).toLocaleString()}</td>
+                    <td className={`p-2 text-right font-medium ${(p.netFlow || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{currency}{(p.netFlow || 0).toLocaleString()}</td>
+                    <td className={`p-2 text-right font-medium ${(p.balance || 0) >= 0 ? 'text-slate-800' : 'text-red-600'}`}>{currency}{(p.balance || 0).toLocaleString()}</td>
                   </tr>
                 ))}</tbody>
               </table>

@@ -339,6 +339,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             customer={customer}
             invoices={(invoices || []).filter((i: any) => i.customerId === customer.id || i.customerName === customer.name)}
             payments={(customerPayments || []).filter((p: any) => p.customerName === customer.name)}
+            currency={currency}
           />
           <button
             onClick={toggleCreditHold}

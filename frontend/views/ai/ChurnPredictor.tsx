@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { Loader2, Users, ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSales } from '../../context/SalesContext';
+import { useAuth } from '../../context/AuthContext';
 import { predictChurn } from '../../services/aiAnalyticsUtils';
 
 const ChurnPredictor: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || 'K';
   const { sales, customers } = useSales();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -52,7 +55,7 @@ const ChurnPredictor: React.FC = () => {
           {result.summary?.highValueAtRisk > 0 && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
               <AlertTriangle className="text-red-500" size={20} />
-              <div><div className="font-medium text-red-800 text-sm">{result.summary.highValueAtRisk} high-value customers at risk</div><div className="text-xs text-red-600">Estimated revenue at risk: {'$' + (result.summary.estimatedRevenueAtRisk || 0).toLocaleString()}</div></div>
+              <div><div className="font-medium text-red-800 text-sm">{result.summary.highValueAtRisk} high-value customers at risk</div><div className="text-xs text-red-600">Estimated revenue at risk: {currency}{(result.summary.estimatedRevenueAtRisk || 0).toLocaleString()}</div></div>
             </div>
           )}
 

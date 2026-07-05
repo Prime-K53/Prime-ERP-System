@@ -6,12 +6,14 @@ interface Props {
   customer: any;
   invoices: any[];
   payments: any[];
+  currency?: string;
 }
 
-const AICustomerInsights: React.FC<Props> = ({ customer, invoices, payments }) => {
+const AICustomerInsights: React.FC<Props> = ({ customer, invoices, payments, currency: propCurrency }) => {
   const [open, setOpen] = useState(false);
   const [insight, setInsight] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const currency = propCurrency || customer?.currency || 'K';
 
   const handleAnalyze = async () => {
     setOpen(true);
@@ -75,8 +77,8 @@ const AICustomerInsights: React.FC<Props> = ({ customer, invoices, payments }) =
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[
-                    { icon: <DollarSign size={14} />, label: 'Total Spent', value: `${customer.currency || '$'}${(insight.totalSpent || 0).toLocaleString()}` },
-                    { icon: <TrendingUp size={14} />, label: 'Avg Invoice', value: `${customer.currency || '$'}${(insight.averageInvoice || 0).toLocaleString()}` },
+                    { icon: <DollarSign size={14} />, label: 'Total Spent', value: `${currency}${(insight.totalSpent || 0).toLocaleString()}` },
+                    { icon: <TrendingUp size={14} />, label: 'Avg Invoice', value: `${currency}${(insight.averageInvoice || 0).toLocaleString()}` },
                     { icon: <Clock size={14} />, label: 'Last Order', value: insight.lastOrderDate ? new Date(insight.lastOrderDate).toLocaleDateString() : 'N/A' },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: '10px', borderRadius: 12, background: '#f8fafc' }}>

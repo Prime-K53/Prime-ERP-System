@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { Loader2, Package, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../context/InventoryContext';
+import { useAuth } from '../../context/AuthContext';
 import { optimizeReorder } from '../../services/aiAnalyticsUtils';
 
 const ReorderOptimizer: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || 'K';
   const { inventory } = useInventory();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -46,7 +49,7 @@ const ReorderOptimizer: React.FC = () => {
             <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Items</div><div className="text-2xl font-bold text-slate-800">{result.summary.totalItems}</div></div>
             <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">Need Reorder</div><div className="text-2xl font-bold text-red-600">{result.summary.needsReorder}</div></div>
             <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Critical</div><div className="text-2xl font-bold text-amber-600">{result.summary.criticalItems}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Est. Cost</div><div className="text-2xl font-bold text-slate-800">{'$' + (result.summary.totalOrderCost || 0).toLocaleString()}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Est. Cost</div><div className="text-2xl font-bold text-slate-800">{currency}{(result.summary.totalOrderCost || 0).toLocaleString()}</div></div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200">

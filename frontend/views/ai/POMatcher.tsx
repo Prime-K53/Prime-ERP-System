@@ -3,10 +3,13 @@ import { Loader2, FileSearch, ArrowLeft, CheckCircle2, AlertTriangle } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { useProcurement } from '../../context/ProcurementContext';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
 import { matchPOs } from '../../services/aiAnalyticsUtils';
 
 const POMatcher: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || 'K';
   const { purchases, goodsReceipts, suppliers } = useProcurement();
   const { supplierPayments } = useFinance();
   const [loading, setLoading] = useState(false);
@@ -63,7 +66,7 @@ const POMatcher: React.FC = () => {
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.matchLevel === 'full' ? 'bg-emerald-50 text-emerald-600' : m.matchLevel === 'partial' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>{m.matchStatus}</span>
                   </div>
-                  <div className="text-xs text-slate-500 ml-6">{m.supplierName} · {'$' + (m.poTotal || 0).toLocaleString()} · {m.grCount} receipts</div>
+                  <div className="text-xs text-slate-500 ml-6">{m.supplierName} · {currency}{(m.poTotal || 0).toLocaleString()} · {m.grCount} receipts</div>
                   {m.discrepancies?.map((d: any, j: number) => (
                     <div key={j} className="ml-6 text-xs text-red-500 mt-0.5">⚠ {d.description}</div>
                   ))}
