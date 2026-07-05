@@ -1117,6 +1117,8 @@ export interface FinishingOption {
   description?: string;
   quantity?: number;
   items: FinishingItemConfig[];
+  /** When set, price is charged per batch of this many copies (e.g. 10 = per 10 sheets) instead of per copy */
+  batchSize?: number;
 }
 
 export interface ProductionSettingsConfig {

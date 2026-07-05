@@ -708,8 +708,12 @@ export const pricingService = {
                 }
 
                 if (perCopyCost > 0) {
-                    finishingCostPerCopy += perCopyCost;
-                    finishingBreakdown.push({ name: enabledId, amount: perCopyCost });
+                    const batchSize = globalFinishingOptions.find((o: any) => o?.id === enabledId)?.batchSize;
+                    const effectiveCost = batchSize && batchSize > 0
+                        ? (Math.ceil(quantity / batchSize) * perCopyCost) / quantity
+                        : perCopyCost;
+                    finishingCostPerCopy += effectiveCost;
+                    finishingBreakdown.push({ name: enabledId, amount: effectiveCost });
                 }
             });
         }

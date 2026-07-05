@@ -15,9 +15,9 @@ import html2canvas from 'html2canvas';
 const defaultFinishingOptions: FinishingOption[] = [
     { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
     { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 20, description: 'Front and back cover pages per copy', items: [] },
-    { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [] },
-    { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [] },
-    { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [] },
+    { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
+    { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
+    { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
     { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
 ];
 
@@ -167,7 +167,8 @@ const SmartPricing: React.FC = () => {
         const finishingCostVal = finishingOptions
             .filter(o => o.enabled)
             .reduce((sum, o) => {
-                return sum + (o.price * copies);
+                const chargeQty = o.batchSize ? Math.ceil(copies / o.batchSize) : copies;
+                return sum + (o.price * chargeQty);
             }, 0);
 
         const finishingInventoryCostVal = finishingOptions

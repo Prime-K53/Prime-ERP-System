@@ -15,9 +15,9 @@ const OPTION_ICONS: Record<string, React.ReactNode> = {
 const DEFAULT_FINISHING_OPTIONS: FinishingOption[] = [
   { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
   { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 20, description: 'Front and back cover pages per copy', items: [] },
-  { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [] },
-  { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [] },
-  { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [] },
+  { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
+  { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
+  { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
   { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
 ];
 
@@ -95,7 +95,10 @@ export const FinishingOptionsTab: React.FC<FinishingOptionsTabProps> = ({ config
                 <div>
                   <p className="font-bold text-slate-800 text-sm">{option.name}</p>
                   {option.description && (
-                    <p className="text-[10px] text-slate-400 mt-0.5">{option.description}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {option.description}
+                      {option.batchSize ? ` · per ${option.batchSize} copies` : ' · per copy'}
+                    </p>
                   )}
                 </div>
               </div>
