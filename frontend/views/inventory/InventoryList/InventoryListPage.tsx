@@ -737,7 +737,7 @@ const handleProduce = useCallback((item: Item) => {
                               </td>
                             </tr>
                             {hasVariants && isExpanded && variants.map((v: any, vIdx: number) => {
-                              const vCp = v.costPrice || p.costPrice || p.cost || 0;
+                              const vCp = v.basePrice || v.costPrice || p.costPrice || p.cost || 0;
                               const vSp = v.sellingPrice || p.sellingPrice || p.price || 0;
                               const vMargin = vCp > 0 ? ((vSp - vCp) / vCp * 100).toFixed(1) : '0.0';
                               return (
@@ -928,7 +928,7 @@ const handleProduce = useCallback((item: Item) => {
                               </td>
                             </tr>
                             {hasVariants && isExpanded && variants.map((v: any, vIdx: number) => {
-                              const vCp = v.costPrice || p.costPrice || p.cost || 0;
+                              const vCp = v.basePrice || v.costPrice || p.costPrice || p.cost || 0;
                               const vSp = v.sellingPrice || p.sellingPrice || p.price || 0;
                               const vMargin = vCp > 0 ? ((vSp - vCp) / vCp * 100).toFixed(1) : '0.0';
                               return (

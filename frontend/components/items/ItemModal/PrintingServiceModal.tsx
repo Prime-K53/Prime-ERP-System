@@ -305,7 +305,9 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
   };
 
   const { paperCost, tonerCost, finishingCost, finishingInventoryCost, baseCost } = calculateCosts();
-  const costPrice = baseCost;
+  const costPrice = isStationery
+    ? (isStationeryPack && unitsPerPack > 0 ? costPerPack / unitsPerPack : stationeryCostPrice)
+    : baseCost;
   const profit = calculateProfit(costPrice, sellingPrice);
   const profitMarkup = calculateMarkup(costPrice, sellingPrice);
   const validation = validateMinimumMarkup(costPrice, sellingPrice, item?.id ? { id: item.id, category: undefined } : undefined);
@@ -469,9 +471,9 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
         stock: item?.stock || 0,
         hasVariants,
         ...(isStationery ? {
-          cost: stationeryCostPrice,
-          cost_price: stationeryCostPrice,
-          costPrice: stationeryCostPrice,
+          cost: costPrice,
+          cost_price: costPrice,
+          costPrice,
           price: sellingPrice,
           selling_price: sellingPrice,
           sellingPrice,
@@ -866,7 +868,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
             </>
           )}
           <div className="col-span-2 flex items-center gap-4 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5">
-            <span>Cost: <span className="font-semibold text-indigo-600">{formatCurrency(costPrice)}</span></span>
+            <span>Cost: <span className="font-semibold text-indigo-600">{formatCurrency(isStationery ? (isStationeryPack && unitsPerPack > 0 ? costPerPack / unitsPerPack : stationeryCostPrice) : costPrice)}</span></span>
             <span className="text-slate-300">|</span>
             <span className={`font-semibold ${profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               Profit: {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
