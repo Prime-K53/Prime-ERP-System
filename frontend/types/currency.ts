@@ -207,6 +207,7 @@ export interface CurrencyRevaluationResult {
  * Default currencies with ISO 4217 data
  */
 export const DEFAULT_CURRENCIES: Currency[] = [
+  { code: 'MWK', name: 'Malawian Kwacha', symbol: 'K', decimalPlaces: 2, isActive: true },
   { code: 'USD', name: 'US Dollar', symbol: '$', decimalPlaces: 2, isActive: true },
   { code: 'EUR', name: 'Euro', symbol: '€', decimalPlaces: 2, isActive: true },
   { code: 'GBP', name: 'British Pound', symbol: '£', decimalPlaces: 2, isActive: true },
@@ -229,8 +230,8 @@ export const DEFAULT_CURRENCIES: Currency[] = [
  * Default currency settings
  */
 export const DEFAULT_CURRENCY_SETTINGS: CurrencySettings = {
-  baseCurrency: 'USD',
-  enabledCurrencies: ['USD', 'EUR', 'GBP'],
+  baseCurrency: 'MWK',
+  enabledCurrencies: ['MWK', 'USD', 'EUR', 'GBP'],
   autoUpdateRates: false,
   rateUpdateFrequency: 'daily',
   apiProvider: 'manual',

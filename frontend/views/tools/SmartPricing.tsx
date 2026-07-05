@@ -27,7 +27,7 @@ const SmartPricing: React.FC = () => {
     const { addJobOrder, jobOrders } = useSales();
     const navigate = useNavigate();
     const location = useLocation();
-    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
     
     const [pages, setPages] = useState(1);
     const [copies, setCopies] = useState(1);
