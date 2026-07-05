@@ -11,6 +11,7 @@ import { Item, Sale, Purchase } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { generateAIResponse } from '../../../services/geminiService';
 import ReactMarkdown from 'react-markdown';
+import { currencyService } from '../../../services/currencyService';
 import { OfflineImage } from '../../../components/OfflineImage';
 
 interface ProductForecastDetailProps {
@@ -25,7 +26,7 @@ const ProductForecastDetail: React.FC<ProductForecastDetailProps> = ({
   item, salesHistory, purchaseHistory, onBack, onCreatePO 
 }) => {
   const { companyConfig, notify } = useAuth();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   // --- 1. Scenario State (What-If) ---
   const [scenario, setScenario] = useState({

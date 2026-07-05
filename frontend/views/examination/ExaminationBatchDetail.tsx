@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Trash2, CheckCircle, BookOpen, Users, BookText, FileTe
 import { AddClassDialog } from './components/AddClassDialog';
 import { ManageSubjectsDialog } from './components/ManageSubjectsDialog';
 import { buildRecurringDraftFromExaminationBatch } from '../../utils/recurringConversion';
+import { currencyService } from '../../services/currencyService';
 
 const ExaminationBatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -881,25 +882,25 @@ const ExaminationBatchDetail: React.FC = () => {
         <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Amount</div>
           <div className="text-xl font-bold text-slate-900 finance-nums">
-            {batch.currency || 'MWK'} {batchTotals.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
           <div className="mt-2 space-y-1">
             <div className="flex justify-between text-[10px]">
               <span className="text-slate-400">Production:</span>
-              <span className="text-slate-600 font-medium">{batch.currency || 'MWK'} {batchTotals.production.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="text-slate-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.production.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-[10px]">
               <span className="text-slate-400">Adjustments:</span>
-              <span className="text-emerald-600 font-medium">{batch.currency || 'MWK'} {batchTotals.marketAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="text-emerald-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.marketAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-[10px]">
               <span className="text-slate-400">Rounding:</span>
-              <span className="text-blue-600 font-medium">{batch.currency || 'MWK'} {batchTotals.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="text-blue-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             </div>
             {batchTotals.manualOverride !== 0 && (
               <div className="flex justify-between text-[10px]">
                 <span className="text-slate-400">Manual Override:</span>
-                <span className="text-purple-600 font-medium">{batch.currency || 'MWK'} {batchTotals.manualOverride.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-purple-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.manualOverride.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
             )}
           </div>
@@ -979,7 +980,7 @@ const ExaminationBatchDetail: React.FC = () => {
                     <div className="flex items-center gap-6">
                       <div className="text-right">
                         <div className="text-blue-600 font-black text-xl leading-none mb-1 finance-nums">
-                          {batch.currency || 'MWK'} {displayedFeePerLearner.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {displayedFeePerLearner.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </div>
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                           {hasManualOverride ? 'Final Fee / Learner (Override)' : 'Expected Fee / Learner'}
@@ -1056,39 +1057,39 @@ const ExaminationBatchDetail: React.FC = () => {
                                     <div className="flex flex-col text-right">
                                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Production</span>
                                       <span className="font-bold text-slate-600 finance-nums leading-none mt-1 text-sm">
-                                        {batch.currency || 'MWK'} {(Number(cls.material_total_cost) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(Number(cls.material_total_cost) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                       </span>
                                     </div>
                                     <div className="flex flex-col text-right">
                                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Margin</span>
                                       <span className="font-bold text-orange-600 finance-nums leading-none mt-1 text-sm">
-                                        {batch.currency || 'MWK'} {(Number(cls.margin_amount) || Math.max(0, (Number(cls.calculated_total_cost) || 0) - (Number(cls.material_total_cost) || 0) - (Number(cls.adjustment_total_cost) || 0))).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(Number(cls.margin_amount) || Math.max(0, (Number(cls.calculated_total_cost) || 0) - (Number(cls.material_total_cost) || 0) - (Number(cls.adjustment_total_cost) || 0))).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                       </span>
                                     </div>
                                     <div className="flex flex-col text-right">
                                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Adjustments</span>
                                       <span className="font-bold text-emerald-600 finance-nums leading-none mt-1 text-sm">
-                                        {batch.currency || 'MWK'} {(Number(cls.market_adjustment_total ?? cls.adjustment_total_cost) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(Number(cls.market_adjustment_total ?? cls.adjustment_total_cost) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                       </span>
                                     </div>
                                     <div className="flex flex-col text-right">
                                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Rounding</span>
                                       <span className="font-bold text-blue-600 finance-nums leading-none mt-1 text-sm">
-                                        {batch.currency || 'MWK'} {(Number(cls.rounding_adjustment) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(Number(cls.rounding_adjustment) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                       </span>
                                     </div>
                                     {Number(cls.manual_override_amount) !== 0 && (
                                       <div className="flex flex-col text-right">
                                         <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Manual Override</span>
                                         <span className="font-bold text-purple-600 finance-nums leading-none mt-1 text-sm">
-                                          {batch.currency || 'MWK'} {(Number(cls.manual_override_amount) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                          {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(Number(cls.manual_override_amount) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                         </span>
                                       </div>
                                     )}
                                     <div className="flex flex-col text-right">
                                       <span className="text-xs uppercase font-bold text-slate-600 tracking-widest">Class Total</span>
                                       <span className="font-bold text-indigo-700 finance-nums leading-none mt-1.5 text-base">
-                                        {batch.currency || 'MWK'} {resolveClassTotalAmount(cls).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {resolveClassTotalAmount(cls).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                       </span>
                                     </div>
                                   </div>
@@ -1135,7 +1136,7 @@ const ExaminationBatchDetail: React.FC = () => {
         onUpdateClass={handleUpdateClass}
         onSaveClassPricing={handleSaveClassPricing}
         onApplyOverridePricing={canOverrideExamCost ? handleApplyClassOverridePricing : undefined}
-        currencySymbol={batch.currency || 'MWK'}
+        currencySymbol={batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}
         isLocked={isLocked}
       />
 

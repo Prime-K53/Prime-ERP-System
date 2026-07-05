@@ -5,11 +5,12 @@ import { useFinance } from '../../context/FinanceContext';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
 import { forecastCashFlow } from '../../services/aiAnalyticsUtils';
+import { currencyService } from '../../services/currencyService';
 
 const CashFlowForecaster: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const { invoices, expenses, income, ledger } = useFinance();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);

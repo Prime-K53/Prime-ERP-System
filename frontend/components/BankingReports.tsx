@@ -6,10 +6,12 @@ import {
   AlertCircle, CheckCircle, DollarSign, PieChart,
   RefreshCw, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useBankingStore } from '../context/BankingContext';
 import { bankingService } from '../services/bankingService';
 import { BankTransaction, BankAccount } from '../types/banking';
 import DocumentPreviewModal from './DocumentPreviewModal';
+import { currencyService } from '../services/currencyService';
 
 type ReportType = 
   | 'transaction' 
@@ -30,6 +32,8 @@ interface FilterOptions {
 }
 
 const BankingReports: React.FC<{ selectedAccountId?: string }> = ({ selectedAccountId }) => {
+  const { companyConfig } = useAuth();
+  const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const { accounts, transactions, reconciliations, fees, fetchBankingData } = useBankingStore();
   const [activeReport, setActiveReport] = useState<ReportType>('transaction');
   const [selectedAccount, setSelectedAccount] = useState<string>(selectedAccountId || '');
@@ -180,9 +184,7 @@ const BankingReports: React.FC<{ selectedAccountId?: string }> = ({ selectedAcco
     );
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-  };
+  const formatCurrency = (amount: number) => `${currency}${(amount || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString();

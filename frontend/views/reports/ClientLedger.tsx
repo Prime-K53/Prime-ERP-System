@@ -8,6 +8,7 @@ import {
   Search, X, ChevronDown, CreditCard, TrendingDown, TrendingUp,
   Building2, Phone, Mail
 } from 'lucide-react';
+import { currencyService } from '../../services/currencyService';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 interface AgingBucket {
@@ -54,7 +55,7 @@ const ClientLedger: React.FC = () => {
   const { ledger = [], invoices = [] } = useFinance();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const gl = companyConfig?.glMapping || {};
   const arAccId = gl.accountsReceivable || '1100';
   const companyName = companyConfig?.companyName || 'Prime ERP';

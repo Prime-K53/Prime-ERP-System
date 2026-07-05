@@ -13,6 +13,7 @@ import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 
 import { AuditTimeline } from '../../shared/components/AuditTimeline';
 import TransactionPricingInsights from './TransactionPricingInsights';
+import { currencyService } from '../../../services/currencyService';
 
 interface QuotationDetailsProps {
   quotation: Quotation;
@@ -25,7 +26,7 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
   const { companyConfig, notify } = useAuth();
   const { quotations = [] } = useSales();
   const { handlePreview } = useDocumentPreview();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const quotation = useMemo(() =>
     quotations.find(q => q.id === initialQuotation.id) || initialQuotation

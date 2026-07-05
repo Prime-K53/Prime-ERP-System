@@ -18,6 +18,7 @@ import { AccountType, LedgerEntry, Account } from '../../types';
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore, isAfter, differenceInDays } from 'date-fns';
 import { exportToCSV } from '../../services/excelService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { currencyService } from '../../services/currencyService';
 
 interface ReportRowProps {
     label: string;
@@ -91,7 +92,7 @@ const FinancialReports: React.FC = () => {
         end: endOfYear(new Date()).toISOString().split('T')[0]
     });
 
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     useEffect(() => {
         const typeParam = searchParams.get('type');

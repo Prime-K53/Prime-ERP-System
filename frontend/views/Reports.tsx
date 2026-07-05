@@ -26,6 +26,7 @@ import ClientLedger from './reports/ClientLedger';
 import InternalAuditor from './reports/InternalAuditor';
 import RoundingAnalytics from './reports/RoundingAnalytics';
 import BusinessHealthReport from './reports/BusinessHealthReport';
+import { currencyService } from '../services/currencyService';
 import { getRevenueSourceLabel } from '../services/revenueAnalysisService';
 import {
   buildRevenueReportingSnapshot,
@@ -52,7 +53,7 @@ const Reports: React.FC = () => {
   const { batches: examinationBatches = [] } = useExamination();
   const location = useLocation();
   const navigate = useNavigate();
-  const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [activeCategory, setActiveCategory] = useState<ReportCategory>(() => {
     if (location.pathname.includes('sales-audit')) return 'Sales Audit';

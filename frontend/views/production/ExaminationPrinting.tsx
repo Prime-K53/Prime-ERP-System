@@ -54,6 +54,7 @@ import { MarketAdjustment, BOMTemplate, ExamPricingResult, SubjectJob, Productio
 import { dbService } from '../../services/db';
 import { SafeFormulaEngine } from '../../services/formulaEngine';
 import { inventoryTransactionService } from '../../services/inventoryTransactionService';
+import { currencyService } from '../../services/currencyService';
 import { NewExamJobModal } from './NewExamJobModal';
 import {
   buildExamHiddenBOMTemplate,
@@ -987,7 +988,7 @@ const ExaminationPrinting: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
                       <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                        {companyConfig?.currencySymbol || '$'} {(stats?.total_revenue || 0).toLocaleString()}
+                        {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'} {(stats?.total_revenue || 0).toLocaleString()}
                       </h3>
                       <span className="text-xs text-emerald-600 flex items-center mt-2 font-medium">
                         <TrendingUp size={14} className="mr-1" />
@@ -1255,7 +1256,7 @@ const ExaminationPrinting: React.FC = () => {
                               </td>
                               <td className="table-body-cell">
                                 <p className="font-bold text-slate-900 text-[13px] finance-nums">
-                                  {companyConfig?.currencySymbol || '$'}{batchSubjects.reduce((sum, s) => sum + (s.selling_price || 0), 0).toLocaleString()}
+                                  {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{batchSubjects.reduce((sum, s) => sum + (s.selling_price || 0), 0).toLocaleString()}
                                 </p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight finance-nums">
                                   Total Class Charge
@@ -1332,16 +1333,16 @@ const ExaminationPrinting: React.FC = () => {
                                 <td className="table-body-cell">
                                   <div className="flex flex-col gap-0.5">
                                     <div className="flex items-center justify-between gap-4">
-                                      <p className="text-[11px] font-bold text-slate-900 finance-nums">{companyConfig?.currencySymbol || '$'}{(job.selling_price || 0).toLocaleString()}</p>
+                                      <p className="text-[11px] font-bold text-slate-900 finance-nums">{companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{(job.selling_price || 0).toLocaleString()}</p>
                                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Selling Price</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-4">
-                                      <p className="text-[11px] font-bold text-blue-600 finance-nums">{companyConfig?.currencySymbol || '$'}{(job.internal_cost || 0).toLocaleString()}</p>
+                                      <p className="text-[11px] font-bold text-blue-600 finance-nums">{companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{(job.internal_cost || 0).toLocaleString()}</p>
                                       <span className="text-[9px] text-blue-500 font-bold uppercase tracking-tight">Est. Cost Price</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-0.5 mt-0.5">
                                       <p className={`text-[11px] font-bold finance-nums ${((job.selling_price || 0) - (job.internal_cost || 0)) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {companyConfig?.currencySymbol || '$'}{((job.selling_price || 0) - (job.internal_cost || 0)).toLocaleString()}
+                                        {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{((job.selling_price || 0) - (job.internal_cost || 0)).toLocaleString()}
                                       </p>
                                       <span className={`text-[9px] font-bold uppercase tracking-tight ${((job.selling_price || 0) - (job.internal_cost || 0)) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>Est. Profit</span>
                                     </div>
@@ -1463,7 +1464,7 @@ const ExaminationPrinting: React.FC = () => {
                           </td>
                           <td className="table-body-cell">
                             <p className="font-bold text-slate-900 text-[13px] finance-nums">
-                              {companyConfig?.currencySymbol || '$'}
+                              {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}
                               {(queue.filter(e => e.invoiceId === inv.invoiceId).reduce((sum, e) => sum + (e.selling_price || 0), 0)).toLocaleString()}
                             </p>
                           </td>
@@ -1583,8 +1584,8 @@ const ExaminationPrinting: React.FC = () => {
                             </div>
                           </td>
                           <td className="table-body-cell">
-                            <p className="font-bold text-slate-900 text-[13px] finance-nums">{companyConfig?.currencySymbol || '$'}{(job.selling_price || 0).toLocaleString()}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight finance-nums">Cost: {companyConfig?.currencySymbol || '$'}{(job.internal_cost || 0).toLocaleString()}</p>
+                            <p className="font-bold text-slate-900 text-[13px] finance-nums">{companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{(job.selling_price || 0).toLocaleString()}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight finance-nums">Cost: {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'}{(job.internal_cost || 0).toLocaleString()}</p>
                           </td>
                           <td className="table-body-cell">
                             <div className="flex flex-col gap-1">

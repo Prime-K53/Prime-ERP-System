@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight, ExternalLink, Target, Calendar, Doll
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { currencyService } from '../../services/currencyService';
 
 const pipelineStages = ['New', 'Qualified', 'Proposal', 'Negotiation', 'Won', 'Lost'];
 
@@ -10,7 +11,7 @@ const LeadBoard: React.FC = () => {
   const { customers = [], updateCustomer, isLoading } = useSales();
   const { companyConfig, notify } = useAuth();
   const navigate = useNavigate();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});

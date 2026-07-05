@@ -1,5 +1,6 @@
 import { ExaminationInvoiceSchema, FinancialDocSchema, LogisticsDocSchema, PrimeDocData, SalesExchangeSchema, SubscriptionDocSchema } from '../views/shared/components/PDF/schemas';
 import { bomService } from '../services/bomService';
+import { currencyService } from '../services/currencyService';
 import { inferSignatureInputMode, resolveSignatureDataUrl } from './signatureUtils';
 
 /**
@@ -31,7 +32,7 @@ export const generateAccountSummary = (item: any, companyConfig: any, customers:
         }
     }
     
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
     const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     
     const fmt = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -69,7 +70,7 @@ export const mapToInvoiceData = (item: any, companyConfig: any, targetType?: str
         parsed.setDate(parsed.getDate() - 1);
         return parsed.toISOString().split('T')[0];
     };
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
     const fmt = (val: any) => toNum(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const resolveFirstText = (...candidates: any[]) => {
         for (const candidate of candidates) {

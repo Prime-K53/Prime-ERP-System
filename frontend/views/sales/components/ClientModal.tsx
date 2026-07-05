@@ -5,6 +5,7 @@ import { getDefaultPaymentTermsForSegment } from '../../../utils/helpers';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { getPlaceholder } from '../../../constants/placeholders';
+import { currencyService } from '../../../services/currencyService';
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -91,6 +92,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
   };
 
   const outstandingBalance = calcOutstanding(customer?.id || formData.id);
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   if (!isOpen) return null;
 
@@ -337,7 +339,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
 
                         <div className="text-right">
                           <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Outstanding</div>
-                          <div className="text-sm font-bold">{(companyConfig?.currencySymbol || '$')}{outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                          <div className="text-sm font-bold">{currency}{outstandingBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
 
                         <button type="button" onClick={async () => {

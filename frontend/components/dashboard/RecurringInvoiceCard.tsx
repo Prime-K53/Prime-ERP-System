@@ -224,7 +224,7 @@ const getInitials = (name: string): string => {
 // ============================================================
 const RecurringInvoiceCardComponent: React.FC<RecurringInvoiceCardProps> = memo(({
   invoices,
-  currency = '$',
+  currency = '',
   onNavigate,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);

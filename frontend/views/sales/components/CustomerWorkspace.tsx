@@ -29,6 +29,7 @@ import { attachDocumentSecurity } from '../../../utils/documentSecurity';
 import { AuditTimeline } from '../../shared/components/AuditTimeline';
 import AICustomerInsights from '../../../components/ai/AICustomerInsights';
 import CRMSegmentation from '../../../components/CRM/CRMSegmentation';
+import { currencyService } from '../../../services/currencyService';
 
 interface CustomerWorkspaceProps {
   customer: Customer;
@@ -45,7 +46,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
   useModuleRefresh(refreshAllData, { interval: REFRESH_INTERVAL });
   const { customerPayments = [], sales, quotations, updateCustomer } = useSales();
   const { addAuditLog, companyConfig, auditLogs, notify } = useAuth();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit'>('Overview');
   const [accountMenu, setAccountMenu] = useState<{ id: string, type: 'debit' | 'credit', x: number, y: number } | null>(null);

@@ -21,6 +21,7 @@ import CustomizeDashboard from '../components/dashboard/CustomizeDashboard';
 import { useDashboardStore } from '../stores/dashboardStore';
 import { dbService } from '../services/db';
 import { formatNumber, parseFormattedNumber } from '../utils/helpers';
+import { currencyService } from '../services/currencyService';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -760,7 +761,7 @@ const DashboardContent: React.FC = () => {
   // Re-enable 1-minute polling and focus refresh for Dashboard
   useModuleRefresh(undefined, { interval: 60000 });
 
-  const currency = companyConfig?.currencySymbol || 'MK ';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const rawCompanyName = companyConfig?.companyName || 'Demo Company';
   const displayCompanyName = rawCompanyName.split(' ').slice(0, 2).join(' ');

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Package, FileText, Receipt, ShoppingCart, Quote, Info, Layers, Copy, Tag, Percent, Hash } from 'lucide-react';
+import { currencyService } from '../services/currencyService';
 
 // Types for item metadata
 interface ItemMetadata {
@@ -101,7 +102,7 @@ export const PremiumHoverCard: React.FC<PremiumHoverCardProps> = ({
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency || 'USD',
+      currency: currency || currencyService.getBaseCurrency(),
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -356,7 +357,7 @@ export const PremiumHoverCardExample: React.FC = () => {
     pricing: {
       unitPrice: 2.50,
       totalPrice: 900.00,
-      currency: 'USD',
+      currency: '$',
     },
     vatRegistered: true,
     serviceDetails: {
@@ -374,7 +375,7 @@ export const PremiumHoverCardExample: React.FC = () => {
     pricing: {
       unitPrice: 12.99,
       totalPrice: 129.90,
-      currency: 'USD',
+      currency: '$',
     },
     vatRegistered: true,
     productDetails: {

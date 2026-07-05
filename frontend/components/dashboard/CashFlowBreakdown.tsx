@@ -145,7 +145,7 @@ const formatPercent = (value: number): string => {
 // ============================================================
 const CashFlowBreakdownComponent: React.FC<CashFlowBreakdownProps> = memo(({
   data,
-  currency = '$',
+  currency = '',
 }) => {
   // Memoize metric values
   const metrics = useMemo(() => [

@@ -16,6 +16,7 @@ import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 import TransactionPricingInsights from './TransactionPricingInsights';
 import AIDocumentSummarizer from '../../../components/ai/AIDocumentSummarizer';
 import { enrichInvoiceWithBatchPricing, findMatchingExaminationBatch } from '../../../utils/examinationInvoicePricing';
+import { currencyService } from '../../../services/currencyService';
 
 interface InvoiceDetailsProps {
     invoice: Invoice;
@@ -32,7 +33,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
 
     const { handlePreview } = useDocumentPreview();
     const navigate = useNavigate();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const invoice = useMemo(() =>
         invoices.find(i => i.id === initialInvoice.id) || initialInvoice

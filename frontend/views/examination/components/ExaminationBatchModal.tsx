@@ -13,6 +13,7 @@ import { toast } from '../../../components/Toast';
 import { Customer } from '../../../types';
 import { getPlaceholder } from '../../../constants/placeholders';
 import { dbService } from '../../../services/db';
+import { currencyService } from '../../../services/currencyService';
 
 interface ExaminationBatchModalProps {
   isOpen: boolean;
@@ -199,7 +200,7 @@ const ExaminationBatchModal: React.FC<ExaminationBatchModalProps> = ({ isOpen, o
         school_id: String(formData.school_id || '').trim(),
         name: formData.name.trim(),
         academic_year: formData.academic_year.trim(),
-        currency: companyConfig?.currencySymbol || 'MWK',
+        currency: companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$',
         sub_account_name: hasSubAccounts ? formData.sub_account_name.trim() : '',
         rounding_method: companyConfig?.pricingSettings?.defaultMethod || 'ALWAYS_UP_50',
         rounding_value: Number(companyConfig?.pricingSettings?.customStep || 50)

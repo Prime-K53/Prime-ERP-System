@@ -6,6 +6,8 @@ import {
   DollarSign, Percent, Globe, Tag, Package, Shield,
   Clock, User, Info, ChevronRight, Zap
 } from 'lucide-react';
+import { currencyService } from '../../services/currencyService';
+import { useAuth } from '../../context/AuthContext';
 import { getUrl, HAS_REMOTE_BACKEND } from '../../config/api';
 import { dbService } from '../../services/db';
 import {
@@ -436,6 +438,8 @@ function OverrideModal({ state, categories, onClose, onSaved, toast }: OverrideM
 // ─── Main ProfitMarkupSettings Component ─────────────────────────────────────
 
 const ProfitMarkupSettings: React.FC = () => {
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const { toasts, push: toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overrides' | 'audit'>('overrides');
   const [settings, setSettings] = useState<MarginSetting[]>([]);
@@ -784,7 +788,7 @@ const ProfitMarkupSettings: React.FC = () => {
                   <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Value</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                      {globalType === 'percentage' ? '%' : 'K'}
+                      {globalType === 'percentage' ? '%' : currency}
                     </span>
                     <input
                       id="global-margin-value"

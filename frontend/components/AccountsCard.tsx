@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Landmark, Wallet, Banknote, Clock, ArrowUpRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { currencyService } from '../services/currencyService';
 
 export const AccountsCard: React.FC = () => {
   const { 
@@ -10,7 +11,7 @@ export const AccountsCard: React.FC = () => {
     sales = []
   } = useData();
 
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const accountsData = useMemo(() => {
     const mappings = [

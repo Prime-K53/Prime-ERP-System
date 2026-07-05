@@ -23,6 +23,7 @@ import {
   Truck
 } from 'lucide-react';
 import { examinationSyncService } from '../../../services/examinationSyncService';
+import { currencyService } from '../../../services/currencyService';
 
 interface BOMItem {
   id: string;
@@ -183,7 +184,7 @@ export const BOMDialog: React.FC<BOMDialogProps> = ({ isOpen, onClose, batch }) 
   const inFlight = useRef(false);
   const recalcInFlight = useRef(false);
 
-  const currency = batch.currency || 'MWK';
+  const currency = batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const isLocked = batch.status === 'Approved' || batch.status === 'Invoiced';
   const useCostBreakdownV2Ui = examFeatureFlags.exam_cost_breakdown_v2_ui();
   const useBackendMetaSource = examFeatureFlags.exam_backend_meta_source();

@@ -18,6 +18,7 @@ import { useProcurement } from '../../../context/ProcurementContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { useAuth } from '../../../context/AuthContext';
 import { format, parseISO, isAfter } from 'date-fns';
+import { currencyService } from '../../../services/currencyService';
 import AISupplierScorecard from '../../../components/ai/AISupplierScorecard';
 
 interface SupplierWorkspaceProps {
@@ -31,7 +32,7 @@ export const SupplierWorkspace: React.FC<SupplierWorkspaceProps> = ({ supplier, 
   const { purchases = [] } = useProcurement();
   const { supplierPayments = [], ledger = [] } = useFinance();
   const { companyConfig, auditLogs = [] } = useAuth();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Bills' | 'Payments' | 'Ledger' | 'Documents' | 'Settings'>('Overview');
 

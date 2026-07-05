@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, X, AlertTriangle, TrendingUp, Package, RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { detectInventoryRisks } from '../../../../services/geminiService';
 import type { Item } from '../../../../types';
+import { useAuth } from '../../../../context/AuthContext';
+import { currencyService } from '../../../../services/currencyService';
 
 interface RiskItem {
   sku?: string;
@@ -49,6 +51,8 @@ const RISK_CONFIG: Record<string, { label: string; color: string; bg: string; bo
 };
 
 export const SmartStockInsights: React.FC<Props> = ({ items, onClose }) => {
+  const { companyConfig } = useAuth();
+  const cs = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const [risks, setRisks] = useState<RiskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'ai' | 'local'>('ai');
@@ -150,7 +154,7 @@ export const SmartStockInsights: React.FC<Props> = ({ items, onClose }) => {
                             <div className="text-[11.5px] mt-0.5" style={{ color: '#94A3B8' }}>
                               Stock: <span className="font-semibold" style={{ color: r.currentStock <= 0 ? '#DC2626' : '#334155' }}>{r.currentStock}</span>
                               {r.sku ? ` · SKU: ${r.sku}` : ''}
-                              {r.costPrice ? ` · Cost: MK ${r.costPrice.toLocaleString()}` : ''}
+                              {r.costPrice ? ` · Cost: ${cs} ${r.costPrice.toLocaleString()}` : ''}
                             </div>
                             <div className="text-[11.5px] mt-0.5" style={{ color: cfg.color }}>
                               {r.suggestedAction}

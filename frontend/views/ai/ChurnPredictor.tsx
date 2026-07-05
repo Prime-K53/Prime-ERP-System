@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
 import { predictChurn } from '../../services/aiAnalyticsUtils';
+import { currencyService } from '../../services/currencyService';
 
 const ChurnPredictor: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const { sales, customers } = useSales();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);

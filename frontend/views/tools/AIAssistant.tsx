@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useSales } from '../../context/SalesContext';
 import { useFinance } from '../../context/FinanceContext';
+import { currencyService } from '../../services/currencyService';
 import { generateAIResponse } from '../../services/geminiService';
 import { useNavigate } from 'react-router-dom';
 
@@ -93,7 +94,7 @@ const AIAssistant: React.FC = () => {
   }, [messages]);
 
   const generateContext = useCallback(() => {
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     return `
 SYSTEM CONTEXT:
 - Company: ${companyConfig?.companyName || 'Prime ERP'}

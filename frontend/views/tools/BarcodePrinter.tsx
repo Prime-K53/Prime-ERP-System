@@ -7,13 +7,14 @@ import { useInventory } from '../../context/InventoryContext';
 import { useInventoryStore } from '../../stores/inventoryStore';
 import { Item } from '../../types';
 import html2canvas from 'html2canvas';
+import { currencyService } from '../../services/currencyService';
 import { generateBarcodeDataUrl } from '../../utils/barcodeGenerator';
 
 const BarcodePrinter: React.FC = () => {
     const { companyConfig, notify } = useAuth();
     const { inventory, fetchInventory } = useInventory();
     const { isLoading } = useInventoryStore();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const [searchTerm, setSearchTerm] = useState('');
     const [printQueue, setPrintQueue] = useState<{item: Item, qty: number}[]>([]);
     

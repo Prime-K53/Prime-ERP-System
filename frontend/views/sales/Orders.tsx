@@ -41,6 +41,7 @@ import { buildRecurringDraftFromInvoice } from '../../utils/recurringConversion'
 import { enrichDocumentCustomerData } from '../../utils/documentCustomerData';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
 import { initializePrimePdfFonts } from '../shared/components/PDF/templateSettings';
+import { currencyService } from '../../services/currencyService';
 
 const SUBSCRIPTION_STATUSES = ['Draft', 'Active', 'Paused', 'Cancelled', 'Expired'] as const;
 
@@ -259,7 +260,7 @@ const Orders: React.FC = () => {
     };
     const [sortField, setSortField] = useState<keyof Invoice>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const resolveDocumentType = (record: any, fallbackType: any) => {
         if (fallbackType !== 'INVOICE') return fallbackType;
         const originModule = String(record?.originModule || record?.origin_module || '').toLowerCase();

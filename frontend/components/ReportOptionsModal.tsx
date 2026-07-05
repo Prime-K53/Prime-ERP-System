@@ -7,6 +7,7 @@ import { useProcurement } from '../context/ProcurementContext';
 import { useDocumentStore } from '../stores/documentStore';
 import { calculateAccountBalances, getAgedData } from '../services/reportService';
 import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
+import { currencyService } from '../services/currencyService';
 
 interface ReportOptionsModalProps {
     isOpen: boolean;
@@ -20,7 +21,7 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
     const { purchases } = useProcurement();
     const { companyConfig, notify } = useAuth();
     const { safeOpenPreview } = useDocumentStore();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const [dateRange, setDateRange] = useState({
         start: startOfYear(new Date()).toISOString().split('T')[0],

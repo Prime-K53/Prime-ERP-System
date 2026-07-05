@@ -3,6 +3,7 @@ import { X, Printer, QrCode, Barcode, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { Item } from '../../../../types';
 import { generateBarcodeDataUrl } from '../../../../utils/barcodeGenerator';
+import { currencyService } from '../../../../services/currencyService';
 import { useAuth } from '../../../../context/AuthContext';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 
 export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose }) => {
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const [showPrice, setShowPrice] = useState(true);
   const [showName, setShowName] = useState(true);
   const [showSKU, setShowSKU] = useState(true);

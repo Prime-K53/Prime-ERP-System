@@ -5,11 +5,12 @@ import { useProcurement } from '../../context/ProcurementContext';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { matchPOs } from '../../services/aiAnalyticsUtils';
+import { currencyService } from '../../services/currencyService';
 
 const POMatcher: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const { purchases, goodsReceipts, suppliers } = useProcurement();
   const { supplierPayments } = useFinance();
   const [loading, setLoading] = useState(false);

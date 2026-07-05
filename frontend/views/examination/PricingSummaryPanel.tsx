@@ -21,7 +21,7 @@ const PricingSummaryPanel: React.FC<PricingSummaryPanelProps> = ({
   subjects,
   learners,
   isLoading,
-  currencySymbol = 'MWK'
+  currencySymbol = '$'
 }) => {
   // Calculate totals from subjects
   const totals = useMemo(() => {

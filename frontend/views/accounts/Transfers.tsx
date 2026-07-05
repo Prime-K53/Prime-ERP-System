@@ -14,6 +14,7 @@ import {
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { exportToCSV } from '../../services/excelService';
 import { generateNextId } from '../../utils/helpers';
+import { currencyService } from '../../services/currencyService';
 
 const Transfers: React.FC = () => {
   const { transfers, executeTransfer } = useFinance();
@@ -23,7 +24,7 @@ const Transfers: React.FC = () => {
     createTransaction: createBankTransaction
   } = useBankingStore();
   const { notify, companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   
   // State
   const [showModal, setShowModal] = useState<'create' | 'view' | null>(null);

@@ -15,7 +15,7 @@ import { format, addDays } from 'date-fns';
 const ExaminationBatchForm: React.FC = () => {
   const navigate = useNavigate();
   const { createBatch, loadAllData, customers, loading: contextLoading } = useExamination();
-  const { companyConfig = { currencySymbol: 'MWK', pricingSettings: { defaultMethod: 'ALWAYS_UP_50', customStep: 50 } } as { currencySymbol: string; pricingSettings: { defaultMethod: string; customStep: number } }, addAuditLog } = useAuth();
+  const { companyConfig = { currencySymbol: '$', pricingSettings: { defaultMethod: 'ALWAYS_UP_50', customStep: 50 } } as { currencySymbol: string; pricingSettings: { defaultMethod: string; customStep: number } }, addAuditLog } = useAuth();
   const { accounts = [] } = useFinance() as { accounts: Array<Record<string, unknown>> };
   const [loading, setLoading] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');

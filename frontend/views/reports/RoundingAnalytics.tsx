@@ -5,6 +5,7 @@ import { useSales } from '../../context/SalesContext';
 import { useFinance } from '../../context/FinanceContext';
 import { useOrders } from '../../context/OrdersContext';
 import { useExamination } from '../../context/ExaminationContext';
+import { currencyService } from '../../services/currencyService';
 import { buildRevenueReportingSnapshot } from '../../services/revenueReportingService';
 
 
@@ -25,7 +26,7 @@ const periodStart = (period: Period): Date => {
   }
 };
 
-const fmt = (n: number, currency = 'K') =>
+const fmt = (n: number, currency = '$') =>
   `${n >= 0 ? '' : '-'}${currency}${Math.abs(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ const RoundingAnalytics: React.FC = () => {
   const { orders = [] } = useOrders();
   const { batches: examinationBatches = [] } = useExamination();
 
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const [period, setPeriod] = useState<Period>('week');
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
 

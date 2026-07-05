@@ -46,14 +46,14 @@ function num(v: any): number {
   return isNaN(n) ? 0 : n;
 }
 
-function money(n: number): string {
+function money(n: number, symbol = '$'): string {
   n = Number(n) || 0;
-  if (n >= 1_000_000) return 'MK ' + (n / 1_000_000).toFixed(2) + 'M';
-  if (n >= 1_000) return 'MK ' + (n / 1_000).toFixed(1) + 'K';
-  return 'MK ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (n >= 1_000_000) return symbol + ' ' + (n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000) return symbol + ' ' + (n / 1_000).toFixed(1) + 'K';
+  return symbol + ' ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function useInventoryDashboard(allItems: Item[], warehouses: { id: string; name: string }[]): DashboardData {
+export function useInventoryDashboard(allItems: Item[], warehouses: { id: string; name: string }[], currencySymbol = '$'): DashboardData {
   return useMemo(() => {
     if (!allItems.length) {
       return {
@@ -122,7 +122,7 @@ export function useInventoryDashboard(allItems: Item[], warehouses: { id: string
     return {
       kpis: [
         { label: 'Total Items', value: String(allItems.length), sub: `${activeItems.length} active · ${inactiveItems.length} inactive`, color: '#2563EB', icon: 'Package' },
-        { label: 'Total Value', value: money(totalValue), sub: 'Cost value across all items', color: '#059669', icon: 'DollarSign' },
+        { label: 'Total Value', value: money(totalValue, currencySymbol), sub: 'Cost value across all items', color: '#059669', icon: 'DollarSign' },
         { label: 'Stock on Hand', value: String(totalStock), sub: `${allItems.length} items tracked`, color: '#7C3AED', icon: 'Layers' },
         { label: 'Low Stock', value: String(lowStockItems.length), sub: `${reorderItems.length} need reorder`, color: '#D97706', icon: 'AlertTriangle' },
         { label: 'Out of Stock', value: String(outOfStockItems.length), sub: `${((outOfStockItems.length / allItems.length) * 100).toFixed(1)}% of total`, color: '#DC2626', icon: 'XCircle' },
@@ -140,5 +140,5 @@ export function useInventoryDashboard(allItems: Item[], warehouses: { id: string
       fastMoving, slowMoving,
       totalValue, totalStock,
     };
-  }, [allItems, warehouses]);
+  }, [allItems, warehouses, currencySymbol]);
 }

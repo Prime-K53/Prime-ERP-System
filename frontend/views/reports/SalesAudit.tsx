@@ -10,6 +10,7 @@ import {
     Calendar, Printer, BarChart3, Users,
     Receipt, XCircle, CheckCircle, RefreshCw
 } from 'lucide-react';
+import { currencyService } from '../../services/currencyService';
 import { Sale, CustomerPayment } from '../../types';
 
 type DateRangeFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all';
@@ -33,7 +34,7 @@ const SalesAudit: React.FC = () => {
     const { sales = [], customerPayments = [] } = useSales();
     const { invoices = [] } = useFinance();
     const { batches: examinationBatches = [] } = useExamination();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const [dateRange, setDateRange] = useState<DateRangeFilter>('today');
     const [expandedSection, setExpandedSection] = useState<string | null>('daily');
 

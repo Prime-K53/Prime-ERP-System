@@ -9,6 +9,7 @@ import { Item, MarketAdjustment, BOMTemplate, FinishingOption } from '../../type
 import { generateAutoSKU } from '../../utils/skuGenerator';
 import { normalizeInventoryItemPricing } from '../../utils/pricing';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, buildPricingSnapshot } from '../../services/pricingValidationService';
+import { currencyService } from '../../services/currencyService';
 import html2canvas from 'html2canvas';
 
 const defaultFinishingOptions: FinishingOption[] = [
@@ -26,7 +27,7 @@ const SmartPricing: React.FC = () => {
     const { addJobOrder, jobOrders } = useSales();
     const navigate = useNavigate();
     const location = useLocation();
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     
     const [pages, setPages] = useState(1);
     const [copies, setCopies] = useState(1);

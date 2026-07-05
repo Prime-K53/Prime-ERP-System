@@ -378,7 +378,7 @@ export function getParentProductPriceDisplay(item: Item): number | { min: number
  * Format the parent product price for display in UI.
  * Returns a string like "K500" for single price or "K200 - K500" for price range.
  */
-export function formatParentProductPrice(item: Item, currency: string = 'K'): string {
+export function formatParentProductPrice(item: Item, currency: string = '$'): string {
   const priceInfo = getParentProductPriceDisplay(item);
 
   if (priceInfo === null) {
@@ -431,7 +431,7 @@ export function getMaterialItemCostDisplay(item: Item): number | { min: number; 
  * Format the material item cost price for display in UI.
  * Returns a string like "K500" for single cost or "K200 - K500" for cost range.
  */
-export function formatMaterialItemCost(item: Item, currency: string = 'K'): string {
+export function formatMaterialItemCost(item: Item, currency: string = '$'): string {
   const costInfo = getMaterialItemCostDisplay(item);
 
   if (costInfo === null) {

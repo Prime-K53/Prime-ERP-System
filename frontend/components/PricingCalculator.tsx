@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Calculator, ChevronDown, ChevronUp, Info, Copy } from 'lucide-react';
 import { usePricingCalculator, FinishingOptionWithMaterial } from '../context/PricingCalculatorContext';
 import { useAuth } from '../context/AuthContext';
+import { currencyService } from '../services/currencyService';
 
 interface PricingCalculatorProps {
     // No props needed - uses context
@@ -9,7 +10,7 @@ interface PricingCalculatorProps {
 
 const PricingCalculator: React.FC<PricingCalculatorProps> = () => {
     const { companyConfig } = useAuth();
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const {
         isOpen,

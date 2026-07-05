@@ -9,6 +9,7 @@ import {
     DollarSign, Wallet, Building2, Package, TrendingUp, TrendingDown,
     ChevronDown, ChevronUp, Landmark, LayoutGrid, FileText, Printer
 } from 'lucide-react';
+import { currencyService } from '../../services/currencyService';
 
 type DateRange = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'all';
 
@@ -25,7 +26,7 @@ const InternalAuditor: React.FC = () => {
     const { sales = [], customerPayments = [] } = useSales();
     const { invoices = [], expenses = [], ledger = [], accounts = [] } = useFinance();
     const { inventory = [], purchases = [] } = useInventory();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const gl = companyConfig?.glMapping || {};
     const [dateRange, setDateRange] = useState<DateRange>('month');
     const [expandedSection, setExpandedSection] = useState<string | null>('sales');

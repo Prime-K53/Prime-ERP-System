@@ -9,6 +9,7 @@ import { useFinance } from '../../../context/FinanceContext';
 import { auditLogService } from '../../../services/auditLogService';
 import type { AuditLogEntry } from '../../../services/auditLogService';
 import { AuditTimeline } from '../../shared/components/AuditTimeline';
+import { currencyService } from '../../../services/currencyService';
 import { 
   XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, AreaChart, Area 
@@ -22,7 +23,7 @@ interface AccountDetailsDashboardProps {
 export const AccountDetailsDashboard: React.FC<AccountDetailsDashboardProps> = ({ account, onClose }) => {
   const { companyConfig } = useAuth();
   const { ledger } = useFinance();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);

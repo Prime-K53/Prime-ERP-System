@@ -3,6 +3,8 @@ import { Package, DollarSign, Layers, AlertTriangle, XCircle, ShoppingCart, Chec
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useInventoryDashboard, type DashboardData } from '../hooks/useInventoryDashboard';
 import type { Item } from '../../../../types';
+import { useAuth } from '../../../../context/AuthContext';
+import { currencyService } from '../../../../services/currencyService';
 
 const KPI_ICONS: Record<string, React.ReactNode> = {
   'Total Items': <Package size={18} />,
@@ -55,7 +57,9 @@ interface InventoryDashboardProps {
 }
 
 export const InventoryDashboard: React.FC<InventoryDashboardProps> = ({ allItems, warehouses }) => {
-  const data = useInventoryDashboard(allItems, warehouses);
+  const { companyConfig } = useAuth();
+  const currencySymbol = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
+  const data = useInventoryDashboard(allItems, warehouses, currencySymbol);
 
   if (!data.kpis.length) {
     return (

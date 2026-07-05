@@ -30,6 +30,7 @@ import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 import { useOrderFormAI, AISuggestionItem, AIPriceOptimisation, AIFraudFlag } from '../../../hooks/useOrderFormAI';
 import InventoryTransactionHistory from '../../inventory/components/InventoryTransactionHistory';
 import { OfflineImage } from '../../../components/OfflineImage';
+import { currencyService } from '../../../services/currencyService';
 
 
 interface OrderFormProps {
@@ -206,7 +207,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const { createOrder } = useOrders();
     const { handlePreview } = useDocumentPreview();
     const navigate = useNavigate();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const ai = useOrderFormAI();
 
     const [aiSuggestions, setAiSuggestions] = useState<AISuggestionItem[]>([]);

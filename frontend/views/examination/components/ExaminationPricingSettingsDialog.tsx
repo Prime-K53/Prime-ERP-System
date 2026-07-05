@@ -9,6 +9,7 @@ import { ExaminationBatch, Item, MarketAdjustment } from '../../../types';
 import { isMarketAdjustmentActive } from '../../../utils/marketAdjustmentUtils';
 import { AlertCircle, RefreshCw, Save, Settings2, Truck } from 'lucide-react';
 import { calculateBatchPricing, PricingSettings } from '../../../utils/examinationPricingCalculator';
+import { currencyService } from '../../../services/currencyService';
 
 
 
@@ -74,7 +75,7 @@ export const ExaminationPricingSettingsDialog: React.FC<{
     const marketAdjustments = externalMarketAdjustments ?? internalMarketAdjustments;
     const loading = isExternal ? externalLoading : internalLoading;
 
-    const currency = batch?.currency || 'MWK';
+    const currency = batch?.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const activeMarketAdjustments = useMemo(
       () => (marketAdjustments || [])
         .filter(isMarketAdjustmentActive),

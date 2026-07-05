@@ -20,7 +20,7 @@ const OverrideDialog: React.FC<OverrideDialogProps> = ({
   onSubmit,
   currentPrice,
   expectedPrice,
-  currencySymbol = 'MWK'
+  currencySymbol = '$'
 }) => {
   const [manualPrice, setManualPrice] = useState(currentPrice);
   const [reason, setReason] = useState('');

@@ -89,7 +89,7 @@ export const useBankingStore = create<BankingState>((set, get) => ({
             accountType: 'Asset' as const,
             status: 'Active' as const,
             openingDate: new Date().toISOString(),
-            currency: 'USD',
+            currency: '$',
             interestRate: 0
           },
           {
@@ -99,7 +99,7 @@ export const useBankingStore = create<BankingState>((set, get) => ({
             accountType: 'Asset' as const,
             status: 'Active' as const,
             openingDate: new Date().toISOString(),
-            currency: 'USD'
+            currency: '$'
           },
           {
             name: 'Mobile Money Account',
@@ -108,7 +108,7 @@ export const useBankingStore = create<BankingState>((set, get) => ({
             accountType: 'Asset' as const,
             status: 'Active' as const,
             openingDate: new Date().toISOString(),
-            currency: 'USD'
+            currency: '$'
           }
         ];
 

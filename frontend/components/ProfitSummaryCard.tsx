@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext';
 import { useBankingStore } from '../context/BankingContext';
 import { PenLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { currencyService } from '../services/currencyService';
 
 export const ProfitSummaryCard: React.FC = () => {
   const { 
@@ -20,7 +21,7 @@ export const ProfitSummaryCard: React.FC = () => {
     fetchBankingData
   } = useBankingStore();
 
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const navigate = useNavigate();
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import type {
 import { serviceRecipeService } from '../../services/serviceRecipeService';
 import { serviceResourceService } from '../../services/serviceResourceService';
 import { useInventory } from '../../context/InventoryContext';
+import { currencyService } from '../../services/currencyService';
 import { useAuth } from '../../context/AuthContext';
 
 const RESOURCE_TYPES: { label: string; value: ServiceResourceType }[] = [
@@ -30,7 +31,7 @@ const COST_METHODS: { label: string; value: ServiceRecipe['costMethod'] }[] = [
 const ServiceRecipeEditorPage: React.FC = () => {
     const { inventory } = useInventory();
     const { companyConfig } = useAuth();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const [recipes, setRecipes] = useState<ServiceRecipe[]>([]);
     const [resources, setResources] = useState<ServiceResource[]>([]);
     const [editingRecipe, setEditingRecipe] = useState<Partial<ServiceRecipe> | null>(null);

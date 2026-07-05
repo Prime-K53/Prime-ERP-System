@@ -194,7 +194,7 @@ class SupplierIntegrationService {
         email: supplier.email,
         phone: supplier.phone
       },
-      currency: 'MWK',
+      currency: '$',
       paymentTermsDays: this.parsePaymentTermsDays(supplier.paymentTerms),
       outstandingBalance: 0,
       entityVersion: 1,
@@ -507,7 +507,7 @@ class SupplierIntegrationService {
         }],
         subtotal: total,
         total,
-        currency: 'MWK',
+        currency: '$',
         status: 'pending'
       };
     });

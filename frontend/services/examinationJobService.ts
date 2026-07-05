@@ -1141,7 +1141,7 @@ class ExaminationJobService {
       if (costChangePercent > 0.15) { // >15% change
         console.warn(
           `[ExaminationJobService] Significant production cost change detected for job ${examId}: ` +
-          `K ${originalProductionCost.toLocaleString()} → K ${productionCost.toLocaleString()} ` +
+          `$ ${originalProductionCost.toLocaleString()} → $ ${productionCost.toLocaleString()} ` +
           `(${Math.round(costChangePercent * 100)}% change)`
         );
       }
@@ -1226,9 +1226,9 @@ class ExaminationJobService {
       if (totalChangePercent > 0.10) { // >10% change
         console.warn(
           `[ExaminationJobService] Significant total amount change for job ${examId}: ` +
-          `K ${originalFinalAmount.toLocaleString()} → K ${updated.final_amount.toLocaleString()} ` +
+          `$ ${originalFinalAmount.toLocaleString()} → $ ${updated.final_amount.toLocaleString()} ` +
           `(${Math.round(totalChangePercent * 100)}% change). ` +
-          `Override: ${updated.override_enabled}, Manual Price: K ${updated.manual_price_per_learner}`
+          `Override: ${updated.override_enabled}, Manual Price: $ ${updated.manual_price_per_learner}`
         );
       }
     }

@@ -19,6 +19,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, 
 import BankingReports from '../../components/BankingReports';
 import DocumentPreviewModal from '../../components/DocumentPreviewModal';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
+import { currencyService } from '../../services/currencyService';
 
 type ScheduledRow = {
   id: string;
@@ -47,7 +48,7 @@ const Banking: React.FC = () => {
   const { refreshAllData } = useData();
   const { companyConfig } = useAuth();
   const { recurringInvoices } = useFinance();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   // Initial fetch on mount
   useEffect(() => {

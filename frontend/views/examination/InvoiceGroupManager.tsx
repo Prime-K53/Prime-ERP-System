@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '@/services/logger';
+import { currencyService } from '../../services/currencyService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useExamination } from '../../context/ExaminationContext';
@@ -270,7 +271,7 @@ const InvoiceGroupManager: React.FC = () => {
                             <Badge variant="secondary">{job.status}</Badge>
                           </div>
                           <div className="text-sm text-gray-600">
-                            {job.number_of_learners} learners | {companyConfig?.currencySymbol || 'MWK'} {job.final_amount?.toLocaleString()}
+                            {job.number_of_learners} learners | {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {job.final_amount?.toLocaleString()}
                           </div>
                         </div>
                       </label>
@@ -340,7 +341,7 @@ const InvoiceGroupManager: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-semibold">{companyConfig?.currencySymbol || 'MWK'} {job.final_amount?.toLocaleString()}</span>
+                        <span className="font-semibold">{currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {job.final_amount?.toLocaleString()}</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -365,7 +366,7 @@ const InvoiceGroupManager: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Total Amount:</span>
-                    <span>{companyConfig?.currencySymbol || 'MWK'} {totalAmount.toLocaleString()}</span>
+                    <span>{currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {totalAmount.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -406,7 +407,7 @@ const InvoiceGroupManager: React.FC = () => {
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-600 mb-3">
-                    {group.jobs.length} jobs | {companyConfig?.currencySymbol || 'MWK'} {group.total_amount.toLocaleString()}
+                    {group.jobs.length} jobs | {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {group.total_amount.toLocaleString()}
                   </div>
                   <div className="space-y-1 mb-3">
                     {group.jobs.slice(0, 3).map((job) => (

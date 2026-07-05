@@ -13,7 +13,7 @@ const AICustomerInsights: React.FC<Props> = ({ customer, invoices, payments, cur
   const [open, setOpen] = useState(false);
   const [insight, setInsight] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const currency = propCurrency || customer?.currency || 'K';
+  const currency = propCurrency || customer?.currency || '$';
 
   const handleAnalyze = async () => {
     setOpen(true);

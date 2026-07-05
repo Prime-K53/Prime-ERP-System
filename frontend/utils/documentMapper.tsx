@@ -7,6 +7,7 @@ import ExaminationInvoice from '../components/ExaminationInvoice';
 import SubscriptionInvoice from '../components/SubscriptionInvoice';
 import WorkOrder from '../components/WorkOrder';
 import PurchaseOrder from '../components/PurchaseOrder';
+import { currencyService } from '../services/currencyService';
 import { calculateLedger, calculateAging } from './ledgerUtils';
 
 export type DocumentType = 'Invoice' | 'Quotation' | 'Delivery Note' | 'Statement' | 'Receipt' | 'Examination Invoice' | 'Subscription Invoice' | 'Work Order' | 'Purchase Order';
@@ -65,7 +66,7 @@ interface ReceiptData extends BaseDocumentData {
  * Transforms raw ERP JSON objects into structured components for MasterDocument.
  */
 export const mapErpDataToDocument = (type: DocumentType, data: any, renderOptions: DocumentRenderOptions = {}): DocumentRenderResult => {
-  const currency = data?.currencySymbol || '$';
+  const currency = data?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const options: Required<DocumentRenderOptions> = {
     showHeader: renderOptions.showHeader !== false,

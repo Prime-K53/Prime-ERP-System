@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Loader2, FileText, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useProduction } from '../../context/ProductionContext';
 import { generateBOM } from '../../services/aiAnalyticsUtils';
+import { currencyService } from '../../services/currencyService';
 
 const BOMGenerator: React.FC = () => {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const { inventory } = useInventory();
   const { boms } = useProduction();
   const [loading, setLoading] = useState(false);
@@ -43,10 +47,10 @@ const BOMGenerator: React.FC = () => {
       {result?.bom && !loading && (
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Material</div><div className="text-lg font-bold text-slate-800">{'$' + (result.bom.materialCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Labor</div><div className="text-lg font-bold text-slate-800">{'$' + (result.bom.laborCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total Cost</div><div className="text-lg font-bold text-slate-800">{'$' + (result.bom.totalCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500">Suggested Price</div><div className="text-lg font-bold text-emerald-600">{'$' + (result.bom.suggestedSellingPrice || 0).toFixed(2)}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Material</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.materialCost || 0).toFixed(2)}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Labor</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.laborCost || 0).toFixed(2)}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total Cost</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.totalCost || 0).toFixed(2)}</div></div>
+            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500">Suggested Price</div><div className="text-lg font-bold text-emerald-600">{currency}{(result.bom.suggestedSellingPrice || 0).toFixed(2)}</div></div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200">
@@ -57,7 +61,7 @@ const BOMGenerator: React.FC = () => {
             <div className="p-3 border-b border-slate-100">
               <div className="text-xs text-slate-500 mb-2">Components</div>
               {result.bom.items?.map((item: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-1 text-sm"><span className="text-slate-700">{item.name}</span><span className="text-slate-500">{item.quantity} {item.unit} @ {'$' + (item.unitCost || 0).toFixed(2)}</span></div>
+                <div key={i} className="flex items-center justify-between py-1 text-sm"><span className="text-slate-700">{item.name}</span><span className="text-slate-500">{item.quantity} {item.unit} @ {currency}{(item.unitCost || 0).toFixed(2)}</span></div>
               ))}
             </div>
             <div className="p-3 text-xs text-slate-500 space-y-1">
@@ -70,7 +74,7 @@ const BOMGenerator: React.FC = () => {
             <div className="bg-white rounded-xl p-4 border border-slate-200">
               <div className="font-semibold text-sm text-slate-700 mb-2">Similar BOMs</div>
               {result.similarBoms.map((b: any, i: number) => (
-                <div key={i} className="text-sm text-slate-600 flex items-center gap-2 mb-1"><FileText size={14} className="text-slate-400" />{b.name} — {'$' + (b.totalCost || 0).toFixed(2)}</div>
+                <div key={i} className="text-sm text-slate-600 flex items-center gap-2 mb-1"><FileText size={14} className="text-slate-400" />{b.name} — {currency}{(b.totalCost || 0).toFixed(2)}</div>
               ))}
             </div>
           )}

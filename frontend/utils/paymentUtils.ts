@@ -53,7 +53,7 @@ export const calculatePaymentDetails = (invoiceTotal: number, amountPaid: number
 /**
  * Standard utility to generate the payment narrative required for receipts.
  */
-export const getPaymentNarrative = (calc: PaymentCalculation, customerName: string, date: string, invoiceNumber: string, currency: string = 'K') => {
+export const getPaymentNarrative = (calc: PaymentCalculation, customerName: string, date: string, invoiceNumber: string, currency: string = '$') => {
     const formattedDate = new Date(date).toLocaleDateString();
 
     if (calc.paymentStatus === 'PARTIALLY PAID') {

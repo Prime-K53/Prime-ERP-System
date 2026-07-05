@@ -166,7 +166,7 @@ export const buildCustomerReceiptDoc = ({
   payment,
   customerName,
   snapshot,
-  currencySymbol = 'K',
+  currencySymbol = '$',
   currentBalance = 0
 }: BuildCustomerReceiptDocInput) => {
   const snap = snapshot || payment.receiptSnapshot || calculateCustomerPaymentSnapshot({

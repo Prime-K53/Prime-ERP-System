@@ -12,6 +12,7 @@ import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 import { useLocation } from 'react-router-dom';
 import DocLink from '../../../components/DocLink';
 import TransactionPricingInsights from './TransactionPricingInsights';
+import { currencyService } from '../../../services/currencyService';
 
 interface OrderDetailsProps {
     order: Order;
@@ -25,7 +26,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
     const { orders = [] } = useOrders();
     const { handlePreview } = useDocumentPreview();
     const location = useLocation();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const order = useMemo(() =>
         orders.find(o => o.id === initialOrder.id) || initialOrder

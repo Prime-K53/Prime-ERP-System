@@ -5,6 +5,7 @@ import { Input } from '../../../components/Input';
 import { ExaminationClass, ExaminationSubject, Item } from '../../../types';
 import { Trash2, FileText, Copy, Layout, RotateCw, Calculator, Hash, Truck, ChevronDown, ChevronUp, Pencil, X, AlertTriangle, Users, Plus, Minus, Loader2, TrendingUp, Info } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { currencyService } from '../../../services/currencyService';
 import { useInventory } from '../../../context/InventoryContext';
 import { examinationBatchService } from '../../../services/examinationBatchService';
 import OverrideDialog from './OverrideDialog';
@@ -909,17 +910,17 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
                 <span className="opacity-60 uppercase mr-2 tracking-widest text-[11px]">Financial Preview:</span>
                 <span className="text-slate-900 inline-flex items-center">{preview.totalSheets.toLocaleString()} Sheets <span className="text-indigo-400 ml-1 font-normal">({preview.totalPages.toLocaleString()} pgs)</span></span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">BOM:</span> {companyConfig?.currencySymbol || 'MWK'} {preview.totalBomCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">BOM:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {preview.totalBomCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">Mkt Adj:</span> {companyConfig?.currencySymbol || 'MWK'} {preview.marketAdjustmentTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">Mkt Adj:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {preview.marketAdjustmentTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-slate-900 inline-flex items-center"><span className="text-blue-400 mr-1 uppercase text-[11px]">Rounding:</span> {companyConfig?.currencySymbol || 'MWK'} {preview.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-slate-900 inline-flex items-center"><span className="text-blue-400 mr-1 uppercase text-[11px]">Rounding:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {preview.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-slate-900 inline-flex items-center"><span className="text-emerald-500 mr-1 uppercase text-[11px]">Margin:</span> {companyConfig?.currencySymbol || 'MWK'} {(preview.marginAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-slate-900 inline-flex items-center"><span className="text-emerald-500 mr-1 uppercase text-[11px]">Margin:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {(preview.marginAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">Total:</span> {companyConfig?.currencySymbol || 'MWK'} {preview.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-slate-900 inline-flex items-center"><span className="text-indigo-400 mr-1 uppercase text-[11px]">Total:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {preview.totalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 <span className="opacity-30 mx-1">•</span>
-                <span className="text-blue-700 font-bold inline-flex items-center"><span className="text-blue-400 mr-1 uppercase text-[11px]">Fee/Learner:</span> {companyConfig?.currencySymbol || 'MWK'} {preview.expectedFeePerLearner.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="text-blue-700 font-bold inline-flex items-center"><span className="text-blue-400 mr-1 uppercase text-[11px]">Fee/Learner:</span> {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {preview.expectedFeePerLearner.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
 
 
@@ -1013,7 +1014,7 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
                           const sheetsPerReam = Number((m as any)?.conversionRate ?? (m as any)?.conversion_rate ?? DEFAULT_PAPER_SHEETS_PER_REAM);
                           return (
                             <option key={m.id} value={String(m.id)}>
-                              {m.name} ({companyConfig?.currencySymbol || 'MWK'}{cost > 0 ? cost.toLocaleString() : '0'}/ream, {sheetsPerReam} sheets)
+                              {m.name} ({currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}{cost > 0 ? cost.toLocaleString() : '0'}/ream, {sheetsPerReam} sheets)
                             </option>
                           );
                         })}
@@ -1032,7 +1033,7 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
                           const pagesPerKg = Number((m as any)?.pagesPerKg ?? (m as any)?.pages_per_kg ?? DEFAULT_TONER_PAGES_PER_KG);
                           return (
                             <option key={m.id} value={String(m.id)}>
-                              {m.name} ({companyConfig?.currencySymbol || 'MWK'}{cost > 0 ? cost.toLocaleString() : '0'}/kg, {pagesPerKg.toLocaleString()} pages)
+                              {m.name} ({currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}{cost > 0 ? cost.toLocaleString() : '0'}/kg, {pagesPerKg.toLocaleString()} pages)
                             </option>
                           );
                         })}
@@ -1085,7 +1086,7 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
                             <span className="bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] text-indigo-700 whitespace-nowrap border border-indigo-100">
                               {rule.type === 'PERCENTAGE' || rule.type === 'PERCENT' || rule.type === 'percentage'
                                 ? `+${Number(rule.value ?? rule.percentage ?? 0)}%`
-                                : `+${companyConfig?.currencySymbol || 'MWK'}${Number(rule.value ?? 0)}/pg`}
+                                : `+${currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}${Number(rule.value ?? 0)}/pg`}
                             </span>
                           </div>
                         ));

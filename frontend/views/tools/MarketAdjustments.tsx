@@ -8,13 +8,14 @@ import { useInventory } from '../../context/InventoryContext';
 import { useInventoryStore } from '../../stores/inventoryStore';
 import { repriceMasterInventoryFromAdjustments } from '../../services/masterInventoryPricingService';
 import { syncMarketAdjustmentsToBackend } from '../../services/examinationSyncService';
+import { currencyService } from '../../services/currencyService';
 
 const MARKET_ADJUSTMENTS_CHANGED_EVENT = 'market-adjustments:changed';
 
 const MarketAdjustments: React.FC = () => {
     const { notify, companyConfig } = useAuth();
     const { refreshMarketAdjustments } = useInventory();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const refreshInventory = useInventoryStore(state => state.fetchInventory);
     const [adjustments, setAdjustments] = useState<MarketAdjustment[]>([]);
     const [adjustmentStats, setAdjustmentStats] = useState<Map<string, { totalApplied: number; applicationCount: number }>>(new Map());

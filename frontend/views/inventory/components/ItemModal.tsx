@@ -10,6 +10,7 @@ import { useInventory } from '../../../context/InventoryContext';
 import { useProcurement } from '../../../context/ProcurementContext';
 import { generateAutoSKU, generateAutoBarcode, generateBulkVariants } from '../../../utils/skuGenerator';
 import { pricingService } from '../../../services/pricingService';
+import { currencyService } from '../../../services/currencyService';
 import { dbService } from '../../../services/db';
 import { normalizeInventoryItemPricing, calculateBaseSellingPrice } from '../../../utils/pricing';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, resolveMinimumMarkup } from '../../../services/pricingValidationService';
@@ -142,7 +143,7 @@ const ItemModal: React.FC<ItemModalProps> = ({
     const { companyConfig } = useAuth();
     const { inventory, marketAdjustments } = useInventory();
     const { suppliers } = useProcurement();
-    const currency = companyConfig.currencySymbol || '$';
+    const currency = companyConfig.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const [formData, setFormData] = useState<Partial<Item>>(defaultItem);
     const [errors, setErrors] = useState<FormErrors>({});
@@ -859,15 +860,15 @@ dbService.getAll<BOMTemplate>('bomTemplates')
             name: '',
             attributes: {},
             costPrice: cp,
-            sellingPrice: 0,
+            sellingPrice: cp,
             cost: cp,
             cost_price: cp,
-            price: 0,
-            selling_price: 0,
+            price: cp,
+            selling_price: cp,
             profitAmount: 0,
             profitMargin: 0,
             minimumMargin: formData.minimumMargin ?? 0,
-            pricingValidated: false,
+            pricingValidated: cp > 0,
             stock: 0,
             pages: 1,
             active: true,
@@ -1045,7 +1046,7 @@ dbService.getAll<BOMTemplate>('bomTemplates')
         }
 
         const cp = (isDynamic && smartResult) ? smartResult.baseCost : (Number(newVariant.cost) || Number(newVariant.costPrice) || 0);
-        const sp = Number(newVariant.sellingPrice ?? newVariant.price ?? 0);
+        const sp = Number(newVariant.sellingPrice ?? newVariant.price ?? 0) || (formData.type === 'Stationery' ? cp : 0);
         const variantId = newVariant.id || generateVariantId();
         const variantSource = (newVariant.source || formData.isStationeryPack ? 'purchased' : 'manual') as VariantSource;
         const variant: ProductVariant = {
@@ -1144,7 +1145,7 @@ dbService.getAll<BOMTemplate>('bomTemplates')
 
     const handleBulkGenerate = () => {
         const baseCp = Number(formData.costPrice ?? formData.cost ?? 0);
-        const baseSp = Number(formData.sellingPrice ?? formData.price ?? 0);
+        const baseSp = Number(formData.sellingPrice ?? formData.price ?? 0) || (formData.type === 'Stationery' ? baseCp : 0);
         const variants = generateBulkVariants(
             baseSp,
             baseCp,

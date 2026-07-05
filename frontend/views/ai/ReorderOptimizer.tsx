@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../context/InventoryContext';
 import { useAuth } from '../../context/AuthContext';
 import { optimizeReorder } from '../../services/aiAnalyticsUtils';
+import { currencyService } from '../../services/currencyService';
 
 const ReorderOptimizer: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const { inventory } = useInventory();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);

@@ -3,6 +3,7 @@ import { logger } from '@/services/logger';
 import { useVatStore } from '../../stores/vatStore';
 import { useAuth } from '../../context/AuthContext';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { currencyService } from '../../services/currencyService';
 import {
     FileText, Download, CheckCircle, AlertCircle, Plus, Calendar
 } from 'lucide-react';
@@ -11,7 +12,7 @@ import { VatReturn } from '../../types';
 export const VatReports: React.FC = () => {
     const { returns, generateReturn, fileReturn, isLoading } = useVatStore();
     const { companyConfig } = useAuth();
-    const currency = companyConfig?.currencySymbol || 'MK';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedReturn, setSelectedReturn] = useState<VatReturn | null>(null);

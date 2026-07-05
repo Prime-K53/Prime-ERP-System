@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { logger } from '@/services/logger';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { currencyService } from '../../services/currencyService';
 import { useExamination } from '../../context/ExaminationContext';
 import { useData, REFRESH_INTERVAL } from '../../context/DataContext';
 import { useModuleRefresh } from '../../hooks/useModuleRefresh';
@@ -435,7 +436,7 @@ const ExaminationHub: React.FC = () => {
         getSchoolName(String(batch.school_id)),
         getBatchClassCount(batch),
         batch.status,
-        `${batch.currency || 'MWK'} ${(batch.total_amount || 0).toLocaleString()}`,
+        `${batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} ${(batch.total_amount || 0).toLocaleString()}`,
         new Date(batch.created_at).toLocaleDateString()
       ])
     ]
@@ -498,7 +499,7 @@ const ExaminationHub: React.FC = () => {
         <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Amount</div>
           <div className="text-xl font-bold text-slate-900 finance-nums">
-            {companyConfig?.currencySymbol || 'MWK'}
+            {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}
             {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
           <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
@@ -677,7 +678,7 @@ const ExaminationHub: React.FC = () => {
                         <td className="table-body-cell flex-1 min-w-[100px] text-slate-600">{batch.academic_year} Term {batch.term}</td>
                         <td className="table-body-cell flex-1 min-w-[70px] text-right finance-nums text-slate-700">{getBatchClassCount(batch)}</td>
                         <td className="table-body-cell flex-1 min-w-[100px] text-right font-semibold finance-nums text-slate-900">
-                          {batch.currency || companyConfig?.currencySymbol || 'MWK'}
+                          {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}
                           {(batch.total_amount || 0).toLocaleString(undefined, {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 2

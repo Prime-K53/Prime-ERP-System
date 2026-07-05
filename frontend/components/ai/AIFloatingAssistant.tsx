@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useSales } from '../../context/SalesContext';
 import { useFinance } from '../../context/FinanceContext';
+import { currencyService } from '../../services/currencyService';
 
 const AIFloatingAssistant: React.FC = () => {
   const { companyConfig, user } = useAuth();
@@ -25,7 +26,7 @@ const AIFloatingAssistant: React.FC = () => {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const generateContext = useCallback(() => {
-    const currency = companyConfig?.currencySymbol || 'K';
+    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const unpaidInvoices = invoices.filter((inv: any) => {
       const s = String(inv.status || '').toLowerCase();
       return s !== 'cancelled' && s !== 'voided' && s !== 'draft' && (s === 'unpaid' || s === 'partial' || s === 'overdue');

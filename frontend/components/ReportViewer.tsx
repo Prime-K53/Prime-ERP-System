@@ -19,6 +19,7 @@ interface ReportViewerProps {
   showCharts?: boolean;
   showSummary?: boolean;
   showGrouping?: boolean;
+  currency?: string;
 }
 
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -32,6 +33,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
   showCharts = true,
   showSummary = true,
   showGrouping = true,
+  currency = '$',
 }) => {
   const [currentPage, setCurrentPage] = useState(result.page || 1);
   const [pageSize, setPageSize] = useState(result.pageSize || 50);
@@ -186,10 +188,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({
     
     switch (column.type) {
       case 'currency':
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(Number(value));
+        return `${currency}${Number(value).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
       case 'percentage':
         return `${(Number(value) * 100).toFixed(2)}%`;
       case 'date':

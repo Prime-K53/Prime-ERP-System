@@ -1,5 +1,6 @@
 
 import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { currencyService } from '../services/currencyService';
 import { logger } from '../services/logger';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -311,7 +312,7 @@ const Settings: React.FC = () => {
     const logoRef = useRef<HTMLInputElement>(null);
     const sigRef = useRef<HTMLInputElement>(null);
 
-    const currency = config.currencySymbol || '$';
+    const currency = config.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const sharedNumberingRule = React.useMemo(
         () => resolveGlobalNumberingRule(config) || DEFAULT_SHARED_NUMBERING_RULE,
         [config]

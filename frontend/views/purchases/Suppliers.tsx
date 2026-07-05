@@ -12,6 +12,7 @@ import { SupplierModal } from './components/SupplierModal';
 import { SupplierWorkspace } from './components/SupplierWorkspace';
 import { isAfter, parseISO, subDays, format } from 'date-fns';
 import { exportToCSV } from '../../utils/helpers';
+import { currencyService } from '../../services/currencyService';
 import { useFinance } from '../../context/FinanceContext';
 
 const Suppliers: React.FC = () => {
@@ -20,7 +21,7 @@ const Suppliers: React.FC = () => {
   const { companyConfig } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

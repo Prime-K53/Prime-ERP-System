@@ -3,6 +3,7 @@ import { Package, AlertTriangle, DollarSign, TrendingUp, Box, Layers, BarChart3,
 import { useInventory } from '../../context/InventoryContext';
 import { useSalesStore } from '../../stores/salesStore';
 import { useAuth } from '../../context/AuthContext';
+import { currencyService } from '../../services/currencyService';
 import type { Item, Sale as SaleType } from '../../types';
 import './inventory-reference.css';
 
@@ -22,7 +23,7 @@ export const InventoryReports: React.FC = () => {
   const { inventory, warehouses } = useInventory();
   const { sales } = useSalesStore();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'KWD';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'KWD';
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CompanyConfig, FinishingOption } from '../../../types';
+import { currencyService } from '../../../services/currencyService';
 import { Scissors, BookOpen, Layers, Triangle, PanelTop, Ruler } from 'lucide-react';
 
 const OPTION_ICONS: Record<string, React.ReactNode> = {
@@ -58,7 +59,7 @@ export const FinishingOptionsTab: React.FC<FinishingOptionsTabProps> = ({ config
     notify('Finishing options reset to defaults', 'info');
   };
 
-  const currency = config.currencySymbol || 'K';
+  const currency = config.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">

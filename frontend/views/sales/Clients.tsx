@@ -16,6 +16,7 @@ import { CustomerCard } from './components/CustomerCard';
 import { CustomerWorkspace } from './components/CustomerWorkspace';
 import { isAfter, parseISO, subDays, format } from 'date-fns';
 import { exportToCSV } from '../../utils/helpers';
+import { currencyService } from '../../services/currencyService';
 
 export const Clients: React.FC = () => {
   const { customers, addCustomer, updateCustomer, deleteCustomer, isLoading, customerPayments } = useSales();
@@ -23,7 +24,7 @@ export const Clients: React.FC = () => {
   const { companyConfig } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -49,7 +49,7 @@ function formatValue(v: number | string, fmt?: 'number' | 'currency'): string {
   return v.toLocaleString();
 }
 
-export const KPICards: React.FC<Props> = ({ stats, onFilter, onSmartStock, topProduct, currency = 'MK' }) => {
+export const KPICards: React.FC<Props> = ({ stats, onFilter, onSmartStock, topProduct, currency = '' }) => {
   const total = stats.totalItems || 1;
   const cards: CardDef[] = [
     { label: 'Total items', value: stats.totalItems, icon: <Box size={16} />, accent: 'teal', desc: 'Master inventory count', pct: 7 },

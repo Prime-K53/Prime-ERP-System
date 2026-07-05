@@ -7,6 +7,7 @@ import { useFinance } from '../../context/FinanceContext';
 import { useProduction } from '../../context/ProductionContext';
 import { useAuth } from '../../context/AuthContext';
 import { generateAIResponse } from '../../services/geminiService';
+import { currencyService } from '../../services/currencyService';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
 
@@ -20,7 +21,7 @@ const EXAMPLE_QUESTIONS = [
 const ConversationalQuery: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig } = useAuth();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const { sales, customers } = useSales();
   const { inventory } = useInventory();
   const { invoices, expenses, income, ledger } = useFinance();

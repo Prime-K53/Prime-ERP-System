@@ -137,7 +137,7 @@ LegendItem.displayName = 'LegendItem';
 // ============================================================
 const IncomeVsExpenditureChart: React.FC<IncomeVsExpenditureChartProps> = memo(({
   data,
-  currency = '$',
+  currency = '',
   height,
 }) => {
   // Memoize chart data with stable comparison

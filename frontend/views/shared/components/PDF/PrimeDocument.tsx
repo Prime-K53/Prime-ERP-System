@@ -11,6 +11,7 @@ import {
   PrimeTemplateSettings,
 } from './templateSettings.ts';
 import { generateAccountSummary } from '../../../../utils/pdfMapper.ts';
+import { currencyService } from '../../../../services/currencyService';
 
 const InvoiceInfoPanel = ({
   type,
@@ -226,7 +227,7 @@ const CleanInvoiceTemplate = ({
   const formattedPhone = rawPhone.replace(/(\+265\s?\d{3}\s?\d{3}\s?\d{3})(?=\+265)/g, '$1 | ');
   const companyPhone = formattedPhone || 'N/A';
   const companyEmail = config?.email || 'N/A';
-  const currency = config?.currencySymbol || 'K';
+  const currency = config?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
   const accentColor = templateSettings.accentColor || '#5a9e96';
@@ -495,7 +496,7 @@ const ModernInvoiceTemplate = ({
   const companyName = config?.companyName || 'Prime Printing & Stationery';
   const companyPhone = config?.phone || 'N/A';
   const companyEmail = config?.email || 'N/A';
-  const currency = config?.currencySymbol || 'K';
+  const currency = config?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
   const accentColor = templateSettings.accentColor || '#739F99';
@@ -770,7 +771,7 @@ const ProfessionalInvoiceTemplate = ({
   const formattedPhone = rawPhone.replace(/(\+265\s?\d{3}\s?\d{3}\s?\d{3})(?=\+265)/g, '$1 | ');
   const companyPhone = formattedPhone || 'N/A';
   const companyEmail = config?.email || 'N/A';
-  const currency = config?.currencySymbol || 'K';
+  const currency = config?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
   const accentColor = templateSettings.accentColor || '#E8450A';
@@ -1019,7 +1020,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     ? `This is a computer-generated document. No signature required. Payment terms: ${paymentTermsLabel}.`
     : 'This is a computer-generated document. No signature required, For enquiries contact:';
   const legalFooterLine2 = `${companyFlatContact2}`;
-  const currency = config?.currencySymbol || 'K';
+  const currency = config?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
   const resolvedWalletBalance = Number(dataAny?.walletBalance || 0);

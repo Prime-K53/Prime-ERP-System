@@ -50,7 +50,7 @@ const CustomTooltipComponent: React.FC<CustomTooltipProps> = memo(({
   active,
   payload,
   label,
-  currency = '$',
+  currency = '',
   valuePrefix,
   valueSuffix,
   decimals = 2,

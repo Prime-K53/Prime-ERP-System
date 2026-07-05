@@ -6,6 +6,7 @@ import { Invoice, WorkOrder } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useInventory } from '../../../context/InventoryContext';
 import { useProduction } from '../../../context/ProductionContext';
+import { currencyService } from '../../../services/currencyService';
 
 interface ProfitAnalysisModalProps {
   invoice: Invoice;
@@ -14,7 +15,7 @@ interface ProfitAnalysisModalProps {
 
 export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoice, onClose }) => {
   const { companyConfig } = useAuth(); const { boms = [], workOrders = [] } = useProduction(); const { inventory = [] } = useInventory();
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const analysis = useMemo(() => {
     let totalWasteCost = 0;

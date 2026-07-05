@@ -24,6 +24,7 @@ import {
   matchesRevenueDateRange,
   type RevenueDateRange,
 } from '../../services/revenueReportingService';
+import { currencyService } from '../../services/currencyService';
 
 const RevenueDashboard: React.FC = () => {
   const { companyConfig } = useAuth();
@@ -47,7 +48,7 @@ const RevenueDashboard: React.FC = () => {
 
   useModuleRefresh(refreshAllData, { interval: REFRESH_INTERVAL });
 
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const [dateRange, setDateRange] = useState<RevenueDateRange>('month');
 
   const formatCurrency = (value: number) =>

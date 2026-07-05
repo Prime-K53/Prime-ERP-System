@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Account, AccountType, LedgerEntry } from '../../types';
 import { format, parseISO } from 'date-fns';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
+import { currencyService } from '../../services/currencyService';
 
 const ChartOfAccounts: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const ChartOfAccounts: React.FC = () => {
   const { checkPermission, notify, companyConfig } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<AccountType | 'All'>('All');
-  const currency = companyConfig?.currencySymbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

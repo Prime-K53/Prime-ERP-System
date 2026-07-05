@@ -5,6 +5,7 @@ import { dbService } from '../../../services/db';
 import { normalizeInventoryItemPricing } from '../../../utils/pricing';
 import { generateAutoSKU } from '../../../utils/skuGenerator';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, resolveMinimumMarkup } from '../../../services/pricingValidationService';
+import { currencyService } from '../../../services/currencyService';
 import { useAuth } from '../../../context/AuthContext';
 import { aiService } from '../../../services/ai/aiService';
 
@@ -170,7 +171,7 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
     }
   }, [item?.id, isStationery]);
 
-  const currency = 'K';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   useEffect(() => {
     (async () => {

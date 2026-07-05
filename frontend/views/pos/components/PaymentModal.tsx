@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { useBankingStore } from '../../../context/BankingContext';
 import { DEFAULT_ACCOUNTS } from '../../../constants';
+import { currencyService } from '../../../services/currencyService';
 
 import { formatNumber } from '../../../utils/helpers';
 
@@ -38,7 +39,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
     const { companyConfig, notify } = useAuth(); const { invoices } = useFinance();
     const { accounts: bankAccounts, fetchBankingData } = useBankingStore();
-    const currency = companyConfig?.currencySymbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const [splitPayments, setSplitPayments] = useState<PaymentDetail[]>([]);
     const [remainingDue, setRemainingDue] = useState(total);
     const [currentPaymentAmount, setCurrentPaymentAmount] = useState(() => (Number.isFinite(total) ? total.toFixed(2) : ''));

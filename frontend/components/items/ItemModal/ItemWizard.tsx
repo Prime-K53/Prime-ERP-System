@@ -244,7 +244,7 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
       excludedVariantIds: variantsManager.excludedVariantIds,
       allAttributes: variantsManager.allAttributes,
       baseCost: variantsManager.baseCost || formData.costPrice,
-      basePrice: variantsManager.basePrice || formData.sellingPrice,
+      basePrice: variantsManager.basePrice || (formData.classification === 'stationery' ? formData.costPrice : formData.sellingPrice),
       recipeCost: formData.costPrice,
       onAdd: variantsManager.addVariant,
       onRemove: variantsManager.removeVariant,
@@ -259,23 +259,24 @@ export const ItemWizard: React.FC<Props> = ({ item, onSave, onClose, onOpenRecip
         if (!formData.variantsEnabled) {
           updateField('variantsEnabled', true);
         }
+        const fallbackPrice = formData.classification === 'stationery' ? formData.costPrice : formData.sellingPrice;
         variantsManager.setSelectedAttributesAndGenerate(
           next,
           variantsManager.allAttributes,
           variantsManager.baseCost || formData.costPrice,
-          variantsManager.basePrice || formData.sellingPrice,
+          variantsManager.basePrice || fallbackPrice,
           variantsManager.excludedVariantIds,
         );
       },
       onToggleExclude: variantsManager.toggleExcludeVariant,
-      onBaseCostChange: (cost: number) => variantsManager.updateBasePricing(cost, variantsManager.basePrice || formData.sellingPrice),
+      onBaseCostChange: (cost: number) => variantsManager.updateBasePricing(cost, variantsManager.basePrice || fallbackPrice),
       onBasePriceChange: (price: number) => variantsManager.updateBasePricing(variantsManager.baseCost || formData.costPrice, price),
       onRegenerate: () => {
         variantsManager.setSelectedAttributesAndGenerate(
           variantsManager.selectedAttributes,
           variantsManager.allAttributes,
           variantsManager.baseCost || formData.costPrice,
-          variantsManager.basePrice || formData.sellingPrice,
+          variantsManager.basePrice || fallbackPrice,
           variantsManager.excludedVariantIds,
         );
       },

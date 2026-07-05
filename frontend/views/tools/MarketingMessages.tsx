@@ -16,6 +16,7 @@ import { whatsAppMarketingService, WhatsAppTemplate, WhatsAppCampaign, Automatio
 import { aiService, SmartReplySuggestion, AIConfig } from '../../services/aiService';
 import { whatsappClient, WhatsAppAccount } from '../../services/whatsappClientService';
 import { supabase } from '../../services/supabaseClient';
+import { currencyService } from '../../services/currencyService';
 
 interface CampaignFormData {
   name: string;
@@ -29,7 +30,7 @@ interface CampaignFormData {
 const MarketingMessages: React.FC = () => {
   const { notify, companyConfig } = useAuth();
   const { customers } = useSales();
-  const currency = companyConfig?.currencySymbol || 'K';
+  const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   
   const [activeView, setActiveView] = useState<'inbox' | 'campaigns' | 'templates' | 'automation' | 'accounts' | 'activity'>('inbox');
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
