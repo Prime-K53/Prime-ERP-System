@@ -207,6 +207,12 @@ const SmartPricing: React.FC = () => {
         else if (e.target.value === '') setPages(1);
     };
 
+    const handleCopiesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        if (!isNaN(value) && value >= 1 && value <= 100000) setCopies(value);
+        else if (e.target.value === '') setCopies(1);
+    };
+
     const handleSellingPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseFloat(e.target.value);
         if (!isNaN(value) && value >= 0) setSellingPrice(value);
@@ -630,496 +636,460 @@ const SmartPricing: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50/50">
-                <div className="flex flex-col items-center gap-4 p-8 bg-white/60 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+            <div className="h-full flex items-center justify-center" style={{ background: '#FBF8F2' }}>
+                <div className="flex flex-col items-center gap-4 p-8 bg-[#FEFDFB] rounded-2xl shadow-lg border border-[#E4DFD1]">
                     <div className="relative">
-                        <div className="absolute inset-0 bg-indigo-400/20 rounded-full blur-xl animate-pulse" />
-                        <Calculator className="w-12 h-12 text-indigo-500 relative animate-pulse" />
+                        <div className="absolute inset-0 bg-[#1C8C86]/10 rounded-full blur-xl animate-pulse" />
+                        <svg className="w-12 h-12 text-[#146B67] relative animate-pulse" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
                     </div>
-                    <p className="text-slate-500 font-medium tracking-wide">Loading pricing engine...</p>
+                    <p className="text-[#666F6C] font-medium" style={{ fontSize: 13.5, lineHeight: 1.45 }}>Loading pricing engine...</p>
                     <div className="flex gap-1.5">
-                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="w-2 h-2 bg-[#1C8C86] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-[#146B67] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-[#0F3D3E] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                 </div>
             </div>
         );
     }
 
+    const mkWarning = !validation.valid && sellingPrice > 0;
+
     return (
-        <div className="h-full bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 overflow-auto">
-            <div className="max-w-4xl mx-auto p-6">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="p-4 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl shadow-lg shadow-indigo-200/50 ring-1 ring-white/20">
-                            <Calculator className="w-8 h-8 text-white drop-shadow-sm" />
+        <div className="h-full overflow-auto" style={{ background: '#FBF8F2' }}>
+            <div className="max-w-[1340px] mx-auto p-6">
+
+                {/* ── Top Bar ── */}
+                <div className="flex items-center justify-between mb-4" style={{ padding: '10px 2px 16px' }}>
+                    <div className="flex items-center gap-3.5">
+                        <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(150deg,#146B67,#0F3D3E)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow: '0 1px 2px rgba(15,61,62,0.06)' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#fff" strokeWidth="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#fff" strokeWidth="1.7" strokeLinecap="round"/></svg>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Smart Pricing Engine</h1>
-                            <p className="text-slate-500 text-sm tracking-wide">Calculate job pricing with BOM cost analysis</p>
+                            <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3, color: '#23282A', margin: 0 }}>Smart Pricing Engine</h1>
+                            <p style={{ fontSize: 12.5, color: '#666F6C', lineHeight: 1.4, margin: '2px 0 0' }}>Calculate job pricing with BOM cost analysis</p>
                             {editingProductId && (
-                                <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50/80 backdrop-blur-sm border border-blue-200/60 text-xs font-semibold text-blue-700 shadow-sm">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                    Editing Inventory {itemType}: {productName || inventory.find(item => item.id === editingProductId)?.name || editingProductId}
+                                <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ fontSize: 12, fontWeight: 600, background: 'linear-gradient(135deg, rgba(28,140,134,0.12), rgba(20,107,103,0.08))', border: '1px solid rgba(28,140,134,0.25)', color: '#146B67' }}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#2AA69E] animate-pulse" />
+                                    Editing {itemType}: {productName || inventory.find(item => item.id === editingProductId)?.name || editingProductId}
                                 </div>
                             )}
                         </div>
-                        {editingProductId && !validation.valid && sellingPrice > 0 && (
-                            <div className="mt-2 px-4 py-2 bg-amber-50/80 backdrop-blur-sm border border-amber-200/60 rounded-lg text-sm text-amber-700 flex items-center gap-2 shadow-sm">
-                                <Info size={16} className="shrink-0" /> Markup {profitMarkup.toFixed(1)}% below minimum {validation.minimumMarkup}%
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {mkWarning && (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full" style={{ fontSize: 12, fontWeight: 600, background: '#FBEAEA', color: '#B23B3B' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.9L2.6 18a2 2 0 001.8 3h15.2a2 2 0 001.8-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                Below minimum {validation.minimumMarkup}% markup
                             </div>
                         )}
+                        <button
+                            onClick={() => navigate('/settings', { state: { tab: 'Finishing' } })}
+                            className="flex items-center gap-1.5" style={{ fontFamily:'Inter,sans-serif', fontSize:13, fontWeight:600, padding:'7px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#FEFDFB', color:'#0F3D3E', cursor:'pointer', lineHeight:1.4, transition:'all .15s ease' }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1C8C86'; e.currentTarget.style.color = '#1C8C86'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,61,62,0.06)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#E4DFD1'; e.currentTarget.style.color = '#0F3D3E'; e.currentTarget.style.boxShadow = 'none'; }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/></svg>
+                            Manage Prices
+                        </button>
                     </div>
-                    <button 
-                        onClick={() => navigate('/settings', { state: { tab: 'Finishing' } })}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                </div>
+
+                {/* ── Load Strip ── */}
+                <div style={{ background:'linear-gradient(120deg, rgba(28,140,134,0.08), rgba(201,131,47,0.05))', border:'1px solid #E4DFD1', borderRadius:14, padding:'12px 16px', display:'grid', gridTemplateColumns:'auto 1fr auto auto', alignItems:'center', gap:16, marginBottom:18 }}>
+                    <div style={{ minWidth: 190 }}>
+                        <p style={{ fontSize:12, fontWeight:600, letterSpacing:'0.06em', textTransform:'uppercase', color:'#1C8C86', margin:'0 0 2px', lineHeight:1.4 }}>Load from Inventory</p>
+                        <p style={{ margin:0, fontSize:12.5, color:'#666F6C', lineHeight:1.4 }}>Pick an existing item, configure it, save back to its BOM</p>
+                    </div>
+                    <select
+                        value={selectedInventoryProductId}
+                        onChange={(e) => setSelectedInventoryProductId(e.target.value)}
+                        style={{ width:'100%', fontFamily:'Inter,sans-serif', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
                     >
-                        <Settings size={18} />
-                        Manage Prices
+                        <option value="">Select a product or service...</option>
+                        {editableInventoryProducts.map(product => (
+                            <option key={product.id} value={product.id}>
+                                [{product.type}] {product.name} ({product.sku})
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={() => loadInventoryProduct(selectedInventoryProductId)}
+                        disabled={!selectedInventoryProductId}
+                        style={{ fontFamily:'Inter,sans-serif', fontSize:13, fontWeight:600, padding:'7px 12px', borderRadius:9, border:'none', cursor:'pointer', background:'linear-gradient(135deg, #1C8C86, #146B67)', color:'#fff', display:'flex', alignItems:'center', gap:7, lineHeight:1.4, transition:'all .15s ease', boxShadow:'0 1px 2px rgba(15,61,62,0.06)', opacity: selectedInventoryProductId ? 1 : 0.5 }}
+                        onMouseEnter={e => { if (selectedInventoryProductId) { e.currentTarget.style.filter = 'brightness(1.06)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,61,62,0.10)'; }}}
+                        onMouseLeave={e => { if (selectedInventoryProductId) { e.currentTarget.style.filter = ''; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,61,62,0.06)'; }}}
+                    >
+                        Load Item
+                    </button>
+                    <button
+                        onClick={clearLoadedProduct}
+                        style={{ fontFamily:'Inter,sans-serif', fontSize:13, fontWeight:600, padding:'7px 12px', borderRadius:9, border:'1px solid #E4DFD1', cursor:'pointer', background:'transparent', color:'#0F3D3E', lineHeight:1.4, transition:'all .15s ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#1C8C86'; e.currentTarget.style.color = '#1C8C86'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E4DFD1'; e.currentTarget.style.color = '#0F3D3E'; }}
+                    >
+                        + New Item
                     </button>
                 </div>
 
-                <div id="smart-pricing-inventory-loader" className="mb-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow duration-300">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-white/80 to-indigo-50/80">
-                        <div className="flex flex-col gap-1">
-                            <h2 className="text-lg font-bold text-slate-800 tracking-tight">Load from Inventory</h2>
-                            <p className="text-sm text-slate-500">Pick any existing product or service, configure it here, then save it back with its Smart Pricing BOM.</p>
+                {/* ── 3-Column Layout ── */}
+                <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 400px', gap:18, alignItems:'start' }}>
+
+                    {/* ═══ Col 1: Finishing Options ═══ */}
+                    <div>
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M9 12l2 2 4-4" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    </div>
+                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Finishing Options</h3>
+                                </div>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10 }}>
+                                    {finishingOptions.map(option => (
+                                        <div
+                                            key={option.id}
+                                            onClick={() => toggleFinishingOption(option.id)}
+                                            style={{
+                                                border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
+                                                borderRadius: 11,
+                                                padding: '11px 13px',
+                                                cursor: 'pointer',
+                                                transition: 'all .15s ease',
+                                                background: option.enabled ? 'linear-gradient(135deg, #F0FAF8, #FFFFFF)' : '#fff',
+                                                boxShadow: option.enabled ? '0 0 0 1px #1C8C86 inset' : 'none',
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between" style={{ marginBottom: 5 }}>
+                                                <span style={{ fontSize:13.5, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>{option.name}</span>
+                                                <div style={{
+                                                    width: 18, height: 18, borderRadius: 6,
+                                                    border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                                    transition: 'all .15s ease',
+                                                    background: option.enabled ? '#1C8C86' : 'transparent',
+                                                }}>
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ opacity: option.enabled ? 1 : 0 }}><path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </div>
+                                            </div>
+                                            <p style={{ fontSize:12, color:'#666F6C', margin:'0 0 7px', lineHeight:1.45 }}>{option.description}</p>
+                                            <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13, fontWeight:700, color:'#146B67' }}>{currency} {option.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] gap-3 items-end">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2 tracking-wide">Load Existing Product or Service</label>
-                            <select
-                                value={selectedInventoryProductId}
-                                onChange={(e) => setSelectedInventoryProductId(e.target.value)}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm"
-                            >
-                                <option value="">Select a product or service...</option>
-                                {editableInventoryProducts.map(product => (
-                                    <option key={product.id} value={product.id}>
-                                        [{product.type}] {product.name} ({product.sku})
-                                    </option>
+
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M12 8v4.5l3 2" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </div>
+                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>How Finishing Options Work</h3>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                {[
+                                    ['1','Tap a card to include or exclude that finishing step — its price is added to or removed from the cost price instantly.'],
+                                    ['2','Prices shown are pulled from each service\'s own BOM, so update them there if a supplier cost changes.'],
+                                    ['3','Only include steps this job actually needs — unused finishing lowers your margin without adding value for the customer.'],
+                                ].map(([num, text]) => (
+                                    <div key={num} className="flex gap-3" style={{ marginBottom: 14 }}>
+                                        <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, background:'#F2EEE3', color:'#666F6C', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{num}</div>
+                                        <p style={{ margin:0, fontSize:13, color:'#666F6C', lineHeight:1.5 }}>{text}</p>
+                                    </div>
                                 ))}
-                            </select>
-                            {editableInventoryProducts.length === 0 && (
-                                <div className="mt-2 text-sm text-amber-700 bg-amber-50/80 backdrop-blur-sm border border-amber-200/60 rounded-xl px-3 py-2 shadow-sm">
-                                    No products or services were found in inventory yet.
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => loadInventoryProduct(selectedInventoryProductId)}
-                            disabled={!selectedInventoryProductId}
-                            className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-indigo-200/50 hover:shadow-lg hover:shadow-indigo-300/50 active:scale-[0.98]"
-                        >
-                            Load Item
-                        </button>
-                        <button
-                            onClick={clearLoadedProduct}
-                            className="px-5 py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
-                        >
-                            New Item
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    <div className="lg:col-span-3 space-y-4">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
-                            <button 
-                                onClick={() => setPaperExpanded(!paperExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg ring-1 ring-blue-200/50 group-hover:ring-blue-300/50 transition-all duration-200">
-                                        <Calculator size={18} className="text-blue-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-slate-800">Print Settings</h3>
-                                </div>
-                                <div className={`transition-transform duration-300 ${paperExpanded ? '' : 'rotate-180'}`}>
-                                    {paperExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
-                                </div>
-                            </button>
-                            {paperExpanded && (
-                                <div className="px-6 pb-6 space-y-4 animate-slideDown">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Pages per Copy</label>
-                                            <input
-                                                type="number"
-                                                value={pages}
-                                                onChange={handlePagesChange}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                                                min={1}
-                                                max={10000}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Selling Price ({currency})</label>
-                                            <input
-                                                type="number"
-                                                value={sellingPrice || ''}
-                                                onChange={handleSellingPriceChange}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 text-lg font-bold shadow-sm hover:shadow-md"
-                                                min={0}
-                                                step={0.01}
-                                                placeholder="Enter selling price..."
-                                            />
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-slate-500 bg-slate-50/80 rounded-lg px-3 py-2">
-                                        Sheets needed: <span className="font-semibold text-slate-700">{totalSheets}</span> 
-                                        <span className="mx-2 text-slate-300">|</span> 
-                                        Cost price: <span className="font-semibold text-slate-700">{formatCurrency(costPrice)}</span>
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
-                            <button 
-                                onClick={() => setBomExpanded(!bomExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-br from-amber-100 to-amber-50 rounded-lg ring-1 ring-amber-200/50 group-hover:ring-amber-300/50 transition-all duration-200">
-                                        <Package size={18} className="text-amber-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-slate-800">BOM Materials (Auto-selected)</h3>
-                                    <span className="text-xs bg-green-100/80 backdrop-blur-sm text-green-600 px-2.5 py-0.5 rounded-full font-medium border border-green-200/50 shadow-sm">Active</span>
-                                </div>
-                                <div className={`transition-transform duration-300 ${bomExpanded ? '' : 'rotate-180'}`}>
-                                    {bomExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
-                                </div>
-                            </button>
-                            {bomExpanded && (
-                                <div className="px-6 pb-6 space-y-4 animate-slideDown">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Paper</label>
-                                        {paperItems.length > 0 ? (
-                                            <select
-                                                value={selectedPaperId}
-                                                onChange={(e) => setSelectedPaperId(e.target.value)}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                                            >
-                                                {paperItems.map(item => (
-                                                    <option key={item.id} value={item.id}>
-                                                        {item.name} - {currency} {getItemCost(item).toFixed(2)}/{getItemUnit(item)} (Stock: {item.stock || 0})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-sm border border-red-200/50">No paper items found</div>
-                                        )}
-                                        {selectedPaper && (
-                                            <div className="mt-2 p-3 bg-gradient-to-r from-blue-50/80 to-blue-100/30 backdrop-blur-sm rounded-xl border border-blue-100/50 shadow-sm">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-600">Sheets needed:</span>
-                                                    <span className="font-semibold text-slate-800">{totalSheets} sheets</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm mt-1">
-                                                    <span className="text-slate-600">Paper cost:</span>
-                                                    <span className="font-semibold text-blue-600">{formatCurrency(paperCost)}</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-2 tracking-wide">Toner/Ink</label>
-                                        {tonerItems.length > 0 ? (
-                                            <select
-                                                value={selectedTonerId}
-                                                onChange={(e) => setSelectedTonerId(e.target.value)}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md"
-                                            >
-                                                {tonerItems.map(item => (
-                                                    <option key={item.id} value={item.id}>
-                                                        {item.name} - {currency} {getItemCost(item).toFixed(2)}/{getItemUnit(item)} (Stock: {item.stock || 0})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <div className="p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-sm border border-red-200/50">No toner items found</div>
-                                        )}
-                                        {selectedToner && (
-                                            <div className="mt-2 p-3 bg-gradient-to-r from-purple-50/80 to-purple-100/30 backdrop-blur-sm rounded-xl border border-purple-100/50 shadow-sm">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-600">Pages to print:</span>
-                                                    <span className="font-semibold text-slate-800">{totalPages} pages</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm mt-1">
-                                                    <span className="text-slate-600">Toner cost:</span>
-                                                    <span className="font-semibold text-purple-600">{formatCurrency(tonerCost)}</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all duration-300">
-                            <button 
-                                onClick={() => setFinishingExpanded(!finishingExpanded)}
-                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/80 transition-all duration-200 group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-50 rounded-lg ring-1 ring-purple-200/50 group-hover:ring-purple-300/50 transition-all duration-200">
-                                        <Info size={18} className="text-purple-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-slate-800">Finishing Options</h3>
-                                </div>
-                                <div className={`transition-transform duration-300 ${finishingExpanded ? '' : 'rotate-180'}`}>
-                                    {finishingExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
-                                </div>
-                            </button>
-                            {finishingExpanded && (
-                                <div className="px-6 pb-6 animate-slideDown">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {finishingOptions.map(option => (
-                                            <label 
-                                                key={option.id} 
-                                                className={`flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200 ${
-                                                    option.enabled 
-                                                        ? 'bg-gradient-to-br from-purple-50/80 to-purple-100/30 border-purple-200 shadow-sm' 
-                                                        : 'bg-slate-50/50 border-slate-100 hover:bg-slate-100/80 hover:shadow-sm'
-                                                } border`}
-                                            >
-                                                <div className="flex-1">
-                                                    <div className="font-semibold text-slate-800">{option.name}</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">{option.description}</div>
-                                                </div>
-                                                <div className="flex items-center gap-3 ml-3">
-                                                    <span className="text-sm font-semibold text-slate-600">{currency} {option.price}</span>
-                                                    <div className="relative">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={option.enabled}
-                                                            onChange={() => toggleFinishingOption(option.id)}
-                                                            className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500/30 focus:ring-offset-0 transition-all duration-200 cursor-pointer"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                    </div>
-
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-100 overflow-hidden sticky top-6 hover:shadow-xl transition-shadow duration-300">
-                            <div className="p-6 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]" />
-                                <h3 className="text-white font-bold text-lg tracking-tight relative">Price Summary</h3>
-                                <p className="text-indigo-200/90 text-sm mt-1 relative">{pages} pages  <span className="mx-1.5 text-indigo-300/50">·</span>  Cost: {formatCurrency(costPrice)}</p>
                             </div>
-                            
-                            <div className="p-6 space-y-4">
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center py-1.5">
-                                        <span className="text-slate-500 text-sm">{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span>
-                                        <span className="font-semibold text-slate-800">{formatCurrency(paperCost)}</span>
+                        </div>
+                    </div>
+
+                    {/* ═══ Col 2: Print Settings + BOM ═══ */}
+                    <div>
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div style={{ width:28, height:28, borderRadius:8, background:'#F4E3C8', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#C9832F" strokeWidth="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#C9832F" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                </div>
+                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Print Settings</h3>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                                    <div>
+                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Pages per Copy</span>
+                                        <input
+                                            type="number"
+                                            value={pages}
+                                            onChange={handlePagesChange}
+                                            min={1} max={10000}
+                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
+                                        />
                                     </div>
-                                    <div className="flex justify-between items-center py-1.5">
-                                        <span className="text-slate-500 text-sm">{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span>
-                                        <span className="font-semibold text-slate-800">{formatCurrency(tonerCost)}</span>
+                                    <div>
+                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Copies</span>
+                                        <input
+                                            type="number"
+                                            value={copies}
+                                            onChange={handleCopiesChange}
+                                            min={1} max={100000}
+                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
+                                        />
                                     </div>
-                                    <div className="flex justify-between items-center py-1.5">
-                                        <span className="text-slate-500 text-sm">Finishing</span>
-                                        <span className="font-semibold text-slate-800">{formatCurrency(finishingCost)}</span>
+                                </div>
+                                <div style={{ display:'flex', gap:16, marginTop:10, paddingTop:10, borderTop:'1px dashed #E4DFD1', fontSize:12.5, color:'#666F6C', lineHeight:1.4 }}>
+                                    <span>Sheets needed <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{totalSheets}</b></span>
+                                    <span>Cost price <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{formatCurrency(costPrice)}</b></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div style={{ width:28, height:28, borderRadius:8, background:'#FDF0E3', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2l9 4.5v9L12 20l-9-4.5v-9L12 2z" stroke="#C9832F" strokeWidth="1.7" strokeLinejoin="round"/></svg>
                                     </div>
-                                    {finishingInventoryCost > 0 && (
-                                        <div className="flex justify-between items-center py-1.5 pl-4 border-l-2 border-purple-200">
-                                            <span className="text-slate-500 text-sm">Finishing Materials</span>
-                                            <span className="font-semibold text-slate-800">{formatCurrency(finishingInventoryCost)}</span>
-                                        </div>
-                                    )}
+                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>BOM Materials</h3>
                                 </div>
-                                <div className="border-t border-slate-200 pt-4 flex justify-between items-center">
-                                    <span className="font-semibold text-slate-700">Cost Price (CP)</span>
-                                    <span className="text-lg font-bold text-slate-800">{formatCurrency(costPrice)}</span>
+                                <span style={{ fontSize:12, fontWeight:600, padding:'3px 9px', borderRadius:100, background:'#E6F4F1', color:'#146B67', lineHeight:1.4 }}>Active</span>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        {selectedPaper?.name || 'Paper'}
+                                    </span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
                                 </div>
-                                <div className="flex justify-between items-center py-1.5 px-3 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-lg border border-blue-100/50">
-                                    <span className="font-semibold text-blue-700">Selling Price (SP)</span>
-                                    <span className="text-lg font-bold text-blue-700">{formatCurrency(sellingPrice)}</span>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        {selectedToner?.name || 'Toner'}
+                                    </span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
                                 </div>
-                                <div className={`flex justify-between items-center py-1.5 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span className="font-semibold">Profit</span>
-                                    <span className="text-lg font-bold">{profit >= 0 ? '+' : ''}{formatCurrency(profit)}</span>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'none', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        Finishing
+                                    </span>
+                                    <span id="finishBomLine" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(finishingCost)}</span>
                                 </div>
-                                <div className={`flex justify-between items-center py-1.5 ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>
-                                    <span className="font-semibold">Profit Margin</span>
-                                    <span className="text-lg font-bold">{profitMarkup.toFixed(1)}%</span>
+                            </div>
+                        </div>
+
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div style={{ width:28, height:28, borderRadius:8, background:'#FDF0E3', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C9832F" strokeWidth="1.7"/><path d="M12 8v4.5l3 2" stroke="#C9832F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </div>
-                                <div className="flex justify-between items-center py-1.5 text-slate-400 text-sm">
-                                    <span>Minimum Required Markup</span>
-                                    <span className="font-medium text-slate-500">{validation.minimumMarkup}%</span>
+                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>How BOM Materials Work</h3>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                {[
+                                    ['1','Materials here are auto-selected from the item\'s bill of materials — quantities scale with pages per copy and copies.'],
+                                    ['2','Cost price (CP) combines paper, toner, and finishing — it\'s the floor your selling price should sit above.'],
+                                    ['3','To swap a material, edit the item\'s BOM under Manage Prices rather than changing it here.'],
+                                ].map(([num, text]) => (
+                                    <div key={num} className="flex gap-3" style={{ marginBottom: 14 }}>
+                                        <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, background:'#F2EEE3', color:'#666F6C', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{num}</div>
+                                        <p style={{ margin:0, fontSize:13, color:'#666F6C', lineHeight:1.5 }}>{text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ═══ Col 3: Receipt Summary ═══ */}
+                    <div style={{ position:'sticky', top:24 }}>
+                        <div style={{ background:'#FEFDFB', borderRadius:16, boxShadow:'0 20px 50px rgba(15,61,62,0.16)', overflow:'hidden', border:'1px solid #E4DFD1' }}>
+                            <div style={{ background:'linear-gradient(135deg, #146B67, #0F3D3E)', padding:'16px 20px 18px', color:'#fbfbfa', position:'relative' }}>
+                                <p style={{ fontSize:12, letterSpacing:'0.08em', textTransform:'uppercase', fontWeight:600, opacity:0.78, margin:'0 0 5px', lineHeight:1.4 }}>Price Summary</p>
+                                <h2 style={{ fontSize:21, margin:'0 0 4px', fontWeight:600, lineHeight:1.3, letterSpacing:'-0.01em' }}>{pages} page{pages!==1?'s':''} · Cost {formatCurrency(costPrice)}</h2>
+                                <div style={{ fontSize:12, opacity:0.8, fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums' }}>{editingProductId ? (productName || inventory.find(item => item.id === editingProductId)?.name || 'ITEM').toUpperCase() : 'NEW ITEM'}</div>
+                            </div>
+                            <div style={{ height:14, background:'linear-gradient(135deg, #146B67, #0F3D3E)', WebkitMask:'radial-gradient(circle at 10px 0, transparent 8px, black 8.5px) 0 -8px / 20px 16px repeat-x', mask:'radial-gradient(circle at 10px 0, transparent 8px, black 8.5px) 0 -8px / 20px 16px repeat-x' }} />
+
+                            <div style={{ padding:'16px 20px 6px' }}>
+                                <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4 }}>
+                                    <span>{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color:'#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
                                 </div>
-                                <div className={`p-3 rounded-xl text-sm font-medium text-center transition-all duration-200 ${
-                                    validation.valid
-                                        ? 'bg-green-50/80 backdrop-blur-sm text-green-700 border border-green-200/60 shadow-sm'
-                                        : sellingPrice > 0
-                                        ? 'bg-red-50/80 backdrop-blur-sm text-red-700 border border-red-200/60 shadow-sm'
-                                        : 'bg-slate-50/50 text-slate-400 border border-slate-200'
-                                }`}>
-                                    {sellingPrice > 0
-                                        ? (validation.valid
-                                            ? 'Above Minimum Markup'
-                                            : `Below Minimum Markup (${profitMarkup.toFixed(1)}% < ${validation.minimumMarkup}%)`)
-                                        : 'Enter a selling price to validate'}
+                                <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4 }}>
+                                    <span>{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color:'#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
+                                </div>
+                                <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4, borderBottom:'1px dashed #E4DFD1', marginBottom:4, paddingBottom:10 }}>
+                                    <span>Finishing</span>
+                                    <span id="finishTotalLine" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color:'#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(finishingCost)}</span>
+                                </div>
+
+                                <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', padding:'10px 0', fontSize:14, fontWeight:700, lineHeight:1.4 }}>
+                                    <span>Cost Price (CP)</span>
+                                    <span id="cpTotal" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:16, textAlign:'right' }}>{formatCurrency(costPrice)}</span>
+                                </div>
+
+                                <div style={{ margin:'6px 0 4px', background:'#FBF8F2', border:'1px solid #E4DFD1', borderRadius:11, padding:'11px 14px' }}>
+                                    <label style={{ fontSize:12, fontWeight:600, letterSpacing:'0.04em', textTransform:'uppercase', color:'#1C8C86' }}>Selling Price (SP)</label>
+                                    <div className="flex items-baseline gap-1.5" style={{ marginTop:6 }}>
+                                        <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:20, fontWeight:700, color:'#0F3D3E' }}>{currency}</span>
+                                        <input
+                                            type="number"
+                                            value={sellingPrice || ''}
+                                            onChange={handleSellingPriceChange}
+                                            min={0} step={0.01}
+                                            placeholder="0.00"
+                                            style={{ border:'none', background:'transparent', outline:'none', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:20, fontWeight:700, color:'#0F3D3E', width:'100%' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2.5" style={{ margin:'12px 0 6px' }}>
+                                    <div id="profitCard" style={{ flex:1, borderRadius:11, padding:'10px 13px', background:'#FBF8F2', border:'1px solid #E4DFD1' }}>
+                                        <div style={{ fontSize:12, color:'#666F6C', fontWeight:600, marginBottom:3, lineHeight:1.4 }}>Profit</div>
+                                        <div id="profitVal" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:16, fontWeight:700, color: profit >= 0 ? '#146B67' : '#B23B3B' }}>{profit >= 0 ? '+' : ''}{formatCurrency(profit)}</div>
+                                    </div>
+                                    <div id="marginCard" style={{ flex:1, borderRadius:11, padding:'10px 13px', background:'#FBF8F2', border:'1px solid #E4DFD1' }}>
+                                        <div style={{ fontSize:12, color:'#666F6C', fontWeight:600, marginBottom:3, lineHeight:1.4 }}>Profit Margin</div>
+                                        <div id="marginVal" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:16, fontWeight:700, color: validation.valid ? '#146B67' : '#B23B3B' }}>{profitMarkup.toFixed(1)}%</div>
+                                    </div>
+                                </div>
+
+                                {sellingPrice > 0 && !validation.valid && (
+                                    <div className="flex items-center gap-1.5" style={{ fontSize:12, fontWeight:600, color:'#B23B3B', lineHeight:1.4, background:'#FBEAEA', padding:'5px 10px', borderRadius:100, marginBottom:10, display:'inline-flex' }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.9L2.6 18a2 2 0 001.8 3h15.2a2 2 0 001.8-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        Below minimum {validation.minimumMarkup}% markup
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2" style={{ fontSize:12, color:'#666F6C', lineHeight:1.4, padding:'8px 2px 14px' }}>
+                                    <span>Minimum required markup <b style={{ color:'#23282A', fontWeight:600 }}>{validation.minimumMarkup}%</b></span>
                                 </div>
                             </div>
 
-                            <div className="px-6 pb-6 space-y-3">
-                                <button 
-                                    onClick={() => setShowSummaryCard(true)}
-                                    className="w-full flex items-center justify-center gap-2 py-3 border border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50/80 transition-all duration-200 hover:border-indigo-300 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    disabled={!validation.valid || sellingPrice <= 0}
-                                >
-                                    <Download size={18} />
-                                    Summary Card
-                                </button>
-                                <button 
+                            <div style={{ padding:'0 20px 18px' }}>
+                                <button
                                     onClick={handleOpenSaveDialog}
                                     disabled={!validation.valid || sellingPrice <= 0}
-                                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ width:'100%', padding:'9px 14px', borderRadius:11, border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', gap:7, transition:'all .15s ease', background:'linear-gradient(135deg, #1C8C86, #146B67)', color:'#fff', boxShadow:'0 1px 2px rgba(15,61,62,0.06)', opacity: (!validation.valid || sellingPrice <= 0) ? 0.5 : 1 }}
                                     title={!validation.valid && sellingPrice > 0 ? `Markup ${profitMarkup.toFixed(1)}% below minimum ${validation.minimumMarkup}%` : ''}
+                                    onMouseEnter={e => { if (validation.valid && sellingPrice > 0) { e.currentTarget.style.filter = 'brightness(1.07)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(15,61,62,0.10)'; }}}
+                                    onMouseLeave={e => { if (validation.valid && sellingPrice > 0) { e.currentTarget.style.filter = ''; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,61,62,0.06)'; }}}
                                 >
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                     {editingProductId ? `Save ${itemType}` : 'Save to Inventory'}
+                                </button>
+                                <button
+                                    onClick={() => setShowSummaryCard(true)}
+                                    disabled={!validation.valid || sellingPrice <= 0}
+                                    style={{ width:'100%', padding:'8px 14px', borderRadius:11, cursor:'pointer', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:13, marginTop:8, background:'transparent', border:'1px solid #E4DFD1', color:'#0F3D3E', opacity: (!validation.valid || sellingPrice <= 0) ? 0.5 : 1 }}
+                                    onMouseEnter={e => { if (validation.valid && sellingPrice > 0) { e.currentTarget.style.borderColor = '#1C8C86'; e.currentTarget.style.color = '#1C8C86'; }}}
+                                    onMouseLeave={e => { if (validation.valid && sellingPrice > 0) { e.currentTarget.style.borderColor = '#E4DFD1'; e.currentTarget.style.color = '#0F3D3E'; }}}
+                                >
+                                    Download summary card
                                 </button>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
 
+            {/* ── Save Dialog Modal ── */}
             {showSaveDialog && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/95 backdrop-blur-md rounded-2xl w-full max-w-md shadow-2xl shadow-indigo-500/10 border border-white/20 p-6 animate-in">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Save to Inventory</h2>
-                            <button onClick={() => setShowSaveDialog(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm">
-                                <X size={20} className="text-slate-400" />
+                <div className="fixed inset-0" style={{ background:'rgba(0,0,0,0.4)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:16 }}>
+                    <div style={{ background:'#FEFDFB', borderRadius:14, width:'100%', maxWidth:420, boxShadow:'0 20px 50px rgba(15,61,62,0.16)', border:'1px solid #E4DFD1', overflow:'hidden' }}>
+                        <div className="flex items-center justify-between" style={{ padding:'12px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                            <h2 style={{ fontSize:20, fontWeight:600, color:'#23282A', letterSpacing:'-0.01em', lineHeight:1.3, margin:0 }}>Save to Inventory</h2>
+                            <button onClick={() => setShowSaveDialog(false)} style={{ padding:4, background:'none', border:'none', cursor:'pointer', borderRadius:6, color:'#666F6C' }}>
+                                <X size={18} />
                             </button>
                         </div>
-
-                        <div className="space-y-4">
-                            <div className="p-4 bg-gradient-to-br from-slate-50/80 to-indigo-50/30 backdrop-blur-sm rounded-xl border border-slate-100 shadow-sm space-y-2">
-                                <p className="text-sm font-semibold text-slate-600 tracking-wide">Pricing Summary</p>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="flex justify-between"><span className="text-slate-400">Cost:</span><span className="font-semibold">{formatCurrency(costPrice)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-400">Selling:</span><span className="font-semibold">{formatCurrency(sellingPrice)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-400">Profit:</span><span className={`font-semibold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(profit)}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-400">Margin:</span><span className={`font-semibold ${validation.valid ? 'text-green-600' : 'text-red-600'}`}>{profitMarkup.toFixed(1)}%</span></div>
+                        <div style={{ padding:'14px 16px' }}>
+                            <div style={{ padding:'10px 13px', borderRadius:11, background:'#FBF8F2', border:'1px solid #E4DFD1', marginBottom:14 }}>
+                                <p style={{ fontSize:12, fontWeight:600, color:'#666F6C', margin:0, marginBottom:8, lineHeight:1.4 }}>Pricing Summary</p>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px 12px', fontSize:13, lineHeight:1.5 }}>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Cost:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(costPrice)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Selling:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(sellingPrice)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Profit:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color: profit >= 0 ? '#146B67' : '#B23B3B' }}>{formatCurrency(profit)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Margin:</span><span style={{ fontWeight:600, color: validation.valid ? '#146B67' : '#B23B3B' }}>{profitMarkup.toFixed(1)}%</span></div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5 tracking-wide">Item Name</label>
+                            <div style={{ marginBottom:14 }}>
+                                <label style={{ fontSize:12, fontWeight:600, color:'#666F6C', display:'block', marginBottom:5, lineHeight:1.4 }}>Item Name</label>
                                 <input
                                     type="text"
                                     value={saveItemName}
                                     onChange={e => setSaveItemName(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200 shadow-sm"
                                     placeholder="Enter item name..."
+                                    style={{ width:'100%', fontFamily:'Inter,sans-serif', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5 tracking-wide">Type</label>
-                                <div className="grid grid-cols-2 gap-3">
+                            <div style={{ marginBottom:14 }}>
+                                <label style={{ fontSize:12, fontWeight:600, color:'#666F6C', display:'block', marginBottom:5, lineHeight:1.4 }}>Type</label>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                                     <button
                                         type="button"
                                         onClick={() => setSaveDialogType('Product')}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ${
-                                            saveDialogType === 'Product' ? 'border-indigo-500 bg-gradient-to-br from-indigo-50/80 to-indigo-100/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'
-                                        }`}
+                                        style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 12px', borderRadius:9, border:`2px solid ${saveDialogType === 'Product' ? '#1C8C86' : '#E4DFD1'}`, background: saveDialogType === 'Product' ? 'linear-gradient(135deg, #F0FAF8, #FFFFFF)' : '#fff', cursor:'pointer', fontSize:13, lineHeight:1.4, color:'#23282A', fontWeight:600 }}
                                     >
-                                        <Package size={20} className={saveDialogType === 'Product' ? 'text-indigo-600' : 'text-slate-400'} />
-                                        <span className={`font-semibold ${saveDialogType === 'Product' ? 'text-indigo-700' : 'text-slate-600'}`}>Product</span>
+                                        <Package size={18} style={{ color: saveDialogType === 'Product' ? '#1C8C86' : '#94A3B8' }} />
+                                        <span style={{ color: saveDialogType === 'Product' ? '#146B67' : '#666F6C' }}>Product</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setSaveDialogType('Service')}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ${
-                                            saveDialogType === 'Service' ? 'border-indigo-500 bg-gradient-to-br from-indigo-50/80 to-indigo-100/30 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'
-                                        }`}
+                                        style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 12px', borderRadius:9, border:`2px solid ${saveDialogType === 'Service' ? '#1C8C86' : '#E4DFD1'}`, background: saveDialogType === 'Service' ? 'linear-gradient(135deg, #F0FAF8, #FFFFFF)' : '#fff', cursor:'pointer', fontSize:13, lineHeight:1.4, color:'#23282A', fontWeight:600 }}
                                     >
-                                        <Printer size={20} className={saveDialogType === 'Service' ? 'text-indigo-600' : 'text-slate-400'} />
-                                        <span className={`font-semibold ${saveDialogType === 'Service' ? 'text-indigo-700' : 'text-slate-600'}`}>Printing Service</span>
+                                        <Printer size={18} style={{ color: saveDialogType === 'Service' ? '#1C8C86' : '#94A3B8' }} />
+                                        <span style={{ color: saveDialogType === 'Service' ? '#146B67' : '#666F6C' }}>Printing Service</span>
                                     </button>
                                 </div>
                             </div>
 
                             {!editingProductId && (
-                                <div>
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <label className="block text-sm font-medium text-slate-700 tracking-wide">Variants</label>
+                                <div style={{ marginBottom:14 }}>
+                                    <div className="flex items-center justify-between" style={{ marginBottom:6 }}>
+                                        <label style={{ fontSize:12, fontWeight:600, color:'#666F6C', lineHeight:1.4 }}>Variants</label>
                                         <button
                                             type="button"
                                             onClick={addVariantRow}
                                             disabled={saveVariants.length >= 5}
-                                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:text-slate-300 transition-all duration-200 font-medium"
+                                            style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, fontWeight:600, color: saveVariants.length >= 5 ? '#CBD5E1' : '#1C8C86', background:'none', border:'none', cursor: saveVariants.length >= 5 ? 'default' : 'pointer', padding:0 }}
                                         >
                                             <Plus size={14} /> Add Variant
                                         </button>
                                     </div>
                                     {saveVariants.length > 0 && (
-                                        <div className="overflow-x-auto rounded-lg border border-slate-100">
-                                            <table className="w-full text-sm">
+                                        <div style={{ overflowX:'auto', borderRadius:9, border:'1px solid #E4DFD1' }}>
+                                            <table style={{ width:'100%', borderCollapse:'collapse' }}>
                                                 <thead>
-                                                    <tr className="border-b border-slate-100 bg-slate-50/50">
-                                                        <th className="text-left py-2.5 pr-2 pl-3 text-slate-500 font-medium text-xs uppercase tracking-wider">Attribute</th>
-                                                        <th className="text-left py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Pages</th>
-                                                        <th className="text-right py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Base Price</th>
-                                                        <th className="text-right py-2.5 px-2 text-slate-500 font-medium text-xs uppercase tracking-wider">Selling Price</th>
-                                                        <th className="py-2.5 pl-2 pr-3"></th>
+                                                    <tr style={{ borderBottom:'1px solid #E4DFD1', background:'#F2EEE3' }}>
+                                                        <th style={{ textAlign:'left', padding:'6px 8px', fontSize:12, fontWeight:600, color:'#666F6C', lineHeight:1.4 }}>Attribute</th>
+                                                        <th style={{ textAlign:'left', padding:'6px 8px', fontSize:12, fontWeight:600, color:'#666F6C', lineHeight:1.4 }}>Pages</th>
+                                                        <th style={{ textAlign:'right', padding:'6px 8px', fontSize:12, fontWeight:600, color:'#666F6C', lineHeight:1.4 }}>Base Price</th>
+                                                        <th style={{ textAlign:'right', padding:'6px 8px', fontSize:12, fontWeight:600, color:'#666F6C', lineHeight:1.4 }}>Selling Price</th>
+                                                        <th style={{ padding:'6px 8px' }}></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {saveVariants.map(v => (
-                                                        <tr key={v.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                                            <td className="py-1.5 pr-2 pl-3">
-                                                                <input
-                                                                    type="text"
-                                                                    value={v.attribute}
-                                                                    onChange={e => updateVariantRow(v.id, 'attribute', e.target.value)}
-                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
-                                                                    placeholder="e.g. A4"
-                                                                />
+                                                        <tr key={v.id} style={{ borderBottom:'1px solid #F2EEE3' }}>
+                                                            <td style={{ padding:'4px 8px' }}>
+                                                                <input type="text" value={v.attribute} onChange={e => updateVariantRow(v.id, 'attribute', e.target.value)} placeholder="e.g. A4" style={{ width:70, padding:'4px 8px', border:'1px solid #E4DFD1', borderRadius:6, fontSize:13, color:'#23282A', outline:'none', fontFamily:'Inter,sans-serif' }} />
                                                             </td>
-                                                            <td className="py-1.5 px-2">
-                                                                <input
-                                                                    type="number"
-                                                                    value={v.pages}
-                                                                    onChange={e => updateVariantRow(v.id, 'pages', parseInt(e.target.value) || 1)}
-                                                                    className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
-                                                                    min={1}
-                                                                />
+                                                            <td style={{ padding:'4px 8px' }}>
+                                                                <input type="number" value={v.pages} onChange={e => updateVariantRow(v.id, 'pages', parseInt(e.target.value) || 1)} min={1} style={{ width:50, padding:'4px 8px', border:'1px solid #E4DFD1', borderRadius:6, fontSize:13, color:'#23282A', outline:'none', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums' }} />
                                                             </td>
-                                                            <td className="py-1.5 px-2 text-right text-slate-600 font-medium">
+                                                            <td style={{ padding:'4px 8px', textAlign:'right', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13, color:'#666F6C' }}>
                                                                 {formatCurrency(v.basePrice)}
                                                             </td>
-                                                            <td className="py-1.5 px-2">
-                                                                <input
-                                                                    type="number"
-                                                                    value={v.sellingPrice || ''}
-                                                                    onChange={e => updateVariantRow(v.id, 'sellingPrice', parseFloat(e.target.value) || 0)}
-                                                                    className="w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all duration-200"
-                                                                    min={0}
-                                                                    step={0.01}
-                                                                    placeholder="0.00"
-                                                                />
+                                                            <td style={{ padding:'4px 8px' }}>
+                                                                <input type="number" value={v.sellingPrice || ''} onChange={e => updateVariantRow(v.id, 'sellingPrice', parseFloat(e.target.value) || 0)} min={0} step={0.01} placeholder="0.00" style={{ width:70, padding:'4px 8px', border:'1px solid #E4DFD1', borderRadius:6, fontSize:13, color:'#23282A', textAlign:'right', outline:'none', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums' }} />
                                                             </td>
-                                                            <td className="py-1.5 pl-2 pr-3">
-                                                                <button type="button" onClick={() => removeVariantRow(v.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors duration-200 hover:bg-red-50 rounded-lg">
-                                                                    <X size={14} />
-                                                                </button>
+                                                            <td style={{ padding:'4px 8px' }}>
+                                                                <button type="button" onClick={() => removeVariantRow(v.id)} style={{ padding:2, background:'none', border:'none', cursor:'pointer', color:'#B23B3B' }}><X size={14} /></button>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1127,16 +1097,16 @@ const SmartPricing: React.FC = () => {
                                             </table>
                                         </div>
                                     )}
-                                    <p className="text-[11px] text-slate-400 mt-1.5">Base price auto-calculated from cost per page. Add up to 5 variants.</p>
+                                    <p style={{ fontSize:12, color:'#666F6C', lineHeight:1.45, marginTop:6 }}>Base price auto-calculated from cost per page. Add up to 5 variants.</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-100 flex gap-3">
+                        <div className="flex gap-2" style={{ padding:'12px 16px', borderTop:'1px solid #E4DFD1' }}>
                             <button
                                 type="button"
                                 onClick={() => setShowSaveDialog(false)}
-                                className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm text-sm font-medium active:scale-[0.98]"
+                                style={{ flex:1, padding:'7px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'transparent', color:'#0F3D3E', cursor:'pointer', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:13, lineHeight:1.4 }}
                             >
                                 Cancel
                             </button>
@@ -1144,7 +1114,7 @@ const SmartPricing: React.FC = () => {
                                 type="button"
                                 onClick={handleSaveFromDialog}
                                 disabled={isCreatingProduct || !saveItemName.trim()}
-                                className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-indigo-200/50 text-sm font-medium active:scale-[0.98]"
+                                style={{ flex:1, padding:'7px 12px', borderRadius:9, border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:13, lineHeight:1.4, background:'linear-gradient(135deg, #1C8C86, #146B67)', color:'#fff', opacity: (isCreatingProduct || !saveItemName.trim()) ? 0.5 : 1 }}
                             >
                                 {isCreatingProduct ? 'Saving...' : editingProductId ? 'Update' : 'Save'}
                             </button>
@@ -1153,58 +1123,53 @@ const SmartPricing: React.FC = () => {
                 </div>
             )}
 
+            {/* ── Summary Card Modal ── */}
             {showSummaryCard && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white/95 backdrop-blur-md rounded-2xl w-full max-w-sm shadow-2xl shadow-indigo-500/10 border border-white/20">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                            <h2 className="text-xl font-bold text-slate-800 tracking-tight">Price Summary Card</h2>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handleSaveCardImage}
-                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 hover:shadow-sm"
-                                    title="Save as Image"
-                                >
-                                    <Download size={20} />
+                <div className="fixed inset-0" style={{ background:'rgba(0,0,0,0.4)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:16 }}>
+                    <div style={{ background:'#FEFDFB', borderRadius:14, width:'100%', maxWidth:340, boxShadow:'0 20px 50px rgba(15,61,62,0.16)', border:'1px solid #E4DFD1', overflow:'hidden' }}>
+                        <div className="flex items-center justify-between" style={{ padding:'12px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                            <h2 style={{ fontSize:20, fontWeight:600, color:'#23282A', letterSpacing:'-0.01em', lineHeight:1.3, margin:0 }}>Price Summary Card</h2>
+                            <div className="flex items-center gap-1">
+                                <button onClick={handleSaveCardImage} style={{ padding:4, background:'none', border:'none', cursor:'pointer', borderRadius:6, color:'#1C8C86' }} title="Save as Image">
+                                    <Download size={18} />
                                 </button>
-                                <button onClick={() => setShowSummaryCard(false)} className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm">
-                                    <X size={20} className="text-slate-400" />
+                                <button onClick={() => setShowSummaryCard(false)} style={{ padding:4, background:'none', border:'none', cursor:'pointer', borderRadius:6, color:'#666F6C' }}>
+                                    <X size={18} />
                                 </button>
                             </div>
                         </div>
-                        <div id="price-summary-card" className="p-6">
-                            <div className="space-y-4">
-                                <div className="text-center pb-4 border-b border-slate-100">
-                                    <h3 className="text-lg font-bold text-slate-800 tracking-tight">Pricing Summary</h3>
-                                    <p className="text-xs text-slate-400 mt-1">{new Date().toLocaleDateString()}</p>
+                        <div id="price-summary-card" style={{ padding:16 }}>
+                            <div style={{ textAlign:'center', paddingBottom:12, borderBottom:'1px solid #E4DFD1' }}>
+                                <h3 style={{ fontSize:18, fontWeight:600, color:'#23282A', letterSpacing:'-0.01em', lineHeight:1.3, margin:0 }}>Pricing Summary</h3>
+                                <p style={{ fontSize:12, color:'#666F6C', marginTop:4 }}>{new Date().toLocaleDateString()}</p>
+                            </div>
+                            <div style={{ marginTop:12 }}>
+                                <div className="flex justify-between" style={{ padding:'4px 0', fontSize:13, lineHeight:1.5 }}>
+                                    <span style={{ color:'#666F6C' }}>Pages per Copy</span>
+                                    <span style={{ fontWeight:600, color:'#23282A' }}>{pages}</span>
                                 </div>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between py-1">
-                                        <span className="text-slate-500">Pages per Copy</span>
-                                        <span className="font-semibold text-slate-800">{pages}</span>
-                                    </div>
-                                    <div className="flex justify-between py-1">
-                                        <span className="text-slate-500">Sheets Needed</span>
-                                        <span className="font-semibold text-slate-800">{totalSheets}</span>
-                                    </div>
-                                    <div className="flex justify-between py-1">
-                                        <span className="text-slate-500">Toner</span>
-                                        <span className="font-semibold text-slate-800">{selectedToner?.name || 'None'}</span>
-                                    </div>
-                                    <div className="flex justify-between py-1">
-                                        <span className="text-slate-500">Finishing</span>
-                                        <span className="font-semibold text-slate-800">{finishingOptions.filter(o => o.enabled).map(o => o.name).join(', ') || 'None'}</span>
-                                    </div>
+                                <div className="flex justify-between" style={{ padding:'4px 0', fontSize:13, lineHeight:1.5 }}>
+                                    <span style={{ color:'#666F6C' }}>Sheets Needed</span>
+                                    <span style={{ fontWeight:600, color:'#23282A' }}>{totalSheets}</span>
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
-                                    <span className="font-bold text-2xl text-slate-900 tracking-tight">Total</span>
-                                    <span className="font-bold text-2xl text-slate-900 tracking-tight">{formatCurrency(sellingPrice)}</span>
+                                <div className="flex justify-between" style={{ padding:'4px 0', fontSize:13, lineHeight:1.5 }}>
+                                    <span style={{ color:'#666F6C' }}>Toner</span>
+                                    <span style={{ fontWeight:600, color:'#23282A' }}>{selectedToner?.name || 'None'}</span>
+                                </div>
+                                <div className="flex justify-between" style={{ padding:'4px 0', fontSize:13, lineHeight:1.5 }}>
+                                    <span style={{ color:'#666F6C' }}>Finishing</span>
+                                    <span style={{ fontWeight:600, color:'#23282A' }}>{finishingOptions.filter(o => o.enabled).map(o => o.name).join(', ') || 'None'}</span>
                                 </div>
                             </div>
+                            <div className="flex items-center justify-between" style={{ marginTop:12, paddingTop:12, borderTop:'1px solid #E4DFD1' }}>
+                                <span style={{ fontSize:20, fontWeight:700, color:'#23282A', letterSpacing:'-0.01em', lineHeight:1.3 }}>Total</span>
+                                <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:20, fontWeight:700, color:'#23282A', letterSpacing:'-0.01em' }}>{formatCurrency(sellingPrice)}</span>
+                            </div>
                         </div>
-                        <div className="p-6 border-t border-slate-100">
+                        <div style={{ padding:'12px 16px', borderTop:'1px solid #E4DFD1' }}>
                             <button
                                 onClick={() => setShowSummaryCard(false)}
-                                className="w-full py-3 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] font-medium"
+                                style={{ width:'100%', padding:'7px 12px', borderRadius:9, border:'1px solid #E4DFD1', cursor:'pointer', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:13, lineHeight:1.4, background:'transparent', color:'#0F3D3E' }}
                             >
                                 Close
                             </button>
