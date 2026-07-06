@@ -526,7 +526,27 @@ const Settings: React.FC = () => {
             if (isSupabaseConfigured()) {
                 const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
                 if (companyId) {
-                    await cloudDb.deleteCompany(companyId);
+                    try {
+                        await cloudDb.deleteCompany(companyId);
+                    } catch (deleteErr) {
+                        const msg = deleteErr instanceof Error ? deleteErr.message : '';
+                        if (msg.includes('cascade_delete_company')) {
+                            const fallbackConfirm = window.confirm(
+                                'Direct deletion failed. Try using the Supabase cascade function?\n\n' +
+                                'If you haven\'t set up the function yet, run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard first.'
+                            );
+                            if (fallbackConfirm) {
+                                const { error: rpcError } = await supabase.rpc('cascade_delete_company', {
+                                    target_company_id: companyId
+                                });
+                                if (rpcError) throw rpcError;
+                            } else {
+                                throw deleteErr;
+                            }
+                        } else {
+                            throw deleteErr;
+                        }
+                    }
                 }
                 await supabase.auth.signOut();
             } else {
@@ -537,7 +557,23 @@ const Settings: React.FC = () => {
             sessionStorage.clear();
             window.location.reload();
         } catch (error) {
-            notify('Failed to delete company: ' + (error instanceof Error ? error.message : String(error)), 'error');
+            const msg = error instanceof Error ? error.message : String(error);
+            if (msg.includes('foreign key') || msg.includes('23503')) {
+                notify(
+                    'Company data could not be fully deleted due to database constraints. ' +
+                    'Run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard.',
+                    'error'
+                );
+            } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                notify(
+                    'Could not reach the local backend server to wipe the database. ' +
+                    'Make sure the backend is running (npm run dev). ' +
+                    'Local storage has been cleared — you will be signed out.',
+                    'warning'
+                );
+            } else {
+                notify('Failed to delete company: ' + msg, 'error');
+            }
         }
     };
 

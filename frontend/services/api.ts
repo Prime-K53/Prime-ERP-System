@@ -2287,11 +2287,19 @@ export const api = {
     }, 'Cloud.TriggerSync'),
 
     deleteWorkspace: () => handle(async () => {
-      if (!HAS_REMOTE_BACKEND) {
-        return { success: true, deletedLocally: true };
+      if (HAS_REMOTE_BACKEND) {
+        const response = await apiClient.delete('/system/workspace');
+        return response.data;
       }
-      const response = await apiClient.delete('/system/workspace');
-      return response.data;
+      const resp = await fetch('http://127.0.0.1:3000/api/system/workspace', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        throw new Error(text || `Backend returned ${resp.status}`);
+      }
+      return resp.json();
     }, 'System.DeleteWorkspace')
   }
 };

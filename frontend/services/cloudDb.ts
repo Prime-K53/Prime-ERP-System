@@ -601,18 +601,62 @@ export const cloudDb = {
 
   async deleteCompany(companyId: string): Promise<void> {
     if (!SUPABASE_ENABLED) return;
+    const tablesWithCompanyId = [
+      'sales', 'invoices', 'sale_items', 'customers', 'inventory',
+      'inventory_transactions', 'material_batches', 'warehouse_inventory',
+      'material_categories', 'sales_orders', 'sales_exchanges',
+      'sales_exchange_items', 'sales_exchange_approvals', 'reprint_jobs',
+      'market_adjustments', 'market_adjustment_transactions',
+      'transaction_adjustment_snapshots', 'audit_logs', 'documents',
+      'tasks', 'classes', 'subjects', 'examination_batches',
+      'examination_classes', 'examination_subjects',
+      'examination_bom_calculations', 'examination_class_adjustments',
+      'examination_pricing_audit', 'examination_batch_notifications',
+      'notification_audit_logs', 'bom_default_materials',
+      'profit_margin_settings', 'profit_margin_audit_logs',
+      'work_centers', 'production_resources', 'work_orders',
+      'production_batches', 'chart_of_accounts', 'ledger_entries',
+      'budgets', 'transfers', 'expenses', 'income', 'suppliers',
+      'purchase_orders', 'goods_receipts', 'departments', 'employees',
+      'payroll_runs', 'payslips', 'customer_payments', 'assets',
+      'settings', 'schools', 'examinations',
+    ];
+
     await withSession(async () => {
-      const { error: companyError } = await supabase
-        .from('companies')
-        .delete()
-        .eq('id', companyId);
-      if (companyError) throw companyError;
+      for (const table of tablesWithCompanyId) {
+        try {
+          const { error } = await supabase
+            .from(table)
+            .delete()
+            .eq('company_id', companyId);
+          if (error && !error.message?.includes('does not exist')) {
+            console.warn(`[cloudDb] Failed to clear ${table}:`, error.message);
+          }
+        } catch {
+          // table may not exist on Supabase — skip silently
+        }
+      }
 
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('company_id', companyId);
       if (profileError) throw profileError;
+
+      const { error: companyError } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+      if (companyError) {
+        if (companyError.message?.includes('foreign key') || companyError.code === '23503') {
+          throw new Error(
+            'Company cannot be deleted because other records still reference it. ' +
+            'Run the cascade_delete_company SQL function in your Supabase dashboard, ' +
+            'or manually delete related data first. See database/supabase-cascade-delete.sql'
+          );
+        }
+        throw companyError;
+      }
     });
   },
 };
