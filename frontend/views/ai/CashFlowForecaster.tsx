@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, TrendingUp, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { useSales } from '../../context/SalesContext';
@@ -56,11 +56,23 @@ const CashFlowForecaster: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Start Balance</div><div className="text-lg font-bold text-slate-800">{currency}{(result.summary.startingBalance || 0).toLocaleString()}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Projected ({days}d)</div><div className={`text-lg font-bold ${result.summary.finalProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{currency}{(result.summary.finalProjectedBalance || 0).toLocaleString()}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Min Balance</div><div className={`text-lg font-bold ${result.summary.minimumProjectedBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{currency}{(result.summary.minimumProjectedBalance || 0).toLocaleString()}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500 capitalize">Risk: {result.summary.riskLevel}</div><div className={`text-lg font-bold capitalize ${result.summary.riskLevel === 'low' ? 'text-emerald-600' : result.summary.riskLevel === 'medium' ? 'text-amber-600' : 'text-red-600'}`}>{result.summary.riskLevel}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Start Balance</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.summary.startingBalance || 0).toLocaleString()}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Projected ({days}d)</p><p className={`text-lg md:text-xl font-semibold ${result.summary.finalProjectedBalance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>{currency}{(result.summary.finalProjectedBalance || 0).toLocaleString()}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><TrendingDown size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Min Balance</p><p className={`text-lg md:text-xl font-semibold ${result.summary.minimumProjectedBalance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>{currency}{(result.summary.minimumProjectedBalance || 0).toLocaleString()}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5 capitalize">Risk: {result.summary.riskLevel}</p><p className={`text-lg md:text-xl font-semibold capitalize ${result.summary.riskLevel === 'low' ? 'text-emerald-600' : result.summary.riskLevel === 'medium' ? 'text-amber-600' : 'text-red-600'}`}>{result.summary.riskLevel}</p></div>
+            </div>
           </div>
 
           {result.summary.daysUntilNegative >= 0 && (

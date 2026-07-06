@@ -27,6 +27,8 @@ import { z } from 'zod';
 import { api } from '../services/api';
 import { dbService } from '../services/db';
 import cloudDb from '../services/cloudDb';
+import { supabase } from '../services/supabaseClient';
+import { isSupabaseConfigured } from '../services/cloudMode';
 import { getPlaceholder } from '../constants/placeholders';
 import { isPasswordProtectionEnabled, normalizeSecuritySettings, withNormalizedSecurityConfig } from '../utils/securitySettings';
 import { calculatePhotocopyCostPerPage, calculateTypePrintingCostPerPage } from '../utils/pricing';
@@ -510,20 +512,25 @@ const Settings: React.FC = () => {
     const handleDeleteCompany = async () => {
         const confirmed = window.confirm(
             `Delete "${config.companyName}" permanently?\n\n` +
-            'This will remove your company from Supabase and reset all local data. This action cannot be undone.'
+            'This will remove your company from the cloud and reset all local data. This action cannot be undone.'
         );
         if (!confirmed) return;
 
         const doubleConfirm = window.confirm(
             'ARE YOU SURE?\n\n' +
-            'All company data on Supabase will be deleted. Local data will be cleared. You will be signed out.'
+            'All company data will be deleted. Local data will be cleared. You will be signed out.'
         );
         if (!doubleConfirm) return;
 
         try {
-            const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
-            if (companyId) {
-                await cloudDb.deleteCompany(companyId);
+            if (isSupabaseConfigured()) {
+                const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
+                if (companyId) {
+                    await cloudDb.deleteCompany(companyId);
+                }
+                await supabase.auth.signOut();
+            } else {
+                await api.system.deleteWorkspace();
             }
             await dbService.factoryReset();
             localStorage.clear();

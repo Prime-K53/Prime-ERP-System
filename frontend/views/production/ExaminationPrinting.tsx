@@ -961,81 +961,38 @@ const ExaminationPrinting: React.FC = () => {
         <div className="grid grid-cols-1 gap-6">
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              {/* Stats Cards - VAT Module Style */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Pending Jobs */}
-                <div className="bg-white p-6 rounded-lg shadow border-l-4 border-amber-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Pending Jobs</p>
-                      <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                        {stats?.pending_jobs || 0}
-                      </h3>
-                      <span className="text-xs text-amber-600 flex items-center mt-2 font-medium">
-                        <Clock size={14} className="mr-1" />
-                        In Queue
-                      </span>
-                    </div>
-                    <div className="p-3 bg-amber-50 rounded-full">
-                      <Activity className="text-amber-600" size={24} />
-                    </div>
+              {/* Stats Cards (QBO Style) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Clock size={20} /></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pending Jobs</p>
+                    <p className="text-lg md:text-xl font-semibold text-slate-900">{stats?.pending_jobs || 0}</p>
+                    <p className="text-[10px] text-amber-600 mt-0.5">In Queue</p>
                   </div>
                 </div>
-
-                {/* Total Revenue */}
-                <div className="bg-white p-6 rounded-lg shadow border-l-4 border-emerald-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
-                      <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                        {companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'} {(stats?.total_revenue || 0).toLocaleString()}
-                      </h3>
-                      <span className="text-xs text-emerald-600 flex items-center mt-2 font-medium">
-                        <TrendingUp size={14} className="mr-1" />
-                        Lifetime Revenue
-                      </span>
-                    </div>
-                    <div className="p-3 bg-emerald-50 rounded-full">
-                      <DollarSign className="text-emerald-600" size={24} />
-                    </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+                  <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Revenue</p>
+                    <p className="text-lg md:text-xl font-semibold text-emerald-600">{companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'} {(stats?.total_revenue || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Lifetime Revenue</p>
                   </div>
                 </div>
-
-                {/* Total Waste */}
-                <div className="bg-white p-6 rounded-lg shadow border-l-4 border-rose-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Total Waste</p>
-                      <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                        {(stats?.total_waste || 0).toLocaleString()}
-                      </h3>
-                      <span className="text-xs text-rose-600 flex items-center mt-2 font-medium">
-                        <ArrowDownRight size={14} className="mr-1" />
-                        Sheets Wasted
-                      </span>
-                    </div>
-                    <div className="p-3 bg-rose-50 rounded-full">
-                      <Trash2 className="text-rose-600" size={24} />
-                    </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+                  <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg shrink-0"><Trash2 size={20} /></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Waste</p>
+                    <p className="text-lg md:text-xl font-semibold text-slate-900">{(stats?.total_waste || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-rose-600 mt-0.5">Sheets Wasted</p>
                   </div>
                 </div>
-
-                {/* Total Sheets */}
-                <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-gray-500 font-medium">Total Sheets</p>
-                      <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                        {(stats?.total_sheets || 0).toLocaleString()}
-                      </h3>
-                      <span className="text-xs text-blue-600 flex items-center mt-2 font-medium">
-                        <ArrowUpRight size={14} className="mr-1" />
-                        Printed Total
-                      </span>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-full">
-                      <Layers className="text-blue-600" size={24} />
-                    </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Layers size={20} /></div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Sheets</p>
+                    <p className="text-lg md:text-xl font-semibold text-slate-900">{(stats?.total_sheets || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-blue-600 mt-0.5">Printed Total</p>
                   </div>
                 </div>
               </div>

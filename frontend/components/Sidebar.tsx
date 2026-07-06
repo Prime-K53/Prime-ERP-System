@@ -255,6 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
             { label: 'Billing / Invoices', path: '/sales-flow/invoices', icon: <FileSpreadsheet size={14} /> },
             { label: 'Subscriptions', path: '/sales-flow/subscriptions', icon: <RefreshCw size={14} /> },
             { label: 'Lead Board', path: '/sales-flow/leads', icon: <Target size={14} /> },
+            { label: 'Commissions', path: '/sales-flow/commissions', icon: <Award size={14} /> },
           ]
         },
         {

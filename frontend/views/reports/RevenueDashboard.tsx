@@ -140,15 +140,6 @@ const RevenueDashboard: React.FC = () => {
     },
   ];
 
-  const toneClasses: Record<string, { icon: string; card: string; value: string }> = {
-    emerald: { icon: 'text-emerald-600 bg-emerald-50', card: 'border-emerald-100', value: 'text-emerald-700' },
-    slate: { icon: 'text-slate-600 bg-slate-100', card: 'border-slate-200', value: 'text-slate-900' },
-    indigo: { icon: 'text-indigo-600 bg-indigo-50', card: 'border-indigo-100', value: 'text-indigo-700' },
-    blue: { icon: 'text-blue-600 bg-blue-50', card: 'border-blue-100', value: 'text-blue-700' },
-    amber: { icon: 'text-amber-600 bg-amber-50', card: 'border-amber-100', value: 'text-amber-700' },
-    rose: { icon: 'text-rose-600 bg-rose-50', card: 'border-rose-100', value: 'text-rose-700' },
-  };
-
   return (
     <div className="space-y-6 animate-fadeIn p-4 md:p-6 max-w-[1600px] mx-auto w-full">
       <div className="flex flex-col gap-4">
@@ -172,21 +163,18 @@ const RevenueDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {kpis.map((kpi) => {
             const Icon = kpi.icon;
-            const tone = toneClasses[kpi.tone];
             return (
-              <div key={kpi.label} className={`bg-white p-5 rounded-2xl border shadow-sm ${tone.card}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">{kpi.label}</p>
-                    <h3 className={`text-2xl font-black mt-1 tabular-nums ${tone.value}`}>{kpi.value}</h3>
-                    <p className="text-[11px] text-slate-500 mt-1 font-medium">{kpi.subtext}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl ${tone.icon}`}>
-                    <Icon size={22} />
-                  </div>
+              <div key={kpi.label} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-${kpi.tone === 'emerald' ? 'emerald' : kpi.tone === 'slate' ? 'slate' : kpi.tone === 'indigo' ? 'indigo' : kpi.tone === 'blue' ? 'blue' : kpi.tone === 'amber' ? 'amber' : 'rose'}-500 hover:bg-slate-50 transition-all duration-200`}>
+                <div className={`p-2.5 rounded-lg shrink-0 ${kpi.tone === 'emerald' ? 'bg-emerald-50 text-emerald-600' : kpi.tone === 'slate' ? 'bg-slate-50 text-slate-600' : kpi.tone === 'indigo' ? 'bg-indigo-50 text-indigo-600' : kpi.tone === 'blue' ? 'bg-blue-50 text-blue-600' : kpi.tone === 'amber' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
+                  <Icon size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{kpi.label}</p>
+                  <p className={`text-lg md:text-xl font-semibold ${kpi.tone === 'emerald' ? 'text-emerald-700' : kpi.tone === 'slate' ? 'text-slate-900' : kpi.tone === 'indigo' ? 'text-indigo-700' : kpi.tone === 'blue' ? 'text-blue-700' : kpi.tone === 'amber' ? 'text-amber-700' : 'text-rose-700'}`}>{kpi.value}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{kpi.subtext}</p>
                 </div>
               </div>
             );

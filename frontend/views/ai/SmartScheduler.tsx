@@ -42,11 +42,23 @@ const SmartScheduler: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Scheduled</div><div className="text-2xl font-bold text-slate-800">{result.metrics.totalScheduled}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Unscheduled</div><div className="text-2xl font-bold text-amber-600">{result.metrics.totalUnscheduled}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">Overdue</div><div className="text-2xl font-bold text-red-600">{result.metrics.overdueJobs}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Est. Hours</div><div className="text-2xl font-bold text-slate-800">{result.metrics.totalEstimatedHours}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Calendar size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Scheduled</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.totalScheduled}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Clock size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Unscheduled</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.totalUnscheduled}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Overdue</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.overdueJobs}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Cpu size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Est. Hours</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.totalEstimatedHours}</p></div>
+            </div>
           </div>
 
           {result.bottlenecks?.length > 0 && (

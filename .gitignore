@@ -9,6 +9,7 @@ build
 *.err
 *.db
 *.db-journal
+*.sqlite
 .opencode
 .vite
 coverage

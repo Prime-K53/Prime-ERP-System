@@ -74,7 +74,7 @@ const SalesFlowHub: React.FC = () => {
     {
       label: 'Commissions',
       description: 'Track and approve sales commissions for your sales team.',
-      path: '/revenue/sales-audit',
+      path: '/sales-flow/commissions',
       icon: <Award />,
       color: 'bg-amber-50 text-amber-600'
     }

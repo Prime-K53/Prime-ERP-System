@@ -1516,32 +1516,47 @@ const ExaminationPrintingV2: React.FC = () => {
             </div>
           </div>
 
-          {/* KPI Grid */}
+          {/* KPI Grid (QBO Style) */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-500">Total Jobs</p>
-              <p className="text-2xl font-black text-slate-900">{reportingSummary.totalJobs}</p>
-              <p className="text-xs text-slate-500 mt-2">Draft {reportingSummary.draftJobs} | Calculated {reportingSummary.calculatedJobs}</p>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Layers size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Jobs</p>
+                <p className="text-lg md:text-xl font-semibold text-slate-900">{reportingSummary.totalJobs}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Draft {reportingSummary.draftJobs} | Calculated {reportingSummary.calculatedJobs}</p>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-500">Learners / Pages</p>
-              <p className="text-2xl font-black text-slate-900">{reportingSummary.totalLearners.toLocaleString()}</p>
-              <p className="text-xs text-slate-500 mt-2">{reportingSummary.totalPages.toLocaleString()} pages</p>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><UserRound size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Learners / Pages</p>
+                <p className="text-lg md:text-xl font-semibold text-slate-900">{reportingSummary.totalLearners.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{reportingSummary.totalPages.toLocaleString()} pages</p>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-500">Production Cost</p>
-              <p className="text-2xl font-black text-slate-900">{formatMoney(reportingSummary.totalProductionCost)}</p>
-              <p className="text-xs text-slate-500 mt-2">Raw material costs</p>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Calculator size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Production Cost</p>
+                <p className="text-lg md:text-xl font-semibold text-amber-600">{formatMoney(reportingSummary.totalProductionCost)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Raw material costs</p>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <p className="text-xs text-slate-500">Adjusted Cost</p>
-              <p className="text-2xl font-black text-slate-900">{formatMoney(reportingSummary.totalAdjustedCost)}</p>
-              <p className="text-xs text-slate-500 mt-2">With adjustments</p>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0"><FileText size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Adjusted Cost</p>
+                <p className="text-lg md:text-xl font-semibold text-violet-600">{formatMoney(reportingSummary.totalAdjustedCost)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">With adjustments</p>
+              </div>
             </div>
-            <div className="bg-emerald-50 rounded-2xl border border-emerald-200 p-4">
-              <p className="text-xs text-emerald-600 font-semibold">Revenue / Margin</p>
-              <p className="text-2xl font-black text-emerald-700">{formatMoney(reportingSummary.totalRevenue)}</p>
-              <p className="text-xs text-emerald-600 mt-2">Margin {formatMoney(reportingSummary.marginAmount)} ({formatPercent(reportingSummary.marginPercent)})</p>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Revenue / Margin</p>
+                <p className="text-lg md:text-xl font-semibold text-emerald-700">{formatMoney(reportingSummary.totalRevenue)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Margin {formatMoney(reportingSummary.marginAmount)} ({formatPercent(reportingSummary.marginPercent)})</p>
+              </div>
             </div>
           </div>
 

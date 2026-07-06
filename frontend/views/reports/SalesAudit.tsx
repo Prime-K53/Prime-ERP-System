@@ -298,57 +298,38 @@ const SalesAudit: React.FC = () => {
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Total Revenue</p>
-                            <h3 className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{formatCurrency(auditData.totalSales)}</h3>
-                            <p className="text-[11px] text-slate-500 mt-1 font-medium">{auditData.totalTransactions} transactions</p>
-                        </div>
-                        <div className="p-3 bg-blue-50 rounded-xl">
-                            <DollarSign size={24} className="text-blue-600" />
-                        </div>
+            {/* Summary Cards (QBO Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Revenue</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900">{formatCurrency(auditData.totalSales)}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{auditData.totalTransactions} transactions</p>
                     </div>
                 </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Avg Transaction</p>
-                            <h3 className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{formatCurrency(auditData.averageTransaction)}</h3>
-                            <p className="text-[11px] text-slate-500 mt-1 font-medium">Per sale average</p>
-                        </div>
-                        <div className="p-3 bg-emerald-50 rounded-xl">
-                            <TrendingUp size={24} className="text-emerald-600" />
-                        </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Avg Transaction</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900">{formatCurrency(auditData.averageTransaction)}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Per sale average</p>
                     </div>
                 </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Voided/Cancelled</p>
-                            <h3 className="text-2xl font-black text-rose-600 mt-1 tabular-nums">{formatCurrency(auditData.voidedAmount)}</h3>
-                            <p className="text-[11px] text-slate-500 mt-1 font-medium">Non-collected revenue</p>
-                        </div>
-                        <div className="p-3 bg-rose-50 rounded-xl">
-                            <XCircle size={24} className="text-rose-600" />
-                        </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg shrink-0"><XCircle size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Voided/Cancelled</p>
+                        <p className="text-lg md:text-xl font-semibold text-rose-600">{formatCurrency(auditData.voidedAmount)}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Non-collected revenue</p>
                     </div>
                 </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Payments Received</p>
-                            <h3 className="text-2xl font-black text-emerald-600 mt-1 tabular-nums">{auditData.recentPayments.length}</h3>
-                            <p className="text-[11px] text-slate-500 mt-1 font-medium">Payment records</p>
-                        </div>
-                        <div className="p-3 bg-amber-50 rounded-xl">
-                            <Receipt size={24} className="text-amber-600" />
-                        </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Receipt size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Payments Received</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900">{auditData.recentPayments.length}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Payment records</p>
                     </div>
                 </div>
             </div>

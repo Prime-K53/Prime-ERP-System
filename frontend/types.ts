@@ -2069,12 +2069,19 @@ export interface CRMTask {
   id: string;
   title: string;
   description?: string;
+  notes?: string;
   assignedTo?: string;
   dueDate?: string;
-  status: string;
-  priority?: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   relatedEntityType?: string;
   relatedEntityId?: string;
+  relatedTo?: { type: string; name: string; id: string };
+  hasAlarm?: boolean;
+  reminderDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  category?: string;
   [key: string]: any;
 }
 export interface SmartPricingConfig {

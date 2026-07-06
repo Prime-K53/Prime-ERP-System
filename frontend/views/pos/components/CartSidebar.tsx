@@ -81,51 +81,51 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     return (
         <div className="flex flex-col h-full bg-white overflow-hidden border-l border-slate-200 rounded-xl">
             {/* Checkout Header */}
-            <div className="px-6 py-3 flex justify-between items-center bg-white border-b border-slate-200 shrink-0 rounded-t-xl">
-                <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-slate-100 rounded text-slate-800">
-                        <ShoppingCart size={16} />
+            <div className="px-4 py-2.5 flex justify-between items-center bg-white border-b border-slate-200 shrink-0 rounded-t-xl border-l-4 border-l-emerald-500">
+                <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-emerald-50 rounded text-emerald-600">
+                        <ShoppingCart size={15} />
                     </div>
                     <div>
-                        <h3 className="text-xs font-bold text-slate-800">Current Order</h3>
-                        <p className="text-[10px] text-slate-500 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items</p>
+                        <h3 className="text-xs font-bold text-slate-800 leading-tight">Current Order</h3>
+                        <p className="text-[9px] text-slate-500 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items</p>
                     </div>
                 </div>
                 <button
                     onClick={clearCart}
                     disabled={cart.length === 0}
-                    className="text-red-600 hover:underline text-[10px] font-semibold disabled:opacity-0"
+                    className="text-red-500 hover:text-red-700 text-[10px] font-bold disabled:opacity-0 disabled:pointer-events-none transition-colors"
                 >
                     Clear all
                 </button>
             </div>
 
             {/* Customer Selector */}
-            <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 shrink-0">
+            <div className="px-3 py-1.5 bg-white border-b border-slate-200 shrink-0">
                 <button
                     onClick={onSelectCustomer}
-                    className={`w-full flex justify-between items-center p-1.5 rounded-xl border transition-all bg-white
+                    className={`w-full flex justify-between items-center p-1.5 rounded-lg border transition-all bg-white shadow-sm
                     ${selectedCustomerName
-                            ? 'border-blue-600'
-                            : 'border-slate-200 hover:border-slate-400'}`}
+                            ? 'border-blue-300 bg-blue-50/30'
+                            : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/20'}`}
                 >
                     <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center
-                          ${selectedCustomerName ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors
+                          ${selectedCustomerName ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                             {selectedCustomerName ? <User size={12} /> : <UserPlus size={12} />}
                         </div>
                         <div className="text-left">
-                            <div className="text-[10px] font-semibold text-slate-800">
-                                {selectedCustomerName ? selectedCustomerName : 'Add Customer'}
+                            <div className="text-[10px] font-semibold text-slate-800 leading-tight">
+                                {selectedCustomerName || 'Add Customer'}
                             </div>
                             {selectedCustomerName && (
-                                <div className="text-[8px] text-slate-500 font-medium">
-                                    Bal: {currency}{customerOutstanding.toLocaleString()}
+                                <div className={`text-[8px] font-medium ${customerOutstanding > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                    {customerOutstanding > 0 ? 'Balance: ' : 'Bal: '}{currency}{(customerOutstanding || 0).toLocaleString()}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <ChevronRight size={10} className="text-slate-400" />
+                    <ChevronRight size={10} className="text-slate-300" />
                 </button>
             </div>
 
@@ -167,7 +167,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
 
             {/* Checkout Totals Summary */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3 shrink-0 rounded-b-xl">
+            <div className="p-4 bg-white border-t-2 border-slate-100 space-y-3 shrink-0 rounded-b-xl shadow-[0_-2px_8px_-3px_rgba(0,0,0,0.06)]">
                 {roundingEnabled && (
                     <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -229,16 +229,16 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                     </div>
                 )}
 
-                <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-800">Total</span>
-                    <span className="text-xl font-bold text-slate-800">{currency}{formatNumber(displayPrice(roundedTotal, undefined, 'pos'))}</span>
+                <div className="flex justify-between items-center pt-1">
+                    <span className="text-sm font-bold text-slate-700">Total</span>
+                    <span className="text-xl font-bold text-slate-900">{currency}{formatNumber(displayPrice(roundedTotal, undefined, 'pos'))}</span>
                 </div>
 
                 <div className="flex flex-col gap-2">
                     <button
                         onClick={onPay}
                         disabled={cart.length === 0}
-                        className="w-full py-2.5 rounded-full bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:bg-slate-300 flex items-center justify-center gap-2 shadow-sm"
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm hover:from-emerald-700 hover:to-emerald-600 transition-all disabled:opacity-50 disabled:from-slate-300 disabled:to-slate-300 flex items-center justify-center gap-2 shadow-md shadow-emerald-200/50 active:scale-[0.98]"
                     >
                         <span>Receive Payment</span> <ArrowRight size={16} />
                     </button>
@@ -327,17 +327,17 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
     };
 
     return (
-        <div className="p-4 bg-slate-50 hover:bg-blue-50/30 transition-all group relative rounded-xl">
+        <div className="p-3 bg-white border-l-4 border-l-blue-400 hover:border-l-blue-500 hover:bg-blue-50/20 transition-all group relative rounded-lg border border-slate-200 shadow-sm">
             <div className="flex justify-between items-start mb-2">
-                <div className="flex-1 min-w-0 pr-8">
-                    <h4 className="font-semibold text-slate-800 text-xs leading-tight mb-1">{item.name}</h4>
+                <div className="flex-1 min-w-0 pr-6">
+                    <h4 className="font-semibold text-slate-800 text-xs leading-tight mb-0.5">{item.name}</h4>
                     {serviceDetails && (
-                        <div className="text-[10px] text-slate-500 leading-snug mb-1.5">
+                        <div className="text-[10px] text-slate-500 leading-snug mb-1">
                             <div>{serviceDetails.pages} pages x {serviceDetails.copies} copies</div>
                         </div>
                     )}
                     {item.attributes && Object.keys(item.attributes).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1 mt-0.5">
                             {Object.entries(item.attributes).map(([key, value]) => (
                                 <span key={key} className="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                                     {key.replace(/_/g, ' ')}: {String(value)}
@@ -347,8 +347,8 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
                     )}
 
                 </div>
-                <button onClick={() => removeFromCart(item.id)} className="text-slate-400 hover:text-red-600 transition-colors p-1" title="Remove item" aria-label="Remove item from cart">
-                    <X size={14} />
+                <button onClick={() => removeFromCart(item.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-0.5 rounded hover:bg-red-50" title="Remove item" aria-label="Remove item from cart">
+                    <X size={13} />
                 </button>
             </div>
 
@@ -357,8 +357,7 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
                     <div className="flex items-center border border-slate-200 rounded bg-white">
                         <button onClick={() => updateQuantity(item.id, -1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-r border-slate-200 shrink-0" title="Decrease quantity" aria-label="Decrease quantity"><Minus size={8} /></button>
                         <input type="number" value={localQty} onChange={(e) => setLocalQty(e.target.value)} onKeyDown={handleKeyDown} onBlur={handleBlur}
-                            style={{ width: 33, padding: 0, textAlign: 'center', border: 'none', outline: 'none', fontSize: 13, fontWeight: 700, color: '#1e293b', background: 'transparent' }}
-                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                            className="w-[33px] p-0 text-center border-none outline-none text-[13px] font-bold text-slate-800 bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                         <button onClick={() => updateQuantity(item.id, 1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-l border-slate-200 shrink-0" title="Increase quantity" aria-label="Increase quantity"><Plus size={8} /></button>
                     </div>
                     <span className="text-[11px] text-slate-500 flex items-center gap-1">

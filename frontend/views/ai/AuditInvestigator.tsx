@@ -76,11 +76,23 @@ const AuditInvestigator: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Findings</div><div className="text-2xl font-bold text-slate-800">{result.totalFindings}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">High</div><div className="text-2xl font-bold text-red-600">{result.highSeverity}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Medium</div><div className="text-2xl font-bold text-amber-600">{result.mediumSeverity}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Low</div><div className="text-2xl font-bold text-slate-500">{result.lowSeverity}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Search size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Findings</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.totalFindings}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">High</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.highSeverity}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Shield size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Medium</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.mediumSeverity}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Low</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.lowSeverity}</p></div>
+            </div>
           </div>
           {result.answer && <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-sm text-slate-700 whitespace-pre-wrap">{result.answer}</div></div>}
           <div className="bg-white rounded-xl border border-slate-200">

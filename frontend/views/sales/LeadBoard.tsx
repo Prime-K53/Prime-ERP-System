@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, ExternalLink, Target, Calendar, DollarSign } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ExternalLink, Target, Calendar, DollarSign, TrendingUp } from 'lucide-react';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -73,18 +73,33 @@ const LeadBoard: React.FC = () => {
           <h1 className="text-xl md:text-2xl font-semibold text-slate-900 tracking-tight">Lead Board</h1>
           <p className="text-[13px] text-slate-500 font-medium">Track opportunities across your sales pipeline.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[12px] w-full md:w-auto">
-          <div className="bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <p className="text-slate-400 font-bold uppercase tracking-wide text-[10px]">Total Leads</p>
-            <p className="text-slate-900 font-semibold">{filteredLeads.length}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+              <Target size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Leads</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900">{filteredLeads.length}</p>
+            </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <p className="text-slate-400 font-bold uppercase tracking-wide text-[10px]">Pipeline Value</p>
-            <p className="text-slate-900 font-semibold">{currency}{totalPipelineValue.toLocaleString()}</p>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+              <DollarSign size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pipeline Value</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{totalPipelineValue.toLocaleString()}</p>
+            </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg px-3 py-2">
-            <p className="text-slate-400 font-bold uppercase tracking-wide text-[10px]">Win Rate</p>
-            <p className="text-slate-900 font-semibold">{conversionRate}%</p>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0">
+              <TrendingUp size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Win Rate</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900">{conversionRate}%</p>
+            </div>
           </div>
         </div>
       </div>

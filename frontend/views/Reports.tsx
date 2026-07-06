@@ -143,67 +143,44 @@ const Reports: React.FC = () => {
 
     return (
       <div className="space-y-6 animate-fadeIn">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Markup Rate</p>
-                <h3 className={`text-2xl font-black mt-1 tabular-nums ${marginPercent >= 20 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {marginPercent.toFixed(1)}%
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  {selectedCustomerName ? `${selectedCustomerName} scope` : 'All revenue sources'}
-                </p>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-xl">
-                <TrendingUp size={24} className="text-emerald-600" />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Markup Rate</p>
+              <p className={`text-lg md:text-xl font-semibold ${marginPercent >= 20 ? 'text-emerald-600' : 'text-amber-600'}`}>{marginPercent.toFixed(1)}%</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{selectedCustomerName ? `${selectedCustomerName} scope` : 'All revenue sources'}</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Profit Markup</p>
-                <h3 className="text-2xl font-black text-blue-600 mt-1 tabular-nums">
-                  {formatCurrency(marginReport.totals.profitMargin)}
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">{marginReport.totals.transactionCount} transactions</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <BarChart3 size={24} className="text-blue-600" />
-              </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><BarChart3 size={20} /></div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Profit Markup</p>
+              <p className="text-lg md:text-xl font-semibold text-blue-600">{formatCurrency(marginReport.totals.profitMargin)}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{marginReport.totals.transactionCount} transactions</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Market Adjustments</p>
-                <h3 className="text-2xl font-black text-indigo-600 mt-1 tabular-nums">
-                  {formatCurrency(marginReport.totals.adjustmentTotal)}
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">{adjustmentShare.toFixed(1)}% of revenue</p>
-              </div>
-              <div className="p-3 bg-indigo-50 rounded-xl">
-                <Coins size={24} className="text-indigo-600" />
-              </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0"><Coins size={20} /></div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Market Adjustments</p>
+              <p className="text-lg md:text-xl font-semibold text-indigo-600">{formatCurrency(marginReport.totals.adjustmentTotal)}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{adjustmentShare.toFixed(1)}% of revenue</p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 tracking-widest uppercase">Rounding Impact</p>
-                <h3 className={`text-2xl font-black mt-1 tabular-nums ${marginReport.totals.roundingTotal >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-                  {marginReport.totals.roundingTotal >= 0 ? '+' : ''}
-                  {formatCurrency(marginReport.totals.roundingTotal)}
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-1 font-medium">Net round up / down</p>
-              </div>
-              <div className="p-3 bg-slate-100 rounded-xl">
-                <Activity size={24} className="text-slate-600" />
-              </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-cyan-500 hover:bg-slate-50 transition-all duration-200">
+            <div className={`p-2.5 rounded-lg shrink-0 ${marginReport.totals.roundingTotal >= 0 ? 'bg-cyan-50 text-cyan-600' : 'bg-rose-50 text-rose-600'}`}>
+              <Activity size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Rounding Impact</p>
+              <p className={`text-lg md:text-xl font-semibold ${marginReport.totals.roundingTotal >= 0 ? 'text-cyan-600' : 'text-rose-600'}`}>
+                {marginReport.totals.roundingTotal >= 0 ? '+' : ''}{formatCurrency(marginReport.totals.roundingTotal)}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Net round up / down</p>
             </div>
           </div>
         </div>

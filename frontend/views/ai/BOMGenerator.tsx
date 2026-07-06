@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, FileText, ArrowLeft } from 'lucide-react';
+import { Loader2, FileText, ArrowLeft, DollarSign, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
@@ -46,11 +46,23 @@ const BOMGenerator: React.FC = () => {
 
       {result?.bom && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Material</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.materialCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Labor</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.laborCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total Cost</div><div className="text-lg font-bold text-slate-800">{currency}{(result.bom.totalCost || 0).toFixed(2)}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500">Suggested Price</div><div className="text-lg font-bold text-emerald-600">{currency}{(result.bom.suggestedSellingPrice || 0).toFixed(2)}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><FileText size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Material</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.bom.materialCost || 0).toFixed(2)}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Labor</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.bom.laborCost || 0).toFixed(2)}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Cost</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.bom.totalCost || 0).toFixed(2)}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Suggested Price</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.bom.suggestedSellingPrice || 0).toFixed(2)}</p></div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200">

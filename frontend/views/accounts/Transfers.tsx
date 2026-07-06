@@ -275,43 +275,35 @@ const Transfers: React.FC = () => {
         </div>
       )}
 
-      {/* Filters and Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6 shrink-0">
-        {/* Summary Cards */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-emerald-600" size={20} />
-            <span className="text-sm font-medium text-slate-600">Total Transfers</span>
+      {/* Summary Cards (QBO Style) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-6 shrink-0">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Transfers</p>
+            <p className="text-lg md:text-xl font-semibold text-emerald-600">{filteredTransfers.length}</p>
           </div>
-          <p className="text-2xl font-bold text-emerald-600">{filteredTransfers.length}</p>
         </div>
-        
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <DollarSign className="text-blue-600" size={20} />
-            <span className="text-sm font-medium text-slate-600">Total Amount</span>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Amount</p>
+            <p className="text-lg md:text-xl font-semibold text-blue-600">{currency}{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</p>
           </div>
-          <p className="text-2xl font-bold text-blue-600">
-            {currency}{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}
-          </p>
         </div>
-        
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <Building2 className="text-purple-600" size={20} />
-            <span className="text-sm font-medium text-slate-600">Active Accounts</span>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0"><Building2 size={20} /></div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Active Accounts</p>
+            <p className="text-lg md:text-xl font-semibold text-violet-600">{activeBankAccounts.length}</p>
           </div>
-          <p className="text-2xl font-bold text-purple-600">{activeBankAccounts.length}</p>
         </div>
-        
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="text-amber-600" size={20} />
-            <span className="text-sm font-medium text-slate-600">This Period</span>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Clock size={20} /></div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">This Period</p>
+            <p className="text-sm font-semibold text-slate-900">{format(parseISO(dateRange.start), 'MMM dd')} - {format(parseISO(dateRange.end), 'MMM dd')}</p>
           </div>
-          <p className="text-sm text-slate-500">
-            {format(parseISO(dateRange.start), 'MMM dd')} - {format(parseISO(dateRange.end), 'MMM dd')}
-          </p>
         </div>
       </div>
 

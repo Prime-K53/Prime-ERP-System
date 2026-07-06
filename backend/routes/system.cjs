@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const workspaceService = require('../services/workspaceService.cjs');
+const { resetDatabase } = require('../db.cjs');
 const { sendSafeError } = require('../utils/errors.cjs');
 const { validateBody, workspaceSchemas } = require('../middleware/validation.cjs');
 
@@ -43,6 +44,20 @@ router.post('/workspace/save-document', validateBody(workspaceSchemas.saveDocume
 router.get('/workspace/config', (req, res) => {
   const config = workspaceService.getWorkspaceConfig();
   res.json(config || { initialized: false });
+});
+
+/**
+ * Delete all data for the current company (local SQLite).
+ * Resets the database entirely since the local backend is single-tenant.
+ */
+router.delete('/workspace', async (req, res) => {
+  try {
+    resetDatabase();
+    res.json({ success: true, message: 'All company data has been wiped from the local database.' });
+  } catch (err) {
+    console.error('[System] Failed to reset database:', err);
+    sendSafeError(res, 500, 'DATABASE_RESET_FAILED');
+  }
 });
 
 module.exports = router;

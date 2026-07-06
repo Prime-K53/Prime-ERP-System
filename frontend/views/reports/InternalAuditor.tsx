@@ -403,23 +403,35 @@ const InternalAuditor: React.FC = () => {
                 </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Physical Inventory</p>
-                    <p className="text-lg font-black text-slate-900 mt-1 tabular-nums">{formatCurrency(auditData.physicalInventoryValue)}</p>
+            {/* Quick Stats (QBO Style) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Package size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Physical Inventory</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900">{formatCurrency(auditData.physicalInventoryValue)}</p>
+                    </div>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ledger Inventory</p>
-                    <p className="text-lg font-black text-slate-900 mt-1 tabular-nums">{formatCurrency(auditData.ledgerInventoryValue)}</p>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><FileText size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Ledger Inventory</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900">{formatCurrency(auditData.ledgerInventoryValue)}</p>
+                    </div>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Outstanding AR</p>
-                    <p className="text-lg font-black text-blue-600 mt-1 tabular-nums">{formatCurrency(auditData.outstandingAR)}</p>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Outstanding AR</p>
+                        <p className="text-lg md:text-xl font-semibold text-rose-600">{formatCurrency(auditData.outstandingAR)}</p>
+                    </div>
                 </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Outstanding AP</p>
-                    <p className="text-lg font-black text-amber-600 mt-1 tabular-nums">{formatCurrency(auditData.outstandingAP)}</p>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Wallet size={20} /></div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Outstanding AP</p>
+                        <p className="text-lg md:text-xl font-semibold text-amber-600">{formatCurrency(auditData.outstandingAP)}</p>
+                    </div>
                 </div>
             </div>
         </div>

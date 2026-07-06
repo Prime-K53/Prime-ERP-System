@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, FileSearch, ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, FileSearch, ArrowLeft, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProcurement } from '../../context/ProcurementContext';
 import { useFinance } from '../../context/FinanceContext';
@@ -48,11 +48,23 @@ const POMatcher: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total POs</div><div className="text-2xl font-bold text-slate-800">{result.summary.total}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500">Matched</div><div className="text-2xl font-bold text-emerald-600">{result.summary.fullyMatched}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Partial</div><div className="text-2xl font-bold text-amber-600">{result.summary.partialMatch}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">Unmatched</div><div className="text-2xl font-bold text-red-600">{result.summary.unmatched}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><FileSearch size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total POs</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.total}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Matched</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.fullyMatched}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><Clock size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Partial</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.partialMatch}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Unmatched</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.unmatched}</p></div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200">

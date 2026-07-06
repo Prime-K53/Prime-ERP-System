@@ -212,7 +212,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                         {viewMode !== 'Small' && <div className="text-[10px] text-slate-500 ml-8">{item.sku}</div>}
                     </div>
 
-<div className={`flex items-center justify-between ${viewMode === 'List' ? 'gap-4' : 'mt-2 pt-2 border-t border-[#f4f5f8]'}`}>
+<div className={`flex items-center justify-between ${viewMode === 'List' ? 'gap-4' : 'mt-2 pt-2 border-t border-slate-100'}`}>
                         {item.isVariantParent ? (
                             <span
                                 onClick={(e) => { e.stopPropagation(); handleItemClick(item); }}

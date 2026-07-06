@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Layers, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2, Layers, ArrowLeft, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProduction } from '../../context/ProductionContext';
 import { optimizeGangRun } from '../../services/aiAnalyticsUtils';
@@ -42,11 +42,23 @@ const GangRunOptimizer: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500 mb-1">Total Jobs</div><div className="text-2xl font-bold text-slate-800">{result.metrics.totalJobs}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500 mb-1">Ganged Jobs</div><div className="text-2xl font-bold text-emerald-600">{result.metrics.gangedJobs}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-blue-200"><div className="text-xs text-blue-500 mb-1">Setup Savings</div><div className="text-2xl font-bold text-blue-600">{result.metrics.setupHoursSaved}h</div></div>
-            <div className="bg-white rounded-xl p-4 border border-purple-200"><div className="text-xs text-purple-500 mb-1">Utilization</div><div className="text-2xl font-bold text-purple-600">{result.metrics.utilizationRate}%</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Layers size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Jobs</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.totalJobs}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Ganged Jobs</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.gangedJobs}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Clock size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Setup Savings</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.setupHoursSaved}h</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Utilization</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.metrics.utilizationRate}%</p></div>
+            </div>
           </div>
           <div className="bg-white rounded-xl border border-slate-200">
             <div className="p-4 border-b border-slate-100 font-semibold text-slate-700">Groups ({result.groups.length})</div>

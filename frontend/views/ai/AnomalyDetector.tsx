@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, AlertTriangle, ArrowLeft, Shield, AlertCircle } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../../context/FinanceContext';
 import { useInventory } from '../../context/InventoryContext';
@@ -86,11 +86,23 @@ const AnomalyDetector: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total</div><div className="text-2xl font-bold text-slate-800">{result.totalCount}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">High</div><div className="text-2xl font-bold text-red-600">{result.highRiskCount}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Medium</div><div className="text-2xl font-bold text-amber-600">{result.mediumRiskCount}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Low</div><div className="text-2xl font-bold text-slate-500">{result.lowRiskCount}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Shield size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.totalCount}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">High</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.highRiskCount}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><AlertCircle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Medium</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.mediumRiskCount}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Low</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.lowRiskCount}</p></div>
+            </div>
           </div>
           <div className="bg-white rounded-xl border border-slate-200">
             <div className="p-3 border-b border-slate-100 font-semibold text-sm text-slate-700">Details</div>

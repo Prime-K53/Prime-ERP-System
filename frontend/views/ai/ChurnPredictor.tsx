@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Users, ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Users, ArrowLeft, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSales } from '../../context/SalesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -46,11 +46,23 @@ const ChurnPredictor: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Total</div><div className="text-2xl font-bold text-slate-800">{result.totalCustomers}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">At Risk</div><div className="text-2xl font-bold text-red-600">{result.atRiskCount}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Moderate</div><div className="text-2xl font-bold text-amber-600">{result.moderateRiskCount}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-emerald-200"><div className="text-xs text-emerald-500">Healthy</div><div className="text-2xl font-bold text-emerald-600">{result.healthyCount}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Users size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.totalCustomers}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">At Risk</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.atRiskCount}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><AlertCircle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Moderate</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.moderateRiskCount}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><CheckCircle2 size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Healthy</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.healthyCount}</p></div>
+            </div>
           </div>
 
           {result.summary?.highValueAtRisk > 0 && (

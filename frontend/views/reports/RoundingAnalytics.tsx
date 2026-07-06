@@ -179,36 +179,38 @@ const RoundingAnalytics: React.FC = () => {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards (QBO Style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           {
             label: 'Net Rounding', value: fmt(stats.totalRounding, currency),
             sub: stats.totalRounding >= 0 ? 'Net gain from rounding' : 'Net loss from rounding',
             Icon: stats.totalRounding >= 0 ? ArrowUpRight : ArrowDownRight,
-            color: stats.totalRounding >= 0 ? 'text-cyan-600' : 'text-red-500',
-            bg: stats.totalRounding >= 0 ? 'bg-cyan-50' : 'bg-red-50',
+            borderColor: stats.totalRounding >= 0 ? 'border-l-cyan-500' : 'border-l-red-500',
+            iconBg: stats.totalRounding >= 0 ? 'bg-cyan-50 text-cyan-600' : 'bg-red-50 text-red-600',
           },
           {
             label: 'Items Rounded Up', value: stats.gainCount.toLocaleString(),
-            sub: 'Price rounded upward', Icon: ArrowUpRight, color: 'text-emerald-600', bg: 'bg-emerald-50',
+            sub: 'Price rounded upward', Icon: ArrowUpRight, borderColor: 'border-l-emerald-500', iconBg: 'bg-emerald-50 text-emerald-600',
           },
           {
             label: 'Items Rounded Down', value: stats.lossCount.toLocaleString(),
-            sub: 'Price rounded downward', Icon: ArrowDownRight, color: 'text-red-500', bg: 'bg-red-50',
+            sub: 'Price rounded downward', Icon: ArrowDownRight, borderColor: 'border-l-red-500', iconBg: 'bg-red-50 text-red-600',
           },
           {
             label: 'Rounding Rate', value: `${stats.roundingRate.toFixed(1)}%`,
-            sub: `of ${stats.totalItems.toLocaleString()} items affected`, Icon: Zap, color: 'text-violet-600', bg: 'bg-violet-50',
+            sub: `of ${stats.totalItems.toLocaleString()} items affected`, Icon: Zap, borderColor: 'border-l-violet-500', iconBg: 'bg-violet-50 text-violet-600',
           },
         ].map(card => (
-          <div key={card.label} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <div className={`p-2 rounded-xl ${card.bg} inline-flex mb-3`}>
-              <card.Icon className={`w-4 h-4 ${card.color}`} />
+          <div key={card.label} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 ${card.borderColor} hover:bg-slate-50 transition-all duration-200`}>
+            <div className={`p-2.5 rounded-lg shrink-0 ${card.iconBg}`}>
+              <card.Icon size={20} />
             </div>
-            <div className={`text-xl font-bold ${card.color}`}>{card.value}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{card.label}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">{card.sub}</div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{card.label}</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900">{card.value}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{card.sub}</p>
+            </div>
           </div>
         ))}
       </div>

@@ -11,6 +11,7 @@ try {
   }
   process.exit(1);
 }
+const fs = require('fs');
 const { getDbPath, ensureRuntimeDirs } = require('./runtimePaths.cjs');
 
 ensureRuntimeDirs();
@@ -1332,9 +1333,30 @@ function reinitializeDatabase() {
   return db;
 }
 
+function resetDatabase() {
+  const currentPath = getDbPath();
+  if (dbInstance) {
+    try { dbInstance.close(); } catch (e) { console.warn('[DB] Error closing:', e.message); }
+    dbInstance = null;
+    instanceId = 0;
+  }
+  try {
+    if (fs.existsSync(currentPath)) {
+      fs.unlinkSync(currentPath);
+      console.log('[DB] Deleted database file:', currentPath);
+    }
+  } catch (e) {
+    console.error('[DB] Failed to delete database file:', e.message);
+    throw e;
+  }
+  db = getDatabase();
+  return db;
+}
+
 module.exports = {
   get db() { return getDatabase(); },
   initDb,
   getDatabase,
-  reinitializeDatabase
+  reinitializeDatabase,
+  resetDatabase
 };

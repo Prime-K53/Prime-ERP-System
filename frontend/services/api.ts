@@ -2284,6 +2284,14 @@ export const api = {
       }
       const response = await apiClient.post('/cloud/sync', {});
       return response.data;
-    }, 'Cloud.TriggerSync')
+    }, 'Cloud.TriggerSync'),
+
+    deleteWorkspace: () => handle(async () => {
+      if (!HAS_REMOTE_BACKEND) {
+        return { success: true, deletedLocally: true };
+      }
+      const response = await apiClient.delete('/system/workspace');
+      return response.data;
+    }, 'System.DeleteWorkspace')
   }
 };

@@ -322,49 +322,61 @@ export const JobTickets: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+      {/* KPI Cards (QBO Style) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
+            <Ticket size={20} />
           </div>
-          <p className="text-[22px] font-bold text-slate-800 tabular-nums leading-none">{stats.total}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.total}</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-blue-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-            <p className="text-[12px] font-bold text-blue-600 uppercase tracking-wider">Received</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+            <Package size={20} />
           </div>
-          <p className="text-[22px] font-bold text-blue-700 tabular-nums leading-none">{stats.received}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Received</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.received}</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-amber-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <p className="text-[12px] font-bold text-amber-600 uppercase tracking-wider">Processing</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
+            <Clock size={20} />
           </div>
-          <p className="text-[22px] font-bold text-amber-700 tabular-nums leading-none">{stats.processing}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Processing</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.processing}</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-emerald-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <p className="text-[12px] font-bold text-emerald-600 uppercase tracking-wider">Ready</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+            <CheckCircle size={20} />
           </div>
-          <p className="text-[22px] font-bold text-emerald-700 tabular-nums leading-none">{stats.ready}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Ready</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.ready}</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-red-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-            <p className="text-[12px] font-bold text-red-600 uppercase tracking-wider">Overdue</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0">
+            <AlertTriangle size={20} />
           </div>
-          <p className="text-[22px] font-bold text-red-700 tabular-nums leading-none">{stats.overdue}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Overdue</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.overdue}</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-2xl border border-violet-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-violet-500"></div>
-            <p className="text-[12px] font-bold text-violet-600 uppercase tracking-wider">Today</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0">
+            <Calendar size={20} />
           </div>
-          <p className="text-[22px] font-bold text-violet-700 tabular-nums leading-none">{stats.today}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Today</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.today}</p>
+          </div>
         </div>
       </div>
 

@@ -676,82 +676,62 @@ const ClientLedger: React.FC = () => {
       {/* Customer Ledger Content */}
       {selectedCustomerId && customerStats && (
         <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer</p>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <Building2 size={15} className="text-blue-600" />
+          {/* KPI Cards (QBO Style) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Building2 size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Customer</p>
+                <p className="text-lg font-semibold text-slate-900 truncate">{selectedCustomer?.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {selectedCustomer?.email && <span className="text-[10px] text-slate-400 truncate"><Mail size={10} className="inline mr-0.5" />{selectedCustomer.email}</span>}
+                  {selectedCustomer?.phone && <span className="text-[10px] text-slate-400 truncate"><Phone size={10} className="inline mr-0.5" />{selectedCustomer.phone}</span>}
                 </div>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 truncate">{selectedCustomer?.name}</h3>
-              <div className="flex items-center gap-3 mt-1.5">
-                {selectedCustomer?.email && (
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
-                    <Mail size={11} /> {selectedCustomer.email}
-                  </span>
-                )}
-                {selectedCustomer?.phone && (
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
-                    <Phone size={11} /> {selectedCustomer.phone}
-                  </span>
-                )}
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Outstanding</p>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  customerStats.totalOutstanding > 0 ? 'bg-rose-50' : 'bg-emerald-50'
-                }`}>
-                  <TrendingDown size={15} className={customerStats.totalOutstanding > 0 ? 'text-rose-600' : 'text-emerald-600'} />
-                </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+              <div className={`p-2.5 rounded-lg shrink-0 ${customerStats.totalOutstanding > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                <TrendingDown size={20} />
               </div>
-              <h3 className={`text-2xl font-black tabular-nums ${
-                customerStats.totalOutstanding > 0 ? 'text-rose-600' : 'text-emerald-600'
-              }`}>
-                {formatCurrency(customerStats.totalOutstanding)}
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-1 font-medium">{customerStats.invoiceCount} invoice{customerStats.invoiceCount !== 1 ? 's' : ''}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Outstanding</p>
+                <p className={`text-lg md:text-xl font-semibold ${customerStats.totalOutstanding > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(customerStats.totalOutstanding)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{customerStats.invoiceCount} invoice{customerStats.invoiceCount !== 1 ? 's' : ''}</p>
+              </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Paid</p>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <TrendingUp size={15} className="text-emerald-600" />
-                </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"><TrendingUp size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Paid</p>
+                <p className="text-lg md:text-xl font-semibold text-emerald-600">{formatCurrency(customerStats.totalPaid)}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{customerStats.paymentCount} payment{customerStats.paymentCount !== 1 ? 's' : ''}</p>
               </div>
-              <h3 className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(customerStats.totalPaid)}</h3>
-              <p className="text-[11px] text-slate-500 mt-1 font-medium">{customerStats.paymentCount} payment{customerStats.paymentCount !== 1 ? 's' : ''}</p>
             </div>
 
-            <div className={`p-5 rounded-2xl shadow-lg ${
-              customerStats.creditUtilization > 80 ? 'bg-gradient-to-br from-rose-600 to-rose-700 text-white' :
-              customerStats.creditUtilization > 50 ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white' :
-              'bg-gradient-to-br from-slate-800 to-slate-900 text-white'
+            <div className={`p-3 md:p-4 rounded-xl shadow-sm border flex items-center gap-4 border-l-4 ${
+              customerStats.creditUtilization > 80 ? 'border-l-rose-500 bg-gradient-to-br from-rose-600 to-rose-700 text-white' :
+              customerStats.creditUtilization > 50 ? 'border-l-amber-500 bg-gradient-to-br from-amber-500 to-orange-500 text-white' :
+              'border-l-slate-500 bg-gradient-to-br from-slate-800 to-slate-900 text-white'
             }`}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-bold opacity-70 uppercase tracking-wider">Credit Limit</p>
-                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
-                  <CreditCard size={15} className="text-white" />
-                </div>
+              <div className={`p-2.5 rounded-lg shrink-0 ${
+                customerStats.creditUtilization > 80 ? 'bg-white/15 text-white' :
+                customerStats.creditUtilization > 50 ? 'bg-white/15 text-white' :
+                'bg-white/15 text-white'
+              }`}>
+                <CreditCard size={20} />
               </div>
-              <h3 className="text-2xl font-black tabular-nums">{formatCurrency(customerStats.creditLimit || 0)}</h3>
-              <div className="flex items-center gap-2 mt-1.5">
-                <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      customerStats.creditUtilization > 80 ? 'bg-white' :
-                      customerStats.creditUtilization > 50 ? 'bg-white/80' :
-                      'bg-white/60'
-                    }`}
-                    style={{ width: `${Math.min(customerStats.creditUtilization, 100)}%` }}
-                  />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold opacity-70 uppercase tracking-tight leading-none mb-1.5">Credit Limit</p>
+                <p className="text-lg md:text-xl font-semibold">{formatCurrency(customerStats.creditLimit || 0)}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${customerStats.creditUtilization > 80 ? 'bg-white' : customerStats.creditUtilization > 50 ? 'bg-white/80' : 'bg-white/60'}`}
+                      style={{ width: `${Math.min(customerStats.creditUtilization, 100)}%` }} />
+                  </div>
+                  <span className="text-xs font-bold opacity-80">{customerStats.creditUtilization.toFixed(0)}%</span>
                 </div>
-                <span className="text-xs font-bold opacity-80">{customerStats.creditUtilization.toFixed(0)}%</span>
               </div>
             </div>
           </div>

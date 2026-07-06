@@ -602,11 +602,17 @@ export const cloudDb = {
   async deleteCompany(companyId: string): Promise<void> {
     if (!SUPABASE_ENABLED) return;
     await withSession(async () => {
-      const { error } = await supabase
+      const { error: companyError } = await supabase
         .from('companies')
         .delete()
         .eq('id', companyId);
-      if (error) throw error;
+      if (companyError) throw companyError;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('company_id', companyId);
+      if (profileError) throw profileError;
     });
   },
 };

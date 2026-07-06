@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Package, ArrowLeft } from 'lucide-react';
+import { Loader2, Package, ArrowLeft, AlertTriangle, AlertCircle, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../context/InventoryContext';
 import { useAuth } from '../../context/AuthContext';
@@ -46,11 +46,23 @@ const ReorderOptimizer: React.FC = () => {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Items</div><div className="text-2xl font-bold text-slate-800">{result.summary.totalItems}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-red-200"><div className="text-xs text-red-500">Need Reorder</div><div className="text-2xl font-bold text-red-600">{result.summary.needsReorder}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-amber-200"><div className="text-xs text-amber-500">Critical</div><div className="text-2xl font-bold text-amber-600">{result.summary.criticalItems}</div></div>
-            <div className="bg-white rounded-xl p-4 border border-slate-200"><div className="text-xs text-slate-500">Est. Cost</div><div className="text-2xl font-bold text-slate-800">{currency}{(result.summary.totalOrderCost || 0).toLocaleString()}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Package size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Items</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.totalItems}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0"><AlertTriangle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Need Reorder</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.needsReorder}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0"><AlertCircle size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Critical</p><p className="text-lg md:text-xl font-semibold text-slate-900">{result.summary.criticalItems}</p></div>
+            </div>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0"><DollarSign size={20} /></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Est. Cost</p><p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{(result.summary.totalOrderCost || 0).toLocaleString()}</p></div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200">

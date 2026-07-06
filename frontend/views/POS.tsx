@@ -1310,13 +1310,13 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
   };
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden bg-[#F8FAFC] relative font-sans text-slate-800">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden bg-slate-50 relative font-sans text-slate-800">
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Top Header Mimicking QBO */}
         <div className="px-6 py-3 flex items-center justify-between z-30 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#393a3d] flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white">
                 <UserIcon size={14} />
               </div>
               <div className="leading-tight">
@@ -1325,12 +1325,12 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
               </div>
             </div>
             <div className="h-8 w-px bg-slate-200 mx-2"></div>
-            <div className="hidden lg:flex gap-4">
-              <button onClick={handleQuickPhotocopy} className="text-blue-600 hover:underline flex items-center gap-1.5 text-sm font-semibold">
-                <Copy size={16} /> Photocopy
+            <div className="hidden lg:flex gap-2">
+              <button onClick={handleQuickPhotocopy} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
+                <Copy size={14} /> Photocopy
               </button>
-              <button onClick={handleQuickTypePrinting} className="text-blue-600 hover:underline flex items-center gap-1.5 text-sm font-semibold">
-                <FileText size={16} /> Type and Printing
+              <button onClick={handleQuickTypePrinting} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
+                <FileText size={14} /> Type & Print
               </button>
             </div>
           </div>
@@ -1345,11 +1345,11 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
               </span>
             )}
             <div className="flex gap-2">
-              <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-slate-100 cursor-pointer transition-colors">
-                <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${autoPreviewReceipt ? 'bg-blue-600' : 'bg-slate-300'}`}>
-                  <div className={`bg-white w-3 h-3 rounded-full shadow-sm transform transition-transform ${autoPreviewReceipt ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              <label className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-all bg-white shadow-sm select-none">
+                <div className={`w-7 h-3.5 rounded-full flex items-center p-0.5 transition-colors ${autoPreviewReceipt ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                  <div className={`bg-white w-2.5 h-2.5 rounded-full shadow-sm transform transition-transform ${autoPreviewReceipt ? 'translate-x-3.5' : 'translate-x-0'}`}></div>
                 </div>
-                <span className="text-slate-700">Preview</span>
+                <span>Preview</span>
                 <input 
                   type="checkbox" 
                   className="hidden" 
@@ -1366,7 +1366,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
                   }} 
                 />
               </label>
-              <button onClick={async () => { await fetchSalesData?.(); setZReportData(generateZReport(user?.id || '')); setShowZReport(true); }} className="px-4 py-1.5 rounded-xl border border-slate-200 text-sm font-semibold hover:bg-slate-100 flex items-center gap-2">
+              <button onClick={async () => { await fetchSalesData?.(); setZReportData(generateZReport(user?.id || '')); setShowZReport(true); }} className="px-3 py-1.5 rounded-lg border border-slate-200 text-[12px] font-bold text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all bg-white shadow-sm flex items-center gap-1.5">
                 <TrendingUp size={14} /> Register
               </button>
             </div>

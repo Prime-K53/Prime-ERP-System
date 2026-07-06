@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Search, Filter, RefreshCw, FileText
+  Plus, Search, Filter, RefreshCw, FileText, Clock, CheckCircle, Printer
 } from 'lucide-react';
 import { useSalesStore } from '../../stores/salesStore';
 import { SalesExchange } from '../../types';
@@ -122,26 +122,40 @@ const SalesExchanges: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Exchanges</div>
-          <div className="text-2xl font-black text-gray-900">{salesExchanges.length}</div>
-        </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <div className="text-[10px] font-bold text-yellow-600 uppercase tracking-wider mb-1">Pending Approval</div>
-          <div className="text-2xl font-black text-yellow-700">
-            {salesExchanges.filter(e => e.status.toLowerCase() === 'pending').length}
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
+            <RefreshCw size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Exchanges</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{salesExchanges.length}</p>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Active Reprints</div>
-          <div className="text-2xl font-black text-blue-700">
-            {reprintJobs.filter(j => j.status !== 'completed').length}
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
+            <Clock size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pending Approval</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{salesExchanges.filter(e => e.status.toLowerCase() === 'pending').length}</p>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <div className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Completed</div>
-          <div className="text-2xl font-black text-green-700">
-            {salesExchanges.filter(e => e.status.toLowerCase() === 'completed').length}
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+            <Printer size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Active Reprints</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{reprintJobs.filter(j => j.status !== 'completed').length}</p>
+          </div>
+        </div>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+            <CheckCircle size={20} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Completed</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900">{salesExchanges.filter(e => e.status.toLowerCase() === 'completed').length}</p>
           </div>
         </div>
       </div>
