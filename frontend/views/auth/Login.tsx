@@ -76,6 +76,15 @@ const Login: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-rose-700 leading-relaxed">{error || notification?.message}</p>
+              {error && error.includes('company was deleted') && (
+                <a
+                  href="#/setup"
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-[11px] font-semibold transition-colors"
+                >
+                  Create New Workspace
+                  <ArrowRight size={12} />
+                </a>
+              )}
             </div>
           </div>
         )}

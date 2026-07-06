@@ -422,7 +422,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!profileRows || profileRows.length === 0) {
       throw new AuthFlowError('Missing profile for authenticated user.', {
         code: 'profile_missing',
-        userMessage: 'Your user profile is missing. Please contact an administrator.',
+        userMessage: 'Your company was deleted. To start fresh, create a new workspace below.',
       });
     }
 
@@ -475,7 +475,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!company) {
       throw new AuthFlowError(`Company ${companyId} was not found.`, {
         code: 'company_missing',
-        userMessage: 'Your company workspace could not be found. Please contact an administrator.',
+        userMessage: 'Your company was deleted. To start fresh, create a new workspace below.',
       });
     }
 
