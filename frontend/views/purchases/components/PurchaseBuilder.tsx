@@ -4,6 +4,7 @@ import { Search, ShoppingCart, Save, X, Trash2, Sparkles, Loader2, ScanLine, Ext
 import { Item, Purchase, Invoice, Supplier } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useProcurement } from '../../../context/ProcurementContext';
+import { generateNextId } from '../../../utils/helpers';
 import { OfflineImage } from '../../../components/OfflineImage';
 import { extractInvoiceData } from '../../../services/geminiService';
 import { localFileStorage } from '../../../services/localFileStorage';
@@ -95,7 +96,7 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
             setPoItems([]);
             setBillDate(new Date().toISOString().split('T')[0]);
             setDueDate(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
-            setReference('');
+            setReference(generateNextId('VR', purchases, companyConfig));
         }
     }, [initialData, inventory, suppliers]);
 
@@ -118,7 +119,6 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
             const newSupplier = await addSupplier(supplierData);
             selectSupplier(newSupplier);
             setIsSupplierModalOpen(false);
-            notify('Supplier added successfully', 'success');
         } catch (error) {
             notify('Failed to add supplier', 'error');
         }

@@ -733,9 +733,89 @@ const SmartPricing: React.FC = () => {
                 </div>
 
                 {/* ── 3-Column Layout ── */}
-                <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 400px', gap:18, alignItems:'start' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'2.4fr 400px', gap:18, alignItems:'start' }}>
 
-                    {/* ═══ Col 1: Finishing Options ═══ */}
+                    <div>
+
+                    {/* ═══ Print Settings ═══ */}
+                    <div>
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div style={{ width:28, height:28, borderRadius:8, background:'#F4E3C8', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#C9832F" strokeWidth="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#C9832F" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                </div>
+                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Print Settings</h3>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+                                    <div>
+                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Pages per Copy</span>
+                                        <input
+                                            type="number"
+                                            value={pages}
+                                            onChange={handlePagesChange}
+                                            min={1} max={10000}
+                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Copies</span>
+                                        <input
+                                            type="number"
+                                            value={copies}
+                                            onChange={handleCopiesChange}
+                                            min={1} max={100000}
+                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display:'flex', gap:16, marginTop:10, paddingTop:10, borderTop:'1px dashed #E4DFD1', fontSize:12.5, color:'#666F6C', lineHeight:1.4 }}>
+                                    <span>Sheets needed <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{totalSheets}</b></span>
+                                    <span>Cost price <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{formatCurrency(costPrice)}</b></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ═══ BOM Materials ═══ */}
+                    <div>
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div style={{ width:28, height:28, borderRadius:8, background:'#FDF0E3', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2l9 4.5v9L12 20l-9-4.5v-9L12 2z" stroke="#C9832F" strokeWidth="1.7" strokeLinejoin="round"/></svg>
+                                    </div>
+                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>BOM Materials</h3>
+                                </div>
+                                <span style={{ fontSize:12, fontWeight:600, padding:'3px 9px', borderRadius:100, background:'#E6F4F1', color:'#146B67', lineHeight:1.4 }}>Active</span>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        {selectedPaper?.name || 'Paper'}
+                                    </span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
+                                </div>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        {selectedToner?.name || 'Toner'}
+                                    </span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
+                                </div>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'none', fontSize:13, lineHeight:1.4 }}>
+                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
+                                        Finishing
+                                    </span>
+                                    <span id="finishBomLine" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(finishingCost)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ═══ Finishing Options ═══ */}
                     <div>
                         <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
                             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
@@ -781,123 +861,29 @@ const SmartPricing: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-
-                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
-                                <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M12 8v4.5l3 2" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                </div>
-                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>How Finishing Options Work</h3>
-                            </div>
-                            <div style={{ padding:'14px 16px 16px' }}>
-                                {[
-                                    ['1','Tap a card to include or exclude that finishing step — its price is added to or removed from the cost price instantly.'],
-                                    ['2','Prices shown are pulled from each service\'s own BOM, so update them there if a supplier cost changes.'],
-                                    ['3','Only include steps this job actually needs — unused finishing lowers your margin without adding value for the customer.'],
-                                ].map(([num, text]) => (
-                                    <div key={num} className="flex gap-3" style={{ marginBottom: 14 }}>
-                                        <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, background:'#F2EEE3', color:'#666F6C', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{num}</div>
-                                        <p style={{ margin:0, fontSize:13, color:'#666F6C', lineHeight:1.5 }}>{text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
 
-                    {/* ═══ Col 2: Print Settings + BOM ═══ */}
-                    <div>
-                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
-                                <div style={{ width:28, height:28, borderRadius:8, background:'#F4E3C8', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#C9832F" strokeWidth="1.7"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#C9832F" strokeWidth="1.7" strokeLinecap="round"/></svg>
-                                </div>
-                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Print Settings</h3>
+                    {/* ═══ How Finishing Options Work ═══ */}
+                    <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginTop:18 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                            <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M12 8v4.5l3 2" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
-                            <div style={{ padding:'14px 16px 16px' }}>
-                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
-                                    <div>
-                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Pages per Copy</span>
-                                        <input
-                                            type="number"
-                                            value={pages}
-                                            onChange={handlePagesChange}
-                                            min={1} max={10000}
-                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <span style={{ fontSize:12, fontWeight:600, color:'#666F6C', marginBottom:5, display:'block', lineHeight:1.4 }}>Copies</span>
-                                        <input
-                                            type="number"
-                                            value={copies}
-                                            onChange={handleCopiesChange}
-                                            min={1} max={100000}
-                                            style={{ width:'100%', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13.5, padding:'8px 12px', borderRadius:9, border:'1px solid #E4DFD1', background:'#fff', color:'#23282A', outline:'none', lineHeight:1.4 }}
-                                        />
-                                    </div>
-                                </div>
-                                <div style={{ display:'flex', gap:16, marginTop:10, paddingTop:10, borderTop:'1px dashed #E4DFD1', fontSize:12.5, color:'#666F6C', lineHeight:1.4 }}>
-                                    <span>Sheets needed <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{totalSheets}</b></span>
-                                    <span>Cost price <b style={{ color:'#23282A', fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600 }}>{formatCurrency(costPrice)}</b></span>
-                                </div>
-                            </div>
+                            <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>How Finishing Options Work</h3>
                         </div>
-
-                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
-                                <div className="flex items-center gap-2.5">
-                                    <div style={{ width:28, height:28, borderRadius:8, background:'#FDF0E3', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2l9 4.5v9L12 20l-9-4.5v-9L12 2z" stroke="#C9832F" strokeWidth="1.7" strokeLinejoin="round"/></svg>
-                                    </div>
-                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>BOM Materials</h3>
+                        <div style={{ padding:'14px 16px 16px' }}>
+                            {[
+                                ['1','Tap a card to include or exclude that finishing step — its price is added to or removed from the cost price instantly.'],
+                                ['2','Prices shown are pulled from each service\'s own BOM, so update them there if a supplier cost changes.'],
+                                ['3','Only include steps this job actually needs — unused finishing lowers your margin without adding value for the customer.'],
+                            ].map(([num, text]) => (
+                                <div key={num} className="flex gap-3" style={{ marginBottom: 14 }}>
+                                    <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, background:'#F2EEE3', color:'#666F6C', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{num}</div>
+                                    <p style={{ margin:0, fontSize:13, color:'#666F6C', lineHeight:1.5 }}>{text}</p>
                                 </div>
-                                <span style={{ fontSize:12, fontWeight:600, padding:'3px 9px', borderRadius:100, background:'#E6F4F1', color:'#146B67', lineHeight:1.4 }}>Active</span>
-                            </div>
-                            <div style={{ padding:'14px 16px 16px' }}>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
-                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
-                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
-                                        {selectedPaper?.name || 'Paper'}
-                                    </span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
-                                </div>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
-                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
-                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
-                                        {selectedToner?.name || 'Toner'}
-                                    </span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
-                                </div>
-                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'none', fontSize:13, lineHeight:1.4 }}>
-                                    <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
-                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
-                                        Finishing
-                                    </span>
-                                    <span id="finishBomLine" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(finishingCost)}</span>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-
-                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
-                                <div style={{ width:28, height:28, borderRadius:8, background:'#FDF0E3', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C9832F" strokeWidth="1.7"/><path d="M12 8v4.5l3 2" stroke="#C9832F" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                </div>
-                                <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>How BOM Materials Work</h3>
-                            </div>
-                            <div style={{ padding:'14px 16px 16px' }}>
-                                {[
-                                    ['1','Materials here are auto-selected from the item\'s bill of materials — quantities scale with pages per copy and copies.'],
-                                    ['2','Cost price (CP) combines paper, toner, and finishing — it\'s the floor your selling price should sit above.'],
-                                    ['3','To swap a material, edit the item\'s BOM under Manage Prices rather than changing it here.'],
-                                ].map(([num, text]) => (
-                                    <div key={num} className="flex gap-3" style={{ marginBottom: 14 }}>
-                                        <div style={{ width:20, height:20, borderRadius:'50%', flexShrink:0, background:'#F2EEE3', color:'#666F6C', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>{num}</div>
-                                        <p style={{ margin:0, fontSize:13, color:'#666F6C', lineHeight:1.5 }}>{text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    </div>
                     </div>
 
                     {/* ═══ Col 3: Receipt Summary ═══ */}

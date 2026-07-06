@@ -24,7 +24,7 @@ interface ProcurementContextType {
   updateSubcontractOrder: (order: SubcontractOrder) => Promise<void>;
   deleteSubcontractOrder: (id: string) => Promise<void>;
 
-  addSupplier: (supplier: Supplier) => Promise<void>;
+  addSupplier: (supplier: Supplier) => Promise<Supplier>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
 }
@@ -58,17 +58,19 @@ export const ProcurementProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const addSupplier = async (supplier: Supplier) => {
     try {
-      await store.addSupplier(supplier);
-      notify(`Supplier ${supplier.name} added successfully`, "success");
+      const newSupplier = await store.addSupplier(supplier);
+      notify(`Supplier ${newSupplier.name} added successfully`, "success");
       addAuditLog({ 
         action: 'CREATE', 
         entityType: 'Supplier', 
-        entityId: supplier.id || 'NEW', 
-        details: `Added supplier: ${supplier.name}`,
-        newValue: supplier
+        entityId: newSupplier.id, 
+        details: `Added supplier: ${newSupplier.name}`,
+        newValue: newSupplier
       });
+      return newSupplier;
     } catch (err: any) {
       notify(`Failed to add supplier: ${err.message}`, "error");
+      throw err;
     }
   };
 

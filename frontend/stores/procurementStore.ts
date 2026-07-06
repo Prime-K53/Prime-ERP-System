@@ -26,7 +26,7 @@ interface ProcurementState {
   updateSubcontractOrder: (order: SubcontractOrder) => Promise<void>;
   deleteSubcontractOrder: (id: string) => Promise<void>;
 
-  addSupplier: (supplier: Supplier) => Promise<void>;
+  addSupplier: (supplier: Supplier) => Promise<Supplier>;
   updateSupplier: (supplier: Supplier) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
 }
@@ -176,6 +176,7 @@ export const useProcurementStore = create<ProcurementState>((set, get) => ({
     set(state => ({ suppliers: [...state.suppliers, newSupplier] }));
     try {
       await api.suppliers.save(newSupplier);
+      return newSupplier;
     } catch (error) {
       set({ suppliers: prev });
       throw error;
