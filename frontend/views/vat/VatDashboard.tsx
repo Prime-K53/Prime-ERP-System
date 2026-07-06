@@ -78,57 +78,35 @@ export const VatDashboard: React.FC = () => {
     return (
         <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 tablet-auto-fit-250 gap-6">
-                <div className="bg-white p-[24px] rounded-[1.5rem] border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-[12px] font-bold text-slate-500 tracking-wide">Output tax (sales)</p>
-                            <h3 className="text-2xl font-bold mt-1 text-slate-800">
-                                {currency} {stats.outputTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </h3>
-                            <span className="text-xs text-emerald-600 flex items-center mt-2">
-                                <TrendingUp size={14} className="mr-1" />
-                                Current month
-                            </span>
-                        </div>
-                        <div className="p-3 bg-emerald-50 rounded-xl">
-                            <ArrowUpRight className="text-emerald-600" size={24} />
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <ArrowUpRight size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Output tax (sales)</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency} {stats.outputTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-emerald-600 mt-0.5">Current month</p>
                     </div>
                 </div>
-
-                <div className="bg-white p-[24px] rounded-[1.5rem] border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-[12px] font-bold text-slate-500 tracking-wide">Input tax (purchases)</p>
-                            <h3 className="text-2xl font-bold mt-1 text-slate-800">
-                                {currency} {stats.inputTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </h3>
-                            <span className="text-xs text-rose-600 flex items-center mt-2">
-                                <TrendingDown size={14} className="mr-1" />
-                                Current month
-                            </span>
-                        </div>
-                        <div className="p-3 bg-rose-50 rounded-xl">
-                            <ArrowDownRight className="text-rose-600" size={24} />
-                        </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all">
+                    <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg">
+                        <ArrowDownRight size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Input tax (purchases)</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency} {stats.inputTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[10px] text-rose-600 mt-0.5">Current month</p>
                     </div>
                 </div>
-
-                <div className="bg-white p-[24px] rounded-[1.5rem] border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-[12px] font-bold text-slate-500 tracking-wide">Net payable</p>
-                            <h3 className={`text-2xl font-bold mt-1 ${stats.net >= 0 ? 'text-slate-800' : 'text-emerald-600'}`}>
-                                {currency} {Math.abs(stats.net).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </h3>
-                            <span className="text-xs text-slate-500 flex items-center mt-2">
-                                {stats.net >= 0 ? 'To pay' : 'Refundable'}
-                            </span>
-                        </div>
-                        <div className="p-3 bg-blue-50 rounded-xl">
-                            <DollarSign className="text-blue-600" size={24} />
-                        </div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                        <DollarSign size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Net payable</p>
+                        <p className={`text-lg md:text-xl font-semibold finance-nums ${stats.net >= 0 ? 'text-slate-900' : 'text-emerald-600'}`}>{currency} {Math.abs(stats.net).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className={`text-[10px] mt-0.5 ${stats.net >= 0 ? 'text-slate-500' : 'text-emerald-600'}`}>{stats.net >= 0 ? 'To pay' : 'Refundable'}</p>
                     </div>
                 </div>
             </div>

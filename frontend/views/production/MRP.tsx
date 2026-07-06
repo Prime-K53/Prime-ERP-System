@@ -174,45 +174,42 @@ const MRP: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 shrink-0">
-             <div className="bg-slate-50/50 border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center gap-4 group">
-                 <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-inner border border-rose-100/50">
-                    <TrendingDown size={24}/>
-                 </div>
-                 <div>
-                     <h3 className="text-[12.5px] font-semibold text-slate-500 mb-0.5">Shortages</h3>
-                     <div className="text-[22px] font-bold text-slate-800 tabular-nums leading-none">{mrpReport.filter(i => i.status === 'Critical').length}</div>
-                  </div>
-              </div>
-              <div className="bg-slate-50/50 border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center gap-4 group">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-inner border border-blue-100/50">
-                     <Truck size={24}/>
-                  </div>
-                  <div>
-                     <h3 className="text-[12.5px] font-semibold text-slate-500 mb-0.5">Inbound</h3>
-                     <div className="text-[22px] font-bold text-slate-800 tabular-nums leading-none">
-                         {mrpReport.reduce((s, i) => s + (i.inboundQty > 0 ? 1 : 0), 0)} <span className="text-[12.5px] font-semibold text-slate-400 ml-1">Items</span>
-                     </div>
-                  </div>
-              </div>
-              <div className="bg-slate-50/50 border border-slate-200/80 p-4 rounded-2xl shadow-sm flex items-center gap-4 group">
-                  <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-inner border border-amber-100/50">
-                     <AlertTriangle size={24}/>
-                  </div>
-                  <div>
-                     <h3 className="text-[12.5px] font-semibold text-slate-500 mb-0.5">Warnings</h3>
-                    <div className="text-[22px] font-bold text-slate-800 tabular-nums leading-none">{mrpReport.filter(i => i.status === 'Buffer Warning').length}</div>
-                 </div>
-             </div>
-             <div className="bg-slate-800 p-4 rounded-2xl shadow-md flex items-center gap-4 text-slate-100 relative overflow-hidden group border border-slate-700">
-                 <div className="absolute -top-4 -right-4 p-4 opacity-5 rotate-12 group-hover:rotate-0 transition-transform duration-700"><Truck size={80}/></div>
-                 <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                    <CheckSquare size={24} className="text-blue-400"/>
-                 </div>
-                 <div>
-                     <h3 className="text-[12.5px] font-semibold text-blue-300/80 mb-0.5">Yield</h3>
-                    <div className="text-[22px] font-bold tabular-nums leading-none">{mrpReport.filter(i => i.status === 'Healthy').length} <span className="text-[12.5px] font-semibold text-slate-400 ml-1">Active</span></div>
-                 </div>
-             </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all">
+            <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg">
+              <TrendingDown size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Shortages</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{mrpReport.filter(i => i.status === 'Critical').length}</p>
+            </div>
+          </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+              <Truck size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Inbound</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{mrpReport.reduce((s, i) => s + (i.inboundQty > 0 ? 1 : 0), 0)} <span className="text-xs font-semibold text-slate-400">Items</span></p>
+            </div>
+          </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all">
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Warnings</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{mrpReport.filter(i => i.status === 'Buffer Warning').length}</p>
+            </div>
+          </div>
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+              <CheckSquare size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Yield</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{mrpReport.filter(i => i.status === 'Healthy').length} <span className="text-xs font-semibold text-slate-400">Active</span></p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-slate-50/30 rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">

@@ -804,17 +804,32 @@ const MarketingMessages: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-slate-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-slate-800">{unreadCount}</div>
-              <div className="text-[10px] text-slate-500">Unread</div>
+            <div className="bg-white p-2 md:p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                <MessageCircle size={16} />
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Unread</p>
+                <p className="text-sm md:text-base font-semibold text-slate-900 finance-nums">{unreadCount}</p>
+              </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-slate-800">{totalCampaigns}</div>
-              <div className="text-[10px] text-slate-500">Campaigns</div>
+            <div className="bg-white p-2 md:p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all">
+              <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
+                <Send size={16} />
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Campaigns</p>
+                <p className="text-sm md:text-base font-semibold text-slate-900 finance-nums">{totalCampaigns}</p>
+              </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-slate-800">{totalSent}</div>
-              <div className="text-[10px] text-slate-500">Sent</div>
+            <div className="bg-white p-2 md:p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+              <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                <CheckCircle size={16} />
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Sent</p>
+                <p className="text-sm md:text-base font-semibold text-slate-900 finance-nums">{totalSent}</p>
+              </div>
             </div>
           </div>
 

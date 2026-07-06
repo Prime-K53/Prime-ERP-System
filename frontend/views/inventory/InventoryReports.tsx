@@ -242,15 +242,16 @@ export const InventoryReports: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-6 pb-1 overflow-x-auto" style={{ borderBottom: '2px solid #E2E8F0' }}>
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer border-0 whitespace-nowrap"
-            style={activeTab === tab.id ? { color: '#2563EB', borderBottom: '2px solid #2563EB', marginBottom: '-2px', background: 'transparent' } : { color: '#64748B', background: 'transparent' }}>
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+      <div className="border-b border-slate-200 bg-white rounded-t-xl mb-6">
+        <div className="flex items-center gap-6 px-4 overflow-x-auto custom-scrollbar">
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`py-3 text-[13px] font-bold transition-all border-b-2 relative whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -259,20 +260,18 @@ export const InventoryReports: React.FC = () => {
           {/* KPI Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Items', value: activeItems.length, icon: <Box size={18} />, color: '#2563EB', bg: '#EFF6FF' },
-              { label: 'Top Product', value: productSalesAggregated[0]?.name || 'N/A', subtitle: productSalesAggregated[0] ? `${currency}${productSalesAggregated[0].profit.toFixed(2)} profit` : '', icon: <Award size={18} />, color: '#059669', bg: '#ECFDF5' },
-              { label: 'Low Stock Items', value: lowStockItems.length, icon: <AlertTriangle size={18} />, color: '#D97706', bg: '#FFFBEB' },
-              { label: 'Out of Stock', value: outOfStock.length, icon: <TrendingUp size={18} />, color: '#EF4444', bg: '#FEF2F2' },
-            ].map((kpi: { label: string; value: string | number; icon: React.ReactNode; color: string; bg: string; subtitle?: string }) => (
-              <div key={kpi.label} className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: kpi.bg, color: kpi.color }}>
-                    {kpi.icon}
-                  </div>
+              { label: 'Total Items', value: activeItems.length, icon: <Box size={20} />, color: 'blue', border: 'border-l-blue-500', iconBg: 'bg-blue-50', iconText: 'text-blue-600' },
+              { label: 'Top Product', value: productSalesAggregated[0]?.name || 'N/A', sub: productSalesAggregated[0] ? `${currency}${productSalesAggregated[0].profit.toFixed(2)} profit` : '', icon: <Award size={20} />, color: 'emerald', border: 'border-l-emerald-500', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600' },
+              { label: 'Low Stock Items', value: lowStockItems.length, icon: <AlertTriangle size={20} />, color: 'amber', border: 'border-l-amber-500', iconBg: 'bg-amber-50', iconText: 'text-amber-600' },
+              { label: 'Out of Stock', value: outOfStock.length, icon: <TrendingUp size={20} />, color: 'red', border: 'border-l-red-500', iconBg: 'bg-red-50', iconText: 'text-red-600' },
+            ].map((kpi: any) => (
+              <div key={kpi.label} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${kpi.border} hover:bg-slate-50 transition-all`}>
+                <div className={`p-2.5 ${kpi.iconBg} ${kpi.iconText} rounded-lg`}>{kpi.icon}</div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{kpi.label}</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{kpi.value}</p>
+                  {kpi.sub && <p className="text-[10px] text-emerald-600 mt-0.5">{kpi.sub}</p>}
                 </div>
-                <div className="text-2xl font-bold finance-nums truncate" style={{ color: '#0F172A' }}>{kpi.value}</div>
-                {kpi.subtitle && <div className="text-xs finance-nums" style={{ color: '#059669' }}>{kpi.subtitle}</div>}
-                <div className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: '#64748B' }}>{kpi.label}</div>
               </div>
             ))}
           </div>
@@ -456,17 +455,17 @@ export const InventoryReports: React.FC = () => {
           {/* Financial Basis KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Cost Basis', value: currency + totalValue.toFixed(2), icon: <DollarSign size={18} />, color: '#059669', bg: '#ECFDF5' },
-              { label: 'Potential Revenue', value: currency + totalPotentialRevenue.toFixed(2), icon: <TrendingUp size={18} />, color: '#2563EB', bg: '#EFF6FF' },
-              { label: 'Gross Profit Potential', value: currency + grossProfitPotential.toFixed(2), icon: <Coins size={18} />, color: grossProfitPotential >= 0 ? '#059669' : '#EF4444', bg: grossProfitPotential >= 0 ? '#ECFDF5' : '#FEF2F2' },
-              { label: 'Avg Markup', value: overallMarkupPct.toFixed(1) + '%', icon: <BarChart3 size={18} />, color: overallMarkupPct >= 20 ? '#059669' : '#D97706', bg: '#FFFBEB' },
+              { label: 'Total Cost Basis', value: currency + totalValue.toFixed(2), icon: <DollarSign size={20} />, border: 'border-l-emerald-500', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600' },
+              { label: 'Potential Revenue', value: currency + totalPotentialRevenue.toFixed(2), icon: <TrendingUp size={20} />, border: 'border-l-blue-500', iconBg: 'bg-blue-50', iconText: 'text-blue-600' },
+              { label: 'Gross Profit Potential', value: currency + grossProfitPotential.toFixed(2), icon: <Coins size={20} />, border: grossProfitPotential >= 0 ? 'border-l-emerald-500' : 'border-l-red-500', iconBg: grossProfitPotential >= 0 ? 'bg-emerald-50' : 'bg-red-50', iconText: grossProfitPotential >= 0 ? 'text-emerald-600' : 'text-red-600' },
+              { label: 'Avg Markup', value: overallMarkupPct.toFixed(1) + '%', icon: <BarChart3 size={20} />, border: overallMarkupPct >= 20 ? 'border-l-emerald-500' : 'border-l-amber-500', iconBg: 'bg-amber-50', iconText: 'text-amber-600' },
             ].map(kpi => (
-              <div key={kpi.label} className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: kpi.bg, color: kpi.color }}>{kpi.icon}</div>
+              <div key={kpi.label} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${kpi.border} hover:bg-slate-50 transition-all`}>
+                <div className={`p-2.5 ${kpi.iconBg} ${kpi.iconText} rounded-lg`}>{kpi.icon}</div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{kpi.label}</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{kpi.value}</p>
                 </div>
-                <div className="text-2xl font-bold finance-nums" style={{ color: '#0F172A' }}>{kpi.value}</div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: '#64748B' }}>{kpi.label}</div>
               </div>
             ))}
           </div>

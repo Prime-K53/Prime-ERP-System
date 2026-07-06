@@ -28,6 +28,7 @@ import {
   X
 } from 'lucide-react';
 import { buildRecurringDraftFromExaminationBatch } from '../../utils/recurringConversion';
+import '../inventory/inventory-reference.css';
 
 const ExaminationHub: React.FC = () => {
   const DEFAULT_TONER_PAGES_PER_UNIT = 20000;
@@ -488,51 +489,64 @@ const ExaminationHub: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 tablet-auto-fit-180 gap-4 mb-6 shrink-0">
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Batches</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">{stats.totalBatches}</div>
-          <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-            <FileText size={10} className="text-blue-500" /> Active and historical
+      <div className="kpi-grid-dash mb-6 shrink-0">
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #2563EB' }}>
+          <div className="kpi-card-icon" style={{ color: '#2563EB', background: '#2563EB12' }}>
+            <FileText size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Batches</div>
+            <div className="kpi-card-value">{stats.totalBatches}</div>
+            <div className="kpi-card-sub">Active and historical</div>
           </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Amount</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">
-            {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}
-            {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #10B981' }}>
+          <div className="kpi-card-icon" style={{ color: '#10B981', background: '#10B98112' }}>
+            <DollarSign size={18} />
           </div>
-          <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-            <DollarSign size={10} className="text-emerald-500" /> Across all batches
-          </div>
-        </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Toner Needed</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">
-            {stats.totalTonerNeeded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            <span className="ml-1 text-xs font-semibold text-slate-500">kg</span>
-          </div>
-          <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-            <Droplet size={10} className="text-violet-500" /> For calculated batches
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Amount</div>
+            <div className="kpi-card-value">
+              {currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'}
+              {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+            <div className="kpi-card-sub">Across all batches</div>
           </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Papers Needed</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">
-            {stats.totalPaperNeeded.toLocaleString()}
-            <span className="ml-1 text-xs font-semibold text-slate-500">sheets</span>
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #7C3AED' }}>
+          <div className="kpi-card-icon" style={{ color: '#7C3AED', background: '#7C3AED12' }}>
+            <Droplet size={18} />
           </div>
-          <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-            <FileText size={10} className="text-blue-500" /> Across {stats.calculatedBatches} calculated batch(es)
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Toner Needed</div>
+            <div className="kpi-card-value">
+              {stats.totalTonerNeeded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="ml-1 text-xs font-semibold text-slate-500">kg</span>
+            </div>
+            <div className="kpi-card-sub">For calculated batches</div>
           </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Ready / Invoiced</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">
-            {stats.approvedBatches} / {stats.invoicedBatches}
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #F59E0B' }}>
+          <div className="kpi-card-icon" style={{ color: '#F59E0B', background: '#F59E0B12' }}>
+            <FileText size={18} />
           </div>
-          <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1">
-            <CheckCircle size={10} className="text-green-500" /> Approval lifecycle
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Papers Needed</div>
+            <div className="kpi-card-value">
+              {stats.totalPaperNeeded.toLocaleString()}
+              <span className="ml-1 text-xs font-semibold text-slate-500">sheets</span>
+            </div>
+            <div className="kpi-card-sub">Across {stats.calculatedBatches} calculated batch(es)</div>
+          </div>
+        </div>
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #16A34A' }}>
+          <div className="kpi-card-icon" style={{ color: '#16A34A', background: '#16A34A12' }}>
+            <CheckCircle size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Ready / Invoiced</div>
+            <div className="kpi-card-value">{stats.approvedBatches} / {stats.invoicedBatches}</div>
+            <div className="kpi-card-sub">Approval lifecycle</div>
           </div>
         </div>
       </div>

@@ -232,19 +232,21 @@ const Forecasting: React.FC = () => {
                 {isAiLoading ? <TrendingUp className="animate-spin text-purple-600" size={14} /> : <BarChart3 className="text-purple-600" size={14} />}
                 {aiAnalysis ? 'Update AI Insight' : 'Get AI Forecast'}
             </button>
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <div className="border-b border-slate-200 bg-white rounded-t-xl">
+              <div className="flex items-center gap-8 px-6">
                 <button 
                     onClick={() => setActiveTab('Inventory')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'Inventory' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`py-3 text-[13px] font-bold transition-all border-b-2 relative ${activeTab === 'Inventory' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                 >
-                    <Package size={14}/> Inventory
+                    <Package size={14} className="inline mr-1.5"/> Inventory
                 </button>
                 <button 
                     onClick={() => setActiveTab('CashFlow')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'CashFlow' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`py-3 text-[13px] font-bold transition-all border-b-2 relative ${activeTab === 'CashFlow' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                 >
-                    <Wallet size={14}/> Cash Flow
+                    <Wallet size={14} className="inline mr-1.5"/> Cash Flow
                 </button>
+              </div>
             </div>
         </div>
       </div>
@@ -273,25 +275,36 @@ const Forecasting: React.FC = () => {
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {activeTab === 'Inventory' ? (
           <div className="animate-fadeIn">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
-                <h3 className="text-purple-100 font-medium mb-1 text-xs uppercase">Critical Stock Alerts</h3>
-                <div className="text-3xl font-bold mb-2">{inventoryForecast.filter(i => i.daysUntilStockout < 7).length} Items</div>
-                <p className="text-xs text-purple-100 opacity-80">Will run out within 7 days based on current trends.</p>
-              </div>
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                <h3 className="text-slate-500 font-medium mb-1 text-xs uppercase">Avg. Daily Consumption</h3>
-                <div className="text-3xl font-bold text-slate-900 mb-2">
-                  {(inventoryForecast.reduce((sum, i) => sum + (i.dailyUsage || 0), 0) || 0).toFixed(1)} <span className="text-sm font-normal text-slate-500">units/day</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-red-50 text-red-600 rounded-lg">
+                  <AlertTriangle size={20} />
                 </div>
-                <p className="text-xs text-slate-500">Across all product lines</p>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Critical Stock Alerts</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{inventoryForecast.filter(i => i.daysUntilStockout < 7).length} <span className="text-xs font-semibold text-slate-400">Items</span></p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Will run out within 7 days</p>
+                </div>
               </div>
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                 <h3 className="text-slate-500 font-medium mb-1 text-xs uppercase">Est. Reorder Value</h3>
-                 <div className="text-3xl font-bold text-emerald-600 mb-2">
-                   {currency}{(inventoryForecast.reduce((sum, i) => sum + ((i.suggestedReorder || 0) * (i.price || 0)), 0) || 0).toFixed(0)}
-                 </div>
-                 <p className="text-xs text-slate-500">To maintain 14-day buffer</p>
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-purple-50 text-purple-600 rounded-lg">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Avg. Daily Consumption</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{(inventoryForecast.reduce((sum, i) => sum + (i.dailyUsage || 0), 0) || 0).toFixed(1)} <span className="text-xs font-semibold text-slate-400">units/day</span></p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Across all product lines</p>
+                </div>
+              </div>
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Est. Reorder Value</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{(inventoryForecast.reduce((sum, i) => sum + ((i.suggestedReorder || 0) * (i.price || 0)), 0) || 0).toFixed(0)}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">To maintain 14-day buffer</p>
+                </div>
               </div>
             </div>
 
@@ -369,31 +382,46 @@ const Forecasting: React.FC = () => {
           </div>
         ) : (
           <div className="animate-fadeIn space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5"><Coins size={60}/></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Cash</p>
-                <h3 className="text-2xl font-black text-slate-900 mt-1">{currency}{cashFlowForecast.currentCash.toLocaleString()}</h3>
-                <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">Ledger balance today</p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                  <Coins size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Available Cash</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{cashFlowForecast.currentCash.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Ledger balance today</p>
+                </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. Inflows (90d)</p>
-                <h3 className="text-2xl font-black text-emerald-600 mt-1">+{currency}{cashFlowForecast.totalInflow.toLocaleString()}</h3>
-                <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">Pending Invoices</p>
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <ArrowUpCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Est. Inflows (90d)</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">+{currency}{cashFlowForecast.totalInflow.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Pending Invoices</p>
+                </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. Outflows (90d)</p>
-                <h3 className="text-2xl font-black text-rose-600 mt-1">-{currency}{cashFlowForecast.totalOutflow.toLocaleString()}</h3>
-                <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tight">AP & Fixed Costs</p>
+              <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all">
+                <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg">
+                  <ArrowDownCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Est. Outflows (90d)</p>
+                  <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">-{currency}{cashFlowForecast.totalOutflow.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">AP & Fixed Costs</p>
+                </div>
               </div>
-              <div className={`p-6 rounded-2xl shadow-sm border border-transparent ${cashFlowForecast.minBalance < 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                <p className={`text-[10px] font-black uppercase tracking-widest ${cashFlowForecast.minBalance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>Projected Liquidity</p>
-                <h3 className={`text-2xl font-black mt-1 ${cashFlowForecast.minBalance < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-                    {currency}{cashFlowForecast.minBalance.toLocaleString()}
-                </h3>
-                <p className={`text-[9px] font-bold mt-2 uppercase tracking-tight ${cashFlowForecast.minBalance < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                    {cashFlowForecast.minBalance < 0 ? `Risk: Deficit on ${cashFlowForecast.riskDay?.label}` : 'Safe operating margin'}
-                </p>
+              <div className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 hover:bg-slate-50 transition-all ${cashFlowForecast.minBalance < 0 ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
+                <div className={`p-2.5 rounded-lg ${cashFlowForecast.minBalance < 0 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Projected Liquidity</p>
+                  <p className={`text-lg md:text-xl font-semibold finance-nums ${cashFlowForecast.minBalance < 0 ? 'text-red-700' : 'text-emerald-700'}`}>{currency}{cashFlowForecast.minBalance.toLocaleString()}</p>
+                  <p className={`text-[10px] mt-0.5 ${cashFlowForecast.minBalance < 0 ? 'text-red-400' : 'text-emerald-400'}`}>{cashFlowForecast.minBalance < 0 ? `Risk: Deficit on ${cashFlowForecast.riskDay?.label}` : 'Safe operating margin'}</p>
+                </div>
               </div>
             </div>
 

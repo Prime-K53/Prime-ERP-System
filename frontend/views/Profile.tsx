@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Dialog from '../components/Dialog';
 import { cloudDb } from '../services/cloudDb';
+import './profile.css';
 
 const TIMEZONES = [
   { label: 'UTC (GMT)', value: 'UTC' },
@@ -245,30 +246,26 @@ const Profile: React.FC = () => {
   const username = user?.username || '';
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar bg-slate-50/50">
+    <div className="h-full overflow-y-auto custom-scrollbar pf-shell">
       <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="pf-header-row">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="p-2.5 hover:bg-white rounded-xl text-slate-500 transition-all border border-slate-200 bg-white shadow-sm hover:shadow-md active:scale-95" 
-              title="Go back"
-            >
+            <button onClick={() => navigate(-1)} className="pf-back-btn" title="Go back">
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Account Settings</h1>
-              <p className="text-sm text-slate-500 mt-0.5 font-medium">Manage your personal information and preferences</p>
+              <h1 className="pf-title">Account Settings</h1>
+              <p className="pf-subtitle">Manage your personal information and preferences</p>
             </div>
           </div>
 
           {hasChanges && (
             <button
               onClick={() => setShowSummaryModal(true)}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 animate-in fade-in slide-in-from-right-4"
+              className="pf-btn-primary"
             >
-              <Save size={18} />
+              <Save size={16} />
               Save All Changes
             </button>
           )}
@@ -277,21 +274,21 @@ const Profile: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column - Profile Card */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="pf-card">
               <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600" />
-              <div className="px-6 pb-6 -mt-12 flex flex-col items-center text-center">
+              <div className="px-5 pb-5 -mt-12 flex flex-col items-center text-center">
                 {/* Profile Photo */}
                 <div className="relative group">
-                  <div className="w-24 h-24 rounded-full border-4 border-white bg-slate-100 shadow-xl overflow-hidden flex items-center justify-center text-slate-400">
+                  <div className="w-24 h-24 rounded-full border-4 border-[#FCFCFD] bg-slate-100 shadow-xl overflow-hidden flex items-center justify-center text-slate-400">
                     {profileData.profilePhoto ? (
                       <img src={profileData.profilePhoto} alt={displayName} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-3xl font-black text-indigo-600">{initials}</span>
+                      <span className="text-3xl font-semibold text-indigo-600">{initials}</span>
                     )}
                   </div>
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/40 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute inset-0 bg-black/40 text-[#FCFCFD] rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Change photo"
                   >
                     <Camera size={24} />
@@ -319,79 +316,76 @@ const Profile: React.FC = () => {
                             if (e.key === 'Escape') { setIsEditingName(false); setNameError(null); setProfileData(prev => ({ ...prev, fullName: originalData.fullName })); }
                           }}
                           onBlur={() => {
-                            // Discard changes on outside click if no error, otherwise stay in edit mode
                             if (!validateName(profileData.fullName)) {
                               setIsEditingName(false);
                               setNameError(null);
                             }
                           }}
-                          className={`w-full text-center text-lg font-bold text-slate-900 bg-slate-50 border ${nameError ? 'border-rose-500' : 'border-indigo-500'} rounded-lg px-2 py-1 outline-none`}
+                          className={`pf-input text-center ${nameError ? 'border-rose-500' : 'border-indigo-500'}`}
                         />
-                        <button onClick={handleNameSave} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Check size={18} /></button>
-                        <button onClick={() => { setIsEditingName(false); setNameError(null); setProfileData(prev => ({ ...prev, fullName: originalData.fullName })); }} className="p-1 text-rose-600 hover:bg-rose-50 rounded"><X size={18} /></button>
+                        <button onClick={handleNameSave} className="pf-btn-ghost text-emerald-600 hover:bg-emerald-50"><Check size={18} /></button>
+                        <button onClick={() => { setIsEditingName(false); setNameError(null); setProfileData(prev => ({ ...prev, fullName: originalData.fullName })); }} className="pf-btn-ghost text-rose-600 hover:bg-rose-50"><X size={18} /></button>
                       </div>
-                      {nameError && <p className="text-[10px] font-bold text-rose-500">{nameError}</p>}
+                      {nameError && <p className="pf-meta text-rose-500 font-medium">{nameError}</p>}
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2 group">
-                      <h2 className="text-xl font-black text-slate-900">{displayName}</h2>
+                      <h2 className="pf-name">{displayName}</h2>
                       {(user?.isSuperAdmin || user?.role === 'Admin') && (
                         <button 
                           onClick={() => setIsEditingName(true)}
-                          className="p-1 text-slate-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"
+                          className="pf-btn-ghost opacity-0 group-hover:opacity-100"
                         >
                           <Edit2 size={14} />
                         </button>
                       )}
                     </div>
                   )}
-                  <p className="text-sm text-slate-500 font-medium">@{username}</p>
+                  <p className="pf-username">@{username}</p>
                 </div>
 
                 <div className="flex items-center gap-2 mt-4">
-                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-indigo-100">
-                    {role}
-                  </span>
+                  <span className="pf-badge">{role}</span>
                 </div>
 
                 {/* Photo Actions */}
-                <div className="grid grid-cols-2 gap-2 w-full mt-6 pt-6 border-t border-slate-100">
+                <div className="grid grid-cols-2 gap-2 w-full mt-5 pt-5 border-t border-slate-100">
                   <button 
                     onClick={() => fileInputRef.current?.click()}
                     className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
                   >
                     <Upload size={16} className="text-indigo-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-tight">Upload</span>
+                    <span className="pf-meta font-medium uppercase tracking-tight">Upload</span>
                   </button>
                   <button 
                     onClick={() => setProfileData(prev => ({ ...prev, profilePhoto: '' }))}
                     className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
                   >
                     <Trash2 size={16} className="text-rose-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-tight">Remove</span>
+                    <span className="pf-meta font-medium uppercase tracking-tight">Remove</span>
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-indigo-500/10">
+            <div className="pf-stats-card">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Activity Summary</p>
+                <span className="pf-stats-label">Activity Summary</span>
                 <Activity size={16} className="text-indigo-400" />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Total Actions</span>
-                  <span className="text-lg font-black">{stats.total}</span>
+                  <span className="text-[13.5px] font-normal text-slate-400">Total Actions</span>
+                  <span className="pf-stats-value">{stats.total}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Today</span>
-                  <span className="text-lg font-black text-indigo-400">{stats.today}</span>
+                  <span className="text-[13.5px] font-normal text-slate-400">Today</span>
+                  <span className="pf-stats-value text-indigo-400">{stats.today}</span>
                 </div>
-                <div className="pt-4 border-t border-slate-800">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Last Action</p>
-                  <p className="text-sm font-bold truncate text-slate-200">{stats.lastAction}</p>
+                <div className="pt-4 border-t border-[#1E293B]">
+                  <span className="pf-stats-label block mb-1">Last Action</span>
+                  <p className="text-[13.5px] font-medium truncate text-slate-200">{stats.lastAction}</p>
                 </div>
               </div>
             </div>
@@ -400,57 +394,47 @@ const Profile: React.FC = () => {
           {/* Right Column - Forms */}
           <div className="lg:col-span-8 space-y-6">
             {/* General Information */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <UserIcon size={18} className="text-indigo-500" />
-                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Personal Details</h3>
-                </div>
+            <div className="pf-card">
+              <div className="pf-card-header">
+                <UserIcon size={16} className="text-indigo-500" />
+                <h3 className="pf-section-title">Personal Details</h3>
               </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Mail size={12} /> Work Email
-                  </label>
+              <div className="pf-card-body grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="pf-input-group">
+                  <label className="pf-label"><Mail size={12} /> Work Email</label>
                   <input
                     type="email"
                     value={profileData.email}
                     onChange={e => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+                    className="pf-input"
                     placeholder="email@organization.com"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Phone size={12} /> Contact Phone
-                  </label>
+                <div className="pf-input-group">
+                  <label className="pf-label"><Phone size={12} /> Contact Phone</label>
                   <input
                     type="tel"
                     value={profileData.phone}
                     onChange={e => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+                    className="pf-input"
                     placeholder="+1 (555) 000-0000"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Briefcase size={12} /> Job Title
-                  </label>
+                <div className="pf-input-group">
+                  <label className="pf-label"><Briefcase size={12} /> Job Title</label>
                   <input
                     value={profileData.jobTitle}
                     onChange={e => setProfileData(prev => ({ ...prev, jobTitle: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+                    className="pf-input"
                     placeholder="Financial Controller"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Globe size={12} /> Timezone
-                  </label>
+                <div className="pf-input-group">
+                  <label className="pf-label"><Globe size={12} /> Timezone</label>
                   <select
                     value={profileData.timezone}
                     onChange={e => setProfileData(prev => ({ ...prev, timezone: e.target.value }))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm appearance-none cursor-pointer"
+                    className="pf-select"
                   >
                     {TIMEZONES.map(tz => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -461,50 +445,48 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Password Management */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Key size={18} className="text-indigo-500" />
-                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Security</h3>
-                </div>
+            <div className="pf-card">
+              <div className="pf-card-header">
+                <Key size={16} className="text-indigo-500" />
+                <h3 className="pf-section-title">Security</h3>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="pf-card-body space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider">New Password</label>
+                  <div className="pf-input-group">
+                    <label className="pf-label">New Password</label>
                     <div className="relative">
                       <input
                         type={showPasswords ? 'text' : 'password'}
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 pr-10 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+                        className="pf-input pr-10"
                         placeholder="Enter new password"
                       />
-                      <button onClick={() => setShowPasswords(!showPasswords)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <button onClick={() => setShowPasswords(!showPasswords)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 pf-btn-ghost">
                         {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider">Confirm Password</label>
+                  <div className="pf-input-group">
+                    <label className="pf-label">Confirm Password</label>
                     <input
                       type={showPasswords ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all text-sm"
+                      className="pf-input"
                       placeholder="Repeat password"
                     />
                   </div>
                 </div>
 
                 {newPassword && (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
                     {!passwordValidation.valid ? (
-                      <p className="text-xs text-rose-500 flex items-center gap-1.5 font-bold">
+                      <p className="pf-meta text-rose-500 font-medium flex items-center gap-1.5">
                         <AlertCircle size={14} /> {passwordValidation.errors[0]}
                       </p>
                     ) : (
-                      <p className="text-xs text-emerald-600 flex items-center gap-1.5 font-bold">
+                      <p className="pf-meta text-emerald-600 font-medium flex items-center gap-1.5">
                         <CheckCircle2 size={14} /> Password complexity requirements met
                       </p>
                     )}
@@ -515,7 +497,7 @@ const Profile: React.FC = () => {
                   <button
                     onClick={handleChangePassword}
                     disabled={saving || !newPassword || !confirmPassword || !!passwordValidation.errors?.length}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-lg shadow-slate-900/10"
+                    className="pf-btn-primary bg-slate-900 hover:bg-slate-800"
                   >
                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Shield size={16} />}
                     Update Security
@@ -525,27 +507,27 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center gap-2">
-                <History size={18} className="text-indigo-500" />
-                <h3 className="font-black text-slate-800 text-sm uppercase tracking-widest">Recent Logs</h3>
+            <div className="pf-card">
+              <div className="pf-card-header">
+                <History size={16} className="text-indigo-500" />
+                <h3 className="pf-section-title">Recent Logs</h3>
               </div>
               <div className="max-h-64 overflow-y-auto custom-scrollbar">
                 {userLogs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                     <Activity size={32} className="mb-2 opacity-30" />
-                    <p className="font-black uppercase tracking-widest text-[10px]">No activity history</p>
+                    <p className="pf-meta font-medium uppercase tracking-widest">No activity history</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {userLogs.slice(0, 10).map((log: any) => (
-                      <div key={log.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50/50 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-indigo-500 border border-slate-100">
+                      <div key={log.id} className="pf-log-item">
+                        <div className="pf-log-icon">
                           <Activity size={14} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800">{log.action}</p>
-                          <p className="text-[10px] text-slate-500 font-medium">{new Date(log.date).toLocaleString()}</p>
+                          <p className="pf-log-action">{log.action}</p>
+                          <p className="pf-log-date">{new Date(log.date).toLocaleString()}</p>
                         </div>
                         <ChevronRight size={14} className="text-slate-300" />
                       </div>
@@ -566,28 +548,28 @@ const Profile: React.FC = () => {
       >
         <div className="space-y-6">
           <p className="text-sm text-slate-500">You are about to save the following updates to your profile:</p>
-          <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <div className="space-y-3 bg-[#F8FAFC] p-4 rounded-2xl border border-[#E2E8F0]">
             {changedFields.map(field => (
-              <div key={field} className="flex items-center gap-3 text-sm">
+              <div key={field} className="pf-change-item">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                <span className="font-bold text-slate-700">{field}</span>
-                <span className="text-slate-400">was modified</span>
+                <span className="font-semibold text-[#1E293B]">{field}</span>
+                <span className="text-[#64748B] font-normal">was modified</span>
               </div>
             ))}
           </div>
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setShowSummaryModal(false)}
-              className="flex-1 px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="pf-btn-secondary flex-1 justify-center"
             >
               Cancel
             </button>
             <button
               onClick={handleBatchSave}
               disabled={saving}
-              className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
+              className="pf-btn-primary flex-1 justify-center"
             >
-              {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
               Confirm & Save
             </button>
           </div>
@@ -626,15 +608,15 @@ const Profile: React.FC = () => {
           <div className="flex gap-3">
             <button
               onClick={() => setShowCropModal(false)}
-              className="flex-1 px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="pf-btn-secondary flex-1 justify-center"
             >
               Cancel
             </button>
             <button
               onClick={handleCropSave}
-              className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
+              className="pf-btn-primary flex-1 justify-center"
             >
-              <ImageIcon size={18} />
+              <ImageIcon size={16} />
               Set Photo
             </button>
           </div>

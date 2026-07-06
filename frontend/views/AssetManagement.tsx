@@ -122,18 +122,33 @@ const AssetManagement: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 border border-slate-200">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Total Value</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">K {totalValue.toLocaleString()}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+            <DollarSign size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Value</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">K {totalValue.toLocaleString()}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Active Assets</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{activeCount}</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <Monitor size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Active Assets</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{activeCount}</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">In Maintenance</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{maintenanceCount}</p>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+            <Wrench size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">In Maintenance</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{maintenanceCount}</p>
+          </div>
         </div>
       </div>
 

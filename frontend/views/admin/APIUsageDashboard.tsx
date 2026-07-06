@@ -22,11 +22,43 @@ const APIUsageDashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div><h1 className="text-2xl font-bold text-slate-900">API Usage & Rate Limiting</h1><p className="text-sm text-slate-500 mt-1">Monitor API consumption, latency, and error rates</p></div>
       </div>
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 border border-slate-200"><p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Requests (24h)</p><p className="text-2xl font-bold text-slate-900 mt-1">{endpoints.reduce((s, e) => s + e.calls24h, 0) || 0}</p></div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200"><p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Avg Latency</p><p className="text-2xl font-bold text-slate-900 mt-1">{endpoints.length > 0 ? (endpoints.reduce((s, e) => s + e.avgLatency, 0) / endpoints.length).toFixed(0) : '0'}ms</p></div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200"><p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Error Rate</p><p className={`text-2xl font-bold mt-1 ${endpoints.some(e => e.errorRate > 5) ? 'text-red-600' : 'text-emerald-600'}`}>{endpoints.length > 0 ? (endpoints.reduce((s, e) => s + e.errorRate, 0) / endpoints.length).toFixed(1) : '0'}%</p></div>
-        <div className="bg-white rounded-xl p-4 border border-slate-200"><p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Rate Limit</p><p className={`text-2xl font-bold mt-1 ${usagePct > 80 ? 'text-red-600' : usagePct > 50 ? 'text-amber-600' : 'text-emerald-600'}`}>{currentUsage}/{rateLimit}</p></div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+            <Activity size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Requests (24h)</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{endpoints.reduce((s, e) => s + e.calls24h, 0) || 0}</p>
+          </div>
+        </div>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-purple-50 text-purple-600 rounded-lg">
+            <Clock size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Avg Latency</p>
+            <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{endpoints.length > 0 ? (endpoints.reduce((s, e) => s + e.avgLatency, 0) / endpoints.length).toFixed(0) : '0'}ms</p>
+          </div>
+        </div>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-red-50 text-red-600 rounded-lg">
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Error Rate</p>
+            <p className={`text-lg md:text-xl font-semibold finance-nums ${endpoints.some(e => e.errorRate > 5) ? 'text-red-600' : 'text-emerald-600'}`}>{endpoints.length > 0 ? (endpoints.reduce((s, e) => s + e.errorRate, 0) / endpoints.length).toFixed(1) : '0'}%</p>
+          </div>
+        </div>
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all">
+          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Rate Limit</p>
+            <p className={`text-lg md:text-xl font-semibold finance-nums ${usagePct > 80 ? 'text-red-600' : usagePct > 50 ? 'text-amber-600' : 'text-emerald-600'}`}>{currentUsage}/{rateLimit}</p>
+          </div>
+        </div>
       </div>
       <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
         <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><BarChart3 size={16} className="text-indigo-600" />Rate Limit Configuration</h3>
