@@ -52,7 +52,24 @@ export async function signUp(email: string, password: string, metadata?: Record<
     if (error) {
       logger.error('[Supabase] signUp error:', error);
       if (error.message?.toLowerCase().includes('already registered')) {
-        return { success: false, error: 'An account with this email already exists.' };
+        console.log('[Auth] Email already registered — attempting login to re-link existing auth user...');
+        const { data: signInData, error: signInError } = await withTimeout(supabase.auth.signInWithPassword({
+          email: targetEmail,
+          password,
+        }));
+        if (signInError) {
+          logger.error('[Supabase] Auto-login after already registered failed:', signInError);
+          return { success: false, error: 'An account with this email already exists. Use a different email or sign in with your existing password.' };
+        }
+        if (signInData?.user) {
+          console.log('[Auth] Re-linked existing auth user:', signInData.user.id);
+          return {
+            success: true,
+            userId: signInData.user.id,
+            session: signInData.session,
+          };
+        }
+        return { success: false, error: 'An account with this email already exists. Try signing in instead.' };
       }
       if (error.message?.toLowerCase().includes('captcha')) {
         return { success: false, error: 'CAPTCHA verification required. Please disable CAPTCHA in your Supabase dashboard under Authentication > Settings > Security, or configure reCAPTCHA keys.' };
