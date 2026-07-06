@@ -48,3 +48,6 @@ BEGIN
   DELETE FROM companies WHERE id = target_company_id;
 END;
 $$;
+
+-- Grant execution to authenticated users so the frontend can call it via supabase.rpc()
+GRANT EXECUTE ON FUNCTION cascade_delete_company(TEXT) TO authenticated;

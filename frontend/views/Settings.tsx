@@ -526,27 +526,7 @@ const Settings: React.FC = () => {
             if (isSupabaseConfigured()) {
                 const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
                 if (companyId) {
-                    try {
-                        await cloudDb.deleteCompany(companyId);
-                    } catch (deleteErr) {
-                        const msg = deleteErr instanceof Error ? deleteErr.message : '';
-                        if (msg.includes('cascade_delete_company')) {
-                            const fallbackConfirm = window.confirm(
-                                'Direct deletion failed. Try using the Supabase cascade function?\n\n' +
-                                'If you haven\'t set up the function yet, run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard first.'
-                            );
-                            if (fallbackConfirm) {
-                                const { error: rpcError } = await supabase.rpc('cascade_delete_company', {
-                                    target_company_id: companyId
-                                });
-                                if (rpcError) throw rpcError;
-                            } else {
-                                throw deleteErr;
-                            }
-                        } else {
-                            throw deleteErr;
-                        }
-                    }
+                    await cloudDb.deleteCompany(companyId);
                 }
                 await supabase.auth.signOut();
             } else {
@@ -562,6 +542,12 @@ const Settings: React.FC = () => {
                 notify(
                     'Company data could not be fully deleted due to database constraints. ' +
                     'Run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard.',
+                    'error'
+                );
+            } else if (msg.includes('permission') || msg.includes('42501')) {
+                notify(
+                    'Permission denied. Run the SQL from database/supabase-cascade-delete.sql in your ' +
+                    'Supabase dashboard to create a privileged deletion function, then try again.',
                     'error'
                 );
             } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
