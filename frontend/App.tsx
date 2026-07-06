@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
-import OnboardingTour from './components/OnboardingTour';
+
 import { logger } from '@/services/logger';
 
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -657,7 +657,6 @@ const AppLayout: React.FC = () => {
         </main>
       </div>
       </div>
-      <OnboardingTour />
     </div>
   );
 };

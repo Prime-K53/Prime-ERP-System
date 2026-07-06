@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, AlertCircle, CheckCircle, Loader2, Download } from 'lucide-react';
 import { useAuth } from '../../../../context/AuthContext';
 import type { Item } from '../../../../types';
+import { parseCSV } from '../../../../services/excelService';
 
 interface Props {
   open: boolean;
@@ -22,20 +23,12 @@ export const ImportModal: React.FC<Props> = ({ open, onClose, onImport }) => {
   React.useEffect(() => { if (!open) { setStep('upload'); setRawData([]); setColumnMap({}); setResult(null); } }, [open]);
   if (!open) return null;
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n').filter(l => l.trim());
-      if (lines.length < 2) { notify?.('CSV must have a header row and at least one data row', 'error'); return; }
-      const headers = parseCSVLine(lines[0]);
-      const rows = lines.slice(1).map(l => {
-        const vals = parseCSVLine(l);
-        const row: Record<string, string> = {};
-        headers.forEach((h, i) => { row[h.trim()] = (vals[i] || '').trim(); });
-        return row;
-      });
-      setRawData(rows);
+  const handleFile = async (file: File) => {
+    try {
+      const rows = await parseCSV(file);
+      if (rows.length === 0) { notify?.('CSV must have a header row and at least one data row', 'error'); return; }
+      setRawData(rows as Record<string, string>[]);
+      const headers = Object.keys(rows[0]);
       const autoMap: Record<string, string> = {};
       const itemKeys = ['name', 'sku', 'barcode', 'type', 'category', 'unit', 'stock', 'costPrice', 'sellingPrice', 'price', 'status', 'description', 'brand'];
       headers.forEach(h => {
@@ -48,8 +41,7 @@ export const ImportModal: React.FC<Props> = ({ open, onClose, onImport }) => {
       });
       setColumnMap(autoMap);
       setStep('preview');
-    };
-    reader.readAsText(file);
+    } catch { notify?.('Failed to parse CSV file.', 'error'); }
   };
 
   const handleImport = async () => {
@@ -194,17 +186,3 @@ export const ImportModal: React.FC<Props> = ({ open, onClose, onImport }) => {
     </div>
   );
 };
-
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
-    if (ch === ',' && !inQuotes) { result.push(current); current = ''; continue; }
-    current += ch;
-  }
-  result.push(current);
-  return result;
-}

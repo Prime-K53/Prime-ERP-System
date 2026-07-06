@@ -534,62 +534,8 @@ const SetupWizard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[13px] font-semibold text-slate-300 mb-3">Pricing Mode</label>
-                    <div className="flex flex-col gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCompany(prev => ({ ...prev, vatPricingMode: 'VAT' }))}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
-                          company.vatPricingMode === 'VAT'
-                            ? 'border-indigo-500 bg-indigo-500/10'
-                            : 'border-[#1F2A3F] bg-[#0D1520] hover:border-slate-500'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                          company.vatPricingMode === 'VAT' ? 'bg-indigo-500' : 'bg-[#1F2A3F]'
-                        }`}>
-                          <svg className={company.vatPricingMode === 'VAT' ? 'text-white' : 'text-slate-400'} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-slate-100 font-semibold text-sm">Tax (VAT)</div>
-                          <div className="text-xs text-slate-400 mt-0.5">Standard pricing with VAT</div>
-                        </div>
-                        {company.vatPricingMode === 'VAT' && (
-                          <CheckCircle2 size={18} className="ml-auto text-indigo-400 shrink-0" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCompany(prev => ({ ...prev, vatPricingMode: 'MarketAdjustment' }))}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
-                          company.vatPricingMode === 'MarketAdjustment'
-                            ? 'border-indigo-500 bg-indigo-500/10'
-                            : 'border-[#1F2A3F] bg-[#0D1520] hover:border-slate-500'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                          company.vatPricingMode === 'MarketAdjustment' ? 'bg-indigo-500' : 'bg-[#1F2A3F]'
-                        }`}>
-                          <svg className={company.vatPricingMode === 'MarketAdjustment' ? 'text-white' : 'text-slate-400'} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                            <polyline points="17 6 23 6 23 12"></polyline>
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-slate-100 font-semibold text-sm">Market Adjustment</div>
-                          <div className="text-xs text-slate-400 mt-0.5">Dynamic market adjustment pricing</div>
-                        </div>
-                        {company.vatPricingMode === 'MarketAdjustment' && (
-                          <CheckCircle2 size={18} className="ml-auto text-indigo-400 shrink-0" />
-                        )}
-                      </button>
-                    </div>
+                    <label className="block text-[13px] font-semibold text-slate-300 mb-1">Pricing Mode</label>
+                    <p className="text-xs text-slate-500">The app supports both Tax (VAT) and Market Adjustment pricing.</p>
                   </div>
 
                   <div className="pt-2">

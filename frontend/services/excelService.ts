@@ -1,35 +1,20 @@
 
-export const exportToCSV = (data: any[], filename: string) => {
-  if (!data || data.length === 0) {
-    alert("No data to export");
-    return;
+export { exportToCSV } from '../utils/helpers';
+
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { result.push(current); current = ''; continue; }
+    current += ch;
   }
-
-  // Extract headers
-  const headers = Object.keys(data[0]);
-  
-  // Convert to CSV string
-  const csvContent = [
-    headers.join(','), // Header row
-    ...data.map(row => headers.map(fieldName => {
-      const value = row[fieldName];
-      // Handle strings with commas or newlines by wrapping in quotes
-      const stringValue = value === null || value === undefined ? '' : String(value);
-      return `"${stringValue.replace(/"/g, '""')}"`; // Escape quotes
-    }).join(','))
-  ].join('\n');
-
-  // Create Blob and download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+  result.push(current);
+  return result;
+}
 
 export const parseCSV = (file: File): Promise<any[]> => {
   return new Promise((resolve, reject) => {
@@ -48,21 +33,13 @@ export const parseCSV = (file: File): Promise<any[]> => {
         return;
       }
 
-      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+      const headers = parseCSVLine(lines[0]).map(h => h.trim());
       
       const result = lines.slice(1).map(line => {
-        // Simple split by comma, handling quotes is complex but this works for basic CSVs
-        // For a robust solution, a library like PapaParse is usually recommended
-        const values = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-        
+        const values = parseCSVLine(line).map(v => v.trim());
         const obj: any = {};
         headers.forEach((header, index) => {
-          let val: any = values[index];
-          
-          // Keep values as strings — consumers handle type conversion explicitly.
-          // Avoids stripping leading zeros or '+' from phone numbers.
-          
-          obj[header] = val;
+          obj[header] = values[index];
         });
         return obj;
       });

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ItemFormData } from '../types/itemFormTypes';
+import { generateAutoBarcode } from '../../../../utils/skuGenerator';
 
 interface Props {
   data: ItemFormData;
@@ -111,7 +112,7 @@ export const WarehouseSection: React.FC<Props> = ({ data, onChange }) => {
               />
               <button
                 type="button"
-                onClick={() => onChange('barcode', 'GEN-' + Date.now().toString(36).toUpperCase())}
+                onClick={() => onChange('barcode', generateAutoBarcode())}
                 style={{
                   padding: '7px 10px', fontSize: 12, fontWeight: 600, borderRadius: 7,
                   border: 'none', background: '#128C72', color: 'white', cursor: 'pointer', lineHeight: 1.45

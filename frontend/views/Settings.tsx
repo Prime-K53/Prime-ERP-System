@@ -55,6 +55,8 @@ import { PricingAdminTab } from './settings/tabs/PricingAdminTab';
 import { AttributesTab } from './settings/tabs/AttributesTab';
 import { FinishingOptionsTab } from './settings/tabs/FinishingOptionsTab';
 import ComplianceSettings, { ComplianceConfig } from '../components/ComplianceSettings';
+import CustomizeDashboard from '../components/dashboard/CustomizeDashboard';
+import { useDashboardStore } from '../stores/dashboardStore';
 
 // Pricing settings validation using reusable utility
 
@@ -110,6 +112,7 @@ const Settings: React.FC = () => {
     const { companyConfig, updateCompanyConfig, validatePasswordStrength, manageUser, notify, resetSystem, manualDownloadBackup, auditLogs, allUsers } = useAuth();
     const { ledger } = useFinance();
     const { inventory } = useInventory();
+    const { setCustomizeOpen } = useDashboardStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('General');
@@ -883,6 +886,23 @@ const Settings: React.FC = () => {
                                             className="bg-red-600 text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-red-700 transition-all flex items-center gap-2 active:scale-95 shadow-md shadow-red-500/10"
                                         >
                                             <Trash2 size={16} /> Delete Company
+                                        </button>
+                                    </div>
+                                </section>
+
+                                <section className="white-card overflow-hidden">
+                                    <div className="settings-section-header flex justify-between items-center">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-[#393A3D]">Dashboard</h3>
+                                            <p className="text-[11px] text-[#6B6C6F] mt-0.5">Customize your dashboard layout and visible widgets.</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-8">
+                                        <button
+                                            onClick={() => setCustomizeOpen(true)}
+                                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 flex items-center gap-2"
+                                        >
+                                            Open Dashboard Customizer
                                         </button>
                                     </div>
                                 </section>
@@ -3186,6 +3206,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     </div >
                 </div >
             </div>
+            <CustomizeDashboard />
             {show2FASetup && (
                 <TwoFactorSetup 
                     onComplete={(secret) => {

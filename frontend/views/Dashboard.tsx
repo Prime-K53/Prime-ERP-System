@@ -17,7 +17,6 @@ import {
   CheckCircle2, Trash2, ExternalLink, Star, Sun, Calendar} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
 import AIFloatingAssistant from '../components/ai/AIFloatingAssistant';
-import CustomizeDashboard from '../components/dashboard/CustomizeDashboard';
 import { useDashboardStore } from '../stores/dashboardStore';
 import { dbService } from '../services/db';
 import { formatNumber, parseFormattedNumber } from '../utils/helpers';
@@ -734,7 +733,7 @@ const DashboardContent: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
-  const { initialized, loadDefaults, widgets, setCustomizeOpen } = useDashboardStore();
+  const { initialized, loadDefaults, widgets } = useDashboardStore();
 
   useEffect(() => { if (!initialized) loadDefaults(); }, [initialized]);
   const { width: screenWidth } = useWindowSize();
@@ -1712,18 +1711,6 @@ const DashboardContent: React.FC = () => {
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setCustomizeOpen(true)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12, fontWeight: 600,
-                color: '#64748b', background: 'white', cursor: 'pointer', transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#818cf8'; e.currentTarget.style.color = '#4f46e5'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121m0-14.486l2.121 2.121m9.9 9.9l2.121 2.121"/></svg>
-              Customize
-            </button>
             <button
               onClick={() => navigate('/reports')}
               style={{
@@ -2247,8 +2234,6 @@ const DashboardContent: React.FC = () => {
       </div>
 
       <AIFloatingAssistant />
-
-      <CustomizeDashboard />
 
       <WhatsAppMarketingModal 
         open={isWhatsAppModalOpen} 
