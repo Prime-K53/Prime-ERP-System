@@ -169,7 +169,7 @@ const logger = {
   },
   error: (msg: string, extra?: any) => {
     const formatted = `[FRONTEND] ${msg}`;
-    logger.error(formatted, extra || '');
+    console.error(formatted, extra || '');
     if (platform.isDesktop) {
       platform.api.log({ message: formatted, level: 'ERROR', ...extra });
     }
@@ -542,7 +542,7 @@ export const api = {
     getAllItems: () => handle(() => dbService.getAll<Item>('inventory'), 'Inventory.GetAll'),
     createItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Create');
-      const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
+      const isSellable = !['material', 'raw material', 'stationery'].includes(String(item.type).toLowerCase());
       const validation = isSellable
         ? validateMinimumMarkup(
             Number(item.costPrice || item.cost || 0),
@@ -570,7 +570,7 @@ export const api = {
     }, 'Inventory.Create'),
     updateItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Update');
-      const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
+      const isSellable = !['material', 'raw material', 'stationery'].includes(String(item.type).toLowerCase());
       const validation = isSellable
         ? validateMinimumMarkup(
             Number(item.costPrice || item.cost || 0),

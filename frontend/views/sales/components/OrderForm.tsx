@@ -1125,7 +1125,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             let taxRate = companyConfig?.taxRate || 0;
             let taxDetails: any = null;
             if (companyConfig?.enableTax && baseItem) {
-                const taxResult = await calculateItemTax(baseItem, unitPrice, qty, resolvedCustomerId);
+                const effectiveUnitPrice = discountAmount > 0 && qty > 0 ? roundToCurrency(taxableAmount / qty) : unitPrice;
+                const taxResult = await calculateItemTax(baseItem, effectiveUnitPrice, qty, resolvedCustomerId);
                 taxAmount = taxResult?.taxAmount || 0;
                 taxRate = taxResult?.rate || taxRate;
             }
@@ -1143,7 +1144,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         }));
 
         const totalGross = processedItems.reduce((sum: number, i: any) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0);
-        const totalDiscount = processedItems.reduce((sum: number, i: any) => sum + (i.discount || 0), 0);
+        const manualDiscount = Number(formData.discount || 0);
+        const ruleDiscount = processedItems.reduce((sum: number, i: any) => sum + (i.discount || 0), 0);
+        const totalDiscount = manualDiscount + ruleDiscount;
         const totalTax = processedItems.reduce((sum: number, i: any) => sum + (i.taxAmount || 0), 0);
         const otherCharges = Number(formData.otherCharges) || 0;
         const preRoundTotal = totalGross - totalDiscount + totalTax + otherCharges + calculatedOtherCharges;

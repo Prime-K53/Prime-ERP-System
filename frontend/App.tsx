@@ -28,7 +28,7 @@ import { useKeyboard } from './core/keyboard';
 import { useDocumentStore } from './stores/documentStore.ts';
 import { PreviewModal } from './views/shared/components/PDF/PreviewModal.tsx';
 import { PdfWorker } from './views/shared/components/PDF/PdfWorker.tsx';
-import { Bell, Loader2, Coins, X, Calculator, Menu } from 'lucide-react';
+import { Bell, Loader2, Coins, X, Calculator, Menu, UserIcon } from 'lucide-react';
 import Login from './views/auth/Login';
 import SetupWizard from './views/auth/SetupWizard';
 import ForgotPassword from './views/auth/ForgotPassword';
@@ -286,7 +286,7 @@ const ResponsiveDebugUtility: React.FC = () => {
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
-  const { companyConfig, isOnline } = useAuth();
+  const { companyConfig, isOnline, user } = useAuth();
   const {
     isOpen,
     data,
@@ -428,14 +428,26 @@ const AppLayout: React.FC = () => {
           {isPosModalOpen && (
             <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200">
               <div className="bg-white w-full max-w-6xl h-full rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                      <Coins size={20} />
+                <div className="px-6 py-2 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-white">
+                        <UserIcon size={12} />
+                      </div>
+                      <div className="leading-tight">
+                        <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Cashier</p>
+                        <p className="text-xs font-bold text-slate-800">{user?.name || 'Cashier'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-lg font-black text-slate-800 tracking-tight">Terminal POS</h2>
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Live Transaction Interface</p>
+                    <div className="h-6 w-px bg-slate-200"></div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                        <Coins size={14} />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-black text-slate-800 tracking-tight">Terminal POS</h2>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Live Transaction Interface</span>
+                      </div>
                     </div>
                   </div>
                   <button

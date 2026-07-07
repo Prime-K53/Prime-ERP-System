@@ -12,6 +12,7 @@ type PricingCarrier = {
   cost?: number | null;
   cost_price?: number | null;
   cost_per_unit?: number | null;
+  costPrice?: number | null;
   rounding_difference?: number | null;
   smartPricingSnapshot?: {
     roundedPrice?: number | null;
@@ -92,7 +93,8 @@ export function resolveStoredCost(source?: PricingCarrier | null): number {
     toFiniteNumber(source.smartPricingSnapshot?.baseCost),
     toFiniteNumber(source.cost_price),
     toFiniteNumber(source.cost_per_unit),
-    toFiniteNumber(source.cost)
+    toFiniteNumber(source.cost),
+    toFiniteNumber(source.costPrice)
   );
 }
 
@@ -106,7 +108,7 @@ export function normalizeStoredPricing<T extends PricingCarrier>(source: T): T {
   const normalized = { ...source } as T;
   const hasAnyPrice = hasFiniteNumber(source.price) || hasFiniteNumber(source.selling_price) || hasFiniteNumber(source.smartPricingSnapshot?.roundedPrice);
   const hasAnyCalculated = hasFiniteNumber(source.calculated_price) || hasFiniteNumber(source.smartPricingSnapshot?.originalPrice);
-  const hasAnyCost = hasFiniteNumber(source.cost) || hasFiniteNumber(source.cost_price) || hasFiniteNumber(source.smartPricingSnapshot?.baseCost);
+  const hasAnyCost = hasFiniteNumber(source.cost) || hasFiniteNumber(source.cost_price) || hasFiniteNumber(source.smartPricingSnapshot?.baseCost) || hasFiniteNumber(source.costPrice);
 
   if (hasAnyPrice) {
     normalized.price = sellingPrice as T['price'];

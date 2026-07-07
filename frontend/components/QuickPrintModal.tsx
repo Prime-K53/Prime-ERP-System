@@ -116,12 +116,12 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
               {renderCardHeader(<Calculator size={15} className="text-white" />, 'Order Details', isPhotocopy ? 'Double-sided' : 'Single-sided', accentGradient)}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={premiumLabel}><Package size={12} /> Number of Copies</label>
-                  <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
-                </div>
-                <div>
                   <label className={premiumLabel}><FileText size={12} /> Pages per Copy</label>
                   <input type="number" min={1} value={pagesPerCopy} onChange={(e) => setPagesPerCopy(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
+                </div>
+                <div>
+                  <label className={premiumLabel}><Package size={12} /> Number of Copies</label>
+                  <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
                 </div>
               </div>
             </div>

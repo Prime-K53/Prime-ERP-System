@@ -82,7 +82,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   addItem: async (item: Item) => {
-    const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
+    const isSellable = !['material', 'raw material', 'stationery'].includes(String(item.type).toLowerCase());
     const validation = isSellable
       ? validateMinimumMarkup(
           Number(item.costPrice || item.cost || 0),
@@ -125,7 +125,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   },
 
   updateItem: async (item: Item) => {
-    const isSellable = !['material', 'stationery'].includes(String(item.type).toLowerCase());
+    const isSellable = !['material', 'raw material', 'stationery'].includes(String(item.type).toLowerCase());
     const validation = isSellable
       ? validateMinimumMarkup(
           Number(item.costPrice || item.cost || 0),

@@ -34,7 +34,7 @@ export async function getApplicableTaxRate(
   return {
     rate: effectiveRate,
     name: taxRate.name,
-    taxAmount: effectiveRate,
+    taxAmount: 0,
   };
 }
 

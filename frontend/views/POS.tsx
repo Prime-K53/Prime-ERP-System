@@ -52,7 +52,7 @@ const POS: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string | null>(null);
   const [selectedSubAccount, setSelectedSubAccount] = useState<string>('Main');
-  const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [manualDiscountPercent, setManualDiscountPercent] = useState(0);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReturnsModal, setShowReturnsModal] = useState(false);
@@ -240,7 +240,8 @@ const POS: React.FC = () => {
     };
   }, [cart]);
 
-  const payableTotal = total;
+  const manualDiscountAmount = manualDiscountPercent > 0 ? round2(total * (manualDiscountPercent / 100)) : 0;
+  const payableTotal = round2(total - manualDiscountAmount);
   const pricingSummary = useMemo(() => summarizePricingBreakdown(cart), [cart]);
 
   // Calculate adjustment summary from cart items for display in totals section
@@ -492,7 +493,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
         const quickItem: CartItem = {
           id: `QUICK-${isPhotocopy ? 'PHOTO' : 'PRINT'}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           itemId: isPhotocopy ? 'SVC-PHOTOCOPY' : 'SVC-TYPE-PRINT',
-          name: isPhotocopy ? 'Quick Photocopy' : 'Type & Printing',
+          name: isPhotocopy ? 'Photocopy' : 'Type & Printing',
           sku: isPhotocopy ? 'QUICK-PHOTO' : 'QUICK-PRINT',
           desc: isPhotocopy 
             ? `Quick Photocopy (${pagesPerCopy} pages, ${Math.ceil(pagesPerCopy / 2)} sheets × ${quantity} copies)`
@@ -924,7 +925,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
     setCart([]);
     setSelectedCustomerName(null);
     setSelectedSubAccount('Main');
-    setGlobalDiscount(0);
+    setManualDiscountPercent(0);
   };
 
   const recalculateCartPrices = async (customerName: string | null) => {
@@ -1035,16 +1036,22 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
 
       // Apply discount rules
       const allDiscounts = selectedCustomer
-        ? await getApplicableDiscounts(selectedCustomer.id, customerSegment, undefined, payableTotal)
+        ? await getApplicableDiscounts(selectedCustomer.id, customerSegment, undefined, total)
         : [];
+
+      const allLineTotal = processesedItemsWithSnapshots.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+      const totalManualDiscount = manualDiscountPercent > 0 && allLineTotal > 0 ? round2(allLineTotal * (manualDiscountPercent / 100)) : 0;
 
       const saleItems = await Promise.all(processesedItemsWithSnapshots.map(async (item: any) => {
         const qty = item.quantity || 1;
         const unitPrice = item.price || 0;
         const lineTotal = unitPrice * qty;
 
-        // Apply discounts per item
-        let discountTotal = 0;
+        const manualDiscountForItem = totalManualDiscount > 0 ? round2((lineTotal / allLineTotal) * totalManualDiscount) : 0;
+        const baseForRules = round2(lineTotal - manualDiscountForItem);
+
+        // Apply rule-based discounts on top of manual discount
+        let discountTotal = manualDiscountForItem;
         let appliedRuleIds: string[] = [];
         if (allDiscounts.length > 0 && item.type !== 'Service') {
           const catDiscounts = allDiscounts.filter(d =>
@@ -1055,15 +1062,18 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
             (d.scope === 'customer_segment')
           );
           if (catDiscounts.length > 0) {
-            const result = applyDiscounts(lineTotal, qty, unitPrice, catDiscounts);
-            discountTotal = lineTotal - result.discountedTotal;
+            const result = applyDiscounts(baseForRules, qty, unitPrice, catDiscounts);
+            discountTotal += baseForRules - result.discountedTotal;
             appliedRuleIds = result.appliedDiscounts.map(r => r.ruleId);
           }
         }
 
-        // Calculate tax
+        const discountedLineTotal = round2(baseForRules - (discountTotal - manualDiscountForItem));
+        const finalUnitPrice = qty > 0 ? round2(discountedLineTotal / qty) : unitPrice;
+
+        // Calculate tax on final discounted unit price
         const baseItem = item.parentId ? inventory.find(i => i.id === item.parentId) || item : item;
-        const taxResult = await calculateItemTax(baseItem, unitPrice, qty, customerId);
+        const taxResult = await calculateItemTax(baseItem, finalUnitPrice, qty, customerId);
         totalTax += taxResult.taxAmount;
         itemTaxDetails.push({ itemId: item.id, rate: taxResult.rate, name: taxResult.name, taxAmount: taxResult.taxAmount });
 
@@ -1080,7 +1090,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           productName: item.name,
           unitPrice,
           subtotal: lineTotal,
-          discount: discountTotal,
+          discount: round2(discountTotal),
           discountRuleIds: appliedRuleIds,
           taxRate: taxResult.rate,
           taxName: taxResult.name,
@@ -1137,7 +1147,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           adjustments: aggregatedSnapshots,
           context: 'POS'
         });
-        if (Math.abs(serverPricing.totalPrice - payableTotal) > 0.01) {
+        if (serverPricing.totalPrice - payableTotal > 0.01) {
           console.warn('⚠️ Price mismatch detected before submit', { 
             serverPrice: serverPricing.totalPrice, 
             frontendPrice: payableTotal,
@@ -1313,18 +1323,8 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
     <div className="h-full flex flex-col md:flex-row overflow-hidden bg-slate-50 relative font-sans text-slate-800">
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Top Header Mimicking QBO */}
-        <div className="px-6 py-3 flex items-center justify-between z-30 bg-slate-50 border-b border-slate-200">
+         <div className="px-6 py-1 flex items-center justify-between z-30 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white">
-                <UserIcon size={14} />
-              </div>
-              <div className="leading-tight">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Cashier</p>
-                <p className="text-sm font-bold text-slate-800">{user?.name || 'Cashier'}</p>
-              </div>
-            </div>
-            <div className="h-8 w-px bg-slate-200 mx-2"></div>
             <div className="hidden lg:flex gap-2">
               <button onClick={handleQuickPhotocopy} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
                 <Copy size={14} /> Photocopy
@@ -1387,6 +1387,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
         <div className="absolute inset-0 bg-white">
           <CartSidebar
             cart={cart}
+            sales={sales}
             selectedCustomerName={selectedCustomerName}
             selectedSubAccount={selectedSubAccount}
             setSelectedSubAccount={setSelectedSubAccount}
@@ -1399,7 +1400,9 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
             onPark={handleParkOrder}
             onReturn={() => setShowReturnsModal(true)}
             onPay={handlePay}
-            totals={{ subtotal: total, discount: 0, total: payableTotal }}
+            totals={{ subtotal: total, total }}
+            manualDiscountPercent={manualDiscountPercent}
+            onManualDiscountChange={setManualDiscountPercent}
             adjustmentSummary={cartAdjustmentSummary}
             pricingSummary={pricingSummary}
           />
@@ -1495,6 +1498,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           subAccountName={selectedSubAccount}
           adjustmentSummary={cartAdjustmentSummary}
           roundingAccumulation={roundingAccumulation}
+          orderNumber={generateNextId('POS', sales, companyConfig)}
         />
       )}
       {showCustomerModal && <CustomerModal onSelect={handleCustomerSelect} onClose={() => setShowCustomerModal(false)} />}

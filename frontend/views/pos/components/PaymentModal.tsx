@@ -22,6 +22,7 @@ interface PaymentModalProps {
     adjustmentSummary?: { adjustmentId: string; adjustmentName: string; totalAmount: number; itemCount: number; }[];
     roundingAccumulation?: number;
     totalProfitMargin?: number;
+    orderNumber: string;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -35,7 +36,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     subAccountName: _subAccountName,
     adjustmentSummary = [],
     roundingAccumulation: _roundingAccumulation = 0,
-    totalProfitMargin = 0
+    totalProfitMargin = 0,
+    orderNumber
 }) => {
     const { companyConfig, notify } = useAuth(); const { invoices } = useFinance();
     const { accounts: bankAccounts, fetchBankingData } = useBankingStore();
@@ -279,280 +281,183 @@ const canCompleteSale = useMemo(() => {
     );
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex overflow-hidden border border-slate-200">
-                {/* Summary Sidebar */}
-                <div className="w-[300px] bg-slate-50 p-8 border-r border-slate-200 flex flex-col">
-                    <h2 className="text-xs font-bold text-slate-500 mb-8 uppercase tracking-widest">Payment Summary</h2>
-                    <div className="space-y-6 flex-1 overflow-y-auto pr-2">
-                        <div className="flex justify-between items-end pb-2">
-                            <span className="text-xs text-slate-800 font-medium">Order Total</span>
-                            <span className="font-bold text-lg text-slate-800">{currency}{formatNumber(total || 0)}</span>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Financial Breakdown</span>
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between text-[11px]">
-                                        <span className="text-slate-500">Total Adjustments</span>
-                                        <span className="font-mono text-emerald-700 font-semibold">+{currency}{formatNumber(adjustmentTotal)}</span>
-                                    </div>
-                                    {Math.abs(roundingTotal) > 0.0001 && (
-                                    <div className="flex items-center justify-between text-[11px]">
-                                        <span className="text-slate-500">Round Up</span>
-                                        <span className={`font-mono font-semibold ${roundingTotal >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-                                            {roundingTotal >= 0 ? '+' : ''}{currency}{formatNumber(roundingTotal)}
-                                        </span>
-                                    </div>
-                                    )}
-                                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
-                                        <span className="text-slate-500 font-bold">Profit Margin</span>
-                                        <span className="font-mono text-emerald-600 font-bold">{currency}{formatNumber(totalProfitMargin)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Account Balances</span>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
-                                        <Banknote size={12} className="text-emerald-600" /> Cash
-                                    </div>
-                                    <span className="font-mono text-[11px] text-slate-800">{formatBalance(cashBalance)}</span>
-                                </div>
-                                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
-                                        <CreditCard size={12} className="text-blue-600" /> Bank
-                                    </div>
-                                    <span className="font-mono text-[11px] text-slate-800">{formatBalance(bankBalance)}</span>
-                                </div>
-                                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold">
-                                        <Smartphone size={12} className="text-purple-600" /> Mobile
-                                    </div>
-                                    <span className="font-mono text-[11px] text-slate-800">{formatBalance(mobileBalance)}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {customerName && (
-                            <div className="space-y-2">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Customer Info</span>
-                                <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
-                                    <div className="text-xs font-bold text-slate-800">{customerName}</div>
-                                    <div className="flex justify-between text-[11px]">
-                                        <span className="text-slate-500">Available Credit</span>
-                                        <span className={creditStatus.blocked ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold'}>{currency}{formatNumber(creditStatus.available || 0)}</span>
-                                    </div>
-                                    {creditStatus.blocked && (
-                                        <div className="text-[10px] text-red-600 bg-red-50 p-1.5 rounded-lg border border-red-200 flex items-center gap-1">
-                                            <AlertCircle size={10} /> {creditStatus.reason}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Swapped: Remaining Due above Change Due in Sidebar */}
-                        {effectiveRemainingDue > 0.01 && (
-                            <div className="space-y-1 animate-in slide-in-from-bottom-2">
-                                <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Remaining Due</span>
-                                <div className="p-4 bg-white border-l-4 border-blue-600 rounded-xl font-bold text-2xl text-slate-800">
-                                    {currency}{formatNumber(effectiveRemainingDue)}
-                                </div>
-                            </div>
-                        )}
-
-                        {changeDue > 0 && (
-                            <div className="space-y-1 animate-in slide-in-from-bottom-2">
-                                <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Change Due</span>
-                                <div className="p-4 bg-emerald-50 border-l-4 border-emerald-600 rounded-xl font-bold text-2xl text-emerald-600">
-                                    {currency}{formatNumber(changeDue)}
-                                </div>
-                            </div>
-                        )}
+            <div style={{ width: 700, background: '#fff', borderRadius: 8, boxShadow: '0 20px 60px rgba(0,0,0,.35)', overflow: 'hidden' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #dde5e2' }}>
+                    <div>
+                        <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 18, color: '#12201d' }}>Payment</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12.5, color: '#93a19c', marginLeft: 10 }}>{orderNumber}</span>
                     </div>
-
-                    <button onClick={onCancel} className="mt-4 flex items-center justify-center gap-2 py-1.5 text-sm font-semibold text-blue-600 hover:underline">
-                        <ArrowLeftRight size={16} /> Back to Register
-                    </button>
+                    <button onClick={onCancel} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, color: '#93a19c', cursor: 'pointer', fontSize: 16, border: 'none', background: 'none' }}>&times;</button>
                 </div>
 
-                {/* Main Payment Area */}
-                <div className="flex-1 bg-white overflow-hidden">
-                    <div className="h-full overflow-y-auto custom-scrollbar p-10 flex flex-col">
-                        <div className="mb-6">
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Amount Received</label>
-                            <div className="flex items-center gap-3 border-b-2 border-blue-600 pb-2 max-w-lg">
-                                <span className="text-2xl font-bold text-blue-600">{currency}</span>
+                {/* Body */}
+                <div style={{ display: 'flex' }}>
+                    {/* Left — Summary */}
+                    <div style={{ width: 230, background: '#eef6f3', padding: '18px 16px 14px', borderRight: '1px solid #dde5e2', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 13 }}>
+                            <span style={{ color: '#5c6d68' }}>Order total</span>
+                        </div>
+                        <div style={{ padding: '10px 0 12px', borderBottom: '1px dashed #dde5e2', marginBottom: 10 }}>
+                            <span style={{ fontSize: 12, color: '#5c6d68' }}>Due</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 22, fontWeight: 600, color: '#12201d', display: 'block', marginTop: 3 }}>
+                                {currency}{formatNumber(total || 0)}
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 13 }}>
+                            <span style={{ color: '#5c6d68' }}>Adjustments</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#12201d' }}>
+                                +{currency}{formatNumber(adjustmentTotal)}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 13 }}>
+                            <span style={{ color: '#5c6d68' }}>Margin</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#0f4f42' }}>
+                                {currency}{formatNumber(totalProfitMargin)}
+                            </span>
+                        </div>
+
+                        <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, margin: '12px 0 5px' }}>Balances</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #dde5e2', borderRadius: 5, padding: '6px 10px', fontSize: 12.5 }}>
+                                <span style={{ color: '#12201d', fontWeight: 500 }}>Cash</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", color: '#93a19c' }}>{formatBalance(cashBalance)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #dde5e2', borderRadius: 5, padding: '6px 10px', fontSize: 12.5 }}>
+                                <span style={{ color: '#12201d', fontWeight: 500 }}>Bank</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", color: '#93a19c' }}>{formatBalance(bankBalance)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', border: '1px solid #dde5e2', borderRadius: 5, padding: '6px 10px', fontSize: 12.5 }}>
+                                <span style={{ color: '#12201d', fontWeight: 500 }}>Mobile</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", color: '#93a19c' }}>{formatBalance(mobileBalance)}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+                            <span style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#0f4f42', fontWeight: 600 }}>{changeDue > 0 ? 'Change' : 'Remaining'}</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 24, fontWeight: 600, color: '#0f4f42', display: 'block', marginTop: 3 }}>
+                                {changeDue > 0 ? currency + formatNumber(changeDue) : currency + formatNumber(effectiveRemainingDue || 0)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right — Payment */}
+                    <div style={{ flex: 1, padding: '18px 20px 14px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, marginBottom: 6 }}>Amount received</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', border: '1px solid #dde5e2', borderRadius: 6, padding: '0 14px', height: 48 }}>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, color: '#93a19c', marginRight: 8, fontSize: 17 }}>{currency}</span>
                                 <input
-                                    type="number"
-                                    className="w-full text-4xl font-bold focus:outline-none text-slate-800 placeholder-slate-300 tracking-tight"
+                                    type="text"
+                                    inputMode="decimal"
+                                    style={{ border: 'none', outline: 'none', fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 500, width: '100%', color: '#12201d' }}
                                     placeholder="0.00"
                                     value={currentPaymentAmount}
-                                    onChange={e => setCurrentPaymentAmount(e.target.value)}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^\d*\.?\d*$/.test(val)) setCurrentPaymentAmount(val);
+                                    }}
                                     autoFocus
                                 />
                             </div>
-                        </div>
-
-                        {/* Swapped positions in Main Payment Area */}
-                        <div className="space-y-6 mb-6">
-                            {changeDue > 0 && (
-                                <div className="animate-in fade-in slide-in-from-top-1">
-                                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Change Due</span>
-                                    <div className="mt-2 p-4 bg-emerald-50 border-l-4 border-emerald-600 rounded-xl font-bold text-2xl text-emerald-600">
-                                        {currency}{formatNumber(changeDue)}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div>
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Remaining Due</span>
-                                <div className={`mt-2 p-4 rounded-xl border-l-4 font-bold text-2xl ${effectiveRemainingDue > 0.01 ? 'bg-white border-blue-600 text-slate-800' : 'bg-emerald-50 border-emerald-600 text-emerald-600'}`}>
+                            <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: 10.5, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#93a19c' }}>Remaining</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#0f4f42', display: 'block' }}>
                                     {currency}{formatNumber(effectiveRemainingDue || 0)}
-                                </div>
+                                </span>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
-                            {/* Primary Payment Methods - Refactored to horizontal layout */}
-                            <button
-                                onClick={() => addPaymentMethod('1000')}
-                                className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20 
-                                    ${activePaymentMethod === '1000' 
-                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
-                                        : 'bg-white border-slate-200 hover:border-blue-600 hover:bg-blue-50 active:bg-blue-100 text-slate-800'}`}
-                            >
-                                <div className={`p-2 rounded-lg ${activePaymentMethod === '1000' ? 'bg-white/20' : 'bg-blue-50'}`}>
-                                    <Banknote size={24} className={activePaymentMethod === '1000' ? 'text-white' : 'text-blue-600'} />
-                                </div>
-                                <span className="text-sm font-bold uppercase tracking-wider">Cash</span>
+                        <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, marginBottom: 6 }}>Payment method</div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                            <button onClick={() => addPaymentMethod('1000')}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1000' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1000' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1000' ? '#eef6f3' : '#fff' }}>
+                                <Banknote size={17} /> Cash
                             </button>
-
-                            <button
-                                onClick={() => addPaymentMethod('1050')}
-                                className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20 
-                                    ${activePaymentMethod === '1050' 
-                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
-                                        : 'bg-white border-slate-200 hover:border-blue-600 hover:bg-blue-50 active:bg-blue-100 text-slate-800'}`}
-                            >
-                                <div className={`p-2 rounded-lg ${activePaymentMethod === '1050' ? 'bg-white/20' : 'bg-blue-50'}`}>
-                                    <CreditCard size={24} className={activePaymentMethod === '1050' ? 'text-white' : 'text-blue-600'} />
-                                </div>
-                                <span className="text-sm font-bold uppercase tracking-wider">Bank</span>
+                            <button onClick={() => addPaymentMethod('1050')}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1050' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1050' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1050' ? '#eef6f3' : '#fff' }}>
+                                <CreditCard size={17} /> Bank
                             </button>
-
-                            <button
-                                onClick={() => addPaymentMethod('1060')}
-                                className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20 
-                                    ${activePaymentMethod === '1060' 
-                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
-                                        : 'bg-white border-slate-200 hover:border-blue-600 hover:bg-blue-50 active:bg-blue-100 text-slate-800'}`}
-                            >
-                                <div className={`p-2 rounded-lg ${activePaymentMethod === '1060' ? 'bg-white/20' : 'bg-blue-50'}`}>
-                                    <Smartphone size={24} className={activePaymentMethod === '1060' ? 'text-white' : 'text-blue-600'} />
-                                </div>
-                                <span className="text-sm font-bold uppercase tracking-wider">Mobile</span>
+                            <button onClick={() => addPaymentMethod('1060')}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1060' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1060' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1060' ? '#eef6f3' : '#fff' }}>
+                                <Smartphone size={17} /> Mobile
                             </button>
-
-                            {/* Conditional Secondary Payment Methods */}
                             {customerName && walletBalance > 0 && (
-                                <button
-                                    onClick={() => addPaymentMethod('WALLET')}
-                                    className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20
-                                        ${activePaymentMethod === 'WALLET'
-                                            ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                            : 'bg-white border-slate-200 hover:border-emerald-600 hover:bg-emerald-50 active:bg-emerald-100 text-slate-800'}`}
-                                >
-                                    <div className={`p-2 rounded-lg ${activePaymentMethod === 'WALLET' ? 'bg-white/20' : 'bg-emerald-50'}`}>
-                                        <Wallet size={24} className={activePaymentMethod === 'WALLET' ? 'text-white' : 'text-emerald-600'} />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-sm font-bold uppercase tracking-wider">Wallet</span>
-                                        <span className={`text-[10px] ${activePaymentMethod === 'WALLET' ? 'text-white/80' : 'text-slate-500'}`}>{currency}{formatNumber(walletBalance)}</span>
-                                    </div>
+                                <button onClick={() => addPaymentMethod('WALLET')}
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'WALLET' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'WALLET' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'WALLET' ? '#eef6f3' : '#fff' }}>
+                                    <Wallet size={17} /> Wallet
                                 </button>
                             )}
-
                             {customerName && loyaltyPoints > 0 && (
-                                <button
-                                    onClick={() => addPaymentMethod('LOYALTY')}
-                                    className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20
-                                        ${activePaymentMethod === 'LOYALTY'
-                                            ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-200'
-                                            : 'bg-white border-slate-200 hover:border-purple-600 hover:bg-purple-50 active:bg-purple-100 text-slate-800'}`}
-                                >
-                                    <div className={`p-2 rounded-lg ${activePaymentMethod === 'LOYALTY' ? 'bg-white/20' : 'bg-purple-50'}`}>
-                                        <Award size={24} className={activePaymentMethod === 'LOYALTY' ? 'text-white' : 'text-purple-600'} />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-sm font-bold uppercase tracking-wider">Loyalty</span>
-                                        <span className={`text-[10px] ${activePaymentMethod === 'LOYALTY' ? 'text-white/80' : 'text-slate-500'}`}>{loyaltyPoints} Points</span>
-                                    </div>
-                                </button>
-                            )}
-
-                            {customerName && !creditStatus.blocked && creditStatus.available > 0 && (
-                                <button
-                                    onClick={() => addPaymentMethod('CREDIT')}
-                                    className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all h-20
-                                        ${activePaymentMethod === 'CREDIT'
-                                            ? 'bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-200'
-                                            : 'bg-white border-slate-200 hover:border-amber-600 hover:bg-amber-50 active:bg-amber-100 text-slate-800'}`}
-                                >
-                                    <div className={`p-2 rounded-lg ${activePaymentMethod === 'CREDIT' ? 'bg-white/20' : 'bg-amber-50'}`}>
-                                        <Briefcase size={24} className={activePaymentMethod === 'CREDIT' ? 'text-white' : 'text-amber-600'} />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-sm font-bold uppercase tracking-wider">Credit</span>
-                                        <span className={`text-[10px] ${activePaymentMethod === 'CREDIT' ? 'text-white/80' : 'text-slate-500'}`}>{currency}{formatNumber(creditStatus.available)}</span>
-                                    </div>
+                                <button onClick={() => addPaymentMethod('LOYALTY')}
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'LOYALTY' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'LOYALTY' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'LOYALTY' ? '#eef6f3' : '#fff' }}>
+                                    <Award size={17} /> Loyalty
                                 </button>
                             )}
                         </div>
 
-                        <div className="mt-auto space-y-6">
-                            {splitPayments.length > 0 && (
-                                <div className="space-y-2">
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Payment Breakdown</span>
-                                    <div className="flex flex-wrap gap-2">
-                                        {splitPayments.map((p, i) => (
-                                            <div key={i} className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 flex items-center gap-3">
-                                                <span className="text-xs font-bold text-slate-800 uppercase">{p.method}</span>
-                                                <span className="font-bold text-blue-600">{currency}{formatNumber(p.amount)}</span>
-                                                <button onClick={() => {
-                                                    setSplitPayments(prev => prev.filter((_, idx) => idx !== i));
-                                                    setActivePaymentMethod(null);
-                                                    const totalPaid = splitPayments.filter((_, idx) => idx !== i).reduce((s, x) => s + x.amount, 0);
-                                                    setRemainingDue(total - totalPaid);
-                                                    setChangeDue(0);
-                                                    setCurrentPaymentAmount((total - totalPaid).toFixed(2));
-                                                }} className="text-[#8d9096] hover:text-[#d52b1e] p-0.5"><X size={14} /></button>
-                                            </div>
-                                        ))}
-                                    </div>
+                        {/* Quick amounts */}
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                            <div onClick={() => setCurrentPaymentAmount(Number.isFinite(total) ? total.toFixed(2) : '')}
+                                style={{ flex: 1, textAlign: 'center', padding: '8px 0', border: '1px solid #dde5e2', borderRadius: 5, fontFamily: "'JetBrains Mono',monospace", fontSize: 12.5, color: '#5c6d68', cursor: 'pointer' }}>
+                                Exact
+                            </div>
+                            <div onClick={() => setCurrentPaymentAmount(prev => (Number(prev) + 5000).toFixed(2))}
+                                style={{ flex: 1, textAlign: 'center', padding: '8px 0', border: '1px solid #dde5e2', borderRadius: 5, fontFamily: "'JetBrains Mono',monospace", fontSize: 12.5, color: '#5c6d68', cursor: 'pointer' }}>
+                                +{currency}5,000
+                            </div>
+                            <div onClick={() => setCurrentPaymentAmount(prev => (Number(prev) + 10000).toFixed(2))}
+                                style={{ flex: 1, textAlign: 'center', padding: '8px 0', border: '1px solid #dde5e2', borderRadius: 5, fontFamily: "'JetBrains Mono',monospace", fontSize: 12.5, color: '#5c6d68', cursor: 'pointer' }}>
+                                +{currency}10,000
+                            </div>
+                        </div>
+
+                        {/* Split payments */}
+                        {splitPayments.length > 0 && (
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, marginBottom: 5 }}>Payment Breakdown</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {splitPayments.map((p, i) => (
+                                        <div key={i} style={{ background: '#eef6f3', padding: '5px 10px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+                                            <span style={{ fontWeight: 600, color: '#0f4f42' }}>{p.method}</span>
+                                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, color: '#12201d' }}>{currency}{formatNumber(p.amount)}</span>
+                                            <button onClick={() => {
+                                                setSplitPayments(prev => prev.filter((_, idx) => idx !== i));
+                                                setActivePaymentMethod(null);
+                                                const totalPaid = splitPayments.filter((_, idx) => idx !== i).reduce((s, x) => s + x.amount, 0);
+                                                setRemainingDue(total - totalPaid);
+                                                setChangeDue(0);
+                                                setCurrentPaymentAmount((total - totalPaid).toFixed(2));
+                                            }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#93a19c', padding: 0, fontSize: 14 }}>&times;</button>
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            <button
-                                onClick={handleComplete}
-                                disabled={!canCompleteSale}
-                                className={`w-full py-4 rounded-full font-bold text-base transition-all flex items-center justify-center gap-3 shadow-sm
-                                    ${!canCompleteSale
-                                        ? 'bg-slate-300 text-white cursor-not-allowed'
-                                        : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                            >
-                                {!canCompleteSale ? (
-                                    <><span>Awaiting Payment</span> <Clock size={20} /></>
-                                ) : (
-                                    <><span>Complete Sale</span> <CheckCircle2 size={20} /></>
-                                )}
-                            </button>
-                        </div>
+                        {/* Change due banner */}
+                        {changeDue > 0 && (
+                            <div style={{ background: '#eef6f3', border: '1px solid #0f4f42', borderRadius: 6, padding: '8px 12px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#0f4f42' }}>Change due</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#0f4f42' }}>{currency}{formatNumber(changeDue)}</span>
+                            </div>
+                        )}
+
+                        <div style={{ flex: 1 }} />
+
+                        <button
+                            onClick={handleComplete}
+                            disabled={!canCompleteSale}
+                            style={{ width: '100%', border: 'none', borderRadius: 6, padding: '13px 0', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, background: canCompleteSale ? '#0f4f42' : '#eef6f3', color: canCompleteSale ? '#fff' : '#93a19c', cursor: canCompleteSale ? 'pointer' : 'default' }}>
+                            {!canCompleteSale ? 'Awaiting payment' : `Complete Sale`}
+                        </button>
                     </div>
+                </div>
+
+                {/* Footer */}
+                <div onClick={onCancel} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '11px 20px', borderTop: '1px solid #dde5e2', fontSize: 12.5, color: '#5c6d68', cursor: 'pointer' }}>
+                    &larr; Back to register
                 </div>
             </div>
         </div>

@@ -229,21 +229,29 @@ export const buildPosReceiptDoc = ({
   const discount = round2(Number(sale.discount || 0));
   const subtotal = round2(Number(sale.subtotal ?? totalAmount + discount));
   const changeGiven = round2(Number(sale.change_due ?? Math.max(totalPaid - totalAmount, 0)));
+  const tax = round2(Number(sale.taxTotal || sale.taxDetails?.reduce((s: any, t: any) => s + (t.taxAmount || 0), 0) || 0));
 
   return {
     receiptNumber: sale.id,
     date: toDisplayDate(sale.date),
     cashierName: cashierName || 'Cashier',
     customerName: customerName || sale.customerName || 'Walk-in Customer',
-    items: (sale.items || []).map((item: any) => ({
-      desc: itemDescriptionFormatter ? itemDescriptionFormatter(item) : (item.name || item.productName || 'Item'),
-      qty: Number(item.quantity || 0),
-      price: round2(Number(item.price || item.unitPrice || 0)),
-      total: round2(Number((item.quantity || 0) * (item.price || item.unitPrice || 0)))
-    })),
+    items: (sale.items || []).map((item: any) => {
+      const qty = Number(item.quantity || 0);
+      const originalPrice = round2(Number(item.price || item.unitPrice || 0));
+      const itemDiscount = round2(Number(item.discount || 0));
+      const discountedPrice = qty > 0 && itemDiscount > 0 ? round2((originalPrice * qty - itemDiscount) / qty) : originalPrice;
+      const total = round2(qty * discountedPrice);
+      return {
+        desc: itemDescriptionFormatter ? itemDescriptionFormatter(item) : (item.name || item.productName || 'Item'),
+        qty,
+        price: discountedPrice,
+        total
+      };
+    }),
     subtotal,
     discount,
-    tax: 0,
+    tax,
     totalAmount,
     paymentMethod: sale.paymentMethod || 'Cash',
     amountTendered: totalPaid,

@@ -72,6 +72,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     if ((internalItem as any).classification === 'printing_service') return true;
     if ((internalItem as any).classification === 'product') return true;
     if ((internalItem as any).classification === 'stationery') return true;
+    if ((internalItem as any).classification === 'raw_material') return true;
     if (internalItem.type === 'Service') {
       if (!internalItem.id && lockClassification) return true;
       if ((internalItem as any).printType || (internalItem as any).printingServiceType || (internalItem as any).printColorMode) return true;
@@ -80,7 +81,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     return false;
   })();
 
-  const usePrintingServiceModal = (sourceTab === 'product' || sourceTab === 'printing' || sourceTab === 'stationery') || isPrintingService;
+  const usePrintingServiceModal = (sourceTab === 'product' || sourceTab === 'printing' || sourceTab === 'stationery' || sourceTab === 'raw' || sourceTab === 'raw material') || isPrintingService;
 
   if (usePrintingServiceModal) {
     return (
@@ -89,7 +90,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
         style={{ background: 'rgba(22,32,27,.5)' }}
         role="dialog"
         aria-modal="true"
-        aria-label={internalItem?.id ? `Edit ${sourceTab === 'product' ? 'product' : sourceTab === 'stationery' ? 'stationery' : 'printing service'}` : `New ${sourceTab === 'product' ? 'product' : sourceTab === 'stationery' ? 'stationery' : 'printing service'}`}
+        aria-label={internalItem?.id ? `Edit ${sourceTab === 'product' ? 'product' : sourceTab === 'stationery' ? 'stationery' : sourceTab === 'raw_material' ? 'raw material' : 'printing service'}` : `New ${sourceTab === 'product' ? 'product' : sourceTab === 'stationery' ? 'stationery' : sourceTab === 'raw_material' ? 'raw material' : 'printing service'}`}
       >
         <div
           ref={modalRef}

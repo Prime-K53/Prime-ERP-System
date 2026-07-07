@@ -1,17 +1,32 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
-import { ShoppingCart, User, Plus, Minus, ShoppingBag, Undo2, ArrowRight, UserPlus, ChevronRight, Tag, AlertTriangle, X, TrendingUp } from 'lucide-react';
-import { CartItem } from '../../../types';
+import { ShoppingCart, User, Plus, Minus, ShoppingBag, UserPlus, ChevronRight, X } from 'lucide-react';
+import { CartItem, Sale } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { PrintJobCartCard } from '../../../components/printing/PrintJobCartCard';
 
-import { formatNumber } from '../../../utils/helpers';
+import { formatNumber, generateNextId } from '../../../utils/helpers';
 import { roundToNearest, roundUpToStep } from '../../../utils/roundingUtils';
 import { displayPrice } from '../../../services/pricingDisplayService';
+import { resolveItemAdjustmentSnapshots, getMarketAdjustmentSnapshots } from '../../../utils/pricingBreakdown';
+
+const T = '#0a2e2e';
+const T7 = '#0f4c4c';
+const T6 = '#146464';
+const T5 = '#1a7d7d';
+const T100 = '#e3f0ef';
+const T50 = '#f2f8f7';
+const PAPER = '#faf9f6';
+const INK = '#16211f';
+const SOFT = '#5c6b68';
+const LINE = '#e1e5e2';
+const AMBER = '#b8863f';
+const RED = '#b3402f';
+const GREEN = '#1f7a52';
 
 interface CartSidebarProps {
     cart: CartItem[];
+    sales: Sale[];
     selectedCustomerName: string | null;
     selectedSubAccount: string;
     setSelectedSubAccount: (val: string) => void;
@@ -24,9 +39,7 @@ interface CartSidebarProps {
     onPark: () => void;
     onReturn: () => void;
     onPay: () => void;
-    totals: { subtotal: number, discount: number, total: number };
-    /** Adjustment summary for display in totals section */
-    // TODO: normalise to adjustmentSnapshots — see cleanup tracker
+    totals: { subtotal: number, total: number };
     adjustmentSummary?: { adjustmentId: string; adjustmentName: string; totalAmount: number; itemCount: number; }[];
     pricingSummary?: {
         profitMarginTotal: number;
@@ -46,30 +59,47 @@ interface CartSidebarProps {
         onToggle?: (value: boolean) => void;
         onMethodChange?: (value: string) => void;
     };
+    manualDiscountPercent?: number;
+    onManualDiscountChange?: (value: number) => void;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
-    cart, selectedCustomerName, selectedSubAccount, setSelectedSubAccount, onSelectCustomer, updateQuantity, updatePrice, resetPriceOverride, removeFromCart, clearCart, onPark, onReturn, onPay, totals, adjustmentSummary, pricingSummary, rounding
+    cart, sales, selectedCustomerName, selectedSubAccount, setSelectedSubAccount, onSelectCustomer, updateQuantity, updatePrice, resetPriceOverride, removeFromCart, clearCart, onPark, onReturn, onPay, totals, adjustmentSummary, pricingSummary, rounding, manualDiscountPercent = 0, onManualDiscountChange
 }) => {
     const { companyConfig } = useAuth();
     const { invoices } = useFinance();
     const currency = companyConfig.currencySymbol;
 
     const [roundingEnabled, setRoundingEnabled] = useState(false);
+    const [showDiscountInput, setShowDiscountInput] = useState(false);
+    const nextOrderNumber = useMemo(() => generateNextId('POS', sales, companyConfig), [sales, companyConfig]);
     const [roundingMethod, setRoundingMethod] = useState('Nearest');
     const roundingStep = 50;
 
     const grandTotal = totals.total;
+    const discountPercent = manualDiscountPercent;
+    const discountAmount = grandTotal * (discountPercent / 100);
+    const effectiveTotal = grandTotal - discountAmount;
     const profitMarginTotal = Number(pricingSummary?.profitMarginTotal || 0);
     const hasPricingBreakdown = Boolean(Math.abs(profitMarginTotal) > 0.0001);
 
     const roundedTotal = useMemo(() => {
-        if (!roundingEnabled) return grandTotal;
-        if (roundingMethod === 'Up') return roundUpToStep(grandTotal, roundingStep);
-        return roundToNearest(grandTotal, roundingStep);
-    }, [grandTotal, roundingEnabled, roundingMethod, roundingStep]);
+        if (!roundingEnabled) return effectiveTotal;
+        if (roundingMethod === 'Up') return roundUpToStep(effectiveTotal, roundingStep);
+        return roundToNearest(effectiveTotal, roundingStep);
+    }, [effectiveTotal, roundingEnabled, roundingMethod, roundingStep]);
 
-    const roundingDifference = roundToNearest(roundedTotal - grandTotal, 0.01);
+    const roundingDifference = roundToNearest(roundedTotal - effectiveTotal, 0.01);
+
+    const totalQuantity = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
+    const totalCost = useMemo(() => cart.reduce((s, i) => s + Number(i.cost || 0) * i.quantity, 0), [cart]);
+    const adjustmentTotal = useMemo(() => {
+        if (!adjustmentSummary || adjustmentSummary.length === 0) return 0;
+        return adjustmentSummary.reduce((sum, adj) => sum + (adj.totalAmount || 0), 0);
+    }, [adjustmentSummary]);
+    const baseTotal = grandTotal - adjustmentTotal;
+    const totalProfit = effectiveTotal - totalCost;
+    const profitMarginPct = effectiveTotal > 0 ? (totalProfit / effectiveTotal) * 100 : 0;
 
     const customerOutstanding = useMemo(() => {
         if (!selectedCustomerName) return 0;
@@ -79,70 +109,45 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     }, [selectedCustomerName, invoices]);
 
     return (
-        <div className="flex flex-col h-full bg-white overflow-hidden border-l border-slate-200 rounded-xl">
-            {/* Checkout Header */}
-            <div className="px-4 py-2.5 flex justify-between items-center bg-white border-b border-slate-200 shrink-0 rounded-t-xl border-l-4 border-l-emerald-500">
-                <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-emerald-50 rounded text-emerald-600">
-                        <ShoppingCart size={15} />
+        <div className="flex flex-col h-full overflow-hidden" style={{ background: '#fff', fontFamily: "'DM Sans',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: INK }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: T7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                        <ShoppingCart size={14} />
                     </div>
                     <div>
-                        <h3 className="text-xs font-bold text-slate-800 leading-tight">Current Order</h3>
-                        <p className="text-[9px] text-slate-500 font-medium">{cart.reduce((s, i) => s + i.quantity, 0)} items</p>
+                        <h3 style={{ margin: 0, fontSize: 17, fontFamily: "'DM Serif Display',serif", fontWeight: 400, color: INK }}>Current Order</h3>
+                        <span style={{ fontSize: 12, color: SOFT }}>{cart.length} item{cart.length !== 1 ? 's' : ''} &middot; {totalQuantity} unit{totalQuantity !== 1 ? 's' : ''}</span>
                     </div>
                 </div>
-                <button
-                    onClick={clearCart}
-                    disabled={cart.length === 0}
-                    className="text-red-500 hover:text-red-700 text-[10px] font-bold disabled:opacity-0 disabled:pointer-events-none transition-colors"
-                >
+                <button onClick={clearCart} disabled={cart.length === 0} style={{ fontSize: 12, color: RED, fontWeight: 600, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
                     Clear all
                 </button>
             </div>
 
-            {/* Customer Selector */}
-            <div className="px-3 py-1.5 bg-white border-b border-slate-200 shrink-0">
-                <button
-                    onClick={onSelectCustomer}
-                    className={`w-full flex justify-between items-center p-1.5 rounded-lg border transition-all bg-white shadow-sm
-                    ${selectedCustomerName
-                            ? 'border-blue-300 bg-blue-50/30'
-                            : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/20'}`}
-                >
-                    <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors
-                          ${selectedCustomerName ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                            {selectedCustomerName ? <User size={12} /> : <UserPlus size={12} />}
-                        </div>
-                        <div className="text-left">
-                            <div className="text-[10px] font-semibold text-slate-800 leading-tight">
-                                {selectedCustomerName || 'Add Customer'}
-                            </div>
-                            {selectedCustomerName && (
-                                <div className={`text-[8px] font-medium ${customerOutstanding > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                                    {customerOutstanding > 0 ? 'Balance: ' : 'Bal: '}{currency}{(customerOutstanding || 0).toLocaleString()}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <ChevronRight size={10} className="text-slate-300" />
-                </button>
+            <div onClick={onSelectCustomer} style={{ margin: '10px 16px 0', padding: '8px 12px', border: `1.5px dashed ${T100}`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: T7, fontWeight: 600, fontSize: 13 }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: T50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: T7 }}>
+                    {selectedCustomerName ? <User size={12} /> : <UserPlus size={12} />}
+                </div>
+                <span>{selectedCustomerName || 'Add customer'}</span>
+                {selectedCustomerName && customerOutstanding > 0 && (
+                    <span style={{ fontSize: 11, color: AMBER, fontWeight: 500, marginLeft: 4 }}>({currency} {formatNumber(customerOutstanding)})</span>
+                )}
+                <span style={{ marginLeft: 'auto', color: SOFT, fontSize: 11 }}>›</span>
             </div>
 
-            {/* Cart Item List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '10px 16px 6px' }}>
                 {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400 p-10 text-center">
-                        <ShoppingBag size={48} className="mb-4 opacity-20" />
-                        <p className="text-sm font-medium">Your cart is empty</p>
-                        <p className="text-xs mt-1">Add items from the product grid to start an order.</p>
+                    <div style={{ padding: '40px 22px', textAlign: 'center', color: SOFT, fontSize: 13 }}>
+                        <ShoppingBag size={36} style={{ opacity: 0.25, margin: '0 auto 12px', display: 'block' }} />
+                        No items yet — tap a product to add it to the order.
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div>
                         {cart.map(item => {
                             if (item.isPrintingJob && item.printingSpec) {
                                 return (
-                                    <div key={item.id} className="p-2">
+                                    <div key={item.id} style={{ padding: '12px 0', borderBottom: `1px dotted ${LINE}` }}>
                                         <PrintJobCartCard
                                             spec={item.printingSpec}
                                             currency={currency}
@@ -166,139 +171,102 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                 )}
             </div>
 
-            {/* Checkout Totals Summary */}
-            <div className="p-4 bg-white border-t-2 border-slate-100 space-y-3 shrink-0 rounded-b-xl shadow-[0_-2px_8px_-3px_rgba(0,0,0,0.06)]">
-                {roundingEnabled && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Rounding</span>
-                            <div className="flex items-center gap-1">
-                                <span className="text-[9px] text-slate-400 font-medium">On</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" className="sr-only peer" checked={roundingEnabled} onChange={e => setRoundingEnabled(e.target.checked)} />
-                                    <div className="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600"></div>
-                                </label>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-purple-600 font-medium">Method</span>
-                            <select value={roundingMethod} onChange={e => setRoundingMethod(e.target.value)}
-                                className="text-[10px] p-1 border border-purple-200 rounded bg-white text-slate-700 font-semibold outline-none">
-                                <option value="Nearest">Nearest</option>
-                                <option value="Up">Round Up</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-purple-600 font-medium">Step</span>
-                            <span className="text-[10px] text-slate-700 font-semibold">{currency}{formatNumber(roundingStep)}</span>
-                        </div>
-                    </div>
-                )}
-
-                {roundingEnabled && Math.abs(roundingDifference) > 0.001 && (
-                    <div className="flex justify-between items-center">
-                        <span className="text-purple-600 text-[11px] font-semibold">Rounding Adjustment</span>
-                        <span className={`font-mono text-[11px] font-semibold ${roundingDifference >= 0 ? 'text-purple-600' : 'text-rose-600'}`}>
-                            {roundingDifference >= 0 ? '+' : ''}{currency}{formatNumber(roundingDifference)}
-                        </span>
-                    </div>
-                )}
-
-                {hasPricingBreakdown && (
-                    <div className="space-y-1.5 pt-2 border-t border-slate-50">
-                        {profitMarginTotal !== 0 && (
-                            <div className="flex justify-between items-center">
-                                <span className={`text-[11px] font-semibold tracking-tight flex items-center gap-1.5 ${profitMarginTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                    <TrendingUp size={10} className={profitMarginTotal < 0 ? 'text-rose-500' : 'text-emerald-500'} /> Profit Margin
-                                </span>
-                                <span className={`font-mono text-[11px] font-semibold ${profitMarginTotal < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                    {profitMarginTotal >= 0 ? '+' : ''}{currency}{formatNumber(profitMarginTotal)}
-                                </span>
-                            </div>
-                        )}
-                        {profitMarginTotal <= 0 && (
-                            <div className="flex items-start gap-2 p-2 bg-rose-50 border border-rose-200 rounded-lg mt-1">
-                                <AlertTriangle size={12} className="text-rose-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] text-rose-700 leading-relaxed">
-                                    {profitMarginTotal === 0
-                                        ? 'Zero profit margin — price equals cost.'
-                                        : `Negative margin of ${currency}${formatNumber(Math.abs(profitMarginTotal))} — selling below cost.`}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className="flex justify-between items-center pt-1">
-                    <span className="text-sm font-bold text-slate-700">Total</span>
-                    <span className="text-xl font-bold text-slate-900">{currency}{formatNumber(displayPrice(roundedTotal, undefined, 'pos'))}</span>
+            <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 2px rgba(10,46,40,.06), 0 8px 24px rgba(10,46,40,.08)', overflow: 'hidden' }}>
+                <div style={{ background: '#0a2e28', color: '#fff', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#a9c9c1', fontWeight: 500 }}>
+                        Order {nextOrderNumber}
+                    </span>
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13.5, fontWeight: 500 }}>
+                        {totalQuantity} item{totalQuantity !== 1 ? 's' : ''}
+                    </span>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <button
-                        onClick={onPay}
-                        disabled={cart.length === 0}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm hover:from-emerald-700 hover:to-emerald-600 transition-all disabled:opacity-50 disabled:from-slate-300 disabled:to-slate-300 flex items-center justify-center gap-2 shadow-md shadow-emerald-200/50 active:scale-[0.98]"
-                    >
-                        <span>Receive Payment</span> <ArrowRight size={16} />
-                    </button>
+                <div style={{ padding: '10px 16px 2px', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', lineHeight: 1.3 }}>
+                        <span style={{ color: '#5c6d68', fontWeight: 400 }}>Subtotal</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', color: '#12201d', fontWeight: 500 }}>
+                            {currency}{formatNumber(totalCost)}
+                        </span>
+                    </div>
+                    {discountPercent > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', lineHeight: 1.3 }}>
+                            <span style={{ color: '#a03c3c', opacity: 0.85, fontWeight: 400 }}>Discount ({discountPercent}%)</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', color: '#a03c3c', fontWeight: 500 }}>
+                                &minus;{currency}{formatNumber(discountAmount)}
+                            </span>
+                        </div>
+                    )}
+                    {adjustmentTotal > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', lineHeight: 1.3 }}>
+                            <span style={{ color: '#5c6d68', fontWeight: 400 }}>Adjustments</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', color: '#0f4f42', fontWeight: 500 }}>
+                                +{currency}{formatNumber(adjustmentTotal)}
+                            </span>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', lineHeight: 1.3 }}>
+                        <span style={{ color: totalProfit >= 0 ? '#0f4f42' : '#a03c3c', fontWeight: 400 }}>Profit</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', color: totalProfit >= 0 ? '#0f4f42' : '#a03c3c', fontWeight: 500 }}>
+                            {totalProfit >= 0 ? '+' : '-'}{currency}{formatNumber(Math.abs(totalProfit))}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', lineHeight: 1.3 }}>
+                        <span style={{ color: totalProfit >= 0 ? '#0f4f42' : '#a03c3c', fontWeight: 400 }}>Margin</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', color: totalProfit >= 0 ? '#0f4f42' : '#a03c3c', fontWeight: 500 }}>
+                            {profitMarginPct.toFixed(1)}%
+                        </span>
+                    </div>
 
-                    <div className={`grid gap-2 ${companyConfig.transactionSettings?.pos?.allowReturns !== false ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                        <button
-                            onClick={() => setRoundingEnabled(prev => !prev)}
-                            disabled={cart.length === 0}
-                            className={`flex items-center justify-center gap-2 py-2 rounded-full border font-bold text-xs transition-all disabled:opacity-50 ${roundingEnabled ? 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100' : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'}`}
-                        >
-                            <Tag size={12} /> {roundingEnabled ? 'Rounding On' : 'Rounding'}
-                        </button>
-                        {companyConfig.transactionSettings?.pos?.allowReturns !== false && (
-                            <button onClick={onReturn} className="flex items-center justify-center gap-2 py-2 rounded-full border border-slate-200 bg-white text-slate-800 font-bold text-xs hover:bg-slate-50 transition-all">
-                                <Undo2 size={12} /> Refund
+                    <div style={{ height: 0, borderTop: '1.5px dashed #d7e2df', margin: '5px 0' }} />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0 8px', lineHeight: 1.3 }}>
+                        <span style={{ fontFamily: "'DM Serif Display',serif", fontSize: 15, color: '#12201d', fontWeight: 400 }}>Total</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', fontSize: 19, fontWeight: 600, color: '#0f4f42' }}>
+                            {currency}{formatNumber(displayPrice(roundedTotal, undefined, 'pos'))}
+                        </span>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, padding: '6px 16px 12px' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        {showDiscountInput ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <input type="number" value={discountPercent} min={0} max={100} onChange={e => onManualDiscountChange?.(Math.min(100, Math.max(0, Number(e.target.value))))}
+                                    style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, padding: '7px 6px', borderRadius: 4, border: '1px solid #a03c3c', textAlign: 'center', background: '#fff', color: '#a03c3c', outline: 'none', width: 0 }} />
+                                <span style={{ fontSize: 11, color: '#a03c3c', fontWeight: 600, whiteSpace: 'nowrap' }}>%</span>
+                                <button onClick={() => { setShowDiscountInput(false); }}
+                                    style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 600, padding: '7px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', background: '#a03c3c', color: '#fff' }}>
+                                    OK
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setShowDiscountInput(true)}
+                                style={{ width: '100%', fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, padding: '7px 0', borderRadius: 4, border: '1px solid #a03c3c', cursor: 'pointer', textAlign: 'center', background: '#fff', color: '#a03c3c' }}>
+                                Discount
                             </button>
                         )}
                     </div>
+                    <button onClick={onPay} disabled={cart.length === 0}
+                        style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, padding: '7px 0', borderRadius: 4, border: 'none', cursor: 'pointer', textAlign: 'center', background: '#0f4f42', color: '#fff', opacity: cart.length === 0 ? 0.5 : 1 }}>
+                        Proceed
+                    </button>
                 </div>
             </div>
         </div>
     );
-}
+};
 
 const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta: number, isAbsolute?: boolean) => void, updatePrice: (id: string, newPrice: number) => void, removeFromCart: (id: string) => void }> = ({ item, updateQuantity, updatePrice, removeFromCart }) => {
     const { companyConfig } = useAuth();
     const currency = companyConfig.currencySymbol;
-    const [localQty, setLocalQty] = useState(item.quantity.toString());
     const serviceDetails = item.serviceDetails;
 
     const [isEditingPrice, setIsEditingPrice] = useState(false);
     const [localPrice, setLocalPrice] = useState(item.price.toString());
 
     useEffect(() => {
-        setLocalQty(item.quantity.toString());
-    }, [item.quantity]);
-
-    useEffect(() => {
         setLocalPrice(item.price.toString());
     }, [item.price]);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            const val = parseInt(localQty);
-            if (!isNaN(val) && val >= 1) {
-                updateQuantity(item.id, val, true);
-            } else {
-                setLocalQty(item.quantity.toString());
-            }
-        }
-    };
-
-    const handleBlur = () => {
-        const val = parseInt(localQty);
-        if (!isNaN(val) && val >= 1) {
-            updateQuantity(item.id, val, true);
-        } else {
-            setLocalQty(item.quantity.toString());
-        }
-    };
 
     const handlePriceKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -326,68 +294,52 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
         setIsEditingPrice(false);
     };
 
+    const adjSnapshots = useMemo(() => getMarketAdjustmentSnapshots(resolveItemAdjustmentSnapshots(item)), [item]);
+    const adjAmount = useMemo(() => adjSnapshots.reduce((s: number, a: any) => s + (a.calculatedAmount || 0), 0), [adjSnapshots]);
+    const hasAdj = adjAmount !== 0;
+
+    const isPrintType = serviceDetails && (item.pages || serviceDetails.pages);
+    const totalPages = isPrintType ? (serviceDetails.pages || item.pages || 1) * (serviceDetails.copies || item.quantity || 1) : 0;
+    const isPhotocopy = item.unit === 'sheet';
+    const sheetCount = isPhotocopy ? Math.ceil((serviceDetails.pages || item.pages || 1) / 2) * (serviceDetails.copies || item.quantity || 1) : 0;
+    const perUnit = isPrintType ? (isPhotocopy ? item.price / sheetCount : item.price / totalPages) : 0;
+
     return (
-        <div className="p-3 bg-white border-l-4 border-l-blue-400 hover:border-l-blue-500 hover:bg-blue-50/20 transition-all group relative rounded-lg border border-slate-200 shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex-1 min-w-0 pr-6">
-                    <h4 className="font-semibold text-slate-800 text-xs leading-tight mb-0.5">{item.name}</h4>
-                    {serviceDetails && (
-                        <div className="text-[10px] text-slate-500 leading-snug mb-1">
-                            <div>{serviceDetails.pages} pages x {serviceDetails.copies} copies</div>
-                        </div>
-                    )}
-                    {item.attributes && Object.keys(item.attributes).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                            {Object.entries(item.attributes).map(([key, value]) => (
-                                <span key={key} className="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    {key.replace(/_/g, ' ')}: {String(value)}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: `1px dotted ${LINE}` }}>
+            {isPrintType ? (
+                <div style={{ width: 28, flexShrink: 0 }} />
+            ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', height: 26, flexShrink: 0 }}>
+                    <button onClick={() => updateQuantity(item.id, -1)} style={{ width: 22, border: 'none', background: T50, color: T7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Decrease quantity" aria-label="Decrease quantity"><Minus size={9} /></button>
+                    <span style={{ width: 22, textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 600, color: INK }}>{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.id, 1)} style={{ width: 22, border: 'none', background: T50, color: T7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Increase quantity" aria-label="Increase quantity"><Plus size={9} /></button>
                 </div>
-                <button onClick={() => removeFromCart(item.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-0.5 rounded hover:bg-red-50" title="Remove item" aria-label="Remove item from cart">
-                    <X size={13} />
-                </button>
-            </div>
+            )}
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                    <div className="flex items-center border border-slate-200 rounded bg-white">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-r border-slate-200 shrink-0" title="Decrease quantity" aria-label="Decrease quantity"><Minus size={8} /></button>
-                        <input type="number" value={localQty} onChange={(e) => setLocalQty(e.target.value)} onKeyDown={handleKeyDown} onBlur={handleBlur}
-                            className="w-[33px] p-0 text-center border-none outline-none text-[13px] font-bold text-slate-800 bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                        <button onClick={() => updateQuantity(item.id, 1)} className="w-4 h-4 flex items-center justify-center hover:bg-slate-50 border-l border-slate-200 shrink-0" title="Increase quantity" aria-label="Increase quantity"><Plus size={8} /></button>
-                    </div>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                        @ {currency}
-                        {isEditingPrice ? (
-                            <input
-                                type="number"
-                                autoFocus
-                                className="w-16 bg-white border border-blue-400 rounded px-1 text-xs font-bold text-blue-600 outline-none"
-                                value={localPrice}
-                                onChange={(e) => setLocalPrice(e.target.value)}
-                                onKeyDown={handlePriceKeyDown}
-                                onBlur={handlePriceBlur}
-                            />
-                        ) : (
-                            <span 
-                                onClick={() => setIsEditingPrice(true)}
-                                className={`font-bold cursor-pointer hover:text-blue-600 transition-colors ${item.manual_override ? 'text-blue-600 underline decoration-dotted' : 'text-slate-800'}`}
-                                title="Click to override price"
-                            >
-                                {formatNumber(displayPrice(item.price, undefined, 'pos'))}
-                            </span>
-                        )}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: INK }}>
+                <span className="truncate">
+                    {isPrintType ? `${totalPages} pages ${item.name}` : item.name}
+                </span>
+                {isPrintType ? (
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 400, color: SOFT, fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                        @{currency}{formatNumber(perUnit)}/{isPhotocopy ? 'sheet' : 'page'}
                     </span>
-                </div>
-                <div className="text-right">
-                    <div className="font-bold text-slate-800 text-sm">{currency}{formatNumber(displayPrice(item.price * item.quantity, undefined, 'pos'))}</div>
-
-                </div>
+                ) : (
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 400, color: SOFT, fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                        @{currency}{formatNumber(displayPrice(item.price, undefined, 'pos'))}
+                    </span>
+                )}
+                {item.manual_override && <span style={{ fontSize: 9, fontWeight: 600, color: '#2f5fa8', background: '#eaf1fb', padding: '1px 4px', borderRadius: 4, flexShrink: 0 }}>OVR</span>}
+                {hasAdj && <span style={{ fontSize: 9, fontWeight: 600, color: AMBER, background: '#fbf1e2', padding: '1px 4px', borderRadius: 4, flexShrink: 0 }}>ADJ</span>}
             </div>
+
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 13, color: INK, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {currency}{formatNumber(displayPrice(item.price * item.quantity, undefined, 'pos'))}
+            </div>
+
+            <button onClick={() => removeFromCart(item.id)} style={{ border: 'none', background: 'none', color: SOFT, cursor: 'pointer', fontSize: 12, padding: '2px 4px', opacity: 0.6, transition: '.15s', flexShrink: 0, display: 'flex', alignItems: 'center' }} title="Remove item" aria-label="Remove item from cart">
+                <X size={11} />
+            </button>
         </div>
     );
 };

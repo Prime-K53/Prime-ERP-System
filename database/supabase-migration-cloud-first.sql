@@ -3,7 +3,14 @@
 -- Run this in Supabase SQL Editor to enable the cloud-first architecture.
 -- ============================================================================
 
--- 1. Ensure idempotency_keys table has the expires_at column
+-- 1. Ensure idempotency_keys table exists and has the expires_at column
+CREATE TABLE IF NOT EXISTS public.idempotency_keys (
+  id UUID PRIMARY KEY,
+  result TEXT,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE IF EXISTS idempotency_keys 
 ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
@@ -12,6 +19,17 @@ ON idempotency_keys(expires_at);
 
 -- Clean up expired keys periodically (optional: run via cron)
 -- DELETE FROM idempotency_keys WHERE expires_at < NOW() - INTERVAL '7 days';
+
+-- 1b. Ensure tax_rates table exists for tax rate config sync
+CREATE TABLE IF NOT EXISTS public.tax_rates (
+  id TEXT PRIMARY KEY,
+  data JSONB,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  company_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_tax_rates_company_id 
+ON tax_rates(company_id);
 
 -- 2. Ensure all business tables have updated_at for incremental sync
 -- (Run for each table that should support incremental sync)
@@ -27,13 +45,11 @@ DECLARE
   t TEXT;
 BEGIN
   FOREACH t IN ARRAY tables LOOP
-    EXECUTE format('
-      DO $$ BEGIN
-        ALTER TABLE %I ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-      EXCEPTION WHEN undefined_table THEN
-        RAISE NOTICE ''Table % does not exist, skipping'', %L;
-      END $$;
-    ', t, t);
+    BEGIN
+      EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();', t);
+    EXCEPTION WHEN undefined_table THEN
+      RAISE NOTICE 'Table % does not exist, skipping', t;
+    END;
   END LOOP;
 END $$;
 

@@ -11,6 +11,20 @@ import { formatNumber } from '../../../utils/helpers';
 import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredSellingPrice } from '../../../utils/pricing';
 import { getSnapshotCalculatedAmount, resolveItemAdjustmentSnapshots } from '../../../utils/pricingBreakdown';
 
+const T = '#0a2e2e';
+const T7 = '#0f4c4c';
+const T6 = '#146464';
+const T5 = '#1a7d7d';
+const T100 = '#e3f0ef';
+const T50 = '#f2f8f7';
+const PAPER = '#faf9f6';
+const INK = '#16211f';
+const SOFT = '#5c6b68';
+const LINE = '#e1e5e2';
+const AMBER = '#b8863f';
+const RED = '#b3402f';
+const GREEN = '#1f7a52';
+
 const SCANNER_THRESHOLD_MS = 50;
 
 interface ProductGridProps {
@@ -43,15 +57,21 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
     }, [companyConfig.transactionSettings?.quickItemEntry]);
 
     const saleableInventory = inventory.filter(i => i.type && i.type !== 'Material' && i.type !== 'Raw Material');
-    const typeCategories = ['All', 'Service', 'Product', 'Package', 'Rental'];
-    const categories = ['All', ...Array.from(new Set(saleableInventory.map(i => i.category).filter(Boolean)))];
 
-    const filteredProducts = saleableInventory.filter(p =>
-        (activeCategory === 'All' || p.category === activeCategory || p.type === activeCategory) &&
-        (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.barcode && p.barcode.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+    const categoryGroups = [
+        { label: 'All', match: (_: Item) => true },
+        { label: 'Products', match: (p: Item) => p.type === 'Product' },
+        { label: 'Stationery', match: (p: Item) => p.type === 'Stationery' },
+        { label: 'Service', match: (p: Item) => p.type === 'Service' || p.category === 'Service' },
+    ] as const;
+
+    const filteredProducts = saleableInventory.filter(p => {
+        const group = categoryGroups.find(g => g.label === activeCategory);
+        return (group ? group.match(p) : true) &&
+            (p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.barcode && p.barcode.toLowerCase().includes(searchTerm.toLowerCase())));
+    });
 
     // Barcode lookup: exact match on barcode regardless of category filter
     const barcodeMatch = searchTerm.trim()
@@ -177,93 +197,241 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
         return <Box size={12} />;
     };
 
-    const renderItems = (items: Item[]) => (
-        items.map((item, idx) => (
+    const renderItems = (items: Item[]) => {
+        const price = (item: Item) => resolveStoredSellingPrice(item) || 0;
+
+        if (viewMode === 'List') {
+            return (
+                <div style={{ width: '100%' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 70px 44px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 600, color: SOFT, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+                        <span></span>
+                        <span>Item</span>
+                        <span style={{ textAlign: 'right' }}>Price</span>
+                        <span style={{ textAlign: 'right' }}>Stock</span>
+                        <span style={{ textAlign: 'center' }}>Type</span>
+                    </div>
+                    {items.map((item, idx) => (
+                        <button
+                            key={item.id}
+                            onMouseEnter={() => setActiveIndex(idx)}
+                            onClick={() => handleItemClick(item)}
+                            disabled={item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent}
+                            style={{
+                                width: '100%',
+                                display: 'grid',
+                                gridTemplateColumns: '28px 1fr 80px 70px 44px',
+                                gap: 8,
+                                alignItems: 'center',
+                                padding: '7px 10px',
+                                textAlign: 'left',
+                                border: 'none',
+                                borderBottom: `1px solid ${LINE}`,
+                                background: activeIndex === idx ? T100 : 'transparent',
+                                cursor: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 'not-allowed' : 'pointer',
+                                opacity: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 0.5 : 1,
+                                fontFamily: "'DM Sans',sans-serif",
+                                transition: '.1s'
+                            }}
+                            onMouseOver={e => { if (activeIndex !== idx) e.currentTarget.style.background = T50; }}
+                            onMouseOut={e => { if (activeIndex !== idx) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                            <div style={{ padding: 4, borderRadius: 6, background: T50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {getCategoryIcon(item.category)}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                <div style={{ fontSize: 9.5, color: SOFT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sku}</div>
+                            </div>
+                            <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: INK, fontFamily: "'JetBrains Mono',monospace" }}>
+                                {item.isVariantParent ? (
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: T7, color: '#fff', borderRadius: 4 }}>View</span>
+                                ) : (
+                                    `${currency}${formatNumber(price(item))}`
+                                )}
+                            </div>
+                            <div style={{ textAlign: 'right', fontSize: 11, color: SOFT, fontFamily: "'JetBrains Mono',monospace" }}>
+                                {(item.type === 'Stationery' || item.type === 'Product') ? `${item.stock}${item.unit ? ' ' + item.unit : ''}` : '\u2014'}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? T100 : T50, color: item.type === 'Service' ? T7 : SOFT }}>
+                                    {(item.type || '?').charAt(0)}
+                                </span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        return items.map((item, idx) => (
             <button
                 key={item.id}
                 onMouseEnter={() => setActiveIndex(idx)}
                 onClick={() => handleItemClick(item)}
                 disabled={item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent}
-                className={`relative bg-white border transition-all group overflow-hidden text-left flex flex-col h-full rounded-xl
-                ${activeIndex === idx ? 'border-blue-600 ring-1 ring-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-400'}
-                ${item.stock <= 0 && item.type === 'Stationery' ? 'opacity-60 grayscale cursor-not-allowed' : 'active:bg-slate-100'}
-                ${viewMode === 'List' ? 'flex-row items-center p-2 gap-3 min-h-[50px]' : 'p-3'}
-            `}
+                style={{
+                    position: 'relative',
+                    background: activeIndex === idx ? T100 : '#fff',
+                    border: `1px solid ${activeIndex === idx ? T6 : LINE}`,
+                    borderRadius: 10,
+                    padding: viewMode === 'Small' ? 8 : 10,
+                    textAlign: 'left',
+                    cursor: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 'not-allowed' : 'pointer',
+                    opacity: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 0.6 : 1,
+                    fontFamily: "'DM Sans',sans-serif",
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    transition: '.12s',
+                    filter: activeIndex === idx ? 'none' : 'none',
+                    boxShadow: activeIndex === idx ? `0 0 0 2px ${T5}33` : 'none'
+                }}
+                onMouseOver={e => {
+                    if (activeIndex !== idx) {
+                        e.currentTarget.style.borderColor = T5;
+                        e.currentTarget.style.boxShadow = `0 0 0 2px ${T5}22`;
+                    }
+                }}
+                onMouseOut={e => {
+                    if (activeIndex !== idx) {
+                        e.currentTarget.style.borderColor = LINE;
+                        e.currentTarget.style.boxShadow = 'none';
+                    }
+                }}
             >
-                {companyConfig.transactionSettings?.pos?.showItemImages && viewMode !== 'List' && (
-                    <div className="w-full aspect-square bg-slate-50 mb-2 overflow-hidden flex items-center justify-center border border-slate-200 rounded-lg">
+                {companyConfig.transactionSettings?.pos?.showItemImages && (
+                    <div style={{
+                        width: '100%',
+                        aspectRatio: '1',
+                        background: T50,
+                        marginBottom: 8,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 8,
+                        border: `1px solid ${LINE}`
+                    }}>
                         {item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                            <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                            <Box size={24} className="text-slate-400" />
+                            <Box size={viewMode === 'Small' ? 18 : 24} style={{ color: SOFT }} />
                         )}
                     </div>
                 )}
-                <div className={`flex flex-col flex-1 ${viewMode === 'List' ? 'flex-row items-center justify-between w-full' : ''}`}>
-                    <div className={viewMode === 'List' ? 'flex-1' : ''}>
-                        <div className="flex items-start gap-2 mb-1">
-                            <div className={`p-1.5 rounded bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors`}>
-                                {getCategoryIcon(item.category)}
-                            </div>
-                            <div className={`font-semibold text-slate-800 leading-snug line-clamp-2 ${viewMode === 'Small' ? 'text-[11px]' : 'text-xs'}`}>
-                                {item.name}
-                            </div>
-                        </div>
-                        {viewMode !== 'Small' && <div className="text-[10px] text-slate-500 ml-8">{item.sku}</div>}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                    <div style={{ padding: '4px 5px', borderRadius: 6, background: T50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {getCategoryIcon(item.category)}
                     </div>
-
-<div className={`flex items-center justify-between ${viewMode === 'List' ? 'gap-4' : 'mt-2 pt-2 border-t border-slate-100'}`}>
-                        {item.isVariantParent ? (
-                            <span
-                                onClick={(e) => { e.stopPropagation(); handleItemClick(item); }}
-                                className="text-[9px] font-bold px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer"
-                            >
-                                View
-                            </span>
-                        ) : (
-                            <span className={`font-bold text-slate-800 ${viewMode === 'Small' ? 'text-xs' : 'text-sm'}`}>
-                                {currency}{formatNumber(resolveStoredSellingPrice(item) || 0)}
-                                {(item.type === 'Service' || item.category === 'Service') && item.pages ? '/page' : ''}
-                            </span>
-                        )}
-                        <div className="flex items-center gap-2">
-                            {(item.type === 'Stationery' || item.type === 'Material' || item.type === 'Raw Material' || item.type === 'Product') && (
-                                <span className={`text-[10px] font-medium ${item.stock <= item.minStockLevel ? 'text-red-600' : 'text-slate-500'}`}>
-                                    {item.stock} {item.unit}
-                                </span>
-                            )}
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase border ${item.type === 'Raw Material' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                                {(item.type || '?').charAt(0)}
-                            </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: viewMode === 'Small' ? 11 : 12.5, fontWeight: 600, color: INK, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {item.name}
                         </div>
+                        {viewMode !== 'Small' && (
+                            <div style={{ fontSize: 9.5, color: SOFT, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{item.sku}</div>
+                        )}
                     </div>
                 </div>
-                {item.stock <= 0 && item.type === 'Stationery' && (
-                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-[0.5px] z-10">
-                        <span className="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider">Out of Stock</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${LINE}` }}>
+                    <div>
+                        {item.isVariantParent ? (
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', background: T7, color: '#fff', borderRadius: 5, cursor: 'pointer' }}>View</span>
+                        ) : (
+                            <span style={{ fontSize: viewMode === 'Small' ? 11 : 13, fontWeight: 700, color: INK }}>
+                                {currency}{formatNumber(price(item))}
+                                {(item.type === 'Service' || item.category === 'Service') && item.pages ? <span style={{ fontSize: 9, fontWeight: 400, color: SOFT, marginLeft: 1 }}>/pg</span> : ''}
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {(item.type === 'Stationery' || item.type === 'Product') && (
+                            <span style={{ fontSize: 9.5, fontWeight: 500, color: item.stock <= item.minStockLevel ? RED : SOFT }}>
+                                {item.stock} {item.unit}
+                            </span>
+                        )}
+                        <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? T100 : T50, color: item.type === 'Service' ? T7 : SOFT }}>
+                            {(item.type || '?').charAt(0)}
+                        </span>
+                    </div>
+                </div>
+                {item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(0.5px)', borderRadius: 10 }}>
+                        <span style={{ background: RED, color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Out of Stock</span>
                     </div>
                 )}
             </button>
-        ))
-    );
+        ));
+    };
 
     return (
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
-            <div className="px-6 py-3 bg-white border-b border-slate-200 flex flex-wrap gap-4 items-center sticky top-0 z-40">
-                <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: PAPER, fontFamily: "'DM Sans',sans-serif" }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 6, background: T7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
+                        <Grid size={12} />
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: 14, fontFamily: "'DM Serif Display',serif", fontWeight: 400, color: INK }}>Items</h3>
+                    <span style={{ fontSize: 12, color: SOFT }}>{filteredProducts.length} item{filteredProducts.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex" style={{ border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden' }}>
+                        {(['Large', 'Small', 'List'] as ViewMode[]).map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => setViewMode(mode)}
+                                style={{
+                                    padding: '6px 10px',
+                                    transition: '.15s',
+                                    border: 'none',
+                                    borderRight: mode !== 'List' ? `1px solid ${LINE}` : 'none',
+                                    cursor: 'pointer',
+                                    background: viewMode === mode ? T100 : '#fff',
+                                    color: viewMode === mode ? T7 : SOFT,
+                                    fontSize: 12,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    fontFamily: "'DM Sans',sans-serif",
+                                    fontWeight: viewMode === mode ? 600 : 400
+                                }}
+                            >
+                                {mode === 'Large' ? <Grid size={13} /> : mode === 'Small' ? <Layout size={13} /> : <FileText size={13} />}
+                                <span style={{ fontSize: 10, display: 'none' }}>{mode}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <div style={{ width: 1, height: 20, background: LINE }} />
+                    <button onClick={onRecall} style={{ color: T6, fontWeight: 600, fontSize: 12.5, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <PauseCircle size={15} /> Recall ({heldCount})
+                    </button>
+                </div>
+            </div>
+
+            {/* Search */}
+            <div style={{ padding: '10px 16px', background: '#fff', borderBottom: `1px solid ${LINE}` }}>
+                <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: SOFT }} />
                     <input
                         ref={searchInputRef}
                         type="text"
-                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all text-sm outline-none placeholder-slate-400"
+                        style={{
+                            width: '100%',
+                            padding: '8px 12px 8px 36px',
+                            borderRadius: 8,
+                            border: `1px solid ${LINE}`,
+                            outline: 'none',
+                            fontSize: 13,
+                            fontFamily: "'DM Sans',sans-serif",
+                            color: INK,
+                            background: PAPER,
+                            boxSizing: 'border-box'
+                        }}
                         placeholder="Find items (Alt+S)..."
                         value={searchTerm}
                         onChange={e => {
                             const val = e.target.value;
                             const isScanner = detectScannerInput();
                             setSearchTerm(val);
-                            // Scanner auto-dispatch: if a single exact barcode match exists after
-                            // scanner input, add it immediately without waiting for Enter
                             if (isScanner && val.trim()) {
                                 const match = saleableInventory.find(
                                     p => p.barcode && p.barcode.toLowerCase() === val.trim().toLowerCase()
@@ -277,45 +445,40 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                         onKeyDown={handleSearchKeyDown}
                     />
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex border border-slate-200 rounded-lg overflow-hidden">
-                        {(['Large', 'Small', 'List'] as ViewMode[]).map(mode => (
-                            <button
-                                key={mode}
-                                onClick={() => setViewMode(mode)}
-                                className={`p-2 transition-all border-r last:border-r-0 ${viewMode === mode ? 'bg-slate-100 text-slate-800' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
-                                title={`${mode} View`}
-                            >
-                                {mode === 'Large' ? <Grid size={14} /> : mode === 'Small' ? <Layout size={14} /> : <FileText size={14} />}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="h-8 w-px bg-slate-200"></div>
-                    <button onClick={onRecall} className="text-blue-600 hover:underline flex items-center gap-1.5 text-sm font-semibold">
-                        <PauseCircle size={16} /> Recall ({heldCount})
-                    </button>
-                </div>
             </div>
 
             {companyConfig.transactionSettings?.pos?.showCategoryFilters !== false && (
-                <div className="bg-white border-b border-slate-200 overflow-x-auto no-scrollbar z-30 sticky top-[61px]">
-                    <div className="flex gap-1 px-6 py-2">
-                        {categories.map(cat => {
-                            const isActive = activeCategory === cat;
+                <div style={{ background: '#fff', borderBottom: `1px solid ${LINE}`, overflowX: 'auto' }}>
+                    <div style={{ display: 'flex', gap: 6, padding: '8px 16px' }}>
+                        {categoryGroups.map(g => {
+                            const isActive = activeCategory === g.label;
                             return (
                                 <button
-                                    key={cat as string}
-                                    onClick={() => { setActiveCategory(cat as string); setActiveIndex(-1); }}
-                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-all text-xs font-semibold
-                                  ${isActive
-                                            ? 'bg-slate-800 text-white'
-                                            : 'bg-white text-slate-800 border border-slate-200 hover:bg-slate-50'
-                                        }`}
+                                    key={g.label}
+                                    onClick={() => { setActiveCategory(g.label); setActiveIndex(-1); }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        padding: '6px 14px',
+                                        borderRadius: 20,
+                                        border: isActive ? 'none' : `1px solid ${LINE}`,
+                                        background: isActive ? T7 : '#fff',
+                                        color: isActive ? '#fff' : INK,
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        fontFamily: "'DM Sans',sans-serif",
+                                        whiteSpace: 'nowrap',
+                                        transition: '.12s'
+                                    }}
                                 >
-                                    {cat !== 'All' && <div className={isActive ? 'text-white' : 'text-slate-400'}>
-                                        {getCategoryIcon(cat as string)}
-                                    </div>}
-                                    <span className="whitespace-nowrap">{cat as string}</span>
+                                    {g.label !== 'All' && (
+                                        <span style={{ color: isActive ? '#fff' : SOFT, display: 'flex' }}>
+                                            {getCategoryIcon(g.label)}
+                                        </span>
+                                    )}
+                                    <span>{g.label}</span>
                                 </button>
                             )
                         })}
@@ -323,10 +486,14 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                 </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                <div className="grid gap-4 content-start pb-20" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
-                    {renderItems(filteredProducts)}
-                </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: viewMode === 'List' ? '0' : '12px 16px' }}>
+                {viewMode === 'List' ? (
+                    renderItems(filteredProducts)
+                ) : (
+                    <div className="grid gap-3 content-start pb-20" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
+                        {renderItems(filteredProducts)}
+                    </div>
+                )}
             </div>
 
             {selectedProductForVariants && (

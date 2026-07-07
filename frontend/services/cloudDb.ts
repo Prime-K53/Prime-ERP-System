@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, supabaseIdempotency } from './supabaseClient';
 import { isSupabaseConfigured } from './cloudMode';
 
 export const STORE_TO_TABLE: Record<string, string> = {
@@ -20,9 +20,10 @@ export const STORE_TO_TABLE: Record<string, string> = {
   goodsReceipts: 'goods_receipts',
   supplierPayments: 'supplier_payments',
   resourceAllocations: 'resource_allocations',
-    profitMarginSettings: 'profit_margin_settings',
-    marketAdjustments: 'market_adjustments',
-    materialCategories: 'material_categories',
+  profitMarginSettings: 'profit_margin_settings',
+  marketAdjustments: 'market_adjustments',
+  materialCategories: 'material_categories',
+  taxRates: 'tax_rates',
   warehouseInventory: 'warehouse_inventory',
   materialBatches: 'material_batches',
   inventoryTransactions: 'inventory_transactions',
@@ -388,9 +389,26 @@ export const cloudDb = {
   /**
    * Check if an operation has already been processed (idempotency check).
    */
-  async checkIdempotency(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
+  _idempotencyTableReady: null as boolean | null,
+
+  async _ensureIdempotencyTable(): Promise<boolean> {
+    if (this._idempotencyTableReady !== null) return this._idempotencyTableReady;
     try {
-      const { data } = await supabase
+      const { error } = await supabaseIdempotency
+        .from('idempotency_keys')
+        .select('id', { head: true, count: 'exact' })
+        .limit(0);
+      this._idempotencyTableReady = !error;
+    } catch {
+      this._idempotencyTableReady = false;
+    }
+    return this._idempotencyTableReady;
+  },
+
+  async checkIdempotency(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
+    if (!(await this._ensureIdempotencyTable())) return { alreadyProcessed: false };
+    try {
+      const { data } = await supabaseIdempotency
         .from('idempotency_keys')
         .select('result')
         .eq('id', operationId)
@@ -408,8 +426,9 @@ export const cloudDb = {
    * Record an idempotency key after successful operation.
    */
   async recordIdempotency(operationId: string, result: string, ttlMs: number = 86400000): Promise<void> {
+    if (!(await this._ensureIdempotencyTable())) return;
     try {
-      await supabase.from('idempotency_keys').upsert({
+      await supabaseIdempotency.from('idempotency_keys').upsert({
         id: operationId,
         result,
         expires_at: new Date(Date.now() + ttlMs).toISOString(),

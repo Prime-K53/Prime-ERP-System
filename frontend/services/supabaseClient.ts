@@ -12,10 +12,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 const TIMEOUT_MS = 10000
+const TIMEOUT_MS_IDEMPOTENCY = 2500
 
 function fetchWithTimeout(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  return fetch(url, { ...options, signal })
+    .finally(() => clearTimeout(id))
+}
+
+function fetchWithIdempotencyTimeout(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), TIMEOUT_MS_IDEMPOTENCY)
 
   const signal = options?.signal
     ? AbortSignal.any([options.signal, controller.signal])
@@ -44,6 +57,29 @@ export const supabase = createClient(
     },
     global: {
       fetch: fetchWithTimeout
+    }
+  }
+)
+
+export const supabaseIdempotency = createClient(
+  supabaseUrl || PLACEHOLDER_SUPABASE_URL,
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storageKey: 'prime-erp-supabase-auth-idempotency',
+      storage: localStorage
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    },
+    global: {
+      fetch: fetchWithIdempotencyTimeout
     }
   }
 )

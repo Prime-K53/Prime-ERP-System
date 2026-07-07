@@ -8,7 +8,7 @@ import { examinationBatchService } from '../../services/examinationBatchService'
 import { ExaminationBatch, ExaminationClass, ExaminationSubject } from '../../types';
 import { toast } from '../../components/Toast';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { ArrowLeft, Plus, Trash2, CheckCircle, BookOpen, Users, BookText, FileText, ChevronDown, ChevronUp, Eye, EyeOff, RefreshCw, Repeat, Printer } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, CheckCircle, BookOpen, Users, BookText, FileText, ChevronDown, ChevronUp, Eye, EyeOff, RefreshCw, Repeat, Printer, DollarSign } from 'lucide-react';
 import { AddClassDialog } from './components/AddClassDialog';
 import { ManageSubjectsDialog } from './components/ManageSubjectsDialog';
 import { buildRecurringDraftFromExaminationBatch } from '../../utils/recurringConversion';
@@ -29,7 +29,17 @@ const ExaminationBatchDetail: React.FC = () => {
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [isManageSubjectsOpen, setIsManageSubjectsOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ExaminationClass | null>(null);
-  const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
+  const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('exam_batch_collapsed');
+      if (raw) {
+        const data = JSON.parse(raw);
+        const ids = data[id || ''];
+        if (Array.isArray(ids)) return new Set(ids);
+      }
+    } catch {}
+    return new Set();
+  });
   const canOverrideExamCost = checkPermission('examination.cost.override');
 
   // Confirmation Dialog States
@@ -498,6 +508,12 @@ const ExaminationBatchDetail: React.FC = () => {
       const next = new Set(prev);
       if (next.has(classId)) next.delete(classId);
       else next.add(classId);
+      try {
+        const raw = localStorage.getItem('exam_batch_collapsed');
+        const data = raw ? JSON.parse(raw) : {};
+        data[id || ''] = Array.from(next);
+        localStorage.setItem('exam_batch_collapsed', JSON.stringify(data));
+      } catch {}
       return next;
     });
   };
@@ -878,44 +894,62 @@ const ExaminationBatchDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Total Amount</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">
-            {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      <div className="kpi-grid-dash mb-6">
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #2563EB' }}>
+          <div className="kpi-card-icon" style={{ color: '#2563EB', background: '#2563EB12' }}>
+            <DollarSign size={18} />
           </div>
-          <div className="mt-2 space-y-1">
-            <div className="flex justify-between text-[10px]">
-              <span className="text-slate-400">Production:</span>
-              <span className="text-slate-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.production.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-[10px]">
-              <span className="text-slate-400">Adjustments:</span>
-              <span className="text-emerald-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.marketAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-[10px]">
-              <span className="text-slate-400">Rounding:</span>
-              <span className="text-blue-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-            </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Amount</div>
+            <div className="kpi-card-value">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div className="kpi-card-sub">Rounding: {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.roundingAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
             {batchTotals.manualOverride !== 0 && (
-              <div className="flex justify-between text-[10px]">
+              <div className="flex justify-between text-[9px] mt-1">
                 <span className="text-slate-400">Manual Override:</span>
                 <span className="text-purple-600 font-medium">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.manualOverride.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
               </div>
             )}
           </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Academic Info</div>
-          <div className="text-xl font-bold text-slate-900">{batch.exam_type}</div>
-          <div className="text-[9px] text-slate-400 mt-1">
-            {batch.academic_year} | Term {batch.term}
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #7C3AED' }}>
+          <div className="kpi-card-icon" style={{ color: '#7C3AED', background: '#7C3AED12' }}>
+            <BookOpen size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Academic Info</div>
+            <div className="kpi-card-value">{batch.exam_type}</div>
+            <div className="kpi-card-sub">{batch.academic_year} | Term {batch.term}</div>
           </div>
         </div>
-        <div className="bg-white/70 backdrop-blur-xl p-4 rounded-2xl border border-white/60 shadow-sm">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Structure</div>
-          <div className="text-xl font-bold text-slate-900 finance-nums">{batch.classes?.length || 0} Classes</div>
-          <div className="text-[9px] text-slate-400 mt-1">Total Subjects: {totalSubjects}</div>
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #F59E0B' }}>
+          <div className="kpi-card-icon" style={{ color: '#F59E0B', background: '#F59E0B12' }}>
+            <BookText size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Structure</div>
+            <div className="kpi-card-value">{batch.classes?.length || 0} Classes</div>
+            <div className="kpi-card-sub">Total Subjects: {totalSubjects}</div>
+          </div>
+        </div>
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #0891B2' }}>
+          <div className="kpi-card-icon" style={{ color: '#0891B2', background: '#0891B212' }}>
+            <Users size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Total Learners</div>
+            <div className="kpi-card-value">{batchTotals.totalLearners.toLocaleString()}</div>
+            <div className="kpi-card-sub">Across {batch.classes?.length || 0} classes</div>
+          </div>
+        </div>
+        <div className="kpi-card-dash" style={{ borderLeft: '3px solid #10B981' }}>
+          <div className="kpi-card-icon" style={{ color: '#10B981', background: '#10B98112' }}>
+            <Printer size={18} />
+          </div>
+          <div className="kpi-card-body">
+            <div className="kpi-card-label">Production</div>
+            <div className="kpi-card-value">{batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.production.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+            <div className="kpi-card-sub">Adjustments: {batch.currency || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || companyConfig?.currencySymbol || 'MWK'} {batchTotals.marketAdjustment.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          </div>
         </div>
       </div>
 
