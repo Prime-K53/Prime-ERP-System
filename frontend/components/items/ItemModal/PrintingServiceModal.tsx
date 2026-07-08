@@ -6,6 +6,7 @@ import { normalizeInventoryItemPricing } from '../../../utils/pricing';
 import { generateAutoSKU } from '../../../utils/skuGenerator';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, resolveMinimumMarkup } from '../../../services/pricingValidationService';
 import { currencyService } from '../../../services/currencyService';
+import { calculateMaterialCosts } from '../../../utils/pricingEngineShared';
 import { useAuth } from '../../../context/AuthContext';
 import { aiService } from '../../../services/ai/aiService';
 
@@ -273,77 +274,27 @@ const PrintingServiceModal: React.FC<Props> = ({ item, onSave, onClose, allItems
 
   const totalSheets = Math.ceil(pages / 2);
 
-  const calculateCosts = () => {
+  const costs = useMemo(() => {
     if (isRawMaterial) {
-      return {
-        paperCost: 0,
-        tonerCost: 0,
-        finishingCost: 0,
-        finishingInventoryCost: 0,
-        baseCost: stationeryCostPrice || 0,
-      };
+      return { paperCost: 0, tonerCost: 0, finishingCost: 0, finishingInventoryCost: 0, baseCost: stationeryCostPrice || 0 };
     }
     if (isStationery) {
       const derivedCost = isStationeryPack && unitsPerPack > 0
         ? costPerPack / unitsPerPack
         : (stationeryCostPrice || 0);
-      return {
-        paperCost: 0,
-        tonerCost: 0,
-        finishingCost: 0,
-        finishingInventoryCost: 0,
-        baseCost: derivedCost,
-      };
+      return { paperCost: 0, tonerCost: 0, finishingCost: 0, finishingInventoryCost: 0, baseCost: derivedCost };
     }
+    return calculateMaterialCosts({
+      paper: selectedPaper,
+      toner: selectedToner,
+      pages,
+      copies,
+      finishingOptions,
+      inventory,
+    });
+  }, [selectedPaper, selectedToner, pages, copies, finishingOptions, inventory, isRawMaterial, isStationery, stationeryCostPrice, isStationeryPack, unitsPerPack, costPerPack]);
 
-    let paperCostVal = 0;
-    if (selectedPaper) {
-      const sheetsPerCopy = Math.ceil(pages / 2);
-      const totalSheetsVal = sheetsPerCopy * copies;
-      const reamSize = Number(selectedPaper.conversionRate || selectedPaper.conversion_rate || 500);
-      const paperUnitCost = Number(selectedPaper.cost_price || selectedPaper.cost_per_unit || selectedPaper.cost || selectedPaper.costPrice || 0);
-      const costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
-      paperCostVal = Number((totalSheetsVal * costPerSheet).toFixed(2));
-    }
-
-    let tonerCostVal = 0;
-    if (selectedToner) {
-      const capacity = 20000;
-      const totalPagesVal = pages * copies;
-      const tonerUnitCost = Number(selectedToner.cost_price || selectedToner.cost_per_unit || selectedToner.cost || selectedToner.costPrice || 0);
-      const costPerPage = tonerUnitCost / capacity;
-      tonerCostVal = Number((totalPagesVal * costPerPage).toFixed(2));
-    }
-
-    const finishingCostVal = finishingOptions
-      .filter(o => o.enabled)
-      .reduce((sum, o) => {
-        const chargeQty = o.batchSize ? Math.ceil(copies / o.batchSize) : copies;
-        return sum + (o.price * chargeQty);
-      }, 0);
-
-    const finishingInventoryCostVal = finishingOptions
-      .filter(o => o.enabled && o.items && o.items.length > 0)
-      .reduce((sum, o) => {
-        const optionInventoryCost = o.items.reduce((itemSum, itemConfig) => {
-          const invItem = inventory.find(i => i.id === itemConfig.itemId);
-          if (!invItem) return itemSum;
-          const itemCost = Number(invItem.cost_price || invItem.cost_per_unit || invItem.cost || invItem.costPrice || 0);
-          return itemSum + (itemCost * itemConfig.quantity * copies);
-        }, 0);
-        return sum + optionInventoryCost;
-      }, 0);
-
-    return {
-      paperCost: paperCostVal,
-      tonerCost: tonerCostVal,
-      finishingCost: finishingCostVal,
-      finishingInventoryCost: finishingInventoryCostVal,
-      baseCost: paperCostVal + tonerCostVal + finishingCostVal + finishingInventoryCostVal,
-    };
-  };
-
-  const { paperCost, tonerCost, finishingCost, finishingInventoryCost, baseCost } = calculateCosts();
+  const { paperCost, tonerCost, finishingCost, finishingInventoryCost, baseCost } = costs;
   const costPrice = isRawMaterial
     ? stationeryCostPrice
     : isStationery

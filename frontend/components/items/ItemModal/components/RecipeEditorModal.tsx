@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Calculator, Package, Printer, Layers, Check } from 'lucide-react';
 import type { Item, FinishingOption } from '../../../../types';
+import { calculateMaterialCosts } from '../../../../utils/pricingEngineShared';
 
 const DEFAULT_FINISHING_OPTIONS: FinishingOption[] = [
   { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
@@ -69,31 +70,16 @@ export const RecipeEditorModal: React.FC<RecipeEditorModalProps> = ({
   }, [open]);
 
   const { paperCost, tonerCost, finishingCost, baseCost } = useMemo(() => {
-    let pc = 0;
-    if (selectedPaper) {
-      const sheetsPerCopy = Math.ceil(pages / 2);
-      const totalSheets = sheetsPerCopy;
-      const reamSize = Number(selectedPaper.conversionRate || selectedPaper.conversion_rate || 500);
-      const unitCost = Number(selectedPaper.cost_price || selectedPaper.cost_per_unit || selectedPaper.cost || 0);
-      const costPerSheet = reamSize > 0 ? unitCost / reamSize : 0;
-      pc = Number((totalSheets * costPerSheet).toFixed(2));
-    }
-
-    let tc = 0;
-    if (selectedToner) {
-      const capacity = 20000;
-      const totalPages = pages;
-      const unitCost = Number(selectedToner.cost_price || selectedToner.cost_per_unit || selectedToner.cost || 0);
-      const costPerPage = unitCost / capacity;
-      tc = Number((totalPages * costPerPage).toFixed(2));
-    }
-
-    const fc = finishingOptions
-      .filter(o => o.enabled)
-      .reduce((sum, o) => sum + (o.price), 0);
-
-    return { paperCost: pc, tonerCost: tc, finishingCost: fc, baseCost: pc + tc + fc };
-  }, [pages, selectedPaper, selectedToner, finishingOptions]);
+    const costs = calculateMaterialCosts({
+      paper: selectedPaper,
+      toner: selectedToner,
+      pages,
+      copies: 1,
+      finishingOptions,
+      inventory,
+    });
+    return costs;
+  }, [pages, selectedPaper, selectedToner, finishingOptions, inventory]);
 
   const toggleFinishing = (id: string) => {
     setFinishingOptions(prev => prev.map(o => o.id === id ? { ...o, enabled: !o.enabled } : o));

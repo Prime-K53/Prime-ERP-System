@@ -10,6 +10,7 @@ import { generateAutoSKU } from '../../utils/skuGenerator';
 import { normalizeInventoryItemPricing } from '../../utils/pricing';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, buildPricingSnapshot } from '../../services/pricingValidationService';
 import { currencyService } from '../../services/currencyService';
+import { calculateMaterialCosts } from '../../utils/pricingEngineShared';
 import html2canvas from 'html2canvas';
 
 const defaultFinishingOptions: FinishingOption[] = [
@@ -144,57 +145,14 @@ const SmartPricing: React.FC = () => {
         [inventory]
     );
 
-    const calculateCosts = () => {
-        let paperCostVal = 0;
-        if (selectedPaper) {
-            const sheetsPerCopy = Math.ceil(pages / 2);
-            const totalSheetsVal = sheetsPerCopy * copies;
-            const reamSize = Number(selectedPaper.conversionRate || selectedPaper.conversion_rate || 500);
-            const paperUnitCost = Number(selectedPaper.cost_price || selectedPaper.cost_per_unit || selectedPaper.cost || 0);
-            const costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
-            paperCostVal = Number((totalSheetsVal * costPerSheet).toFixed(2));
-        }
-
-        let tonerCostVal = 0;
-        if (selectedToner) {
-            const capacity = 20000;
-            const totalPagesVal = pages * copies;
-            const tonerUnitCost = Number(selectedToner.cost_price || selectedToner.cost_per_unit || selectedToner.cost || 0);
-            const costPerPage = tonerUnitCost / capacity;
-            tonerCostVal = Number((totalPagesVal * costPerPage).toFixed(2));
-        }
-
-        const finishingCostVal = finishingOptions
-            .filter(o => o.enabled)
-            .reduce((sum, o) => {
-                const chargeQty = o.batchSize ? Math.ceil(copies / o.batchSize) : copies;
-                return sum + (o.price * chargeQty);
-            }, 0);
-
-        const finishingInventoryCostVal = finishingOptions
-            .filter(o => o.enabled && o.items && o.items.length > 0)
-            .reduce((sum, o) => {
-                const optionInventoryCost = o.items.reduce((itemSum, itemConfig) => {
-                    const item = inventory.find(i => i.id === itemConfig.itemId);
-                    if (!item) return itemSum;
-                    const itemCost = Number(item.cost_price || item.cost_per_unit || item.cost || 0);
-                    return itemSum + (itemCost * itemConfig.quantity * copies);
-                }, 0);
-                return sum + optionInventoryCost;
-            }, 0);
-
-        const baseCostVal = paperCostVal + tonerCostVal + finishingCostVal + finishingInventoryCostVal;
-        
-        return { 
-            paperCost: paperCostVal, 
-            tonerCost: tonerCostVal, 
-            finishingCost: finishingCostVal, 
-            finishingInventoryCost: finishingInventoryCostVal, 
-            baseCost: baseCostVal,
-        };
-    };
-
-    const { paperCost, tonerCost, finishingCost, finishingInventoryCost, baseCost } = calculateCosts();
+    const { paperCost, tonerCost, finishingCost, finishingInventoryCost, baseCost } = calculateMaterialCosts({
+        paper: selectedPaper,
+        toner: selectedToner,
+        pages,
+        copies,
+        finishingOptions,
+        inventory,
+    });
     const costPrice = baseCost;
     const profit = calculateProfit(costPrice, sellingPrice);
     const profitMarkup = calculateMarkup(costPrice, sellingPrice);
@@ -733,8 +691,59 @@ const SmartPricing: React.FC = () => {
                 </div>
 
                 {/* ── 3-Column Layout ── */}
-                <div style={{ display:'grid', gridTemplateColumns:'2.4fr 400px', gap:18, alignItems:'start' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1.2fr 380px', gap:18, alignItems:'start' }}>
 
+                    {/* ═══ Col 1: Finishing Options ═══ */}
+                    <div>
+                    <div>
+                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M9 12l2 2 4-4" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    </div>
+                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Finishing Options</h3>
+                                </div>
+                            </div>
+                            <div style={{ padding:'14px 16px 16px' }}>
+                                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                                    {finishingOptions.map(option => (
+                                        <div
+                                            key={option.id}
+                                            onClick={() => toggleFinishingOption(option.id)}
+                                            style={{
+                                                border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
+                                                borderRadius: 11,
+                                                padding: '11px 13px',
+                                                cursor: 'pointer',
+                                                transition: 'all .15s ease',
+                                                background: option.enabled ? 'linear-gradient(135deg, #F0FAF8, #FFFFFF)' : '#fff',
+                                                boxShadow: option.enabled ? '0 0 0 1px #1C8C86 inset' : 'none',
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between" style={{ marginBottom: 5 }}>
+                                                <span style={{ fontSize:13.5, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>{option.name}</span>
+                                                <div style={{
+                                                    width: 18, height: 18, borderRadius: 6,
+                                                    border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                                    transition: 'all .15s ease',
+                                                    background: option.enabled ? '#1C8C86' : 'transparent',
+                                                }}>
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ opacity: option.enabled ? 1 : 0 }}><path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </div>
+                                            </div>
+                                            <p style={{ fontSize:12, color:'#666F6C', margin:'0 0 7px', lineHeight:1.45 }}>{option.description}</p>
+                                            <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13, fontWeight:700, color:'#146B67' }}>{currency} {option.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    {/* ═══ Col 2: Print Settings + BOM Materials + How Finishing ═══ */}
                     <div>
 
                     {/* ═══ Print Settings ═══ */}
@@ -810,54 +819,6 @@ const SmartPricing: React.FC = () => {
                                         Finishing
                                     </span>
                                     <span id="finishBomLine" style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(finishingCost)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ═══ Finishing Options ═══ */}
-                    <div>
-                        <div style={{ background:'#FEFDFB', border:'1px solid #E4DFD1', borderRadius:14, boxShadow:'0 1px 2px rgba(15,61,62,0.06)', marginBottom:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', borderBottom:'1px solid #E4DFD1' }}>
-                                <div className="flex items-center gap-2.5">
-                                    <div style={{ width:28, height:28, borderRadius:8, background:'#EDE6F7', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#7B5CC9" strokeWidth="1.7"/><path d="M9 12l2 2 4-4" stroke="#7B5CC9" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    </div>
-                                    <h3 style={{ fontSize:14, margin:0, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>Finishing Options</h3>
-                                </div>
-                            </div>
-                            <div style={{ padding:'14px 16px 16px' }}>
-                                <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:10 }}>
-                                    {finishingOptions.map(option => (
-                                        <div
-                                            key={option.id}
-                                            onClick={() => toggleFinishingOption(option.id)}
-                                            style={{
-                                                border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
-                                                borderRadius: 11,
-                                                padding: '11px 13px',
-                                                cursor: 'pointer',
-                                                transition: 'all .15s ease',
-                                                background: option.enabled ? 'linear-gradient(135deg, #F0FAF8, #FFFFFF)' : '#fff',
-                                                boxShadow: option.enabled ? '0 0 0 1px #1C8C86 inset' : 'none',
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-between" style={{ marginBottom: 5 }}>
-                                                <span style={{ fontSize:13.5, fontWeight:600, lineHeight:1.4, color:'#23282A' }}>{option.name}</span>
-                                                <div style={{
-                                                    width: 18, height: 18, borderRadius: 6,
-                                                    border: `1.5px solid ${option.enabled ? '#1C8C86' : '#E4DFD1'}`,
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                                    transition: 'all .15s ease',
-                                                    background: option.enabled ? '#1C8C86' : 'transparent',
-                                                }}>
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" style={{ opacity: option.enabled ? 1 : 0 }}><path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                </div>
-                                            </div>
-                                            <p style={{ fontSize:12, color:'#666F6C', margin:'0 0 7px', lineHeight:1.45 }}>{option.description}</p>
-                                            <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:13, fontWeight:700, color:'#146B67' }}>{currency} {option.price}</span>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -992,12 +953,17 @@ const SmartPricing: React.FC = () => {
                         </div>
                         <div style={{ padding:'14px 16px' }}>
                             <div style={{ padding:'10px 13px', borderRadius:11, background:'#FBF8F2', border:'1px solid #E4DFD1', marginBottom:14 }}>
-                                <p style={{ fontSize:12, fontWeight:600, color:'#666F6C', margin:0, marginBottom:8, lineHeight:1.4 }}>Pricing Summary</p>
-                                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px 12px', fontSize:13, lineHeight:1.5 }}>
-                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Cost:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(costPrice)}</span></div>
-                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Selling:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(sellingPrice)}</span></div>
-                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Profit:</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color: profit >= 0 ? '#146B67' : '#B23B3B' }}>{formatCurrency(profit)}</span></div>
-                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Margin:</span><span style={{ fontWeight:600, color: validation.valid ? '#146B67' : '#B23B3B' }}>{profitMarkup.toFixed(1)}%</span></div>
+                                <p style={{ fontSize:12, fontWeight:600, color:'#666F6C', margin:0, marginBottom:8, lineHeight:1.4 }}>Item Cost Breakdown</p>
+                                <div style={{ display:'flex', flexDirection:'column', gap:'3px', fontSize:13, lineHeight:1.5 }}>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(paperCost)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(tonerCost)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Finishing</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(finishingCost)}</span></div>
+                                    {finishingInventoryCost > 0 && (
+                                        <div className="flex justify-between"><span style={{ color:'#666F6C', paddingLeft:12 }}>Materials</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(finishingInventoryCost)}</span></div>
+                                    )}
+                                    <div className="flex justify-between" style={{ borderTop:'1px dashed #E4DFD1', paddingTop:6, marginTop:4 }}><span style={{ color:'#23282A', fontWeight:700 }}>Total Cost</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:700, color:'#23282A' }}>{formatCurrency(costPrice)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color:'#666F6C' }}>Selling Price</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color:'#23282A' }}>{formatCurrency(sellingPrice)}</span></div>
+                                    <div className="flex justify-between"><span style={{ color: profit >= 0 ? '#146B67' : '#B23B3B' }}>Profit ({profitMarkup.toFixed(1)}%)</span><span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, color: profit >= 0 ? '#146B67' : '#B23B3B' }}>{profit >= 0 ? '+' : ''}{formatCurrency(profit)}</span></div>
                                 </div>
                             </div>
 

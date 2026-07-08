@@ -14,6 +14,7 @@ import { currencyService } from '../../../services/currencyService';
 import { dbService } from '../../../services/db';
 import { normalizeInventoryItemPricing, calculateBaseSellingPrice } from '../../../utils/pricing';
 import { calculateProfit, calculateMarkup, validateMinimumMarkup, resolveMinimumMarkup } from '../../../services/pricingValidationService';
+import { calculateMaterialCosts } from '../../../utils/pricingEngineShared';
 import PricingTab from './PricingTab';
 
 // Generate a unique ID without external dependency
@@ -242,49 +243,28 @@ const ItemModal: React.FC<ItemModalProps> = ({
         const sp = formData.smartPricing;
         if (!sp) return null;
 
-        // Paper cost
-        let paperCost = 0;
         const paper = inventory.find((i: Item) => i.id === sp.paperItemId);
-        if (paper) {
-            const sheetsPerCopy = Math.ceil(pages / 2);
-            const totalSheets = sheetsPerCopy * copies;
-            const reamSize = Number(paper.conversionRate || paper.conversion_rate || 500);
-            const paperUnitCost = Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0);
-            const costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
-            paperCost = Number((totalSheets * costPerSheet).toFixed(2));
-        }
-
-        // Toner cost
-        let tonerCost = 0;
         const toner = inventory.find((i: Item) => i.id === sp.tonerItemId);
-        if (toner) {
-            const capacity = 20000;
-            const totalPages = pages * copies;
-            const tonerUnitCost = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0);
-            tonerCost = Number((totalPages * (tonerUnitCost / capacity)).toFixed(2));
-        }
 
-        // Finishing cost Ã¢â‚¬â€ reuse saved finishing button costs (same source as SmartPricing)
+        const costs = calculateMaterialCosts({
+            paper,
+            toner,
+            pages,
+            copies,
+            finishingOptions: [],
+            inventory,
+        });
+
         const finishingCost = ((sp.finishingEnabled || []) as string[]).reduce((sum: number, id: string) => {
             const opt = finishingButtons.find(f => f.id === id);
             return sum + (opt?.cost || 0);
         }, 0);
 
-        const baseCost = paperCost + tonerCost + finishingCost;
+        const baseCost = costs.paperCost + costs.tonerCost + finishingCost;
 
-        // Market adjustments Ã¢â‚¬â€ same logic as SmartPricing
-        const adjustmentLines = marketAdjustments.map(adj => {
-            const type = (adj.type || '').toUpperCase();
-            const value = (type === 'PERCENTAGE' || type === 'PERCENT')
-                ? baseCost * ((adj.value || 0) / 100)
-                : (adj.value || 0) * pages * copies;
-            return { id: adj.id, name: adj.name, type: adj.type, value: Number(value.toFixed(2)), rawValue: adj.value };
-        });
-        const marketAdjustmentTotal = adjustmentLines.reduce((s: number, a: any) => s + a.value, 0);
-        const priceAfterAdjustments = baseCost + marketAdjustmentTotal;
         return {
-            paperCost,
-            tonerCost,
+            paperCost: costs.paperCost,
+            tonerCost: costs.tonerCost,
             finishingCost,
             baseCost,
             pages,
