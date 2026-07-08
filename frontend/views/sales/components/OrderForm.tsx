@@ -334,6 +334,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
     const [itemSearch, setItemSearch] = useState('');
     const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState('');
+    const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
     const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
     const [showItemHistory, setShowItemHistory] = useState(false);
     const [itemHistoryItemId, setItemHistoryItemId] = useState<string | undefined>();
@@ -341,6 +343,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
     const customerDropdownRef = useRef<HTMLDivElement>(null);
     const itemDropdownRef = useRef<HTMLDivElement>(null);
+    const serviceDropdownRef = useRef<HTMLDivElement>(null);
 
     const getCustomerOutstanding = (name: string) => {
         return (invoices as Invoice[])
@@ -355,12 +358,20 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     }, [customerNames, customerSearch]);
 
     const filteredInventory = useMemo(() => {
-        const base = inventory.filter((i: Item) => i.type !== 'Material');
+        const base = inventory.filter((i: Item) => i.type !== 'Material' && i.type !== 'Service');
         if (!itemSearch) return base;
         return base.filter((i: Item) =>
             (i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase()))
         );
     }, [inventory, itemSearch]);
+
+    const filteredServices = useMemo(() => {
+        const base = inventory.filter((i: Item) => i.type === 'Service');
+        if (!serviceSearch) return base;
+        return base.filter((i: Item) =>
+            (i.name.toLowerCase().includes(serviceSearch.toLowerCase()) || i.sku.toLowerCase().includes(serviceSearch.toLowerCase()))
+        );
+    }, [inventory, serviceSearch]);
 
     const revenueAccounts = useMemo(() => {
         return (accounts as Account[]).filter(acc => acc.type === 'Revenue' || acc.code.startsWith('4'));
@@ -974,6 +985,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             }
             if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target as Node)) {
                 setIsItemDropdownOpen(false);
+            }
+            if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(event.target as Node)) {
+                setIsServiceDropdownOpen(false);
             }
         };
         document.addEventListener('keydown', handleKeyDown);
@@ -2348,16 +2362,50 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 relative" ref={serviceDropdownRef}>
                                 <div className="flex items-center border border-gray-200 rounded-md bg-white px-3 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all">
                                     <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">Services</span>
                                     <input
                                         type="text"
                                         className="flex-1 text-sm bg-transparent outline-none"
-                                        placeholder="Search photocopy services..."
-                                        onFocus={() => handleQuickService('Photocopy')}
+                                        placeholder="Search services..."
+                                        value={serviceSearch}
+                                        onFocus={() => setIsServiceDropdownOpen(true)}
+                                        onChange={e => {
+                                            setServiceSearch(e.target.value);
+                                            setIsServiceDropdownOpen(true);
+                                        }}
                                     />
                                 </div>
+                                {isServiceDropdownOpen && (
+                                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                        {filteredServices.length === 0 ? (
+                                            <div className="p-4 text-center text-xs text-slate-400">No matching services</div>
+                                        ) : (
+                                            filteredServices.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => {
+                                                        handleAddItem(item);
+                                                        setIsServiceDropdownOpen(false);
+                                                        setServiceSearch('');
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex justify-between items-center border-b border-gray-100 last:border-0"
+                                                >
+                                                    <div>
+                                                        <div className="text-sm font-medium text-slate-700">{item.name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-mono">{item.sku || 'NO-SKU'}</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-semibold text-slate-800">
+                                                            {currency}{Number((item.price || 0)).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
