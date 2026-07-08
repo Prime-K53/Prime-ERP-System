@@ -2560,7 +2560,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     <Image size={12} />
                                                                 </span>
                                                             )}
-                                                            <span>{item.name}</span>
+                                                            <span className={item.id?.startsWith('QUICK-') ? 'text-xs' : ''}>
+                                                                {item.id?.startsWith('QUICK-') && item.serviceDetails
+                                                                    ? `Quick photocopy ${item.serviceDetails.pages || item.pages || 0} sheets @K${((item.price || 0) / ((item.serviceDetails.pages || 1) * (item.serviceDetails.copies || 1))).toFixed(2)}/sheet`
+                                                                    : item.name}
+                                                            </span>
                                                         </td>
                                                         <td className="px-3 py-2 text-center">
                                                             <input
