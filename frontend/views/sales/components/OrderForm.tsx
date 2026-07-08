@@ -2746,28 +2746,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </div>
                                 </div>
 
-                                <div className="mt-3">
-                                    <div className="text-xs font-medium text-slate-500 mb-1">Reference Document</div>
-                                    <input
-                                        type="text"
-                                        className="w-full text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
-                                        placeholder="No reference attached"
-                                        value={formData.referenceDoc || ''}
-                                        onChange={e => setFormData({ ...formData, referenceDoc: e.target.value })}
-                                    />
-                                    <div className="flex gap-1.5 mt-1.5">
-                                        <button className="flex-1 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1 hover:bg-slate-50 hover:text-slate-700 flex items-center justify-center gap-1 transition-colors">
-                                            <FolderOpen size={12} /> Browse
-                                        </button>
-                                        <button className="flex-1 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1 hover:bg-slate-50 hover:text-slate-700 flex items-center justify-center gap-1 transition-colors">
-                                            <Eye size={12} /> View
-                                        </button>
-                                        <button className="flex-1 text-xs text-red-500 bg-white border border-slate-200 rounded px-2 py-1 hover:bg-red-50 flex items-center justify-center gap-1 transition-colors">
-                                            <Trash2 size={12} /> Delete
-                                        </button>
-                                    </div>
                                 </div>
-                            </div>
                         </div>
                     </div>
                 </div>
