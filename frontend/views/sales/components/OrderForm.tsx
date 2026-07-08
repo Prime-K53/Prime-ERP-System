@@ -2560,35 +2560,35 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     <Image size={12} />
                                                                 </span>
                                                             )}
-                                                            <span className={item.id?.startsWith('QUICK-') ? 'text-xs' : ''}>
-                                                                {item.id?.startsWith('QUICK-') && item.serviceDetails
-                                                                    ? `Quick photocopy ${item.serviceDetails.pages || item.pages || 0} sheets @K${((item.price || 0) / ((item.serviceDetails.pages || 1) * (item.serviceDetails.copies || 1))).toFixed(2)}/sheet`
-                                                                    : item.name}
-                                                            </span>
+                                                            <span>Quick photocopy</span>
                                                         </td>
-                                                        <td className="px-3 py-2 text-center">
-                                                            <input
-                                                                type="number"
-                                                                min={1}
-                                                                className={`w-16 text-center text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors ${qty > stock && stock > 0 ? 'text-red-600' : ''}`}
-                                                                value={qty}
-                                                                onChange={e => handleQuantityChange(idx, parseFloat(e.target.value) || 0)}
-                                                                disabled={isPriceLocked || isPrintingQuotation}
-                                                            />
+                                                        <td className="px-3 py-2 text-center text-sm text-slate-800">
+                                                            {item.id?.startsWith('QUICK-')
+                                                                ? `${item.serviceDetails?.pages || item.pages || 0} pages`
+                                                                : <input
+                                                                    type="number"
+                                                                    min={1}
+                                                                    className={`w-16 text-center text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors ${qty > stock && stock > 0 ? 'text-red-600' : ''}`}
+                                                                    value={qty}
+                                                                    onChange={e => handleQuantityChange(idx, parseFloat(e.target.value) || 0)}
+                                                                    disabled={isPriceLocked || isPrintingQuotation}
+                                                                />}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right">
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                step="0.01"
-                                                                className="w-24 text-right text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
-                                                                value={Number(item.price || 0)}
-                                                                onChange={e => {
-                                                                    if (isPriceLocked || isPrintingQuotation) return;
-                                                                    applyManualLineItemPrice(item.id, parseFloat(e.target.value) || 0);
-                                                                }}
-                                                                disabled={isPriceLocked || isPrintingQuotation}
-                                                            />
+                                                        <td className="px-3 py-2 text-right text-sm text-slate-800">
+                                                            {item.id?.startsWith('QUICK-')
+                                                                ? `${currency}${((item.price || 0) / ((item.serviceDetails?.pages || 1) * (item.serviceDetails?.copies || 1))).toFixed(2)}/sheet`
+                                                                : <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    step="0.01"
+                                                                    className="w-24 text-right text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
+                                                                    value={Number(item.price || 0)}
+                                                                    onChange={e => {
+                                                                        if (isPriceLocked || isPrintingQuotation) return;
+                                                                        applyManualLineItemPrice(item.id, parseFloat(e.target.value) || 0);
+                                                                    }}
+                                                                    disabled={isPriceLocked || isPrintingQuotation}
+                                                                />}
                                                         </td>
                                                         <td className="px-3 py-2 text-right text-sm font-semibold text-indigo-700">
                                                             {currency}{((Number(item.price) || 0) * qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}
