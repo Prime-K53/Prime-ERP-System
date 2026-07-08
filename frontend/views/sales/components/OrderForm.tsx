@@ -2576,7 +2576,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                         </td>
                                                         <td className="px-3 py-2 text-right text-sm text-slate-800">
                                                             {item.id?.startsWith('QUICK-')
-                                                                ? `${currency}${((item.price || 0) / ((item.serviceDetails?.pages || 1) * (item.serviceDetails?.copies || 1))).toFixed(2)}/sheet`
+                                                                ? (() => { const sheets = Math.ceil((item.serviceDetails?.pages || 1) / 2) * (item.serviceDetails?.copies || 1); return `${currency}${((item.price || 0) / sheets).toFixed(2)}/sheet`; })()
                                                                 : <input
                                                                     type="number"
                                                                     min={0}
