@@ -2286,10 +2286,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
                                 <kbd className="px-1 py-0.5 bg-white border border-indigo-200 rounded text-[10px] font-mono">F11</kbd> Type & Print
                             </button>
-                            <button type="button" onClick={() => { if (formData.items.length > 0) handleRemoveItem(formData.items.length - 1); }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
-                                <kbd className="px-1 py-0.5 bg-white border border-red-200 rounded text-[10px] font-mono">Del</kbd> Remove row
-                            </button>
                         </div>
 
                         <div className="flex gap-3">
@@ -2354,7 +2350,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center border border-gray-200 rounded-md bg-white px-3 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all">
-                                    <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">F10: Photocopy</span>
+                                    <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">Services</span>
                                     <input
                                         type="text"
                                         className="flex-1 text-sm bg-transparent outline-none"
@@ -2374,9 +2370,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </span></span>
                             <a href="#" className="text-indigo-600 hover:text-indigo-700 hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
                                 Alt+F2: Item History
-                            </a>
-                            <a href="#" className="text-indigo-600 hover:text-indigo-700 hover:underline" onClick={e => { e.preventDefault(); notify('View photo feature', 'info'); }}>
-                                View Photo
                             </a>
                         </div>
 
@@ -2609,21 +2602,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-3 py-2 border-t border-gray-200 bg-slate-50 flex items-center">
-                                <button
-                                    onClick={() => {
-                                        if (!formData.items.length) {
-                                            const firstItem = inventory.find((i: Item) => i.type !== 'Material' && !i.isVariantParent);
-                                            if (firstItem) handleAddItem(firstItem);
-                                        } else {
-                                            handleQuantityChange(0, (formData.items[0]?.quantity || 0) + 1);
-                                        }
-                                    }}
-                                    className="text-xs font-medium text-indigo-600 border border-dashed border-indigo-200 rounded px-3 py-1 hover:bg-indigo-50 flex items-center gap-1"
-                                >
-                                    <Plus size={12} /> Add row
-                                </button>
-                            </div>
                         </div>
 
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -2783,13 +2761,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 className="w-48 text-xs border border-amber-200 rounded px-2 py-1.5 bg-amber-50 placeholder:text-amber-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-300 outline-none transition-colors"
                             />
                         )}
-                        <button
-                            onClick={() => handleSubmission(true)}
-                            disabled={formData.items.length === 0 || (isEditing && !auditReason.trim()) || saving}
-                            className="px-4 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 disabled:opacity-40 transition-colors"
-                        >
-                            <Save size={12} /> Save and Preview
-                        </button>
                         <button
                             onClick={() => handleSubmission(false, false)}
                             disabled={formData.items.length === 0 || (isEditing && !auditReason.trim()) || saving}
