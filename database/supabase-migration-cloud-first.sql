@@ -20,6 +20,13 @@ ON idempotency_keys(expires_at);
 -- Clean up expired keys periodically (optional: run via cron)
 -- DELETE FROM idempotency_keys WHERE expires_at < NOW() - INTERVAL '7 days';
 
+-- Add company_id for tenant isolation
+ALTER TABLE IF EXISTS idempotency_keys
+ADD COLUMN IF NOT EXISTS company_id TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_idempotency_keys_company_id
+ON idempotency_keys(company_id);
+
 -- 1b. Ensure tax_rates table exists for tax rate config sync
 CREATE TABLE IF NOT EXISTS public.tax_rates (
   id TEXT PRIMARY KEY,

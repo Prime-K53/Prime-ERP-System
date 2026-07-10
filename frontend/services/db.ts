@@ -1,7 +1,8 @@
 import { openDB, DBSchema, IDBPDatabase, deleteDB } from 'idb';
 import { logger } from '@/services/logger';
 import {
-    Item, Warehouse, Purchase, Sale, Quotation, JobOrder, CustomerPayment, BillOfMaterial, ProductionBatch, WorkOrder, WorkCenter, ProductionResource, Account, LedgerEntry, Invoice, RecurringInvoice, Expense, Income, ScheduledPayment, WalletTransaction, DeliveryNote, Budget, Transfer, Employee, PayrollRun, Payslip, User, ResourceAllocation, GoodsReceipt, UserRole, SMSCampaign, Subscriber, SMSTemplate, Cheque, Shipment, SubcontractOrder, MaintenanceLog, AuditLogEntry, SystemAlert, Reminder, ExamJob, ExamPaper, ExamPrintingBatch, School, Customer, Supplier, SupplierPayment, Order, PurchaseAllocation, VatTransaction, VatReturn, BOMTemplate, MarketAdjustment, MarketAdjustmentTransaction, UserGroup, MaterialCategory, WarehouseInventory, MaterialBatch, InventoryTransaction, MaterialReservation, RoundingLog, ExaminationJob, ExaminationJobSubject, ExaminationInvoiceGroup, ExaminationRecurringProfile, ExaminationInventoryDeduction, CustomerReceiptSnapshot, ExaminationBatchNotification, NotificationAuditLog, SalesOrder, JobTicket, JobTicketSettings
+    Item, Warehouse, Purchase, Sale, Quotation, JobOrder, CustomerPayment, BillOfMaterial, ProductionBatch, WorkOrder, WorkCenter, ProductionResource, Account, LedgerEntry, Invoice, RecurringInvoice, Expense, Income, ScheduledPayment, WalletTransaction, DeliveryNote, Budget, Transfer, Employee, PayrollRun, Payslip, User, ResourceAllocation, GoodsReceipt, UserRole, SMSCampaign, Subscriber, SMSTemplate, Cheque, Shipment, SubcontractOrder, MaintenanceLog, AuditLogEntry, SystemAlert, Reminder, ExamJob, ExamPaper, ExamPrintingBatch, School, Customer, Supplier, SupplierPayment, Order, PurchaseAllocation, VatTransaction, VatReturn, BOMTemplate, MarketAdjustment, MarketAdjustmentTransaction, UserGroup, MaterialCategory, WarehouseInventory, MaterialBatch, InventoryTransaction, MaterialReservation, RoundingLog, ExaminationJob, ExaminationJobSubject, ExaminationInvoiceGroup, ExaminationRecurringProfile, ExaminationInventoryDeduction, CustomerReceiptSnapshot, ExaminationBatchNotification, NotificationAuditLog,     SalesOrder, JobTicket, JobTicketSettings,
+    TaxRate
 } from '../types';
 import type { ProductAttribute } from '../types/attributes';
 import { calculateCustomerPaymentSnapshot } from './receiptCalculationService';
@@ -127,13 +128,14 @@ interface NexusDB extends DBSchema {
     whatsappCampaigns: { key: string; value: any; };
     whatsappAutomations: { key: string; value: any; };
     productAttributes: { key: string; value: ProductAttribute; };
+    taxRates: { key: string; value: TaxRate; };
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
 // Version bump required so existing IndexedDB instances run upgrade()
 // and create newly-added stores such as examinationBatchNotifications
-// and notificationAuditLogs.
-const DB_VERSION = 41;
+// and notificationAuditLogs, and taxRates.
+const DB_VERSION = 42;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
@@ -576,7 +578,8 @@ const STORE_NAMES: (keyof NexusDB)[] = [
     'idempotencyKeys',
     'settings', 'customerNotificationLogs',
     'whatsappChats', 'whatsappTemplates', 'whatsappCampaigns', 'whatsappAutomations',
-    'productAttributes'
+    'productAttributes',
+    'taxRates'
 ];
 
 export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {

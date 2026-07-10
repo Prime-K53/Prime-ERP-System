@@ -1,4 +1,4 @@
-import { supabase, supabaseIdempotency } from './supabaseClient';
+import { supabase } from './supabaseClient';
 import { isSupabaseConfigured } from './cloudMode';
 
 export const STORE_TO_TABLE: Record<string, string> = {
@@ -394,7 +394,7 @@ export const cloudDb = {
   async _ensureIdempotencyTable(): Promise<boolean> {
     if (this._idempotencyTableReady !== null) return this._idempotencyTableReady;
     try {
-      const { error } = await supabaseIdempotency
+      const { error } = await supabase
         .from('idempotency_keys')
         .select('id', { head: true, count: 'exact' })
         .limit(0);
@@ -408,11 +408,13 @@ export const cloudDb = {
   async checkIdempotency(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
     if (!(await this._ensureIdempotencyTable())) return { alreadyProcessed: false };
     try {
-      const { data } = await supabaseIdempotency
+      const companyId = await getCompanyId();
+      let query = supabase
         .from('idempotency_keys')
         .select('result')
-        .eq('id', operationId)
-        .maybeSingle();
+        .eq('id', operationId);
+      if (companyId) query = query.eq('company_id', companyId);
+      const { data } = await query.maybeSingle();
       if (data) {
         return { alreadyProcessed: true, result: data.result as string | null };
       }
@@ -428,11 +430,14 @@ export const cloudDb = {
   async recordIdempotency(operationId: string, result: string, ttlMs: number = 86400000): Promise<void> {
     if (!(await this._ensureIdempotencyTable())) return;
     try {
-      await supabaseIdempotency.from('idempotency_keys').upsert({
+      const companyId = await getCompanyId();
+      const record: any = {
         id: operationId,
         result,
         expires_at: new Date(Date.now() + ttlMs).toISOString(),
-      }, { onConflict: 'id' });
+      };
+      if (companyId) record.company_id = companyId;
+      await supabase.from('idempotency_keys').upsert(record, { onConflict: 'id' });
     } catch {
       // Idempotency recording is best-effort
     }
