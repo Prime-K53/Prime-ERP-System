@@ -13,6 +13,14 @@ import {
 import { generateAccountSummary } from '../../../../utils/pdfMapper.ts';
 import { currencyService } from '../../../../services/currencyService';
 
+const formatPhone = (phone: string): string => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('265')) {
+    return '(+265) ' + digits.slice(3, 6) + ' ' + digits.slice(6, 9) + ' ' + digits.slice(9, 12);
+  }
+  return phone;
+};
+
 const InvoiceInfoPanel = ({
   type,
   settings,
@@ -252,9 +260,9 @@ const CleanInvoiceTemplate = ({
   const resolvedRecipientAddress = String(
     dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || dataAny.proofOfDelivery?.address || dataAny.proofOfDelivery?.deliveryLocation || ''
   ).trim();
-  const resolvedRecipientPhone = String(
+  const resolvedRecipientPhone = formatPhone(String(
     dataAny.phone || dataAny.customerPhone || dataAny.customer_phone || dataAny.schoolPhone || dataAny.school_phone || dataAny.vendorPhone || dataAny.vendor_phone || dataAny.supplierPhone || dataAny.supplier_phone || dataAny.recipientPhone || dataAny.recipient_phone || dataAny.proofOfDelivery?.receiverPhone || dataAny.proofOfDelivery?.recipientPhone || dataAny.proofOfDelivery?.phone || ''
-  ).trim();
+  ).trim());
 
   // Financials
   const items = dataAny.items || [];
@@ -326,8 +334,8 @@ const CleanInvoiceTemplate = ({
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 8 * fontScale, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 1 }}>Bill To</Text>
             <Text style={{ fontSize: 11 * fontScale, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 }}>{resolvedRecipientName || 'N/A'}</Text>
-            {!!resolvedRecipientAddress && <Text style={{ fontSize: 10 * fontScale, color: '#475569', marginBottom: 3, lineHeight: 1.4 }}>{resolvedRecipientAddress}</Text>}
-            {!!resolvedRecipientPhone && <Text style={{ fontSize: 10 * fontScale, color: '#475569' }}>{resolvedRecipientPhone}</Text>}
+            {!!resolvedRecipientAddress && <Text style={{ fontSize: 10 * fontScale, color: '#334155', marginBottom: 3, lineHeight: 1.4 }}>{resolvedRecipientAddress}</Text>}
+            {!!resolvedRecipientPhone && <Text style={{ fontSize: 10 * fontScale, color: '#334155' }}>{resolvedRecipientPhone}</Text>}
           </View>
           <View style={{ flex: 1, alignItems: 'flex-start' }}>
             <View style={{ marginBottom: 12 }}>
@@ -622,7 +630,8 @@ const ModernInvoiceTemplate = ({
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 12 * fontScale, fontWeight: 'bold', color: '#111111', marginBottom: 4 }}>{resolvedRecipientName}</Text>
-              {!!resolvedRecipientAddress && <Text style={{ fontSize: 11 * fontScale, color: '#333333', textAlign: 'right', lineHeight: 1.4 }}>{resolvedRecipientAddress}</Text>}
+              {!!resolvedRecipientAddress && <Text style={{ fontSize: 10 * fontScale, color: '#333333', textAlign: 'right', lineHeight: 1.4 }}>{resolvedRecipientAddress}</Text>}
+              {!!resolvedRecipientPhone && <Text style={{ fontSize: 10 * fontScale, color: '#333333', textAlign: 'right', marginTop: 2 }}>{resolvedRecipientPhone}</Text>}
             </View>
           </View>
         </View>
@@ -1100,7 +1109,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     || dataAny.proofOfDelivery?.deliveryLocation
     || ''
   ).trim();
-  const resolvedRecipientPhone = String(
+  const resolvedRecipientPhone = formatPhone(String(
     dataAny.phone
     || dataAny.customerPhone
     || dataAny.customer_phone
@@ -1116,7 +1125,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     || dataAny.proofOfDelivery?.recipientPhone
     || dataAny.proofOfDelivery?.phone
     || ''
-  ).trim();
+  ).trim());
   const shouldRenderRecipientSection = Boolean(
     recipientSectionEnabledTypes.includes(type) || resolvedRecipientName || resolvedRecipientAddress || resolvedRecipientPhone
   );

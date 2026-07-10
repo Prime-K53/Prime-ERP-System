@@ -20,6 +20,8 @@ const defaultFinishingOptions: FinishingOption[] = [
     { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
     { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
     { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
+    { id: 'standardTurnaround', name: 'Standard Turnaround', enabled: false, price: 0, description: 'Standard delivery turnaround', items: [] },
+    { id: 'rushSurcharge', name: 'Rush Surcharge', enabled: false, price: 0, description: 'Express/rush order surcharge', items: [] },
 ];
 
 const SmartPricing: React.FC = () => {
@@ -137,6 +139,61 @@ const SmartPricing: React.FC = () => {
         return cat.includes('toner') || cat.includes('ink') || cat.includes('cartridge');
     }), [inventory]);
 
+    const bindingInventoryItem = useMemo(() => inventory.find(i =>
+        i.name?.toLowerCase().includes('binding')
+    ), [inventory]);
+    const staplingInventoryItem = useMemo(() => inventory.find(i =>
+        i.name?.toLowerCase().includes('staple') || /\bpins?\b/.test(i.name || '')
+    ), [inventory]);
+    const coverInventoryItem = useMemo(() => inventory.find(i =>
+        i.name?.toLowerCase().includes('cover') || i.name?.toLowerCase().includes('card') || i.name?.toLowerCase().includes('bold')
+    ), [inventory]);
+
+    const getItemUnitCost = (item: Item | undefined): number => {
+        if (!item) return 0;
+        return Number(item.cost_price ?? item.cost ?? item.costPrice ?? 0);
+    };
+    const getItemConversionRate = (item: Item | undefined, fallback: number): number => {
+        if (!item) return fallback;
+        return Number(item.conversionRate ?? fallback);
+    };
+
+    const inventoryBindingCost = useMemo(() => {
+        if (!bindingInventoryItem) return 0;
+        const unitCost = getItemUnitCost(bindingInventoryItem);
+        const conversionRate = getItemConversionRate(bindingInventoryItem, 1);
+        return conversionRate > 0 ? unitCost / conversionRate : 0;
+    }, [bindingInventoryItem]);
+
+    const inventoryStaplingCost = useMemo(() => {
+        if (!staplingInventoryItem) return 0;
+        const unitCost = getItemUnitCost(staplingInventoryItem);
+        const conversionRate = getItemConversionRate(staplingInventoryItem, 5000);
+        return conversionRate > 0 ? unitCost / conversionRate : 0;
+    }, [staplingInventoryItem]);
+
+    const inventoryCoverCost = useMemo(() => {
+        if (!coverInventoryItem) return 0;
+        const unitCost = getItemUnitCost(coverInventoryItem);
+        const conversionRate = getItemConversionRate(coverInventoryItem, 100);
+        return conversionRate > 0 ? unitCost / conversionRate : 0;
+    }, [coverInventoryItem]);
+
+    const finishingOptionsWithPrices = useMemo(() => {
+        return finishingOptions.map(opt => {
+            if (opt.id === 'binding' && inventoryBindingCost > 0) {
+                return { ...opt, price: parseFloat(inventoryBindingCost.toFixed(2)) };
+            }
+            if (opt.id === 'coverPages' && inventoryCoverCost > 0) {
+                return { ...opt, price: parseFloat(inventoryCoverCost.toFixed(2)) };
+            }
+            if (opt.id === 'stapling' && inventoryStaplingCost > 0) {
+                return { ...opt, price: parseFloat(inventoryStaplingCost.toFixed(2)) };
+            }
+            return opt;
+        });
+    }, [finishingOptions, inventoryBindingCost, inventoryCoverCost, inventoryStaplingCost]);
+
     const selectedPaper = useMemo(() => inventory.find(i => i.id === selectedPaperId), [inventory, selectedPaperId]);
     const selectedToner = useMemo(() => inventory.find(i => i.id === selectedTonerId), [inventory, selectedTonerId]);
 
@@ -152,7 +209,7 @@ const SmartPricing: React.FC = () => {
         toner: selectedToner,
         pages,
         copies,
-        finishingOptions,
+        finishingOptions: finishingOptionsWithPrices,
         inventory,
         paperUnitCost: manualPaperUnitCost ?? undefined,
         tonerUnitCost: manualTonerUnitCost ?? undefined,
@@ -267,7 +324,7 @@ const SmartPricing: React.FC = () => {
             const existingProduct = editingProductId ? inventory.find(item => item.id === editingProductId) : null;
             const productId = editingProductId || `PROD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
             const bomId = editingBomId || existingProduct?.smartPricing?.bomTemplateId || `BOM-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-            const enabledFinishingOptions = finishingOptions.filter(option => option.enabled);
+            const enabledFinishingOptions = finishingOptionsWithPrices.filter(option => option.enabled);
             const finishingOptionCosts = enabledFinishingOptions.reduce<Record<string, number>>((acc, option) => {
                 acc[option.id] = Number(option.price) || 0;
                 return acc;
@@ -500,7 +557,7 @@ const SmartPricing: React.FC = () => {
             await handleSaveProduct(name);
 
             if (variantsToSave.length > 0) {
-                const enabledFinishingOptions = finishingOptions.filter(o => o.enabled);
+                const enabledFinishingOptions = finishingOptionsWithPrices.filter(o => o.enabled);
 
                 for (const variant of variantsToSave) {
                     const varPages = variant.pages;
@@ -721,7 +778,7 @@ const SmartPricing: React.FC = () => {
                             </div>
                             <div style={{ padding:'14px 16px 16px' }}>
                                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                                    {finishingOptions.map(option => (
+                                    {finishingOptionsWithPrices.map(option => (
                                         <div
                                             key={option.id}
                                             onClick={() => toggleFinishingOption(option.id)}

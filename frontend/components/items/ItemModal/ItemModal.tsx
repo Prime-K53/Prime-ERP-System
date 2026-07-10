@@ -596,6 +596,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
       { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
       { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
+      { id: 'standardTurnaround', name: 'Standard Turnaround', enabled: false, price: 0, description: 'Standard delivery turnaround', items: [] },
+      { id: 'rushSurcharge', name: 'Rush Surcharge', enabled: false, price: 0, description: 'Express/rush order surcharge', items: [] },
     ];
   }, [companyConfig]);
 

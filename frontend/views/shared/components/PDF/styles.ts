@@ -53,12 +53,10 @@ export const docStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
   recipientDetail: {
-    fontSize: 10,
-    color: '#334155',
+    color: '#333333',
   },
   recipientPhone: {
-    fontSize: 10,
-    color: '#334155',
+    color: '#333333',
     marginTop: 2, // Explicit gap visually matching metadata
   },
   narrativeContainer: {
