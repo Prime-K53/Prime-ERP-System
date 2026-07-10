@@ -262,7 +262,7 @@ export const ServiceCalculatorModal: React.FC<{
         const p = paper && sp ? { sheetsPerCopy: Math.ceil(pages / 2), totalSheets: Math.ceil(pages / 2) * copies, costPerSheet: (() => { const rs = Number(paper.conversionRate || paper.conversion_rate || 500); return rs > 0 ? Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0) / rs : 0; })(), paperCost: 0 } : { sheetsPerCopy: 0, totalSheets: 0, costPerSheet: 0, paperCost: 0 };
         if (p.paperCost === 0 && p.totalSheets > 0) p.paperCost = Number((p.totalSheets * p.costPerSheet).toFixed(2));
         const t = toner && sp ? { tonerCostPerPage: (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000), tonerCost: Number(((pages * copies) * (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000)).toFixed(2)) } : { tonerCostPerPage: 0, tonerCost: 0 };
-        const fd = sp ? (enabledFinishing.map(id => ({ id, name: getFinishingName(id), cost: resolveFinishingCost(id), total: Number((resolveFinishingCost(id) * copies).toFixed(2)) }))) : [];
+        const fd = sp ? (enabledFinishing.map(id => ({ id, name: getFinishingName(id), cost: resolveFinishingCost(id), total: resolveFinishingCost(id) }))) : [];
         const fc = Number(fd.reduce((s, f) => s + f.total, 0).toFixed(2));
         return { paperCost: p.paperCost, tonerCost: t.tonerCost, finishingCost: fc, baseCost: Number((p.paperCost + t.tonerCost + fc).toFixed(2)), sheetsPerCopy: p.sheetsPerCopy, totalSheets: p.totalSheets, costPerSheet: p.costPerSheet, tonerCostPerPage: t.tonerCostPerPage, finishingDetails: fd };
     }, [pages, copies, paper, toner, sp, enabledFinishing, resolveFinishingCost]);
@@ -272,7 +272,7 @@ export const ServiceCalculatorModal: React.FC<{
         const p = inventory.find((i: any) => i.id === sp.paperItemId); const tn = inventory.find((i: any) => i.id === sp.tonerItemId);
         const pc = p ? Number((Math.ceil(pageCount / 2) * copyCount * (Number(p.conversionRate || p.conversion_rate || 500) > 0 ? Number(p.cost_price || p.cost_per_unit || p.cost || 0) / Number(p.conversionRate || p.conversion_rate || 500) : 0)).toFixed(2)) : 0;
         const tc = tn ? Number(((pageCount * copyCount) * (Number(tn.cost_price || tn.cost_per_unit || tn.cost || 0) / 20000)).toFixed(2)) : 0;
-        const fc = enabledFinishing.reduce((s, id) => s + resolveFinishingCost(id) * copyCount, 0);
+        const fc = enabledFinishing.reduce((s, id) => s + resolveFinishingCost(id), 0);
         return Number((pc + tc + fc).toFixed(2));
     }, [service, inventory, sp, enabledFinishing, resolveFinishingCost]);
 
@@ -357,7 +357,7 @@ export const ServiceCalculatorModal: React.FC<{
                                                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: isOn ? amber : ink300 }}></div>
                                                     <span style={{ fontSize: 12, fontWeight: 600, color: ink900 }}>{fd.name}</span>
                                                 </div>
-                                                <span style={{ fontFamily: "inherit", fontSize: 11, color: isOn ? amber : ink500 }}>{fc(fd.cost)}/copy</span>
+                                                <span style={{ fontFamily: "inherit", fontSize: 11, color: isOn ? amber : ink500 }}>{fc(fd.cost)}/job</span>
                                             </button>
                                         );
                                     })}
