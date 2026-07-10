@@ -36,6 +36,44 @@ function esc(s: any): string {
   return String(s == null ? '' : s);
 }
 
+function getBomSummary(item: any, allItems: any[]): string {
+  const sp = item.smartPricing || item.smartPricingSnapshot;
+  const pc = item.pricingConfig;
+  if (!sp && !pc) return '\u2014';
+  const parts: string[] = [];
+  if (sp) {
+    const paperId = sp.paperItemId || pc?.paperId;
+    if (paperId) {
+      const paper = allItems.find(i => i.id === paperId);
+      parts.push(paper ? paper.name.replace(/\s*\d+gsm.*/i, '').trim() : 'Paper');
+    } else if (Number(sp.paperCost) > 0) parts.push('Paper');
+    const tonerId = sp.tonerItemId || pc?.tonerId;
+    if (tonerId) {
+      const toner = allItems.find(i => i.id === tonerId);
+      parts.push(toner ? toner.name.replace(/\s*Universal\s*/i, '').trim() : 'Toner');
+    } else if (Number(sp.tonerCost) > 0) parts.push('Toner');
+    const finishing = sp.finishingEnabled || [];
+    if (Array.isArray(finishing) && finishing.length > 0) {
+      finishing.forEach((id: string) => {
+        parts.push(id.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
+      });
+    } else if (Number(sp.finishingCost) > 0) parts.push('Finishing');
+  }
+  if (pc && !sp) {
+    if (Number(pc.paperCost) > 0) parts.push('Paper');
+    if (Number(pc.tonerCost) > 0) parts.push('Toner');
+    const finishing = pc.finishingOptions || [];
+    if (Array.isArray(finishing)) {
+      finishing.forEach((opt: any) => {
+        if (opt.active !== false) {
+          parts.push(opt.name || opt.id?.replace(/([A-Z])/g, ' $1').replace(/^./, (s: string) => s.toUpperCase()) || 'Finishing');
+        }
+      });
+    }
+  }
+  return parts.length > 0 ? parts.join(', ') : '\u2014';
+}
+
 type TabKey = 'dashboard' | 'raw' | 'product' | 'stationery' | 'printing';
 
 export const InventoryListPage: React.FC = () => {
@@ -991,27 +1029,31 @@ const handleProduce = useCallback((item: Item) => {
                             onChange={() => handleTabSelectAll(searchFiltered)}
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                         </th>
-                        <th>SKU</th><th>Product</th><th>Variants</th><th className="num">Cost Price</th><th className="num">Selling Price</th><th className="num">Margin</th><th className="num">Stock</th><th>Actions</th>
+                        <th>Service Code</th><th>Service Name</th><th>Category</th><th>Output Unit</th><th>BOM</th><th>Status</th><th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {searchFiltered.map((s, idx) => {
-                        const cp = s.costPrice || s.cost || 0;
-                        const sp = s.sellingPrice || s.price || 0;
-                        const margin = cp > 0 ? ((sp - cp) / cp * 100).toFixed(1) : '0.0';
                         return (
                           <tr key={`${s.id}-${idx}`} onClick={() => handleViewItem(s)} style={{cursor:'pointer'}}>
                             <td className="table-body-cell w-10 px-1 text-center" onClick={e => e.stopPropagation()}>
                               <input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelect(s.id)}
                                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                             </td>
-                            <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(s.sku)}</td>
+                            <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10, color:'#64748B'}}>{esc(s.serviceSku || s.sku)}</td>
                             <td>{esc(s.name)}</td>
-                            <td>standard</td>
-                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(cp, currencySymbol)}</td>
-                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(sp, currencySymbol)}</td>
-                            <td className={`num mono ${sp-cp >= 0 ? 'pp-pos' : 'pp-neg'}`} style={{fontFamily:'IBM Plex Mono,monospace'}}>{margin}%</td>
-                            <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{esc(s.stock ?? 0)}</td>
+                            <td>{esc(s.category || s.classification || '-')}</td>
+                            <td className="mono" style={{fontFamily:'IBM Plex Mono,monospace', fontSize:10}}>{esc(s.unit || 'pcs')}</td>
+                            <td className="text-xs text-slate-600 max-w-[200px] truncate" title={getBomSummary(s, allItems)}>{getBomSummary(s, allItems)}</td>
+                            <td>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-semibold ${
+                                s.status === 'Active' || !s.status ? 'bg-green-100 text-green-700 border border-green-200' :
+                                s.status === 'Inactive' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                'bg-amber-100 text-amber-700 border border-amber-200'
+                              }`}>
+                                {s.status || 'Active'}
+                              </span>
+                            </td>
                             <td className="actions" onClick={e => e.stopPropagation()}>
                               <div className="action-dropdown-container">
                                 <button className="action-menu-btn" onClick={() => toggleActionMenu(s.id)}>
@@ -1073,10 +1115,9 @@ const handleProduce = useCallback((item: Item) => {
                         <td>Total ({searchFiltered.length} services)</td>
                         <td></td>
                         <td></td>
-                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.costPrice || i.cost || 0), 0), currencySymbol)}</td>
-                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{money(searchFiltered.reduce((s,i) => s + (i.sellingPrice || i.price || 0), 0), currencySymbol)}</td>
                         <td></td>
-                        <td className="num mono" style={{fontFamily:'IBM Plex Mono,monospace'}}>{searchFiltered.reduce((s,i) => s + num(i.stock), 0)}</td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                       </tr>
                     </tfoot>
