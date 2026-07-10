@@ -569,11 +569,15 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   );
 
   const productBase = useMemo(() => {
+    // Auto-calculate from BOM variants first
+    const variantsWithBom = variants.filter(v => v.name.trim() && v.bomCost > 0);
+    if (variantsWithBom.length > 0) {
+      const avgBomCost = variantsWithBom.reduce((sum, v) => sum + v.bomCost, 0) / variantsWithBom.length;
+      return avgBomCost;
+    }
+    // Fall back to manual cost inputs
     const sum = productPaperCost + productTonerCost + productFinishCost;
-    if (sum > 0) return sum;
-    const namedVariants = variants.filter(v => v.name.trim());
-    if (namedVariants.length > 0 && namedVariants[0].bomCost > 0) return namedVariants[0].bomCost;
-    return 0;
+    return sum;
   }, [productPaperCost, productTonerCost, productFinishCost, variants]);
   const productProfit = useMemo(() => productSP - productBase, [productSP, productBase]);
   const productMarkup = useMemo(() => productBase > 0 ? (productProfit / productBase) * 100 : 0, [productProfit, productBase]);
@@ -650,12 +654,24 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       );
     }
     if (category === 'product') {
+      const variantsWithBom = variants.filter(v => v.name.trim() && v.bomCost > 0);
+      const bomBased = variantsWithBom.length > 0;
       return (
         <>
-          <div style={s.briefItem}><span style={s.briefLabel}>Paper</span><span style={s.briefValue}>{formatCurrency(productPaperCost, currencySymbol)}</span></div>
-          <div style={s.briefItem}><span style={s.briefLabel}>Toner</span><span style={s.briefValue}>{formatCurrency(productTonerCost, currencySymbol)}</span></div>
-          <div style={s.briefItem}><span style={s.briefLabel}>Finishing</span><span style={s.briefValue}>{formatCurrency(productFinishCost, currencySymbol)}</span></div>
-          <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Base Cost</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700 }}>{formatCurrency(productBase, currencySymbol)}</span></div>
+          {bomBased ? (
+            <>
+              <div style={s.briefItem}><span style={s.briefLabel}>BOM Variants</span><span style={s.briefValue}>{variantsWithBom.length} active</span></div>
+              <div style={s.briefItem}><span style={s.briefLabel}>Avg BOM Cost</span><span style={s.briefValue}>{formatCurrency(productBase, currencySymbol)}</span></div>
+              <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Total Base Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700, fontSize: 13 }}>{formatCurrency(productBase, currencySymbol)}</span></div>
+            </>
+          ) : (
+            <>
+              <div style={s.briefItem}><span style={s.briefLabel}>Paper</span><span style={s.briefValue}>{formatCurrency(productPaperCost, currencySymbol)}</span></div>
+              <div style={s.briefItem}><span style={s.briefLabel}>Toner</span><span style={s.briefValue}>{formatCurrency(productTonerCost, currencySymbol)}</span></div>
+              <div style={s.briefItem}><span style={s.briefLabel}>Finishing</span><span style={s.briefValue}>{formatCurrency(productFinishCost, currencySymbol)}</span></div>
+              <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Total Base Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700, fontSize: 13 }}>{formatCurrency(productBase, currencySymbol)}</span></div>
+            </>
+          )}
           <div style={s.briefItem}><span style={s.briefLabel}>Sell Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.teal500 }}>{formatCurrency(productSP, currencySymbol)}</span></div>
           <div style={{ ...s.briefItem, borderBottom: 'none' }}>
             <span style={s.briefLabel}>Profit</span>
@@ -791,7 +807,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     let productExtras: any = {};
     if (category === 'product') {
       productExtras = {
-        variants: variants.filter(v => v.name.trim()).map(v => ({
+        variants: variants.filter(v => v.name.trim() || v.bomCost > 0).map(v => ({
           name: v.name,
           costPrice: v.cost || v.bomCost,
           sellingPrice: v.selling,
@@ -1290,6 +1306,9 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
               <div style={s.briefHead}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h9" stroke={VAR_STYLES.ink700} strokeWidth="2" strokeLinecap="round"/></svg>
                 Cost Summary
+                {category === 'product' && productBase > 0 && (
+                  <span style={{ ...s.badge, ...s.badgeTeal, marginLeft: 'auto', fontSize: 10 }}>Auto-calculated</span>
+                )}
               </div>
               {renderBrief()}
             </div>
