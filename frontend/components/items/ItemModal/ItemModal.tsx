@@ -1253,6 +1253,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       </div>
     </div>
   );
+  };
 
   const renderStationeryTab = () => {
     return (
