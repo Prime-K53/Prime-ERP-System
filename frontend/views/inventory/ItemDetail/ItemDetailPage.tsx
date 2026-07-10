@@ -2,10 +2,11 @@ import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, ChevronLeft, ChevronRight, Edit3, Copy, Printer, QrCode, Archive, Download, Plus, ArrowUpDown, Package, Layers, DollarSign, Warehouse, ShoppingCart, TrendingUp, FlaskConical, Building2, FileText, ClipboardCheck, History, BarChart3, Sparkles, X, Box, Tag, Grid3X3, Ruler, Globe, Eye } from 'lucide-react';
 import { useItemDetail } from './hooks/useItemDetail';
-import { ItemModal } from '../../../components/items/ItemModal/ItemModal';
+
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import { TransferStockModal } from '../InventoryList/modals/TransferStockModal';
 import { PrintLabelModal } from '../InventoryList/modals/PrintLabelModal';
+import { ItemModal } from '../../../components/items/ItemModal';
 import { useInventory } from '../../../context/InventoryContext';
 import { useAuth } from '../../../context/AuthContext';
 import { OverviewTab } from './tabs/OverviewTab';
@@ -81,7 +82,12 @@ export const ItemDetailPage: React.FC = () => {
 
   const isProduct = useMemo(() => {
     const t = item?.type || '';
-    return t === 'Product' || t === 'Stationery' || t === 'Service' || ext.productType === 'MANUFACTURED';
+    return t === 'Product' || t === 'Service' || ext.productType === 'MANUFACTURED';
+  }, [item]);
+
+  const isStockTracked = useMemo(() => {
+    const t = item?.type || '';
+    return t === 'Raw Material' || t === 'Stationery';
   }, [item]);
 
   const handleEditSave = useCallback(async (updated: Item) => {
@@ -118,25 +124,33 @@ export const ItemDetailPage: React.FC = () => {
     const reserved = stockCalc.reserved;
     const value = stockCalc.inventoryValue;
 
-    const common = [
-      { label: 'Current Stock', value: String(cur), sub: `${avail} available`, color: cur === 0 ? '#DC2626' : cur <= (item.minStockLevel || 0) ? '#D97706' : '#16A34A' },
-      { label: 'Available', value: String(avail), sub: `${((avail / (cur || 1)) * 100).toFixed(0)}% of stock`, color: '#2563EB' },
-      { label: 'Reserved', value: String(reserved), sub: `${((reserved / (cur || 1)) * 100).toFixed(0)}% allocated`, color: '#7C3AED' },
-      { label: 'Stock Value', value: value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), sub: 'Total cost value', color: '#059669' },
-    ];
+    if (isStockTracked) {
+      const common = [
+        { label: 'Current Stock', value: String(cur), sub: `${avail} available`, color: cur === 0 ? '#DC2626' : cur <= (item.minStockLevel || 0) ? '#D97706' : '#16A34A' },
+        { label: 'Available', value: String(avail), sub: `${((avail / (cur || 1)) * 100).toFixed(0)}% of stock`, color: '#2563EB' },
+        { label: 'Reserved', value: String(reserved), sub: `${((reserved / (cur || 1)) * 100).toFixed(0)}% allocated`, color: '#7C3AED' },
+        { label: 'Stock Value', value: value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), sub: 'Total cost value', color: '#059669' },
+      ];
 
-    if (isRaw) {
+      if (isRaw) {
+        return [...common,
+          { label: 'Avg Cost', value: pricingCalc.costPrice.toFixed(2), sub: 'Per unit', color: '#2563EB' },
+          { label: 'Reorder Level', value: String(item.reorderPoint || item.minStockLevel || 0), sub: item.reorderPoint ? `Min: ${item.minStockLevel || '—'}` : 'Not set', color: cur <= (item.reorderPoint || 0) ? '#DC2626' : '#64748B' },
+        ];
+      }
+
       return [...common,
-        { label: 'Avg Cost', value: pricingCalc.costPrice.toFixed(2), sub: 'Per unit', color: '#2563EB' },
-        { label: 'Reorder Level', value: String(item.reorderPoint || item.minStockLevel || 0), sub: item.reorderPoint ? `Min: ${item.minStockLevel || '—'}` : 'Not set', color: cur <= (item.reorderPoint || 0) ? '#DC2626' : '#64748B' },
+        { label: 'Selling Price', value: pricingCalc.sellingPrice.toFixed(2), sub: `Profit ${pricingCalc.profit.toFixed(2)}`, color: pricingCalc.profit >= 0 ? '#16A34A' : '#DC2626' },
+        { label: 'Gross Margin', value: `${pricingCalc.markup.toFixed(1)}%`, sub: `Min ${pricingCalc.minimumMarkup}%`, color: pricingCalc.markup >= pricingCalc.minimumMarkup ? '#16A34A' : '#DC2626' },
       ];
     }
 
-    return [...common,
+    // For non-stock-tracked items (Products, Services)
+    return [
       { label: 'Selling Price', value: pricingCalc.sellingPrice.toFixed(2), sub: `Profit ${pricingCalc.profit.toFixed(2)}`, color: pricingCalc.profit >= 0 ? '#16A34A' : '#DC2626' },
       { label: 'Gross Margin', value: `${pricingCalc.markup.toFixed(1)}%`, sub: `Min ${pricingCalc.minimumMarkup}%`, color: pricingCalc.markup >= pricingCalc.minimumMarkup ? '#16A34A' : '#DC2626' },
     ];
-  }, [item, stockCalc, pricingCalc, isRaw]);
+  }, [item, stockCalc, pricingCalc, isRaw, isStockTracked]);
 
   // AI insights
   const aiInsights = useMemo(() => {
@@ -145,24 +159,28 @@ export const ItemDetailPage: React.FC = () => {
     const cur = stockCalc.currentStock;
     const reorder = item.reorderPoint || item.minStockLevel || 0;
 
-    if (cur <= 0) insights.push({ text: 'Item is out of stock. Urgent reorder needed.', severity: 'high' });
-    else if (reorder > 0 && cur <= reorder) insights.push({ text: `Stock level (${cur}) is at or below reorder point (${reorder}).`, severity: 'med' });
-    else insights.push({ text: 'Stock level is healthy.', severity: 'ok' });
+    if (isStockTracked) {
+      if (cur <= 0) insights.push({ text: 'Item is out of stock. Urgent reorder needed.', severity: 'high' });
+      else if (reorder > 0 && cur <= reorder) insights.push({ text: `Stock level (${cur}) is at or below reorder point (${reorder}).`, severity: 'med' });
+      else insights.push({ text: 'Stock level is healthy.', severity: 'ok' });
+
+      if (cur > 0 && ext.averageMonthlyUsage) {
+        const months = cur / ext.averageMonthlyUsage;
+        if (months < 1) insights.push({ text: `Estimated ${(months * 30).toFixed(0)} days until stockout based on usage.`, severity: 'med' });
+        else insights.push({ text: `Estimated ${months.toFixed(1)} months of stock remaining.`, severity: 'ok' });
+      }
+
+      if (isRaw && !item.preferredSupplierId) insights.push({ text: 'No preferred supplier assigned.', severity: 'low' });
+    } else {
+      insights.push({ text: 'Stock tracking is not enabled for this item type.', severity: 'low' });
+    }
 
     if (!pricingCalc.sellingPrice && !isRaw) insights.push({ text: 'No selling price configured.', severity: 'high' });
     else if (pricingCalc.markup < pricingCalc.minimumMarkup) insights.push({ text: `Markup ${pricingCalc.markup.toFixed(1)}% is below minimum ${pricingCalc.minimumMarkup}%.`, severity: 'med' });
     else if (pricingCalc.sellingPrice > 0) insights.push({ text: `Current markup ${pricingCalc.markup.toFixed(1)}% meets minimum target.`, severity: 'ok' });
 
-    if (cur > 0 && ext.averageMonthlyUsage) {
-      const months = cur / ext.averageMonthlyUsage;
-      if (months < 1) insights.push({ text: `Estimated ${(months * 30).toFixed(0)} days until stockout based on usage.`, severity: 'med' });
-      else insights.push({ text: `Estimated ${months.toFixed(1)} months of stock remaining.`, severity: 'ok' });
-    }
-
-    if (isRaw && !item.preferredSupplierId) insights.push({ text: 'No preferred supplier assigned.', severity: 'low' });
-
     return insights;
-  }, [item, stockCalc, pricingCalc, isRaw]);
+  }, [item, stockCalc, pricingCalc, isRaw, isStockTracked]);
 
   if (loading && !mounted) {
     return (
@@ -190,6 +208,7 @@ export const ItemDetailPage: React.FC = () => {
   }
 
   const getStockStatus = () => {
+    if (!isStockTracked) return 'not-applicable';
     const cur = stockCalc?.currentStock || 0;
     if (cur <= 0) return 'out-of-stock';
     if ((item.reorderPoint || 0) > 0 && cur <= item.reorderPoint!) return 'low-stock';
@@ -206,6 +225,13 @@ export const ItemDetailPage: React.FC = () => {
 
   const stockStatus = getStockStatus();
 
+  const getStockStatusLabel = () => {
+    if (stockStatus === 'not-applicable') return 'No Stock Tracking';
+    if (stockStatus === 'active') return 'Active';
+    if (stockStatus === 'low-stock') return 'Low Stock';
+    return 'Out of Stock';
+  };
+
   return (
     <div className="item-detail-shell">
 
@@ -221,7 +247,7 @@ export const ItemDetailPage: React.FC = () => {
               <span className={`item-type-badge ${getTypeBadgeClass()}`}>{item.type || ext.classification || 'Item'}</span>
               <span className={`item-status-badge ${stockStatus}`}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
-                {stockStatus === 'active' ? 'Active' : stockStatus === 'low-stock' ? 'Low Stock' : 'Out of Stock'}
+                {getStockStatusLabel()}
               </span>
             </div>
             <div className="item-meta">
@@ -239,8 +265,8 @@ export const ItemDetailPage: React.FC = () => {
             <button className="qa-icon" title="Print Barcode" onClick={() => setPrintMode('barcode')}><Printer size={14} /></button>
             <button className="qa-icon" title="Generate QR" onClick={() => setPrintMode('qrcode')}><QrCode size={14} /></button>
             <button className="qa-icon" title="Export"><Download size={14} /></button>
-            <button className="qa-icon" title="Adjust Stock" onClick={() => setIsAdjustOpen(true)}><Plus size={14} /></button>
-            <button className="qa-icon" title="Transfer" onClick={() => setIsTransferOpen(true)}><ArrowUpDown size={14} /></button>
+            {isStockTracked && <button className="qa-icon" title="Adjust Stock" onClick={() => setIsAdjustOpen(true)}><Plus size={14} /></button>}
+            {isStockTracked && <button className="qa-icon" title="Transfer" onClick={() => setIsTransferOpen(true)}><ArrowUpDown size={14} /></button>}
             <button className="qa-icon" title={item?.status === 'Inactive' ? 'Activate' : 'Archive'} onClick={handleToggleStatus}><Archive size={14} /></button>
             {prevItem && <button className="qa-icon" onClick={() => navigate(`/supply-chain/inventory/${prevItem.id}`)} title="Previous"><ChevronLeft size={14} /></button>}
             {nextItem && <button className="qa-icon" onClick={() => navigate(`/supply-chain/inventory/${nextItem.id}`)} title="Next"><ChevronRight size={14} /></button>}
@@ -397,7 +423,7 @@ export const ItemDetailPage: React.FC = () => {
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: '#94A3B8', marginBottom: 6 }}>Smart Actions</div>
                 {isRaw && <div className="ai-insight-card low" style={{ cursor: 'pointer' }}>Create Purchase Order</div>}
                 {isProduct && <div className="ai-insight-card low" style={{ cursor: 'pointer' }}>Create Sales Order</div>}
-                {stockCalc && stockCalc.currentStock <= (item.reorderPoint || 0) && stockCalc.currentStock > 0 && (
+                {isStockTracked && stockCalc && stockCalc.currentStock <= (item.reorderPoint || 0) && stockCalc.currentStock > 0 && (
                   <div className="ai-insight-card med" style={{ cursor: 'pointer' }}>Reorder Now</div>
                 )}
               </div>
@@ -406,8 +432,22 @@ export const ItemDetailPage: React.FC = () => {
         )}
       </div>
 
-      <ItemModal open={isEditing} item={item} onClose={() => setIsEditing(false)} onSave={handleEditSave} allItems={allItems} sourceTab={item?.type === 'Service' || (item as any)?.classification === 'printing_service' ? 'printing' : item?.type?.toLowerCase() || null} />
-
+      <ItemModal
+        open={isEditing}
+        item={item}
+        onClose={() => setIsEditing(false)}
+        onSave={handleEditSave}
+        allItems={allItems}
+        sourceTab={
+          item?.type === 'Product'
+            ? 'product'
+            : item?.type === 'Stationery'
+              ? 'stationery'
+              : item?.type === 'Service' || (item as any)?.classification === 'printing_service'
+                ? 'printing'
+                : null
+        }
+      />
       <StockAdjustmentModal isOpen={isAdjustOpen} onClose={() => setIsAdjustOpen(false)} item={item} />
 
       <TransferStockModal open={isTransferOpen} item={item} onClose={() => setIsTransferOpen(false)} onSuccess={refresh} />

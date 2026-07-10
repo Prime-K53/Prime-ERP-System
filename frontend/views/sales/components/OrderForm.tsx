@@ -125,6 +125,21 @@ const normalizeRecurringStatus = (status?: string) => {
     return status;
 };
 
+const normalizeOtherCharges = (items: any[] = []): { items: any[]; otherChargesCalculated: number } => {
+    let totalAdj = 0;
+    const normalized = items.map((item: any) => {
+        const adj = Number(item.otherChargesAdjustment) || 0;
+        totalAdj += adj;
+        const price = Number(item.price) || 0;
+        return {
+            ...item,
+            price: Math.max(0, roundToCurrency(price - adj)),
+            otherChargesAdjustment: adj
+        };
+    });
+    return { items: normalized, otherChargesCalculated: roundToCurrency(totalAdj) };
+};
+
 const PAPER_SIZES = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Tabloid', 'Custom'];
 const COLOR_MODE_OPTIONS = [
     { value: 'bw', label: 'Black & White', pricePerUnit: 0 },
@@ -216,7 +231,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [showAiFraud, setShowAiFraud] = useState(false);
     const [aiDiscountSuggestion, setAiDiscountSuggestion] = useState<any>(null);
     const [aiGeneratingDesc, setAiGeneratingDesc] = useState(false);
-    const [calculatedOtherCharges, setCalculatedOtherCharges] = useState(0);
+    const calculatedOtherCharges = useMemo(() => {
+        return (formData.items || []).reduce((sum, item) => sum + (Number(item.otherChargesAdjustment) || 0), 0);
+    }, [formData.items]);
 
     // Derive Customer Names from Transactions and Customers List
     const customerNames = useMemo(() => {
@@ -243,6 +260,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         otherChargesEnabled: false,
         otherChargesAdjustment: '',
         otherChargesPercent: 0,
+        otherChargesCalculated: 0,
         roundingMethod: 'Nearest',
         roundingEnabled: false,
         frequency: 'Monthly',
@@ -910,6 +928,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             setFormData((prev: any) => ({ ...prev, id: generateNextId(key, collection, companyConfig) }));
         } else {
             const clonedItems = Array.isArray(initialData.items) ? cloneSerializable(initialData.items) : [];
+            const { items: normalizedItems, otherChargesCalculated: normalizedOtherCharges } = normalizeOtherCharges(clonedItems);
             const clonedScheduledDates = Array.isArray(initialData.scheduledDates)
                 ? [...initialData.scheduledDates].map((date: any) => String(date))
                 : [];
@@ -935,12 +954,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 customerPricingSegment: editSegment,
                 subAccountName: initialData.subAccountName || 'Main',
                 salesAccountId: initialData.salesAccountId || companyConfig?.glMapping?.defaultSalesAccount || '4000',
-                items: clonedItems,
+                items: normalizedItems,
                 status: isRecurring
                     ? resolvedRecurringStatus
                     : (initialData.status || (type === 'Invoice' ? 'Unpaid' : (type === 'Order' ? 'Pending' : 'Draft'))),
                 discount: initialData.discount || 0,
                 otherCharges: initialData.otherCharges || 0,
+                otherChargesCalculated: initialData.otherChargesCalculated ?? normalizedOtherCharges,
                 date: initialData.date || prev.date,
                 dueDate: initialData.dueDate || prev.dueDate,
                 paymentTerms: initialData.paymentTerms || prev.paymentTerms,
@@ -1950,8 +1970,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
         switch (method) {
             case 'Up': rounded = Math.ceil(value / step) * step; break;
             case 'Down': rounded = Math.floor(value / step) * step; break;
-            case 'Truncate': rounded = Math.trunc(value); break;
-            default: rounded = Math.round(value); break;
+            case 'Truncate': rounded = Math.trunc(value / step) * step; break;
+            default: rounded = Math.round(value / step) * step; break;
         }
         return { rounded, difference: rounded - value };
     };
@@ -1973,7 +1993,13 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
     const handleCalculateCharges = () => {
         if (!selectedAdjustment || !formData.otherChargesEnabled) {
-            setCalculatedOtherCharges(0);
+            setFormData((prev: any) => ({
+                ...prev,
+                items: (prev.items || []).map((item: any) => ({
+                    ...item,
+                    otherChargesAdjustment: 0
+                }))
+            }));
             notify('Select a market adjustment first', 'info');
             return;
         }
@@ -2014,7 +2040,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
             currentItems[idx] = {
                 ...item,
-                price: itemPrice + adjAmount,
                 manual_override: true,
                 otherChargesAdjustment: adjAmount,
                 adjustmentSnapshots: snapshots
@@ -2024,9 +2049,9 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
         setFormData((prev: any) => ({
             ...prev,
+            otherChargesCalculated: totalAdjAmount,
             items: currentItems
         }));
-        setCalculatedOtherCharges(totalAdjAmount);
         notify(`Other charges calculated: ${currency}${totalAdjAmount.toLocaleString()}`, 'success');
     };
 
@@ -2330,6 +2355,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 const maxPrice = hasVariants ? Math.max(...prices) : 0;
                                                 const isPriceRange = hasVariants && minPrice !== maxPrice;
                                                 const stock = item.stock || 0;
+                                                const isStockTracked = item.type === 'Stationery' || item.type === 'Raw Material';
                                                 return (
                                                     <button
                                                         key={item.id}
@@ -2351,9 +2377,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     : `${currency}${Number((hasVariants ? minPrice : item.price) || 0).toLocaleString()}`
                                                                 }
                                                             </div>
-                                                            <div className={`text-[10px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
-                                                                {stock} left
-                                                            </div>
+                                                            {isStockTracked && (
+                                                                <div className={`text-[10px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                                                                    {stock} left
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </button>
                                                 );
@@ -2671,10 +2699,16 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         className="rounded"
                                         checked={formData.otherChargesEnabled}
                                         onChange={e => {
-                                            setFormData({ ...formData, otherChargesEnabled: e.target.checked });
-                                            if (!e.target.checked) {
-                                                setCalculatedOtherCharges(0);
-                                            }
+                                            setFormData((prev: any) => ({
+                                                ...prev,
+                                                otherChargesEnabled: e.target.checked,
+                                                ...(e.target.checked ? {} : {
+                                                    items: (prev.items || []).map((item: any) => ({
+                                                        ...item,
+                                                        otherChargesAdjustment: 0
+                                                    }))
+                                                })
+                                            }));
                                         }}
                                     />
                                     <span className="text-xs font-medium text-slate-700">Other Charges</span>
