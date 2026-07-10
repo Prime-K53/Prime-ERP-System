@@ -378,9 +378,9 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [serviceReorder, setServiceReorder] = useState(0);
 
   // Stationery
-  const [statVariants, setStatVariants] = useState<{ name: string; qtyPack: number; packCost: number; sellItem: number }[]>([
-    { name: '', qtyPack: 12, packCost: 0, sellItem: 0 },
-  ]);
+  const [statVariants, setStatVariants] = useState<{ name: string; qtyPack: number; packCost: number; sellItem: number }[]>([]);
+  const [statCP, setStatCP] = useState(0);
+  const [statSP, setStatSP] = useState(0);
   const [statTotalStock, setStatTotalStock] = useState(0);
   const [statReorder, setStatReorder] = useState(0);
   const [statSupplier, setStatSupplier] = useState('');
@@ -470,6 +470,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         setStatTotalStock(item.stock || 0);
         setStatReorder(item.reorderPoint || 0);
         setStatSupplier(item.preferredSupplierId || '');
+        setStatCP(item.cost_price || item.cost || 0);
+        setStatSP(item.selling_price || item.price || 0);
       }
 
       const loadedVariants = (item as any).variants;
@@ -488,13 +490,17 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         setVariants([]);
       }
       const loadedStatVariants = (item as any).variants as any;
-      if (loadedStatVariants && item.type === 'Stationery' && loadedStatVariants.length > 0) {
-        setStatVariants(loadedStatVariants.map((v: any) => ({
-          name: v.name || '',
-          qtyPack: v.unitsPerPack || 12,
-          packCost: v.costPerPack || 0,
-          sellItem: v.sellingPrice || 0,
-        })));
+      if (loadedStatVariants && item.type === 'Stationery') {
+        if (loadedStatVariants.length > 0) {
+          setStatVariants(loadedStatVariants.map((v: any) => ({
+            name: v.name || '',
+            qtyPack: v.unitsPerPack || 12,
+            packCost: v.costPerPack || 0,
+            sellItem: v.sellingPrice || 0,
+          })));
+        } else {
+          setStatVariants([]);
+        }
       }
     } else {
       setName('');
@@ -530,7 +536,12 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setRushSurcharge(0);
       setTrackStock(false);
       setVariants([]);
-      setStatVariants([{ name: '', qtyPack: 12, packCost: 0, sellItem: 0 }]);
+      setStatVariants([]);
+      setStatCP(0);
+      setStatSP(0);
+      setStatTotalStock(0);
+      setStatReorder(0);
+      setStatSupplier('');
       setCostingMethod('weighted_average');
     }
   }, [open, item, sourceTab, allItems]);
@@ -653,7 +664,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   const statBlend = useMemo(() => {
     const rows = statVariants.filter(v => v.name.trim());
     if (rows.length === 0) {
-      return { avgCost: 0, avgSell: 0, profit: 0, margin: 0 };
+      return { avgCost: statCP, avgSell: statSP, profit: statSP - statCP, margin: statSP > 0 ? ((statSP - statCP) / statSP) * 100 : 0 };
     }
     let costSum = 0;
     const sellRows: number[] = [];
@@ -667,7 +678,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     const profit = avgSell - avgCost;
     const margin = avgSell > 0 ? (profit / avgSell) * 100 : 0;
     return { avgCost, avgSell, profit, margin };
-  }, [statVariants]);
+  }, [statVariants, statCP, statSP]);
 
   const renderBrief = () => {
     if (category === 'raw') {
@@ -756,13 +767,19 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   }, [name, category, sku, rawUnitCost, productBase, productSP, serviceBase, serviceSP, statBlend, currencySymbol, notify]);
 
   const handleSave = useCallback(async () => {
+    const statHasVariants = statVariants.some(v => v.name.trim());
+    const statBase = statHasVariants ? statBlend.avgCost : statCP;
+    const statSell = statHasVariants ? statBlend.avgSell : statSP;
+    const statProfit = statHasVariants ? statBlend.profit : statSP - statCP;
+    const statMarkup = statSell > 0 ? (statProfit / statSell) * 100 : 0;
+
     const effectiveBase = category === 'raw'
       ? rawBuyCost
       : category === 'product'
         ? productBase
         : category === 'service'
           ? serviceBase
-          : statBlend.avgCost;
+          : statBase;
 
     const effectiveSell = category === 'raw'
       ? rawBuyCost
@@ -770,7 +787,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         ? productSP
         : category === 'service'
           ? serviceSP
-          : statBlend.avgSell;
+          : statSell;
 
     const effectiveProfit = category === 'raw'
       ? 0
@@ -778,7 +795,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         ? productProfit
         : category === 'service'
           ? serviceProfit
-          : statBlend.profit;
+          : statProfit;
 
     const effectiveMarkup = category === 'raw'
       ? 0
@@ -786,7 +803,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         ? productMarkup
         : category === 'service'
           ? serviceMarkup
-          : statBlend.margin;
+          : statMarkup;
 
     const baseItem: any = {
       id: item?.id || '',
@@ -877,8 +894,9 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
 
     let stationeryExtras: any = {};
     if (category === 'stationery') {
+      const savedVariants = statVariants.filter(v => v.name.trim());
       stationeryExtras = {
-        variants: statVariants.filter(v => v.name.trim()).map(v => ({
+        variants: savedVariants.map(v => ({
           name: v.name,
           costPrice: v.qtyPack > 0 ? v.packCost / v.qtyPack : 0,
           sellingPrice: v.sellItem,
@@ -889,6 +907,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         barcode: barcode || undefined,
         preferredSupplierId: statSupplier,
       };
+      if (savedVariants.length === 0) {
+        stationeryExtras.costPrice = statCP;
+        stationeryExtras.sellingPrice = statSP;
+      }
     }
 
     const finalItem: Item = {
@@ -1233,41 +1255,73 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   );
 
   const renderStationeryTab = () => {
-    const unitPlural = (word: string) => word.endsWith('s') ? word : word + 's';
     return (
       <div>
         <div style={s.section}>
-          <p style={s.sectionTitle}>Variants &amp; Unit Conversion</p>
-          <div style={s.variantList}>
-            <div style={{ ...s.variantRow, ...s.variantRowHead, gridTemplateColumns: '1.2fr 0.75fr 0.9fr 0.9fr 0.9fr auto' }}>
-              <span>Variant</span><span>Qty/Pack</span><span>Pack Cost</span><span>Cost/Item</span><span>Sell/Item</span><span></span>
-            </div>
-            {statVariants.map((v, i) => (
-              <div key={i} style={{ ...s.variantRow, gridTemplateColumns: '1.2fr 0.75fr 0.9fr 0.9fr 0.9fr auto' }}>
-                <input type="text" style={s.variantInput} value={v.name} onChange={e => {
-                  const next = [...statVariants]; next[i] = { ...next[i], name: e.target.value }; setStatVariants(next);
-                }} placeholder="e.g. Blue Ink Pen" />
-                <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.qtyPack || ''} onChange={e => {
-                  const next = [...statVariants]; next[i] = { ...next[i], qtyPack: Number(e.target.value) || 0 }; setStatVariants(next);
-                }} />
-                <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.packCost || ''} onChange={e => {
-                  const next = [...statVariants]; next[i] = { ...next[i], packCost: Number(e.target.value) || 0 }; setStatVariants(next);
-                }} />
-                <span style={s.variantAmt}>{formatCurrency(v.qtyPack > 0 ? v.packCost / v.qtyPack : 0, currencySymbol)}</span>
-                <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.sellItem || ''} onChange={e => {
-                  const next = [...statVariants]; next[i] = { ...next[i], sellItem: Number(e.target.value) || 0 }; setStatVariants(next);
-                }} />
-                <button style={s.variantRemove} onClick={() => { if (statVariants.length > 1) setStatVariants(statVariants.filter((_, j) => j !== i)); }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-                </button>
+          <p style={s.sectionTitle}>Pricing</p>
+          {statVariants.some(v => v.name.trim()) ? (
+            <div style={s.costStrip}>
+              <div style={s.costItem}><div style={s.costItemK}>Blended Cost/Item</div><div style={s.costItemV}>{formatCurrency(statBlend.avgCost, currencySymbol)}</div></div>
+              <div style={s.costItem}><div style={s.costItemK}>Blended Sell/Item</div><div style={s.costItemV}>{formatCurrency(statBlend.avgSell, currencySymbol)}</div></div>
+              <div style={{ ...s.costItem, ...(statBlend.profit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
+                <div style={s.costItemK}>Profit/Item</div>
+                <div style={s.costItemV}>{formatCurrency(statBlend.profit, currencySymbol)}</div>
               </div>
-            ))}
-            <div style={s.addVariant} onClick={() => setStatVariants([...statVariants, { name: '', qtyPack: 12, packCost: 0, sellItem: 0 }])}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-              Add another variant
+              <div style={{ ...s.costItem, ...(statBlend.profit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
+                <div style={s.costItemK}>Margin</div>
+                <div style={s.costItemV}>{statBlend.margin.toFixed(1)}%</div>
+              </div>
             </div>
-          </div>
-          <p style={s.fieldHint}>Bought by the pack, sold per item — cost per item recalculates automatically.</p>
+          ) : (
+            <div style={s.grid2}>
+              <Field label="Cost Price (CP)">
+                <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statCP} onChange={e => setStatCP(Number(e.target.value) || 0)} /></div>
+              </Field>
+              <Field label="Selling Price (SP)">
+                <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statSP} onChange={e => setStatSP(Number(e.target.value) || 0)} /></div>
+              </Field>
+            </div>
+          )}
+        </div>
+        <div style={s.section}>
+          <p style={s.sectionTitle}>Variants (optional)</p>
+          {statVariants.length > 0 ? (
+            <div style={s.variantList}>
+              <div style={{ ...s.variantRow, ...s.variantRowHead, gridTemplateColumns: '1.2fr 0.75fr 0.9fr 0.9fr 0.9fr auto' }}>
+                <span>Variant</span><span>Qty/Pack</span><span>Pack Cost</span><span>Cost/Item</span><span>Sell/Item</span><span></span>
+              </div>
+              {statVariants.map((v, i) => (
+                <div key={i} style={{ ...s.variantRow, gridTemplateColumns: '1.2fr 0.75fr 0.9fr 0.9fr 0.9fr auto' }}>
+                  <input type="text" style={s.variantInput} value={v.name} onChange={e => {
+                    const next = [...statVariants]; next[i] = { ...next[i], name: e.target.value }; setStatVariants(next);
+                  }} placeholder="e.g. Blue Ink Pen" />
+                  <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.qtyPack || ''} onChange={e => {
+                    const next = [...statVariants]; next[i] = { ...next[i], qtyPack: Number(e.target.value) || 0 }; setStatVariants(next);
+                  }} />
+                  <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.packCost || ''} onChange={e => {
+                    const next = [...statVariants]; next[i] = { ...next[i], packCost: Number(e.target.value) || 0 }; setStatVariants(next);
+                  }} />
+                  <span style={s.variantAmt}>{formatCurrency(v.qtyPack > 0 ? v.packCost / v.qtyPack : 0, currencySymbol)}</span>
+                  <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.sellItem || ''} onChange={e => {
+                    const next = [...statVariants]; next[i] = { ...next[i], sellItem: Number(e.target.value) || 0 }; setStatVariants(next);
+                  }} />
+                  <button style={s.variantRemove} onClick={() => { setStatVariants(statVariants.filter((_, j) => j !== i)); }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                  </button>
+                </div>
+              ))}
+              <div style={s.addVariant} onClick={() => setStatVariants([...statVariants, { name: '', qtyPack: 12, packCost: 0, sellItem: 0 }])}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                Add another variant
+              </div>
+            </div>
+          ) : (
+            <div style={s.addVariant} onClick={() => setStatVariants([{ name: '', qtyPack: 12, packCost: 0, sellItem: 0 }])}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+              Add variant
+            </div>
+          )}
+          <p style={s.fieldHint}>Variants are optional. Bought by the pack, sold per item.</p>
         </div>
         <div style={s.section}>
           <p style={s.sectionTitle}>Stock &amp; Reorder</p>
@@ -1281,24 +1335,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
           </div>
         </div>
         <div style={s.section}>
-          <p style={s.sectionTitle}>Supplier &amp; Blended Pricing</p>
-          <div style={{ marginBottom: 14 }}>
-            <Field label="Preferred Supplier">
-              <input type="text" style={s.input} value={statSupplier} onChange={e => setStatSupplier(e.target.value)} placeholder="e.g. Zaithwa Wholesalers" />
-            </Field>
-          </div>
-          <div style={s.costStrip}>
-            <div style={s.costItem}><div style={s.costItemK}>Blended Cost/Item</div><div style={s.costItemV}>{formatCurrency(statBlend.avgCost, currencySymbol)}</div></div>
-            <div style={s.costItem}><div style={s.costItemK}>Blended Sell/Item</div><div style={s.costItemV}>{formatCurrency(statBlend.avgSell, currencySymbol)}</div></div>
-            <div style={{ ...s.costItem, ...(statBlend.profit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
-              <div style={s.costItemK}>Profit/Item</div>
-              <div style={s.costItemV}>{formatCurrency(statBlend.profit, currencySymbol)}</div>
-            </div>
-            <div style={{ ...s.costItem, ...(statBlend.profit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
-              <div style={s.costItemK}>Margin</div>
-              <div style={s.costItemV}>{statBlend.margin.toFixed(1)}%</div>
-            </div>
-          </div>
+          <p style={s.sectionTitle}>Supplier</p>
+          <Field label="Preferred Supplier">
+            <input type="text" style={s.input} value={statSupplier} onChange={e => setStatSupplier(e.target.value)} placeholder="e.g. Zaithwa Wholesalers" />
+          </Field>
         </div>
       </div>
     );
