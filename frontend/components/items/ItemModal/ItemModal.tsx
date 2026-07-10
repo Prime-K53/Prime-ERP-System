@@ -379,7 +379,8 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
 
   // Stationery
   const [statVariants, setStatVariants] = useState<{ name: string; qtyPack: number; packCost: number; sellItem: number }[]>([]);
-  const [statCP, setStatCP] = useState(0);
+  const [statQtyPack, setStatQtyPack] = useState(0);
+  const [statPackCost, setStatPackCost] = useState(0);
   const [statSP, setStatSP] = useState(0);
   const [statTotalStock, setStatTotalStock] = useState(0);
   const [statReorder, setStatReorder] = useState(0);
@@ -470,7 +471,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         setStatTotalStock(item.stock || 0);
         setStatReorder(item.reorderPoint || 0);
         setStatSupplier(item.preferredSupplierId || '');
-        setStatCP(item.cost_price || item.cost || 0);
+        setStatQtyPack((item as any).qtyPack || 12);
+        setStatPackCost((item as any).packCost || 0);
         setStatSP(item.selling_price || item.price || 0);
       }
 
@@ -537,7 +539,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setTrackStock(false);
       setVariants([]);
       setStatVariants([]);
-      setStatCP(0);
+      setStatQtyPack(12);
+      setStatPackCost(0);
       setStatSP(0);
       setStatTotalStock(0);
       setStatReorder(0);
@@ -664,7 +667,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   const statBlend = useMemo(() => {
     const rows = statVariants.filter(v => v.name.trim());
     if (rows.length === 0) {
-      return { avgCost: statCP, avgSell: statSP, profit: statSP - statCP, margin: statSP > 0 ? ((statSP - statCP) / statSP) * 100 : 0 };
+      const cpt = statQtyPack > 0 ? statPackCost / statQtyPack : 0;
+      return { avgCost: cpt, avgSell: statSP, profit: statSP - cpt, margin: statSP > 0 ? ((statSP - cpt) / statSP) * 100 : 0 };
     }
     let costSum = 0;
     const sellRows: number[] = [];
@@ -678,7 +682,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     const profit = avgSell - avgCost;
     const margin = avgSell > 0 ? (profit / avgSell) * 100 : 0;
     return { avgCost, avgSell, profit, margin };
-  }, [statVariants, statCP, statSP]);
+  }, [statVariants, statQtyPack, statPackCost, statSP]);
 
   const renderBrief = () => {
     if (category === 'raw') {
@@ -768,9 +772,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
 
   const handleSave = useCallback(async () => {
     const statHasVariants = statVariants.some(v => v.name.trim());
-    const statBase = statHasVariants ? statBlend.avgCost : statCP;
+    const statItemCost = statQtyPack > 0 ? statPackCost / statQtyPack : 0;
+    const statBase = statHasVariants ? statBlend.avgCost : statItemCost;
     const statSell = statHasVariants ? statBlend.avgSell : statSP;
-    const statProfit = statHasVariants ? statBlend.profit : statSP - statCP;
+    const statProfit = statHasVariants ? statBlend.profit : statSP - statItemCost;
     const statMarkup = statSell > 0 ? (statProfit / statSell) * 100 : 0;
 
     const effectiveBase = category === 'raw'
@@ -908,7 +913,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         preferredSupplierId: statSupplier,
       };
       if (savedVariants.length === 0) {
-        stationeryExtras.costPrice = statCP;
+        stationeryExtras.qtyPack = statQtyPack;
+        stationeryExtras.packCost = statPackCost;
         stationeryExtras.sellingPrice = statSP;
       }
     }
@@ -1274,13 +1280,29 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
               </div>
             </div>
           ) : (
-            <div style={s.grid2}>
-              <Field label="Cost Price (CP)">
-                <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statCP} onChange={e => setStatCP(Number(e.target.value) || 0)} /></div>
-              </Field>
-              <Field label="Selling Price (SP)">
-                <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statSP} onChange={e => setStatSP(Number(e.target.value) || 0)} /></div>
-              </Field>
+            <div>
+              <div style={s.grid3}>
+                <Field label="Qty/Pack">
+                  <input type="number" style={{ ...s.input, ...s.mono }} value={statQtyPack || ''} onChange={e => setStatQtyPack(Number(e.target.value) || 0)} />
+                </Field>
+                <Field label="Pack Cost">
+                  <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statPackCost || ''} onChange={e => setStatPackCost(Number(e.target.value) || 0)} /></div>
+                </Field>
+                <Field label="Cost/Item">
+                  <input type="text" readOnly style={{ ...s.input, ...s.mono, background: VAR_STYLES.paper, fontWeight: 600 }} value={formatCurrency(statQtyPack > 0 ? statPackCost / statQtyPack : 0, currencySymbol)} />
+                </Field>
+              </div>
+              <div style={{ ...s.grid2, marginTop: 14 }}>
+                <Field label="Selling Price (SP)">
+                  <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={statSP} onChange={e => setStatSP(Number(e.target.value) || 0)} /></div>
+                </Field>
+                <div style={s.costStrip}>
+                  <div style={{ ...s.costItem, ...(statSP - (statQtyPack > 0 ? statPackCost / statQtyPack : 0) < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
+                    <div style={s.costItemK}>Margin</div>
+                    <div style={s.costItemV}>{statSP > 0 ? (((statSP - (statQtyPack > 0 ? statPackCost / statQtyPack : 0)) / statSP) * 100).toFixed(1) : 0}%</div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
