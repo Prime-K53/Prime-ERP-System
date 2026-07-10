@@ -274,6 +274,9 @@ const s: Record<string, React.CSSProperties> = {
   },
   bomTotalAmt: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 18, color: VAR_STYLES.ink700 },
   bomRateNote: { fontSize: 11, color: VAR_STYLES.textDim, marginTop: 10, lineHeight: 1.5 },
+  bomCostRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: VAR_STYLES.paper, border: `1px solid ${VAR_STYLES.line}`, borderRadius: 10 },
+  bomCostLabel: { fontSize: 13, fontWeight: 700, color: VAR_STYLES.ink700 },
+  bomCostValue: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 18, fontWeight: 700, color: VAR_STYLES.teal },
   aiGenBtn: {
     fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 700,
     padding: '5px 11px', borderRadius: 8, border: 'none',
@@ -353,9 +356,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [barcode, setBarcode] = useState('');
 
   // Product
-  const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number }[]>([
-    { name: '', bomCost: 0, cost: 0, selling: 0 },
-  ]);
+  const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number }[]>([]);
   const [productPaperCost, setProductPaperCost] = useState(0);
   const [productTonerCost, setProductTonerCost] = useState(0);
   const [productFinishCost, setProductFinishCost] = useState(0);
@@ -391,6 +392,12 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   const [bomCovers, setBomCovers] = useState(2);
   const [bomStaples, setBomStaples] = useState(2);
   const [bomTape, setBomTape] = useState(0);
+
+  // Product-level BOM (used when no variants exist)
+  const [productBomPages, setProductBomPages] = useState(96);
+  const [productBomCovers, setProductBomCovers] = useState(2);
+  const [productBomStaples, setProductBomStaples] = useState(2);
+  const [productBomTape, setProductBomTape] = useState(0);
 
   const isEditing = !!item?.id;
 
@@ -428,6 +435,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       }
 
       if (item.type === 'Product') {
+        setProductBomPages((item as any).bomPages ?? 96);
+        setProductBomCovers((item as any).bomCovers ?? 2);
+        setProductBomStaples((item as any).bomStaples ?? 2);
+        setProductBomTape((item as any).bomTape ?? 0);
         if ((sp?.paperCost || sp?.tonerCost || sp?.finishingCost)) {
           setProductPaperCost(sp.paperCost || 0);
           setProductTonerCost(sp.tonerCost || 0);
@@ -471,6 +482,8 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
           bomStaples: v.bomStaples,
           bomTape: v.bomTape,
         })));
+      } else {
+        setVariants([]);
       }
       const loadedStatVariants = (item as any).variants as any;
       if (loadedStatVariants && item.type === 'Stationery' && loadedStatVariants.length > 0) {
@@ -496,6 +509,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setRawReorder(0);
       setRawSupplier('');
       setRawLocation('');
+      setProductBomPages(96);
+      setProductBomCovers(2);
+      setProductBomStaples(2);
+      setProductBomTape(0);
       setProductPaperCost(0);
       setProductTonerCost(0);
       setProductFinishCost(0);
@@ -510,7 +527,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setTurnaround('');
       setRushSurcharge(0);
       setTrackStock(false);
-      setVariants([{ name: '', bomCost: 0, cost: 0, selling: 0, bomPages: 96, bomCovers: 2, bomStaples: 2, bomTape: 0 }]);
+      setVariants([]);
       setStatVariants([{ name: '', qtyPack: 12, packCost: 0, sellItem: 0 }]);
       setCostingMethod('weighted_average');
     }
@@ -569,16 +586,22 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   );
 
   const productBase = useMemo(() => {
-    // Auto-calculate from BOM variants first
-    const variantsWithBom = variants.filter(v => v.name.trim() && v.bomCost > 0);
+    // Product-level BOM cost (primary source)
+    const productBomCost = Math.ceil(productBomPages / PAGES_PER_SHEET) * bomRates.paper
+      + productBomPages * bomRates.toner
+      + productBomCovers * bomRates.cover
+      + productBomStaples * bomRates.staple
+      + productBomTape * bomRates.tape;
+    if (productBomCost > 0) return productBomCost;
+    // Variant BOM costs (average, used when variants exist)
+    const variantsWithBom = variants.filter(v => v.bomCost > 0);
     if (variantsWithBom.length > 0) {
       const avgBomCost = variantsWithBom.reduce((sum, v) => sum + v.bomCost, 0) / variantsWithBom.length;
       return avgBomCost;
     }
     // Fall back to manual cost inputs
-    const sum = productPaperCost + productTonerCost + productFinishCost;
-    return sum;
-  }, [productPaperCost, productTonerCost, productFinishCost, variants]);
+    return productPaperCost + productTonerCost + productFinishCost;
+  }, [productPaperCost, productTonerCost, productFinishCost, variants, productBomPages, productBomCovers, productBomStaples, productBomTape, bomRates]);
   const productProfit = useMemo(() => productSP - productBase, [productSP, productBase]);
   const productMarkup = useMemo(() => productBase > 0 ? (productProfit / productBase) * 100 : 0, [productProfit, productBase]);
 
@@ -809,6 +832,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     let productExtras: any = {};
     if (category === 'product') {
       productExtras = {
+        bomPages: productBomPages,
+        bomCovers: productBomCovers,
+        bomStaples: productBomStaples,
+        bomTape: productBomTape,
         variants: variants.filter(v => v.name.trim() || v.bomCost > 0).map(v => ({
           name: v.name,
           costPrice: v.cost || v.bomCost,
@@ -997,40 +1024,68 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     </div>
   );
 
-  const renderProductTab = () => (
+  const renderProductTab = () => {
+    const productBomCost = Math.ceil(productBomPages / PAGES_PER_SHEET) * bomRates.paper
+      + productBomPages * bomRates.toner
+      + productBomCovers * bomRates.cover
+      + productBomStaples * bomRates.staple
+      + productBomTape * bomRates.tape;
+
+    return (
     <div>
       <div style={s.section}>
-        <p style={s.sectionTitle}>Variants &amp; BOM</p>
-        <div style={s.variantList}>
-          <div style={{ ...s.variantRow, ...s.variantRowHead }}>
-            <span>Variant</span><span>BOM</span><span>Cost (CP)</span><span>Selling (SP)</span><span></span>
-          </div>
-          {variants.map((v, i) => (
-            <div key={i} style={s.variantRow}>
-              <input type="text" style={s.variantInput} value={v.name} onChange={e => {
-                const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next);
-              }} placeholder="e.g. 96 Page" />
-              <button style={s.bomEditBtn} onClick={() => { setBomVariantIdx(i); setBomPages(v.bomPages ?? 96); setBomCovers(v.bomCovers ?? 2); setBomStaples(v.bomStaples ?? 2); setBomTape(v.bomTape ?? 0); setBomOpen(true); }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M16 3l5 5L8 21H3v-5L16 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
-                Edit BOM
-              </button>
-              <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.cost || ''} onChange={e => {
-                const next = [...variants]; next[i] = { ...next[i], cost: Number(e.target.value) || 0 }; setVariants(next);
-              }} placeholder="0.00" />
-              <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.selling || ''} onChange={e => {
-                const next = [...variants]; next[i] = { ...next[i], selling: Number(e.target.value) || 0 }; setVariants(next);
-              }} placeholder="0.00" />
-              <button style={s.variantRemove} onClick={() => { if (variants.length > 1) setVariants(variants.filter((_, j) => j !== i)); }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-              </button>
-            </div>
-          ))}
-          <div style={s.addVariant} onClick={() => setVariants([...variants, { name: '', bomCost: 0, cost: 0, selling: 0, bomPages: 96, bomCovers: 2, bomStaples: 2, bomTape: 0 }])}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-            Add another variant
-          </div>
+        <p style={s.sectionTitle}>Bill of Materials</p>
+        <div style={{ ...s.grid4, marginBottom: 14 }}>
+          <Field label="Pages"><input type="number" style={s.input} value={productBomPages} min={0} onChange={e => setProductBomPages(Number(e.target.value) || 0)} /></Field>
+          <Field label="Covers"><input type="number" style={s.input} value={productBomCovers} min={0} onChange={e => setProductBomCovers(Number(e.target.value) || 0)} /></Field>
+          <Field label="Staples"><input type="number" style={s.input} value={productBomStaples} min={0} onChange={e => setProductBomStaples(Number(e.target.value) || 0)} /></Field>
+          <Field label="Tape (cm)"><input type="number" style={s.input} value={productBomTape} min={0} onChange={e => setProductBomTape(Number(e.target.value) || 0)} /></Field>
         </div>
-        <p style={s.fieldHint}>Each variant carries its own bill of materials.</p>
+        <div style={s.bomCostRow}>
+          <span style={s.bomCostLabel}>BOM Cost</span>
+          <span style={s.bomCostValue}>{formatCurrency(productBomCost, currencySymbol)}</span>
+        </div>
+        <p style={s.bomRateNote}>Rates — Paper {formatCurrency(bomRates.paper, currencySymbol)}/sheet · Toner {formatCurrency(bomRates.toner, currencySymbol)}/page · Cover {formatCurrency(bomRates.cover, currencySymbol)}/ea · Staple {formatCurrency(bomRates.staple, currencySymbol)}/ea · Binding Tape {formatCurrency(bomRates.tape, currencySymbol)}/cm</p>
+      </div>
+      <div style={s.section}>
+        <p style={s.sectionTitle}>Variants (optional)</p>
+        {variants.length > 0 ? (
+          <div style={s.variantList}>
+            <div style={{ ...s.variantRow, ...s.variantRowHead }}>
+              <span>Variant</span><span>BOM</span><span>Cost (CP)</span><span>Selling (SP)</span><span></span>
+            </div>
+            {variants.map((v, i) => (
+              <div key={i} style={s.variantRow}>
+                <input type="text" style={s.variantInput} value={v.name} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next);
+                }} placeholder="e.g. 96 Page" />
+                <button style={s.bomEditBtn} onClick={() => { setBomVariantIdx(i); setBomPages(v.bomPages ?? 96); setBomCovers(v.bomCovers ?? 2); setBomStaples(v.bomStaples ?? 2); setBomTape(v.bomTape ?? 0); setBomOpen(true); }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M16 3l5 5L8 21H3v-5L16 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
+                  Edit BOM
+                </button>
+                <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.cost || ''} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], cost: Number(e.target.value) || 0 }; setVariants(next);
+                }} placeholder="0.00" />
+                <input type="number" style={{ ...s.variantInput, ...s.mono }} value={v.selling || ''} onChange={e => {
+                  const next = [...variants]; next[i] = { ...next[i], selling: Number(e.target.value) || 0 }; setVariants(next);
+                }} placeholder="0.00" />
+                <button style={s.variantRemove} onClick={() => { setVariants(variants.filter((_, j) => j !== i)); }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                </button>
+              </div>
+            ))}
+            <div style={s.addVariant} onClick={() => setVariants([...variants, { name: '', bomCost: 0, cost: 0, selling: 0, bomPages: 96, bomCovers: 2, bomStaples: 2, bomTape: 0 }])}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+              Add another variant
+            </div>
+          </div>
+        ) : (
+          <div style={s.addVariant} onClick={() => setVariants([{ name: '', bomCost: 0, cost: 0, selling: 0, bomPages: 96, bomCovers: 2, bomStaples: 2, bomTape: 0 }])}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            Add variant
+          </div>
+        )}
+        <p style={s.fieldHint}>Variants are optional. The product BOM above determines Total Base Price.</p>
       </div>
       <div style={s.section}>
         <p style={s.sectionTitle}>Stock &amp; Reorder</p>
@@ -1081,6 +1136,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       </div>
     </div>
   );
+  };
 
   const renderServiceTab = () => (
     <div>
