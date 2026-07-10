@@ -726,13 +726,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         <>
           <div style={s.briefItem}><span style={s.briefLabel}>Paper</span><span style={s.briefValue}>{formatCurrency(servicePaperCost, currencySymbol)}</span></div>
           <div style={s.briefItem}><span style={s.briefLabel}>Toner</span><span style={s.briefValue}>{formatCurrency(serviceTonerCost, currencySymbol)}</span></div>
-          <div style={s.briefItem}><span style={s.briefLabel}>Finishing</span><span style={s.briefValue}>{formatCurrency(serviceFinishingTotal, currencySymbol)}</span></div>
-          <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Base Cost</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700 }}>{formatCurrency(serviceBase, currencySymbol)}</span></div>
-          <div style={s.briefItem}><span style={s.briefLabel}>Sell Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.teal500 }}>{formatCurrency(serviceSP, currencySymbol)}</span></div>
-          <div style={{ ...s.briefItem, borderBottom: 'none' }}>
-            <span style={s.briefLabel}>Profit</span>
-            <span style={{ ...s.briefValue, color: serviceProfit < 0 ? VAR_STYLES.danger : VAR_STYLES.teal600 }}>{formatCurrency(serviceProfit, currencySymbol)}</span>
-          </div>
+          <div style={{ ...s.briefItem, borderBottom: 'none' }}><span style={s.briefLabel}>Finishing</span><span style={s.briefValue}>{formatCurrency(serviceFinishingTotal, currencySymbol)}</span></div>
         </>
       );
     }
@@ -830,9 +824,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       minimumMargin: defaultMarkup,
       pricingValidated: category === 'product'
         ? productSP >= productBase * (1 + TARGET_MARKUP)
-        : category === 'service'
-          ? serviceSP >= serviceBase * (1 + defaultMarkup / 100)
-          : true,
+        : true,
       costingMethod: category !== 'service' ? costingMethod : undefined,
       updatedBy: USER?.id,
       ...(item?.id ? {} : { createdBy: USER?.id }),
