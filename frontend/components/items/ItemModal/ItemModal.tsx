@@ -1151,10 +1151,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   };
 
   const renderServiceTab = () => {
-    const pricingHint = pricingMethod === 'per_job' ? 'Paper + Toner + selected Finishing (flat per job)'
-      : pricingMethod === 'per_page' ? 'Paper + Toner + selected Finishing (per page)'
-      : 'Paper + Toner + selected Finishing (per sheet)';
-
     return (
     <div>
       <div style={s.section}>
@@ -1171,13 +1167,13 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       <div style={s.section}>
         <p style={s.sectionTitle}>BOM Materials <span style={{ ...s.badge, ...s.badgeTeal, marginLeft: 6 }}>Auto-selected</span></p>
         <div style={s.grid3}>
-          <Field label="Paper"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={servicePaperCost} onChange={e => setServicePaperCost(Number(e.target.value) || 0)} /></div></Field>
-          <Field label="Toner"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={serviceTonerCost} onChange={e => setServiceTonerCost(Number(e.target.value) || 0)} /></div></Field>
+          <Field label="Paper (per sheet)"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={servicePaperCost} onChange={e => setServicePaperCost(Number(e.target.value) || 0)} /></div></Field>
+          <Field label="Toner (per page)"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={serviceTonerCost} onChange={e => setServiceTonerCost(Number(e.target.value) || 0)} /></div></Field>
           <Field label="Min. Markup Required"><input type="text" readOnly style={{ ...s.input, ...s.mono }} value={`${defaultMarkup}%`} /></Field>
         </div>
       </div>
       <div style={s.section}>
-        <p style={s.sectionTitle}>Finishing Options Offered</p>
+        <p style={s.sectionTitle}>Finishing Options Offered <span style={s.badge}>Per job</span></p>
         <div style={s.chipGrid}>
           {serviceFinishing.map((f, i) => (
             <div key={f.name} style={{ ...s.chip, ...(f.active ? s.chipActive : {}) }} onClick={() => {
@@ -1195,37 +1191,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
             </div>
           ))}
         </div>
-      </div>
-      <div style={s.section}>
-        <p style={s.sectionTitle}>Pricing</p>
-        <div style={s.grid2}>
-          <Field label="Total Base Price" hint={pricingHint}>
-            <input type="text" readOnly style={{ ...s.input, ...s.mono, background: VAR_STYLES.paper, fontWeight: 700, color: VAR_STYLES.ink700 }} value={formatCurrency(serviceBase, currencySymbol)} />
-          </Field>
-          <Field label={`Selling Price${pricingMethod === 'per_job' ? ' (per job)' : pricingMethod === 'per_page' ? ' (per page)' : ' (per sheet)'}`}>
-            <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={serviceSP} onChange={e => setServiceSP(Number(e.target.value) || 0)} /></div>
-          </Field>
-        </div>
-        {serviceBase > 0 && (
-          <div style={{ ...s.costStrip, marginTop: 14 }}>
-            <div style={{ ...s.costItem, ...(serviceProfit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
-              <div style={s.costItemK}>Total Profit</div>
-              <div style={s.costItemV}>{formatCurrency(serviceProfit, currencySymbol)}</div>
-            </div>
-            <div style={{ ...s.costItem, ...(serviceProfit < 0 ? { color: VAR_STYLES.danger } : { color: VAR_STYLES.ink700 }) }}>
-              <div style={s.costItemK}>Markup</div>
-              <div style={s.costItemV}>{serviceMarkup.toFixed(1)}%</div>
-            </div>
-              <div style={s.costItem}>
-                <div style={s.costItemK}>AI Suggested SP</div>
-                <div style={{ ...s.costItemV, color: VAR_STYLES.purple }}>{formatCurrency(serviceBase * (1 + TARGET_MARKUP), currencySymbol)}</div>
-              </div>
-            <div style={s.costItem}>
-              <div style={s.costItemK}>Suggested @</div>
-              <div style={{ ...s.costItemV, fontSize: 12.5 }}>{TARGET_MARKUP * 100}% markup</div>
-            </div>
-          </div>
-        )}
       </div>
       <div style={s.section}>
         <p style={s.sectionTitle}>Turnaround</p>
