@@ -1,56 +1,42 @@
 import { Item, ProductVariant } from '../types';
 
-const TYPE_ABBREVIATIONS: Record<string, string> = {
-  Product: 'PROD',
-  Service: 'SERV',
-  Stationery: 'STAT',
-  Material: 'MATE',
-  'Raw Material': 'MATE',
+const CATEGORY_PREFIXES: Record<string, string> = {
+  raw: 'MAT',
+  product: 'PRD',
+  service: 'SER',
+  stationery: 'STA',
+  'Raw Material': 'MAT',
+  Material: 'MAT',
+  Product: 'PRD',
+  Service: 'SER',
+  Stationery: 'STA',
 };
 
-export const generateAutoSKU = (type: string, name: string, attributes?: Record<string, string | number>, collection?: any[]): string => {
-  const typeAbbrev = TYPE_ABBREVIATIONS[type] || type.replace(/\s+/g, '').substring(0, 4).toUpperCase() || 'ITEM';
-  const isKnownInventoryType = type in TYPE_ABBREVIATIONS;
-  const namePart = name ? name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase() : 'UNK';
+const CATEGORY_FROM_TYPE: Record<string, string> = {
+  'Raw Material': 'raw',
+  Product: 'product',
+  Service: 'service',
+  Stationery: 'stationery',
+};
 
-  if (!isKnownInventoryType) {
-    let sku = `${typeAbbrev}-${namePart}`;
-    if (attributes) {
-      Object.values(attributes).forEach(val => {
-        const attrPart = String(val).replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
-        sku += `-${attrPart}`;
-      });
-    }
-    if (collection && collection.length > 0) {
-      const matching = collection.filter((item: any) => item?.sku && item.sku.startsWith(`${sku}-`));
-      let maxNum = 0;
-      matching.forEach((item: any) => {
-        const parts = String(item.sku || '').split('-');
-        const last = parts[parts.length - 1];
-        const parsed = parseInt(last, 10);
-        if (!Number.isNaN(parsed) && parsed > maxNum) maxNum = parsed;
-      });
-      return `${sku}-${String(maxNum + 1).padStart(4, '0')}`;
-    }
-    const suffix = Date.now().toString(36).toUpperCase().slice(-4);
-    return `${sku}-${suffix}`;
-  }
-
-  const prefix = `INVE-${typeAbbrev}`;
+export const generateAutoSKU = (categoryOrType: string, name: string, attributes?: Record<string, string | number>, collection?: any[]): string => {
+  const cat = CATEGORY_FROM_TYPE[categoryOrType] || categoryOrType;
+  const prefix = CATEGORY_PREFIXES[cat] || 'ITM';
 
   if (collection && collection.length > 0) {
     let maxNum = 0;
     collection.forEach((item: any) => {
       const sku = String(item?.sku || '');
+      if (!sku.startsWith(`INV-${prefix}`)) return;
       const parts = sku.split('-');
       const last = parts[parts.length - 1];
       const parsed = parseInt(last, 10);
       if (!Number.isNaN(parsed) && parsed > maxNum) maxNum = parsed;
     });
-    return `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
+    return `INV-${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
   }
 
-  return `${prefix}-0001`;
+  return `INV-${prefix}-0001`;
 };
 
 export const generateAutoBarcode = (): string => {

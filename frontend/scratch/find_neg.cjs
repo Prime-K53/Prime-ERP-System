@@ -1,6 +1,6 @@
 
 const fs = require('fs');
-const content = fs.readFileSync('views/inventory/components/ItemModal.tsx', 'utf8');
+const content = fs.readFileSync('components/items/ItemModal/ItemModal.tsx', 'utf8');
 const lines = content.split('\n');
 
 let balance = 0;

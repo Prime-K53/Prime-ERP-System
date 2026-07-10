@@ -426,7 +426,7 @@ export const ExaminationProvider: React.FC<ExaminationProviderProps> = ({ childr
         // that ProductionContext can listen to
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('examination-batch-to-production', {
-            detail: { workOrder, batch }
+            detail: { workOrder: { ...workOrder, source: 'examination' }, batch }
           }));
         }
       });

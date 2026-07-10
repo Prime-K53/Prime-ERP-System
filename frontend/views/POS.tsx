@@ -1434,7 +1434,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
               <button
                 onClick={handleCloseRegister}
                 disabled={isClosingDrawer}
-                className="w-full py-3.5 bg-emerald-600 text-white rounded-full font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-sm"
+                className="w-full py-3.5 bg-blue-600 text-white rounded-full font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-sm"
               >
                 {isClosingDrawer ? <RefreshCw size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
                 {isClosingDrawer ? 'Posting to Ledger...' : 'Close Register & Post'}
@@ -1580,7 +1580,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
 
       {/* Receipt Preview Banner */}
       {lastSale && (
-        <div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-300">
+        <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-2 duration-300">
           <CheckCircle size={20} />
           <div className="text-sm font-bold">Sale #{lastSale.id} completed</div>
           <button

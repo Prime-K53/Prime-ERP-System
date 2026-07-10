@@ -11,12 +11,12 @@ import { formatNumber } from '../../../utils/helpers';
 import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredSellingPrice } from '../../../utils/pricing';
 import { getSnapshotCalculatedAmount, resolveItemAdjustmentSnapshots } from '../../../utils/pricingBreakdown';
 
-const T = '#0a2e2e';
-const T7 = '#0f4c4c';
-const T6 = '#146464';
-const T5 = '#1a7d7d';
-const T100 = '#e3f0ef';
-const T50 = '#f2f8f7';
+const B = '#1E3A5F';
+const B7 = '#2563EB';
+const B6 = '#1D4ED8';
+const B5 = '#3B82F6';
+const B100 = '#DBEAFE';
+const B50 = '#EFF6FF';
 const PAPER = '#faf9f6';
 const INK = '#16211f';
 const SOFT = '#5c6b68';
@@ -203,7 +203,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
         if (viewMode === 'List') {
             return (
                 <div style={{ width: '100%' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 70px 44px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 600, color: SOFT, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 70px 44px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 600, color: SOFT, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${LINE}`, background: B50 }}>
                         <span></span>
                         <span>Item</span>
                         <span style={{ textAlign: 'right' }}>Price</span>
@@ -226,16 +226,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                                 textAlign: 'left',
                                 border: 'none',
                                 borderBottom: `1px solid ${LINE}`,
-                                background: activeIndex === idx ? T100 : 'transparent',
+                                background: activeIndex === idx ? B100 : 'transparent',
                                 cursor: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 'not-allowed' : 'pointer',
                                 opacity: item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent ? 0.5 : 1,
                                 fontFamily: "'DM Sans',sans-serif",
                                 transition: '.1s'
                             }}
-                            onMouseOver={e => { if (activeIndex !== idx) e.currentTarget.style.background = T50; }}
+                            onMouseOver={e => { if (activeIndex !== idx) e.currentTarget.style.background = B50; }}
                             onMouseOut={e => { if (activeIndex !== idx) e.currentTarget.style.background = 'transparent'; }}
                         >
-                            <div style={{ padding: 4, borderRadius: 6, background: T50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ padding: 4, borderRadius: 6, background: B50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {getCategoryIcon(item.category)}
                             </div>
                             <div style={{ minWidth: 0 }}>
@@ -244,7 +244,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                             </div>
                             <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: INK, fontFamily: "'JetBrains Mono',monospace" }}>
                                 {item.isVariantParent ? (
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: T7, color: '#fff', borderRadius: 4 }}>View</span>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: B7, color: '#fff', borderRadius: 4 }}>View</span>
                                 ) : (
                                     `${currency}${formatNumber(price(item))}`
                                 )}
@@ -253,7 +253,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                                 {(item.type === 'Stationery' || item.type === 'Product') ? `${item.stock}${item.unit ? ' ' + item.unit : ''}` : '\u2014'}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? T100 : T50, color: item.type === 'Service' ? T7 : SOFT }}>
+                                <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? B100 : B50, color: item.type === 'Service' ? B7 : SOFT }}>
                                     {(item.type || '?').charAt(0)}
                                 </span>
                             </div>
@@ -271,8 +271,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                 disabled={item.stock <= 0 && item.type === 'Stationery' && !item.isVariantParent}
                 style={{
                     position: 'relative',
-                    background: activeIndex === idx ? T100 : '#fff',
-                    border: `1px solid ${activeIndex === idx ? T6 : LINE}`,
+                    background: activeIndex === idx ? B100 : '#fff',
+                    border: `1px solid ${activeIndex === idx ? B6 : LINE}`,
                     borderRadius: 10,
                     padding: viewMode === 'Small' ? 8 : 10,
                     textAlign: 'left',
@@ -284,12 +284,12 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                     height: '100%',
                     transition: '.12s',
                     filter: activeIndex === idx ? 'none' : 'none',
-                    boxShadow: activeIndex === idx ? `0 0 0 2px ${T5}33` : 'none'
+                    boxShadow: activeIndex === idx ? `0 0 0 2px ${B5}33` : 'none'
                 }}
                 onMouseOver={e => {
                     if (activeIndex !== idx) {
-                        e.currentTarget.style.borderColor = T5;
-                        e.currentTarget.style.boxShadow = `0 0 0 2px ${T5}22`;
+                        e.currentTarget.style.borderColor = B5;
+                        e.currentTarget.style.boxShadow = `0 0 0 2px ${B5}22`;
                     }
                 }}
                 onMouseOut={e => {
@@ -303,7 +303,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                     <div style={{
                         width: '100%',
                         aspectRatio: '1',
-                        background: T50,
+                        background: B50,
                         marginBottom: 8,
                         overflow: 'hidden',
                         display: 'flex',
@@ -320,7 +320,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                     </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                    <div style={{ padding: '4px 5px', borderRadius: 6, background: T50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ padding: '4px 5px', borderRadius: 6, background: B50, color: SOFT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {getCategoryIcon(item.category)}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -335,7 +335,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${LINE}` }}>
                     <div>
                         {item.isVariantParent ? (
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', background: T7, color: '#fff', borderRadius: 5, cursor: 'pointer' }}>View</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', background: B7, color: '#fff', borderRadius: 5, cursor: 'pointer' }}>View</span>
                         ) : (
                             <span style={{ fontSize: viewMode === 'Small' ? 11 : 13, fontWeight: 700, color: INK }}>
                                 {currency}{formatNumber(price(item))}
@@ -349,7 +349,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                                 {item.stock} {item.unit}
                             </span>
                         )}
-                        <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? T100 : T50, color: item.type === 'Service' ? T7 : SOFT }}>
+                        <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', borderRadius: 4, textTransform: 'uppercase', background: item.type === 'Service' ? B100 : B50, color: item.type === 'Service' ? B7 : SOFT }}>
                             {(item.type || '?').charAt(0)}
                         </span>
                     </div>
@@ -365,9 +365,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
 
     return (
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: PAPER, fontFamily: "'DM Sans',sans-serif" }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: `1px solid ${LINE}`, background: B50 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 6, background: T7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 6, background: B7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>
                         <Grid size={12} />
                     </div>
                     <h3 style={{ margin: 0, fontSize: 14, fontFamily: "'DM Serif Display',serif", fontWeight: 400, color: INK }}>Items</h3>
@@ -385,8 +385,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                                     border: 'none',
                                     borderRight: mode !== 'List' ? `1px solid ${LINE}` : 'none',
                                     cursor: 'pointer',
-                                    background: viewMode === mode ? T100 : '#fff',
-                                    color: viewMode === mode ? T7 : SOFT,
+                                    background: viewMode === mode ? B100 : '#fff',
+                                    color: viewMode === mode ? B7 : SOFT,
                                     fontSize: 12,
                                     display: 'flex',
                                     alignItems: 'center',
@@ -401,7 +401,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                         ))}
                     </div>
                     <div style={{ width: 1, height: 20, background: LINE }} />
-                    <button onClick={onRecall} style={{ color: T6, fontWeight: 600, fontSize: 12.5, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <button onClick={onRecall} style={{ color: B6, fontWeight: 600, fontSize: 12.5, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <PauseCircle size={15} /> Recall ({heldCount})
                     </button>
                 </div>
@@ -463,7 +463,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                                         padding: '6px 14px',
                                         borderRadius: 20,
                                         border: isActive ? 'none' : `1px solid ${LINE}`,
-                                        background: isActive ? T7 : '#fff',
+                                        background: isActive ? B7 : '#fff',
                                         color: isActive ? '#fff' : INK,
                                         fontSize: 12,
                                         fontWeight: 600,

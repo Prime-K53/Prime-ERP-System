@@ -9,35 +9,35 @@ const SmartOperationsHub: React.FC = () => {
       description: 'AI-powered chat for business insights, analytics, and smart recommendations.',
       path: '/smart-operations/ai',
       icon: <Brain />,
-      color: 'bg-purple-50 text-purple-500'
+      color: 'bg-blue-50 text-blue-600'
     },
     {
       label: 'AI Analytics',
       description: 'Gang Run, Cash Flow, Anomaly Detection, Churn, Reorder, PO Match, Schedule, Query, Audit, BOM.',
       path: '/smart-operations/ai/analytics',
       icon: <BarChart3 />,
-      color: 'bg-fuchsia-50 text-fuchsia-500'
+      color: 'bg-blue-50 text-blue-600'
     },
     {
       label: 'Market Adjustments',
       description: 'Manage global cost layers, inflation adjustments, and logistics surcharges.',
       path: '/smart-operations/adjustments',
       icon: <TrendingUp />,
-      color: 'bg-emerald-50 text-emerald-500'
+      color: 'bg-blue-50 text-blue-600'
     },
     {
       label: 'Smart Pricing Engine',
       description: 'Calculate item prices with market adjustments and generate revenue reports.',
       path: '/smart-operations/pricing',
       icon: <Calculator />,
-      color: 'bg-indigo-50 text-indigo-500'
+      color: 'bg-blue-50 text-blue-600'
     },
     {
       label: 'Marketing Messages',
       description: 'WhatsApp automation, bulk campaigns, and customer communications.',
       path: '/smart-operations/messages',
       icon: <MessageSquare />,
-      color: 'bg-green-50 text-green-500'
+      color: 'bg-blue-50 text-blue-600'
     }
   ];
 

@@ -6,6 +6,14 @@ const { detectIdentifierType, ResolutionError } = require('./resolverUtils.cjs')
 const { LayoutEngine } = require('../../frontend/services/layoutEngine.cjs');
 const { ConsistencyService } = require('../../frontend/services/consistencyService.cjs');
 
+// PDF Generation with Puppeteer
+let puppeteer;
+try {
+  puppeteer = require('puppeteer');
+} catch (err) {
+  console.warn('[DocumentService] Puppeteer not available:', err.message);
+}
+
 /**
  * DocumentService handles the lifecycle of documents in the ERP.
  * It integrates the layout engine and consistency checks.
@@ -273,11 +281,27 @@ class DocumentService {
   }
 
   /**
-   * Batch Export: Currently disabled (PDF export removed).
+   * Batch Export: Exports multiple documents.
    */
   async batchExport(ids) {
-    console.warn('Batch export is currently disabled.');
-    return [];
+    const results = [];
+    for (const id of ids) {
+      try {
+        const exportResult = await this.exportPdf(id);
+        results.push({
+          id,
+          success: true,
+          data: exportResult
+        });
+      } catch (err) {
+        results.push({
+          id,
+          success: false,
+          error: err.message
+        });
+      }
+    }
+    return results;
   }
 
   /**
@@ -489,10 +513,123 @@ class DocumentService {
   }
 
   /**
-   * Export PDF: Currently disabled (PDF export removed).
+   * Export PDF: Generates a PDF from the document's render model using Puppeteer.
    */
-  async exportPdf(id) {
-    throw new Error('PDF export is currently disabled.');
+  async exportPdf(id, companyId = '') {
+    const cid = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    
+    // Resolve the document
+    const doc = await this.resolveDocument(id, cid);
+    if (!doc) {
+      throw new Error('Document not found');
+    }
+
+    // Get the render model
+    let renderModel = doc.render_model;
+    if (!renderModel && doc.payload) {
+      // Generate render model if not exists
+      const blueprint = await this.getBlueprintForType(doc.type);
+      if (blueprint) {
+        const boundBlueprint = this.layoutEngine.calculate(doc.payload, blueprint);
+        renderModel = this.layoutEngine.generate(boundBlueprint);
+      }
+    }
+
+    if (!renderModel) {
+      throw new Error('Cannot generate PDF: no render model available');
+    }
+
+    // Parse render model if it's a string
+    if (typeof renderModel === 'string') {
+      renderModel = JSON.parse(renderModel);
+    }
+
+    // Check if puppeteer is available
+    if (!puppeteer) {
+      console.warn('[DocumentService] PDF export requested but Puppeteer not installed. Returning render model.');
+      return {
+        success: false,
+        message: 'PDF generation library not configured',
+        renderModel: renderModel,
+        docType: doc.type,
+        docId: doc.id
+      };
+    }
+
+    // Generate HTML from render model
+    const html = this.renderModelToHtml(renderModel);
+    
+    // Launch browser and generate PDF
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
+      });
+      
+      await browser.close();
+      
+      return {
+        success: true,
+        pdfBuffer: pdfBuffer,
+        docType: doc.type,
+        docId: doc.id
+      };
+    } catch (err) {
+      await browser.close();
+      throw err;
+    }
+  }
+
+  /**
+   * Convert render model to HTML for PDF generation
+   */
+  renderModelToHtml(renderModel) {
+    // Basic HTML template
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${renderModel.type || 'Document'}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .content { margin: 20px 0; }
+          .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f5f5f5; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${renderModel.type || 'Document'}</h1>
+        </div>
+        <div class="content">
+          <pre>${JSON.stringify(renderModel, null, 2)}</pre>
+        </div>
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    return html;
   }
 
   /**

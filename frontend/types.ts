@@ -1209,6 +1209,7 @@ export interface QACheck {
 export interface WorkOrder {
   id: string;
   status: 'Draft' | 'Scheduled' | 'In Progress' | 'On Hold' | 'QA' | 'Completed' | 'Cancelled';
+  source?: 'examination' | 'regular';
   productId: string;
   productName: string;
   customerId?: string;

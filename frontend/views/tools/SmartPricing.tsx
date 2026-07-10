@@ -46,6 +46,8 @@ const SmartPricing: React.FC = () => {
     const [marketAdjustments, setMarketAdjustments] = useState<MarketAdjustment[]>([]);
     const [bomTemplates, setBOMTemplates] = useState<BOMTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [manualPaperUnitCost, setManualPaperUnitCost] = useState<number | null>(null);
+    const [manualTonerUnitCost, setManualTonerUnitCost] = useState<number | null>(null);
     
     const [paperExpanded, setPaperExpanded] = useState(true);
     const [finishingExpanded, setFinishingExpanded] = useState(true);
@@ -152,6 +154,8 @@ const SmartPricing: React.FC = () => {
         copies,
         finishingOptions,
         inventory,
+        paperUnitCost: manualPaperUnitCost ?? undefined,
+        tonerUnitCost: manualTonerUnitCost ?? undefined,
     });
     const costPrice = baseCost;
     const profit = calculateProfit(costPrice, sellingPrice);
@@ -187,6 +191,8 @@ const SmartPricing: React.FC = () => {
         setPages(1);
         setCopies(1);
         setSellingPrice(0);
+        setManualPaperUnitCost(null);
+        setManualTonerUnitCost(null);
         if (paperItems.length > 0) setSelectedPaperId(paperItems[0].id);
         if (tonerItems.length > 0) setSelectedTonerId(tonerItems[0].id);
         setFinishingOptions(prev => prev.map(opt => ({ ...opt, enabled: false })));
@@ -419,6 +425,14 @@ const SmartPricing: React.FC = () => {
         if (!item) return 0;
         return Number(item.cost_price || item.cost_per_unit || item.cost || 0);
     };
+
+    const hasValidMaterialCost = (item: Item | undefined) => {
+        if (!item) return false;
+        return (item.cost_price || 0) > 0 || (item.cost_per_unit || 0) > 0 || (item.cost || 0) > 0 || (item.costPrice || 0) > 0;
+    };
+
+    const paperCostWarning = selectedPaper && !hasValidMaterialCost(selectedPaper);
+    const tonerCostWarning = selectedToner && !hasValidMaterialCost(selectedToner);
 
     const getItemUnit = (item: Item | undefined) => {
         if (!item) return '';
@@ -801,17 +815,47 @@ const SmartPricing: React.FC = () => {
                             <div style={{ padding:'14px 16px 16px' }}>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
                                     <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
-                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
-                                        {selectedPaper?.name || 'Paper'}
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background: paperCostWarning ? '#B23B3B' : '#2AA69E', flexShrink:0 }} />
+                                        {selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}
+                                        {paperCostWarning && <span style={{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:100, background:'#FBEAEA', color:'#B23B3B' }}>NO COST</span>}
                                     </span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
+                                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                        {paperCostWarning && (
+                                            <input
+                                                type="number"
+                                                value={manualPaperUnitCost ?? ''}
+                                                onChange={e => setManualPaperUnitCost(e.target.value ? parseFloat(e.target.value) : null)}
+                                                placeholder="Unit cost"
+                                                min={0}
+                                                step={0.01}
+                                                style={{ width:80, fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:11, padding:'3px 6px', borderRadius:6, border:'1px solid #B23B3B', background:'#FFF', color:'#23282A', outline:'none', textAlign:'right' }}
+                                                title="Override paper unit cost"
+                                            />
+                                        )}
+                                        <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right', color: paperCostWarning ? '#B23B3B' : undefined }}>{formatCurrency(paperCost)}</span>
+                                    </div>
                                 </div>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #F2EEE3', fontSize:13, lineHeight:1.4 }}>
                                     <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
-                                        <span style={{ width:7, height:7, borderRadius:'50%', background:'#2AA69E', flexShrink:0 }} />
-                                        {selectedToner?.name || 'Toner'}
+                                        <span style={{ width:7, height:7, borderRadius:'50%', background: tonerCostWarning ? '#B23B3B' : '#2AA69E', flexShrink:0 }} />
+                                        {selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}
+                                        {tonerCostWarning && <span style={{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:100, background:'#FBEAEA', color:'#B23B3B' }}>NO COST</span>}
                                     </span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
+                                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                        {tonerCostWarning && (
+                                            <input
+                                                type="number"
+                                                value={manualTonerUnitCost ?? ''}
+                                                onChange={e => setManualTonerUnitCost(e.target.value ? parseFloat(e.target.value) : null)}
+                                                placeholder="Unit cost"
+                                                min={0}
+                                                step={0.01}
+                                                style={{ width:80, fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontSize:11, padding:'3px 6px', borderRadius:6, border:'1px solid #B23B3B', background:'#FFF', color:'#23282A', outline:'none', textAlign:'right' }}
+                                                title="Override toner unit cost"
+                                            />
+                                        )}
+                                        <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', fontWeight:600, textAlign:'right', color: tonerCostWarning ? '#B23B3B' : undefined }}>{formatCurrency(tonerCost)}</span>
+                                    </div>
                                 </div>
                                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderBottom:'none', fontSize:13, lineHeight:1.4 }}>
                                     <span className="flex items-center gap-2.5" style={{ color:'#23282A' }}>
@@ -859,12 +903,12 @@ const SmartPricing: React.FC = () => {
 
                             <div style={{ padding:'16px 20px 6px' }}>
                                 <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4 }}>
-                                    <span>{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}</span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color:'#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
+                                    <span>{selectedPaper?.name?.replace(/\s*\d+gsm.*/i, '') || 'Paper'}{paperCostWarning ? ' ⚠' : ''}</span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color: paperCostWarning ? '#B23B3B' : '#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(paperCost)}</span>
                                 </div>
                                 <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4 }}>
-                                    <span>{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}</span>
-                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color:'#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
+                                    <span>{selectedToner?.name?.replace(/\s*Universal\s*/i, '') || 'Toner'}{tonerCostWarning ? ' ⚠' : ''}</span>
+                                    <span style={{ fontFamily:'"JetBrains Mono", monospace', fontVariantNumeric:'tabular-nums', color: tonerCostWarning ? '#B23B3B' : '#23282A', fontWeight:500, textAlign:'right' }}>{formatCurrency(tonerCost)}</span>
                                 </div>
                                 <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', fontSize:13, padding:'6px 0', color:'#666F6C', lineHeight:1.4, borderBottom:'1px dashed #E4DFD1', marginBottom:4, paddingBottom:10 }}>
                                     <span>Finishing</span>

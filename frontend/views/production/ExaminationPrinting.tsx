@@ -585,6 +585,7 @@ const ExaminationPrinting: React.FC = () => {
             quantityPlanned: subj.production_copies,
             quantityCompleted: 0,
             status: 'Scheduled',
+            source: 'examination',
             priority: 'Medium',
             dueDate: new Date().toISOString(),
             bomId: configuredBomId,
@@ -637,31 +638,30 @@ const ExaminationPrinting: React.FC = () => {
         // 4. Work order status update
         await completeWorkOrder(completingSubject.workOrderId, wasteVal);
       } else {
-        // Fallback for legacy exams without work orders
+        // Legacy path: exams created before work-order integration
+        logger.warn('[ExaminationPrinting] Using legacy completion path — no workOrderId linked. Upgrade recommended.');
         await api.production.completeExamSubject(
           completingSubject.id.toString(),
           wasteVal
         );
 
-        // Use new inventory transaction service for proper tracking
-        const paperItem = (inventory || []).find(i => i.name?.toLowerCase()?.includes('paper'));
+        const paperItem = (inventory || []).find(i =>
+          i.type === 'Raw Material' && /paper|bond/i.test(i.name)
+        );
         if (paperItem) {
           const total_sheets = completingSubject.base_sheets + wasteVal;
-          const deductionResult = await inventoryTransactionService.deductInventory({
+          const defaultWarehouse = (companyConfig as any)?.productionSettings?.defaultWarehouseId;
+          await inventoryTransactionService.deductInventory({
             itemId: paperItem.id,
-            warehouseId: '', // Use default warehouse
+            warehouseId: defaultWarehouse || '',
             quantity: total_sheets,
-            reason: 'Production Consumption',
+            reason: 'Production Consumption (legacy exam)',
             reference: `Exam: ${completingSubject.subject}`,
             referenceId: completingSubject.id?.toString(),
             performedBy: user?.id || user?.username || 'system'
           });
-
-          if (!deductionResult.success) {
-            console.warn('[ExaminationPrinting] Inventory deduction warning:', deductionResult.error);
-            // Fallback to legacy method if needed
-            updateStock(paperItem.id, -total_sheets, 'Production Consumption', `Exam: ${completingSubject.subject} (${completingSubject.school_name})`);
-          }
+        } else {
+          logger.warn('[ExaminationPrinting] Legacy completion: no paper raw material found for inventory deduction.');
         }
       }
 

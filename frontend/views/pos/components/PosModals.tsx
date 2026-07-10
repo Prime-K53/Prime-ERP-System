@@ -196,7 +196,7 @@ export const PrintingVariantModal: React.FC<{
 
                     <button
                         onClick={handleConfirm}
-                        className="w-full py-3.5 bg-[#2ca01c] text-white rounded-full font-bold text-sm hover:bg-[#248217] transition-all flex items-center justify-center gap-2 shadow-sm"
+                        className="w-full py-3.5 bg-blue-600 text-white rounded-full font-bold text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
                         Add to Order <ArrowRight size={18} />
                     </button>
@@ -567,7 +567,7 @@ export const CustomerModal: React.FC<{
                         <button
                             type="submit"
                             disabled={!newCustomerName}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[12px] font-medium hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[12px] font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors"
                         >
                             <Save size={14} /> Save and Select
                         </button>

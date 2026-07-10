@@ -22,28 +22,29 @@ class ProcurementService {
     });
   }
 
-  async postGoodsReceiptLedger(grn, companyId) {
+  async postGoodsReceiptLedger(grn, companyId, currency = 'USD') {
     const items = await this._all('SELECT * FROM purchase_order_items WHERE purchase_order_id = ?', [grn.purchase_order_id]);
     const totalAmount = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
     if (totalAmount <= 0) return;
     const inventoryAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%inventory%' OR code = '1200')",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%inventory%' OR code = '1200')",
       [companyId]
     );
     const apAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'liability' AND (name LIKE '%payable%' OR code = '2000')",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'liability' AND (name LIKE '%payable%' OR code = '2000')",
       [companyId]
     );
     if (inventoryAccount && apAccount) {
       const po = await this._get('SELECT * FROM purchase_orders WHERE id = ?', [grn.purchase_order_id]);
+      const poCurrency = po?.currency || currency;
       await this._saveLedgerEntry({
         account_id: inventoryAccount.id, entry_type: 'debit', amount: totalAmount,
-        currency: po?.currency || 'USD', description: 'Inventory receipt',
+        currency: poCurrency, description: 'Inventory receipt',
         reference_type: 'goods_receipt', reference_id: grn.id
       }, companyId);
       await this._saveLedgerEntry({
         account_id: apAccount.id, entry_type: 'credit', amount: totalAmount,
-        currency: po?.currency || 'USD', description: 'AP accrual',
+        currency: poCurrency, description: 'AP accrual',
         reference_type: 'goods_receipt', reference_id: grn.id
       }, companyId);
     }
@@ -200,7 +201,7 @@ class ProcurementService {
     );
   }
 
-  async createGoodsReceipt(data, companyId, userId) {
+  async createGoodsReceipt(data, companyId, userId, currency = 'USD') {
     const id = data.id || crypto.randomUUID();
     await this._run(
       `INSERT INTO goods_receipts (id, purchase_order_id, received_date, status, notes, company_id, created_by)
@@ -209,7 +210,7 @@ class ProcurementService {
        'Received', data.notes || null, companyId, userId]
     );
     const grn = await this._get('SELECT * FROM goods_receipts WHERE id = ?', [id]);
-    await this.postGoodsReceiptLedger(grn, companyId);
+    await this.postGoodsReceiptLedger(grn, companyId, currency);
     return grn;
   }
 }

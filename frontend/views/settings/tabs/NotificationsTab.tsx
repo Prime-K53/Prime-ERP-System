@@ -17,7 +17,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
         </h3>
         <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 space-y-8 shadow-sm">
           <div className="grid grid-cols-2 gap-10">
-            <div className="flex justify-between items-center p-6 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-[#2CA01C] transition-all">
+            <div className="flex justify-between items-center p-6 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-blue-600 transition-all">
               <div className="flex items-center gap-5">
                 <div className="p-4 bg-white rounded-2xl shadow-sm text-blue-600 border border-slate-100 group-hover:scale-110 transition-transform"><Mail size={24} /></div>
                 <div>
@@ -38,10 +38,10 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
                     }
                   })}
                 />
-                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
-            <div className="flex justify-between items-center p-6 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-[#2CA01C] transition-all">
+            <div className="flex justify-between items-center p-6 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-blue-600 transition-all">
               <div className="flex items-center gap-5">
                 <div className="p-4 bg-white rounded-2xl shadow-sm text-emerald-600 border border-slate-100 group-hover:scale-110 transition-transform"><MessageSquare size={24} /></div>
                 <div>
@@ -62,7 +62,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
                     }
                   })}
                 />
-                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
@@ -133,7 +133,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
                   }
                 })}
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
@@ -215,7 +215,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
                   }
                 }}
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>

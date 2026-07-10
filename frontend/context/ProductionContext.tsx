@@ -81,11 +81,16 @@ export const ProductionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-const handleExaminationBatchToProduction = async (event: CustomEvent) => {
+ const handleExaminationBatchToProduction = async (event: CustomEvent) => {
             const { workOrder, batch } = event.detail;
             if (workOrder) {
+                const exists = workOrders.some(wo => wo.id === workOrder.id);
+                if (exists) {
+                    logger.warn(`[Production] Skipping duplicate work order creation: ${workOrder.id}`);
+                    return;
+                }
                 try {
-                    await storeAddWorkOrder(workOrder);
+                    await storeAddWorkOrder({ ...workOrder, source: 'examination' as const });
                     
                     // Clean up product name: replace "Unknown School" or "Unknown Customer" with actual customer name
                     let productName = workOrder.productName;

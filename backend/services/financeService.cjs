@@ -104,13 +104,14 @@ class FinanceService {
     return this._all(sql, params);
   }
 
-  async saveLedgerEntry(entry, companyId) {
+  async saveLedgerEntry(entry, companyId, currency = 'USD') {
     const id = entry.id || crypto.randomUUID();
+    const entryCurrency = entry.currency || currency;
     await this._run(
       `INSERT INTO ledger_entries (id, account_id, account_code, account_name, entry_type, amount, currency, description, reference_type, reference_id, journal_id, entry_date, company_id, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, entry.account_id, entry.account_code || null, entry.account_name || null,
-       entry.entry_type, entry.amount, entry.currency || 'USD',
+       entry.entry_type, entry.amount, entryCurrency,
        entry.description || null, entry.reference_type || null,
        entry.reference_id || null, entry.journal_id || null,
        entry.entry_date, companyId, entry.created_by || null]

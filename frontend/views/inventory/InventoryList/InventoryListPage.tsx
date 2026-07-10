@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../../context/InventoryContext';
 import { useAuth } from '../../../context/AuthContext';
 import { currencyService } from '../../../services/currencyService';
-import { ItemModal } from '../../../components/items/ItemModal';
+
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import SmartAdjustModal from '../components/SmartAdjustModal';
 import { SmartStockInsights } from './components/SmartStockInsights';
@@ -17,6 +17,7 @@ import { FilterPanel } from './components/FilterPanel';
 import '../../inventory/inventory-reference.css';
 import type { Item } from '../../../types';
 import { BulkActionToolbar } from './components/BulkActionToolbar';
+import { ItemModal } from '../../../components/items/ItemModal';
 import { BulkEditModal } from './modals/BulkEditModal';
 import { AssignModal } from './modals/AssignModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
@@ -57,10 +58,7 @@ export const InventoryListPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [tabSearch, setTabSearch] = useState<string>('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [lockClassification, setLockClassification] = useState(false);
-  const [sourceTab, setSourceTab] = useState<string | null>(null);
+
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [adjustingItem, setAdjustingItem] = useState<Item | null>(null);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
@@ -175,68 +173,39 @@ export const InventoryListPage: React.FC = () => {
     printing: 'Service',
   };
 
+const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [modalSourceTab, setModalSourceTab] = useState<string | null>(null);
+
   const handleNewItem = useCallback((tabType?: string) => {
-    if (tabType && typeForTab[tabType]) {
-      const base: Record<string, any> = {
-        id: '',
-        name: '',
-        type: typeForTab[tabType],
-        sku: '',
-        unit: 'pcs',
-        costPrice: 0,
-        sellingPrice: 0,
-        stock: 0,
-        status: 'Active',
-      };
-      if (tabType === 'printing') {
-        base.classification = 'printing_service';
-      }
-      setEditingItem(base as Item);
-      setLockClassification(true);
-      setSourceTab(tabType);
-    } else {
-      setEditingItem(null);
-      setLockClassification(false);
-      setSourceTab(null);
-    }
+    setEditingItem(null);
+    setModalSourceTab(tabType || null);
     setIsModalOpen(true);
   }, []);
 
   const handleEditItem = useCallback((item: Item) => {
     setEditingItem(item);
-    setLockClassification(true);
-    if (item.type === 'Service' || item.classification === 'printing_service') {
-      setSourceTab('printing');
-    } else if (item.type === 'Product' || item.classification === 'product') {
-      setSourceTab('product');
-    } else if (item.type === 'Stationery' || item.classification === 'stationery' || item.classification === 'Stationery') {
-      setSourceTab('stationery');
-    } else {
-      setSourceTab(item.type === 'Raw Material' ? 'raw' : item.type?.toLowerCase() || null);
-    }
+    if (item.type === 'Service' || (item as any).classification === 'printing_service') setModalSourceTab('printing');
+    else if (item.type === 'Product' || (item as any).classification === 'product') setModalSourceTab('product');
+    else if (item.type === 'Stationery' || (item as any).classification === 'stationery') setModalSourceTab('stationery');
+    else setModalSourceTab('raw');
     setIsModalOpen(true);
   }, []);
 
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    setEditingItem(null);
-    setLockClassification(false);
-    setSourceTab(null);
-  }, []);
-
-  const handleSaveItem = useCallback(async (item: Item) => {
+  const handleSaveItem = useCallback(async (savedItem: Item) => {
     try {
-      if (item.id && allItems.some(i => i.id === item.id)) {
-        await updateItem(item);
+      if (savedItem.id && allItems.some((i: Item) => i.id === savedItem.id)) {
+        await updateItem(savedItem);
         notify?.('Item updated successfully', 'success');
       } else {
-        await addItem(item);
+        await addItem(savedItem);
         notify?.('Item created successfully', 'success');
       }
       refresh();
+      setIsModalOpen(false);
+      setEditingItem(null);
     } catch (error: any) {
       notify?.(`Save failed: ${error?.message || 'Unknown error'}`, 'error');
-      throw error;
     }
   }, [allItems, updateItem, addItem, notify, refresh]);
 
@@ -1120,8 +1089,8 @@ const handleProduce = useCallback((item: Item) => {
         </div>
       </div>
 
-      {/* Modals */}
-      <ItemModal open={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={editingItem} allItems={allItems} lockClassification={lockClassification} sourceTab={sourceTab} />
+{/* Modals */}
+      <ItemModal open={isModalOpen} item={editingItem} onClose={() => { setIsModalOpen(false); setEditingItem(null); setModalSourceTab(null); }} onSave={handleSaveItem} allItems={allItems} sourceTab={modalSourceTab} />
       {adjustingItem && (
         <StockAdjustmentModal
           isOpen={isAdjustModalOpen}

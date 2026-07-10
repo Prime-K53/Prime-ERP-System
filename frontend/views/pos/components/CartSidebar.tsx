@@ -10,12 +10,10 @@ import { roundToNearest, roundUpToStep } from '../../../utils/roundingUtils';
 import { displayPrice } from '../../../services/pricingDisplayService';
 import { resolveItemAdjustmentSnapshots, getMarketAdjustmentSnapshots } from '../../../utils/pricingBreakdown';
 
-const T = '#0a2e2e';
-const T7 = '#0f4c4c';
-const T6 = '#146464';
-const T5 = '#1a7d7d';
-const T100 = '#e3f0ef';
-const T50 = '#f2f8f7';
+const B7 = '#2563EB';
+const B6 = '#1D4ED8';
+const B100 = '#DBEAFE';
+const B50 = '#EFF6FF';
 const PAPER = '#faf9f6';
 const INK = '#16211f';
 const SOFT = '#5c6b68';
@@ -110,9 +108,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
     return (
         <div className="flex flex-col h-full overflow-hidden" style={{ background: '#fff', fontFamily: "'DM Sans',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: INK }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${LINE}`, background: T50 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: `1px solid ${LINE}`, background: B50 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: T7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: B7, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
                         <ShoppingCart size={14} />
                     </div>
                     <div>
@@ -125,8 +123,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                 </button>
             </div>
 
-            <div onClick={onSelectCustomer} style={{ margin: '10px 16px 0', padding: '8px 12px', border: `1.5px dashed ${T100}`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: T7, fontWeight: 600, fontSize: 13 }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: T50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: T7 }}>
+            <div onClick={onSelectCustomer} style={{ margin: '10px 16px 0', padding: '8px 12px', border: `1.5px dashed ${B100}`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: B7, fontWeight: 600, fontSize: 13 }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: B50, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: B7 }}>
                     {selectedCustomerName ? <User size={12} /> : <UserPlus size={12} />}
                 </div>
                 <span>{selectedCustomerName || 'Add customer'}</span>
@@ -172,7 +170,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
 
             <div style={{ background: '#fff', borderRadius: 6, boxShadow: '0 1px 2px rgba(10,46,40,.06), 0 8px 24px rgba(10,46,40,.08)', overflow: 'hidden' }}>
-                <div style={{ background: '#0a2e28', color: '#fff', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div style={{ background: '#1E3A5F', color: '#fff', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#a9c9c1', fontWeight: 500 }}>
                         Order {nextOrderNumber}
                     </span>
@@ -247,7 +245,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                         )}
                     </div>
                     <button onClick={onPay} disabled={cart.length === 0}
-                        style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, padding: '7px 0', borderRadius: 4, border: 'none', cursor: 'pointer', textAlign: 'center', background: '#0f4f42', color: '#fff', opacity: cart.length === 0 ? 0.5 : 1 }}>
+                        style={{ flex: 1, fontFamily: "'DM Sans',sans-serif", fontSize: 12.5, fontWeight: 600, padding: '7px 0', borderRadius: 4, border: 'none', cursor: 'pointer', textAlign: 'center', background: '#2563EB', color: '#fff', opacity: cart.length === 0 ? 0.5 : 1 }}>
                         Proceed
                     </button>
                 </div>
@@ -310,9 +308,9 @@ const CartItemRow: React.FC<{ item: CartItem, updateQuantity: (id: string, delta
                 <div style={{ width: 28, flexShrink: 0 }} />
             ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', height: 26, flexShrink: 0 }}>
-                    <button onClick={() => updateQuantity(item.id, -1)} style={{ width: 22, border: 'none', background: T50, color: T7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Decrease quantity" aria-label="Decrease quantity"><Minus size={9} /></button>
+                    <button onClick={() => updateQuantity(item.id, -1)} style={{ width: 22, border: 'none', background: B50, color: B7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Decrease quantity" aria-label="Decrease quantity"><Minus size={9} /></button>
                     <span style={{ width: 22, textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 600, color: INK }}>{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, 1)} style={{ width: 22, border: 'none', background: T50, color: T7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Increase quantity" aria-label="Increase quantity"><Plus size={9} /></button>
+                    <button onClick={() => updateQuantity(item.id, 1)} style={{ width: 22, border: 'none', background: B50, color: B7, fontWeight: 600, cursor: 'pointer', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }} title="Increase quantity" aria-label="Increase quantity"><Plus size={9} /></button>
                 </div>
             )}
 

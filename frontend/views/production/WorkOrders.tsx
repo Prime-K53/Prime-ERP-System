@@ -428,9 +428,7 @@ const WorkOrders: React.FC = () => {
                     // Filter work orders based on filterType
                     const filteredWorkOrders = workOrders.filter(wo => {
                         if (filterType !== 'all') {
-                            const isExamination = wo.tags?.includes('Examination') || 
-                                                 wo.productName?.includes('Exam') ||
-                                                 wo.productId === 'EXAM-PRINT';
+                            const isExamination = wo.source === 'examination';
                             if (filterType === 'examination' ? !isExamination : isExamination) return false;
                         }
                         if (searchTerm.trim()) {
@@ -479,9 +477,7 @@ const WorkOrders: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100/50">
                                     {filteredWorkOrders.map(wo => {
-                                        const isExamination = wo.tags?.includes('Examination') || 
-                                                            wo.productName?.includes('Exam') ||
-                                                            wo.productId === 'EXAM-PRINT';
+                                        const isExamination = wo.source === 'examination';
                                         return (
                                         <tr
                                             key={wo.id}

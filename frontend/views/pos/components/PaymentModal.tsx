@@ -294,7 +294,7 @@ const canCompleteSale = useMemo(() => {
                 {/* Body */}
                 <div style={{ display: 'flex' }}>
                     {/* Left — Summary */}
-                    <div style={{ width: 230, background: '#eef6f3', padding: '18px 16px 14px', borderRight: '1px solid #dde5e2', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ width: 230, background: '#DBEAFE', padding: '18px 16px 14px', borderRight: '1px solid #dde5e2', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 13 }}>
                             <span style={{ color: '#5c6d68' }}>Order total</span>
                         </div>
@@ -313,7 +313,7 @@ const canCompleteSale = useMemo(() => {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', fontSize: 13 }}>
                             <span style={{ color: '#5c6d68' }}>Margin</span>
-                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#0f4f42' }}>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#2563EB' }}>
                                 {currency}{formatNumber(totalProfitMargin)}
                             </span>
                         </div>
@@ -335,8 +335,8 @@ const canCompleteSale = useMemo(() => {
                         </div>
 
                         <div style={{ marginTop: 'auto', paddingTop: 12 }}>
-                            <span style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#0f4f42', fontWeight: 600 }}>{changeDue > 0 ? 'Change' : 'Remaining'}</span>
-                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 24, fontWeight: 600, color: '#0f4f42', display: 'block', marginTop: 3 }}>
+                            <span style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#2563EB', fontWeight: 600 }}>{changeDue > 0 ? 'Change' : 'Remaining'}</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 24, fontWeight: 600, color: '#2563EB', display: 'block', marginTop: 3 }}>
                                 {changeDue > 0 ? currency + formatNumber(changeDue) : currency + formatNumber(effectiveRemainingDue || 0)}
                             </span>
                         </div>
@@ -363,7 +363,7 @@ const canCompleteSale = useMemo(() => {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <span style={{ fontSize: 10.5, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#93a19c' }}>Remaining</span>
-                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#0f4f42', display: 'block' }}>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#2563EB', display: 'block' }}>
                                     {currency}{formatNumber(effectiveRemainingDue || 0)}
                                 </span>
                             </div>
@@ -372,26 +372,26 @@ const canCompleteSale = useMemo(() => {
                         <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, marginBottom: 6 }}>Payment method</div>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                             <button onClick={() => addPaymentMethod('1000')}
-                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1000' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1000' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1000' ? '#eef6f3' : '#fff' }}>
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1000' ? '#2563EB' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1000' ? '#2563EB' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1000' ? '#DBEAFE' : '#fff' }}>
                                 <Banknote size={17} /> Cash
                             </button>
                             <button onClick={() => addPaymentMethod('1050')}
-                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1050' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1050' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1050' ? '#eef6f3' : '#fff' }}>
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1050' ? '#2563EB' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1050' ? '#2563EB' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1050' ? '#DBEAFE' : '#fff' }}>
                                 <CreditCard size={17} /> Bank
                             </button>
                             <button onClick={() => addPaymentMethod('1060')}
-                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1060' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1060' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1060' ? '#eef6f3' : '#fff' }}>
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === '1060' ? '#2563EB' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === '1060' ? '#2563EB' : '#12201d', cursor: 'pointer', background: activePaymentMethod === '1060' ? '#DBEAFE' : '#fff' }}>
                                 <Smartphone size={17} /> Mobile
                             </button>
                             {customerName && walletBalance > 0 && (
                                 <button onClick={() => addPaymentMethod('WALLET')}
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'WALLET' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'WALLET' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'WALLET' ? '#eef6f3' : '#fff' }}>
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'WALLET' ? '#2563EB' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'WALLET' ? '#2563EB' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'WALLET' ? '#DBEAFE' : '#fff' }}>
                                     <Wallet size={17} /> Wallet
                                 </button>
                             )}
                             {customerName && loyaltyPoints > 0 && (
                                 <button onClick={() => addPaymentMethod('LOYALTY')}
-                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'LOYALTY' ? '#136b58' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'LOYALTY' ? '#0f4f42' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'LOYALTY' ? '#eef6f3' : '#fff' }}>
+                                    style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', border: `1px solid ${activePaymentMethod === 'LOYALTY' ? '#2563EB' : '#dde5e2'}`, borderRadius: 6, padding: '10px 8px', fontSize: 13, fontWeight: 500, color: activePaymentMethod === 'LOYALTY' ? '#2563EB' : '#12201d', cursor: 'pointer', background: activePaymentMethod === 'LOYALTY' ? '#DBEAFE' : '#fff' }}>
                                     <Award size={17} /> Loyalty
                                 </button>
                             )}
@@ -419,8 +419,8 @@ const canCompleteSale = useMemo(() => {
                                 <div style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#93a19c', fontWeight: 600, marginBottom: 5 }}>Payment Breakdown</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {splitPayments.map((p, i) => (
-                                        <div key={i} style={{ background: '#eef6f3', padding: '5px 10px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
-                                            <span style={{ fontWeight: 600, color: '#0f4f42' }}>{p.method}</span>
+                                        <div key={i} style={{ background: '#DBEAFE', padding: '5px 10px', borderRadius: 5, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+                                            <span style={{ fontWeight: 600, color: '#2563EB' }}>{p.method}</span>
                                             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, color: '#12201d' }}>{currency}{formatNumber(p.amount)}</span>
                                             <button onClick={() => {
                                                 setSplitPayments(prev => prev.filter((_, idx) => idx !== i));
@@ -438,9 +438,9 @@ const canCompleteSale = useMemo(() => {
 
                         {/* Change due banner */}
                         {changeDue > 0 && (
-                            <div style={{ background: '#eef6f3', border: '1px solid #0f4f42', borderRadius: 6, padding: '8px 12px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: '#0f4f42' }}>Change due</span>
-                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#0f4f42' }}>{currency}{formatNumber(changeDue)}</span>
+                            <div style={{ background: '#DBEAFE', border: '1px solid #2563EB', borderRadius: 6, padding: '8px 12px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#2563EB' }}>Change due</span>
+                                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 17, fontWeight: 600, color: '#2563EB' }}>{currency}{formatNumber(changeDue)}</span>
                             </div>
                         )}
 
@@ -449,7 +449,7 @@ const canCompleteSale = useMemo(() => {
                         <button
                             onClick={handleComplete}
                             disabled={!canCompleteSale}
-                            style={{ width: '100%', border: 'none', borderRadius: 6, padding: '13px 0', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, background: canCompleteSale ? '#0f4f42' : '#eef6f3', color: canCompleteSale ? '#fff' : '#93a19c', cursor: canCompleteSale ? 'pointer' : 'default' }}>
+                            style={{ width: '100%', border: 'none', borderRadius: 6, padding: '13px 0', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, background: canCompleteSale ? '#2563EB' : '#DBEAFE', color: canCompleteSale ? '#fff' : '#93a19c', cursor: canCompleteSale ? 'pointer' : 'default' }}>
                             {!canCompleteSale ? 'Awaiting payment' : `Complete Sale`}
                         </button>
                     </div>

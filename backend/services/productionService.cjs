@@ -22,14 +22,14 @@ class ProductionService {
     });
   }
 
-  async postWipLedger(workOrder, companyId) {
+  async postWipLedger(workOrder, companyId, currency = 'USD') {
     const accounts = await this._all(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%wip%'",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%wip%' OR name LIKE '%work in progress%')",
       [companyId]
     );
     const wipAccount = accounts && accounts.length > 0 ? accounts[0] : null;
     const invAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%inventory%'",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%inventory%' OR name LIKE '%stock%')",
       [companyId]
     );
     if (!wipAccount || !invAccount) return;
@@ -41,24 +41,24 @@ class ProductionService {
     }
     if (totalAmount <= 0) return;
     await this._saveLedgerEntry({
-      account_id: wipAccount.id, entry_type: 'debit', amount: totalAmount,
+      account_id: wipAccount.id, entry_type: 'debit', amount: totalAmount, currency,
       description: `WIP for Work Order ${workOrder.id}`,
       reference_type: 'work_order', reference_id: workOrder.id
     }, companyId);
     await this._saveLedgerEntry({
-      account_id: invAccount.id, entry_type: 'credit', amount: totalAmount,
+      account_id: invAccount.id, entry_type: 'credit', amount: totalAmount, currency,
       description: `Raw materials for Work Order ${workOrder.id}`,
       reference_type: 'work_order', reference_id: workOrder.id
     }, companyId);
   }
 
-  async postCogsLedger(workOrder, companyId) {
+  async postCogsLedger(workOrder, companyId, currency = 'USD') {
     const cogsAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%cogs%' OR code = '5000')",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%cogs%' OR name LIKE '%cost of goods%' OR code = '5000')",
       [companyId]
     );
     const accounts = await this._all(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'asset' AND name LIKE '%wip%'",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'asset' AND (name LIKE '%wip%' OR name LIKE '%work in progress%')",
       [companyId]
     );
     const wipAccount = accounts && accounts.length > 0 ? accounts[0] : null;
@@ -71,12 +71,12 @@ class ProductionService {
     }
     if (totalAmount <= 0) return;
     await this._saveLedgerEntry({
-      account_id: cogsAccount.id, entry_type: 'debit', amount: totalAmount,
+      account_id: cogsAccount.id, entry_type: 'debit', amount: totalAmount, currency,
       description: `COGS for Work Order ${workOrder.id}`,
       reference_type: 'work_order_cogs', reference_id: workOrder.id
     }, companyId);
     await this._saveLedgerEntry({
-      account_id: wipAccount.id, entry_type: 'credit', amount: totalAmount,
+      account_id: wipAccount.id, entry_type: 'credit', amount: totalAmount, currency,
       description: `WIP reversal for Work Order ${workOrder.id}`,
       reference_type: 'work_order_cogs', reference_id: workOrder.id
     }, companyId);
@@ -172,7 +172,7 @@ class ProductionService {
     return this.getWorkOrderById(id, companyId);
   }
 
-  async updateWorkOrder(id, data, companyId) {
+  async updateWorkOrder(id, data, companyId, currency = 'USD') {
     const fields = [];
     const params = [];
     const allowed = ['customer_name', 'product_name', 'quantity_planned', 'quantity_completed',
@@ -192,9 +192,9 @@ class ProductionService {
     );
     const workOrder = await this.getWorkOrderById(id, companyId);
     if (data.status === 'In Progress') {
-      await this.postWipLedger(workOrder, companyId);
+      await this.postWipLedger(workOrder, companyId, currency);
     } else if (data.status === 'Completed') {
-      await this.postCogsLedger(workOrder, companyId);
+      await this.postCogsLedger(workOrder, companyId, currency);
     }
     return workOrder;
   }

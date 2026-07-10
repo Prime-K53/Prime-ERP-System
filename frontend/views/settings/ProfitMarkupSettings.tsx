@@ -202,7 +202,7 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
     <div className="fixed bottom-6 right-6 z-[9999] space-y-2 pointer-events-none">
       {toasts.map(t => (
         <div key={t.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-sm font-semibold transition-all animate-in slide-in-from-right duration-300 ${
-          t.type === 'success' ? 'bg-emerald-600 text-white' :
+          t.type === 'success' ? 'bg-blue-600 text-white' :
           t.type === 'error' ? 'bg-red-600 text-white' :
           'bg-slate-800 text-white'
         }`}>
@@ -310,7 +310,7 @@ function OverrideModal({ state, categories, onClose, onSaved, toast }: OverrideM
     <div className="fixed inset-0 z-[8000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 flex justify-between items-start">
+        <div className="bg-blue-600 p-6 flex justify-between items-start">
           <div>
             <h2 className="text-white font-bold text-lg">{title}</h2>
             <p className="text-indigo-200 text-xs mt-1">
@@ -371,14 +371,14 @@ function OverrideModal({ state, categories, onClose, onSaved, toast }: OverrideM
                 <button
                   id="margin-type-percentage"
                   onClick={() => setMarginType('percentage')}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${marginType === 'percentage' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${marginType === 'percentage' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <Percent size={14} /> %
                 </button>
                 <button
                   id="margin-type-fixed"
                   onClick={() => setMarginType('fixed_amount')}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${marginType === 'fixed_amount' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${marginType === 'fixed_amount' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <DollarSign size={14} /> Fixed
                 </button>
@@ -424,7 +424,7 @@ function OverrideModal({ state, categories, onClose, onSaved, toast }: OverrideM
             id="override-save-btn"
             onClick={validateAndSave}
             disabled={saving}
-            className="px-6 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-60 flex items-center gap-2"
+            className="px-6 py-2 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-60 flex items-center gap-2"
           >
             {saving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
             {saving ? 'Saving…' : state.mode === 'edit' ? 'Update Override' : 'Create Override'}
@@ -745,7 +745,7 @@ const ProfitMarkupSettings: React.FC = () => {
           <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
                   <Globe size={18} className="text-indigo-600" />
                 </div>
                 <div>
@@ -754,7 +754,7 @@ const ProfitMarkupSettings: React.FC = () => {
                 </div>
               </div>
               {globalSetting && (
-                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-200">
+                <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold border border-blue-200">
                   <CheckCircle2 size={12} /> Active: {fmtMargin(globalSetting.margin_value, globalSetting.margin_type)}
                 </div>
               )}
@@ -769,14 +769,14 @@ const ProfitMarkupSettings: React.FC = () => {
                     <button
                       id="global-type-percentage"
                       onClick={() => setGlobalType('percentage')}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${globalType === 'percentage' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${globalType === 'percentage' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
                     >
                       <Percent size={14} /> Percentage
                     </button>
                     <button
                       id="global-type-fixed"
                       onClick={() => setGlobalType('fixed_amount')}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${globalType === 'fixed_amount' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${globalType === 'fixed_amount' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
                     >
                       <DollarSign size={14} /> Fixed
                     </button>
@@ -821,7 +821,7 @@ const ProfitMarkupSettings: React.FC = () => {
                   id="global-save-btn"
                   onClick={handleSaveGlobal}
                   disabled={savingGlobal}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-indigo-500/20"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60 shadow-lg shadow-indigo-500/20"
                 >
                   {savingGlobal ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
                   {savingGlobal ? 'Saving…' : 'Save Global'}
@@ -855,7 +855,7 @@ const ProfitMarkupSettings: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-6">
                 <div className="flex items-center gap-4">
-                   <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${globalSetting?.apply_volume_margins ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : 'bg-slate-200'}`}>
+                   <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${globalSetting?.apply_volume_margins ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-slate-200'}`}>
                       <Zap size={20} className={globalSetting?.apply_volume_margins ? 'text-white' : 'text-slate-400'} />
                    </div>
                    <div>
@@ -1048,7 +1048,7 @@ const ProfitMarkupSettings: React.FC = () => {
                             <button
                               id={`cat-edit-${s.id}`}
                               onClick={() => setModal({ open: true, mode: 'edit', scope: 'category', existing: s })}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             >
                               <Edit2 size={15} />
                             </button>
@@ -1175,7 +1175,7 @@ const ProfitMarkupSettings: React.FC = () => {
                             <button
                               id={`line-edit-${s.id}`}
                               onClick={() => setModal({ open: true, mode: 'edit', scope: 'line_item', existing: s })}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             >
                               <Edit2 size={15} />
                             </button>
@@ -1197,7 +1197,7 @@ const ProfitMarkupSettings: React.FC = () => {
           </section>
 
           {/* Hierarchy info card */}
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 flex items-start gap-4">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-4">
             <Shield size={20} className="text-indigo-600 mt-0.5 shrink-0" />
             <div>
               <h4 className="text-sm font-bold text-indigo-800 mb-1">Override Hierarchy</h4>
@@ -1270,7 +1270,7 @@ const ProfitMarkupSettings: React.FC = () => {
               <button
                 id="audit-filter-apply"
                 onClick={loadAudit}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-95"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-95"
               >
                 <Filter size={14} /> Apply
               </button>
@@ -1318,7 +1318,7 @@ const ProfitMarkupSettings: React.FC = () => {
                           <td className="px-5 py-3.5 text-xs font-semibold text-slate-700">{l.performed_by || '—'}</td>
                           <td className="px-5 py-3.5">
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                              l.action === 'CREATE' ? 'bg-emerald-100 text-emerald-700' :
+                              l.action === 'CREATE' ? 'bg-blue-100 text-blue-700' :
                               l.action === 'DELETE' ? 'bg-red-100 text-red-700' :
                               l.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
                               'bg-slate-100 text-slate-600'
@@ -1326,7 +1326,7 @@ const ProfitMarkupSettings: React.FC = () => {
                           </td>
                           <td className="px-5 py-3.5">
                             <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                              l.scope === 'global' ? 'bg-indigo-100 text-indigo-700' :
+                              l.scope === 'global' ? 'bg-blue-100 text-blue-700' :
                               l.scope === 'category' ? 'bg-violet-100 text-violet-700' :
                               'bg-rose-100 text-rose-700'
                             }`}>{l.scope}</span>

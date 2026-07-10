@@ -1,3 +1,4 @@
+ reports hub
 try { require('dotenv').config({ path: require('path').join(__dirname, '.env') }); } catch {}
 console.log('--- SERVER SCRIPT STARTING ---');
 console.log('Requiring express...');
@@ -129,6 +130,7 @@ const { validateTransactionPrice, calculateSellingPrice } = require('./services/
 const { verifyToken, requireRole, requirePermission } = require('./middleware/auth.cjs');
 const { tenantContext } = require('./middleware/tenantContext.cjs');
 const { validateBody, sanitizeInput, inventorySchemas, salesSchemas, userSchemas, financialSchemas, productionSchemas, documentSchemas, exchangeSchemas, orderSchemas, classSchemas, subjectSchemas, notificationSchemas, accountSchemas, expenseSchemas, incomeSchemas, budgetSchemas, transferSchemas } = require('./middleware/validation.cjs');
+const CurrencyMiddleware = require('./middleware/currencyMiddleware.cjs');
 const { createLimiter, authLimiter, sensitiveLimiter } = require('./services/redisRateLimiter.cjs');
 const authRoutes = require('./routes/auth.cjs');
 app.use(auditContextMiddleware);
@@ -195,6 +197,11 @@ app.use((req, res, next) => {
 app.use('/api', verifyToken);
 // Attach tenant context from x-company-id header to all /api routes
 app.use('/api', tenantContext);
+// Inject company currency into requests
+const CurrencyService = require('./services/currencyService.cjs');
+const currencyService = new CurrencyService(db);
+const currencyMiddleware = new CurrencyMiddleware(currencyService);
+app.use('/api', currencyMiddleware.injectCurrency());
 
 // Shared helper for pricing validation
 async function validateItemsPricing(items) {
@@ -343,6 +350,183 @@ function validateEnv() {
   console.log('[ENV] All required secrets present.');
 }
 
+// Helper function to post ledger entries for a sale
+async function postSaleLedgerEntries(saleId, totalAmount, materialTotal, customerId, customerName, companyId, userId) {
+  try {
+    const FinanceService = require('./services/financeService.cjs');
+    const finance = new FinanceService(db);
+    
+    // Find AR and Revenue accounts
+    const arAccount = await finance.getAccounts(companyId).then(accounts => accounts.find(a => a.code === '1200' || a.name.toLowerCase().includes('accounts receivable')));
+    const revenueAccount = await finance.getAccounts(companyId).then(accounts => accounts.find(a => a.code === '4000' || a.name.toLowerCase().includes('sales')));
+    const cogsAccount = await finance.getAccounts(companyId).then(accounts => accounts.find(a => a.code === '5000' || a.name.toLowerCase().includes('cost of goods')));
+    
+    if (!arAccount || !revenueAccount) {
+      console.warn('[Ledger] AR or Revenue account not found, skipping ledger posting for sale', saleId);
+      return;
+    }
+    
+    const now = new Date().toISOString();
+    const journalId = `JRN-${saleId}`;
+    
+    // Post AR debit
+    await finance.saveLedgerEntry({
+      account_id: arAccount.id,
+      entry_type: 'debit',
+      amount: totalAmount,
+      currency: 'USD',
+      description: `Sale #${saleId} - ${customerName}`,
+      reference_type: 'sale',
+      reference_id: saleId,
+      journal_id: journalId,
+      entry_date: now,
+      created_by: userId
+    }, companyId);
+    
+    // Post Revenue credit
+    await finance.saveLedgerEntry({
+      account_id: revenueAccount.id,
+      entry_type: 'credit',
+      amount: totalAmount,
+      currency: 'USD',
+      description: `Sale #${saleId} - Revenue`,
+      reference_type: 'sale',
+      reference_id: saleId,
+      journal_id: journalId,
+      entry_date: now,
+      created_by: userId
+    }, companyId);
+    
+    // Post COGS if we have material cost
+    if (materialTotal > 0 && cogsAccount) {
+      await finance.saveLedgerEntry({
+        account_id: cogsAccount.id,
+        entry_type: 'debit',
+        amount: materialTotal,
+        currency: 'USD',
+        description: `Sale #${saleId} - COGS`,
+        reference_type: 'sale',
+        reference_id: saleId,
+        journal_id: journalId,
+        entry_date: now,
+        created_by: userId
+      }, companyId);
+    }
+    
+    console.log(`[Ledger] Posted entries for sale #${saleId}`);
+  } catch (error) {
+    console.error(`[Ledger] Error posting entries for sale #${saleId}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to update customer balance
+async function updateCustomerBalance(customerId, amount, companyId) {
+  try {
+    if (!customerId || customerId === 'walk-in') return;
+    
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE customers SET 
+          balance = COALESCE(balance, 0) + ?,
+          outstandingBalance = COALESCE(outstandingBalance, 0) + ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND company_id = ?`,
+        [amount, amount, customerId, companyId],
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+    
+    console.log(`[Customer] Updated balance for customer ${customerId}: +${amount}`);
+  } catch (error) {
+    console.error(`[Customer] Error updating balance for ${customerId}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to deduct inventory for a sale
+async function deductInventoryForSale(items, saleId, companyId) {
+  try {
+    // Get default warehouse for company or use 'WH-MAIN' as fallback
+    const warehouseId = await new Promise((resolve, reject) => {
+      db.get(
+        "SELECT warehouse_id FROM warehouse_inventory WHERE company_id = ? LIMIT 1",
+        [companyId],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row?.warehouse_id || 'WH-MAIN');
+        }
+      );
+    });
+    
+    for (const item of items) {
+      if (item.type === 'service') continue;
+      
+      const itemId = item.id || item.itemId;
+      const quantity = item.quantity || 1;
+      
+      if (!itemId) continue;
+      
+      // Check if inventory exists
+      const inventory = await new Promise((resolve, reject) => {
+        db.get("SELECT * FROM inventory WHERE id = ? AND company_id = ?", [itemId, companyId], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+      
+      if (!inventory) {
+        console.warn(`[Inventory] Item ${itemId} not found, skipping deduction`);
+        continue;
+      }
+      
+      const currentQuantity = inventory.quantity || 0;
+      const newQuantity = Math.max(0, currentQuantity - quantity);
+      
+      // Create transaction record
+      const transactionId = `TXN-${saleId}-${itemId}`;
+      await new Promise((resolve, reject) => {
+        db.run(
+          `INSERT INTO inventory_transactions 
+            (id, item_id, warehouse_id, type, quantity, previous_quantity, new_quantity, 
+              unit_cost, total_cost, reason, reference, reference_id, performed_by, timestamp, company_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            transactionId, itemId, warehouseId, 'OUT', -quantity, 
+            currentQuantity, newQuantity, inventory.cost_per_unit || 0, 
+            quantity * (inventory.cost_per_unit || 0),
+            `POS Sale #${saleId}`, 'sale', saleId, 'system', new Date().toISOString(), companyId
+          ],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+      
+      // Update inventory quantity
+      await new Promise((resolve, reject) => {
+        db.run(
+          "UPDATE inventory SET quantity = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?",
+          [newQuantity, itemId, companyId],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+      
+      console.log(`[Inventory] Deducted ${quantity} units of ${itemId} for sale ${saleId}`);
+    }
+  } catch (error) {
+    console.error(`[Inventory] Error deducting inventory for sale ${saleId}:`, error);
+    throw error;
+  }
+}
+
 async function startServer() {
   console.log('--- STARTING SERVER ---');
   validateEnv();
@@ -442,14 +626,15 @@ async function startServer() {
     }
   });
 
-  app.get('/api/sales', (req, res) => {
+  app.get('/api/sales', requireRole('Admin', 'Manager', 'Cashier', 'Accountant', 'Viewer'), (req, res) => {
     db.all(
       `SELECT 
         id, date, customer_id as customerId, customer_name as customerName, sub_account_name as subAccountName,
         total_amount as totalAmount, material_total as materialTotal, adjustment_total as adjustmentTotal,
-        profit_margin_total as profitMarginTotal, rounding_total as roundingTotal,
+        profit_margin_total as profitMarginTotal, rounding_total as roundingTotal, other_charges as otherCharges,
         adjustment_snapshots_json as adjustmentSnapshots,
-        status, payment_method as paymentMethod, source, items_json, payments_json
+        status, payment_method as paymentMethod, source, items_json, payments_json,
+        created_by, updated_by, void_reason, voided_at
        FROM sales
        WHERE company_id = ?
        ORDER BY date DESC`,
@@ -470,6 +655,7 @@ async function startServer() {
           adjustmentTotal: Number(row.adjustmentTotal || 0),
           profitMarginTotal: Number(row.profitMarginTotal || 0),
           roundingTotal: Number(row.roundingTotal || 0),
+          otherCharges: Number(row.otherCharges || 0),
           status: row.status,
           paymentMethod: row.paymentMethod,
           source: row.source,
@@ -482,8 +668,22 @@ async function startServer() {
     );
   });
 
-  app.post('/api/sales', validateBody(salesSchemas.sale), async (req, res) => {
+  app.post('/api/sales', requireRole('Admin', 'Manager', 'Cashier'), validateBody(salesSchemas.sale), async (req, res) => {
     const payload = req.body || {};
+    
+    // Idempotency check
+    if (payload.idempotencyKey) {
+      db.get(`SELECT id FROM sales WHERE idempotency_key = ? AND company_id = ?`, [payload.idempotencyKey, req.companyId || ''], (err, row) => {
+        if (err) {
+          console.error('[Backend] Idempotency check error:', err);
+          return res.status(500).json({ error: 'Idempotency check failed' });
+        }
+        if (row) {
+          console.log(`[Backend] Duplicate sale prevented by idempotency key: ${payload.idempotencyKey}`);
+          return res.json({ id: row.id, message: 'Sale already processed', duplicate: true });
+        }
+      });
+    }
     
     try {
       await validateItemsPricing(payload.items);
@@ -499,6 +699,7 @@ async function startServer() {
     const adjustmentTotal = Number(payload.adjustmentTotal ?? payload.adjustment_total ?? 0);
     const profitMarginTotal = Number(payload.profitMarginTotal ?? payload.profit_margin_total ?? 0);
     const roundingTotal = Number(payload.roundingTotal ?? payload.rounding_total ?? payload.roundingDifference ?? 0);
+    const otherCharges = Number(payload.otherCharges || 0);
     const subAccountName = payload.subAccountName || payload.sub_account_name || 'Main';
     
     const customerId = payload.customerId || payload.customer_id || 'walk-in';
@@ -510,6 +711,7 @@ async function startServer() {
     const itemsJson = JSON.stringify(payload.items || []);
     const paymentsJson = JSON.stringify(payload.payments || []);
     const snapshotsJson = JSON.stringify(payload.adjustmentSnapshots || []);
+    const idempotencyKey = payload.idempotencyKey || `sale-${id}-${Date.now()}`;
 
     console.log(`[BACKEND] Creating POS sale #${id} for ${customerName}. Revenue: ${totalAmount}, Margin: ${profitMarginTotal}`);
 
@@ -518,16 +720,20 @@ async function startServer() {
         console.error(`[BACKEND] Error beginning transaction for sale #${id}:`, err.message);
         return res.status(500).json({ error: 'Failed to begin transaction' });
       }
+      
+      // Insert sale
       db.run(
-        `INSERT OR REPLACE INTO sales (
+        `INSERT INTO sales (
           id, date, customer_id, customer_name, sub_account_name, 
-          total_amount, material_total, adjustment_total, profit_margin_total, rounding_total,
-          adjustment_snapshots_json, status, payment_method, source, items_json, payments_json, company_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_amount, material_total, adjustment_total, profit_margin_total, rounding_total, other_charges,
+          adjustment_snapshots_json, status, payment_method, source, items_json, payments_json, 
+          company_id, created_by, updated_by, idempotency_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id, date, customerId, customerName, subAccountName,
-          totalAmount, materialTotal, adjustmentTotal, profitMarginTotal, roundingTotal,
-          snapshotsJson, status, paymentMethod, source, itemsJson, paymentsJson, req.companyId || ''
+          totalAmount, materialTotal, adjustmentTotal, profitMarginTotal, roundingTotal, otherCharges,
+          snapshotsJson, status, paymentMethod, source, itemsJson, paymentsJson, 
+          req.companyId || '', req.user?.id || 'system', req.user?.id || 'system', idempotencyKey
         ],
         (error) => {
           if (error) {
@@ -535,31 +741,95 @@ async function startServer() {
             console.error(`[BACKEND] Error creating sale #${id}:`, error.message);
             return res.status(500).json({ error: 'Failed to create sale' });
           }
-          db.run("COMMIT", (commitErr) => {
-            if (commitErr) {
-              db.run("ROLLBACK");
-              console.error(`[BACKEND] Error committing sale #${id}:`, commitErr.message);
-              return res.status(500).json({ error: 'Failed to commit sale' });
+          
+          // Insert sale items (normalized)
+          const insertSaleItem = (index, items) => {
+            if (index >= items.length) {
+              // All items inserted, now post ledger entries and update inventory
+              try {
+                // Post ledger entries for the sale
+                postSaleLedgerEntries(id, totalAmount, materialTotal, customerId, customerName, req.companyId || '', req.user?.id || 'system');
+                
+                // Update customer balance if not walk-in
+                if (customerId && customerId !== 'walk-in') {
+                  updateCustomerBalance(customerId, totalAmount, req.companyId || '');
+                }
+                
+                // Deduct inventory for physical products
+                const inventoryItems = payload.items.filter(item => item.type !== 'service');
+                if (inventoryItems.length > 0) {
+                  deductInventoryForSale(inventoryItems, id, req.companyId || '');
+                }
+              } catch (ledgerError) {
+                console.error('[BACKEND] Error posting ledger/inventory for sale #${id}:', ledgerError);
+                // Continue with commit - ledger errors are non-fatal for now
+              }
+              
+              // All items inserted, commit transaction
+              db.run("COMMIT", (commitErr) => {
+                if (commitErr) {
+                  db.run("ROLLBACK");
+                  console.error(`[BACKEND] Error committing sale #${id}:`, commitErr.message);
+                  return res.status(500).json({ error: 'Failed to commit sale' });
+                }
+                res.json({
+                  id,
+                  date,
+                  customerId,
+                  customerName,
+                  subAccountName,
+                  totalAmount,
+                  materialTotal,
+                  adjustmentTotal,
+                  profitMarginTotal,
+                  roundingTotal,
+                  otherCharges,
+                  status,
+                  paymentMethod,
+                  source,
+                  items: payload.items || [],
+                  payments: payload.payments || [],
+                  adjustmentSnapshots: payload.adjustmentSnapshots || []
+                });
+              });
+              return;
             }
-            res.json({
-              id,
-              date,
-              customerId,
-              customerName,
-              subAccountName,
-              totalAmount,
-              materialTotal,
-              adjustmentTotal,
-              profitMarginTotal,
-              roundingTotal,
-              status,
-              paymentMethod,
-              source,
-              items: payload.items || [],
-              payments: payload.payments || [],
-              adjustmentSnapshots: payload.adjustmentSnapshots || []
-            });
-          });
+            
+            const item = items[index];
+            const itemId = item.id || item.itemId || `item-${index}`;
+            const itemName = item.name || item.productName || 'Unknown Item';
+            const quantity = item.quantity || 1;
+            const unitPrice = item.price || 0;
+            const unitCost = item.cost || item.cost_price || 0;
+            const lineTotal = unitPrice * quantity;
+            const discount = item.discount || 0;
+            const taxRate = item.taxRate || 0;
+            const taxAmount = item.taxAmount || 0;
+            const itemType = item.type || 'product';
+            
+            db.run(
+              `INSERT INTO sale_items (
+                id, sale_id, item_id, variant_id, item_name, quantity, unit_price, unit_cost, 
+                line_total, discount, tax_rate, tax_amount, item_type, company_id
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                `${id}-item-${index}`, id, itemId, item.variantId || null, itemName, 
+                quantity, unitPrice, unitCost, lineTotal, discount, taxRate, taxAmount, 
+                itemType, req.companyId || ''
+              ],
+              (itemErr) => {
+                if (itemErr) {
+                  db.run("ROLLBACK");
+                  console.error(`[BACKEND] Error inserting sale item #${index} for sale #${id}:`, itemErr.message);
+                  return res.status(500).json({ error: 'Failed to create sale item' });
+                }
+                insertSaleItem(index + 1, items);
+              }
+            );
+          };
+          
+          // Start inserting sale items
+          insertSaleItem(0, payload.items || []);
         }
       );
     });
@@ -574,6 +844,7 @@ async function startServer() {
     const adjustmentTotal = Number(payload.adjustmentTotal ?? payload.adjustment_total ?? 0);
     const profitMarginTotal = Number(payload.profitMarginTotal ?? payload.profit_margin_total ?? 0);
     const roundingTotal = Number(payload.roundingTotal ?? payload.rounding_total ?? payload.roundingDifference ?? 0);
+    const otherCharges = Number(payload.otherCharges || 0);
     const itemsJson = JSON.stringify(payload.items || []);
     const paymentsJson = JSON.stringify(payload.payments || []);
     const snapshotsJson = JSON.stringify(payload.adjustmentSnapshots || []);
@@ -581,7 +852,7 @@ async function startServer() {
     db.run(
       `UPDATE sales SET
         date = ?, customer_id = ?, customer_name = ?, sub_account_name = ?,
-        total_amount = ?, material_total = ?, adjustment_total = ?, profit_margin_total = ?, rounding_total = ?,
+        total_amount = ?, material_total = ?, adjustment_total = ?, profit_margin_total = ?, rounding_total = ?, other_charges = ?,
         adjustment_snapshots_json = ?, status = ?, payment_method = ?, source = ?, items_json = ?, payments_json = ?
       WHERE id = ?`,
       [
@@ -589,7 +860,7 @@ async function startServer() {
         payload.customerId || payload.customer_id || 'walk-in',
         payload.customerName || payload.customer_name || 'Walk-in',
         payload.subAccountName || payload.sub_account_name || 'Main',
-        totalAmount, materialTotal, adjustmentTotal, profitMarginTotal, roundingTotal,
+        totalAmount, materialTotal, adjustmentTotal, profitMarginTotal, roundingTotal, otherCharges,
         snapshotsJson, payload.status || 'Paid', payload.paymentMethod || null, payload.source || null,
         itemsJson, paymentsJson, id
       ],
@@ -668,6 +939,14 @@ async function startServer() {
   // --- Finance / Accounting Endpoints ---
   const FinanceService = require('./services/financeService.cjs');
   const finance = new FinanceService(db);
+  const BankingService = require('./services/bankingService.cjs');
+  const banking = new BankingService(db);
+  const FinancialReportingService = require('./services/financialReportingService.cjs');
+  const reporting = new FinancialReportingService(db);
+  const VATManagementService = require('./services/vatManagementService.cjs');
+  const vatManagement = new VATManagementService(db);
+  const CurrencyService = require('./services/currencyService.cjs');
+  const currency = new CurrencyService(db);
 
   // Chart of Accounts
   app.get('/api/accounts', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
@@ -897,6 +1176,370 @@ async function startServer() {
     }
   });
 
+  // --- Banking Endpoints ---
+  app.get('/api/bank-accounts', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const rows = await banking.getAccounts(req.companyId || '');
+      res.json(rows);
+    } catch (err) {
+      console.error('[Banking] getAccounts error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch bank accounts' });
+    }
+  });
+
+  app.post('/api/bank-accounts', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const row = await banking.createAccount(req.body, req.companyId || '');
+      res.status(201).json(row);
+    } catch (err) {
+      console.error('[Banking] createAccount error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to create bank account' });
+    }
+  });
+
+  app.put('/api/bank-accounts/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const row = await banking.updateAccount(req.params.id, req.body, req.companyId || '');
+      if (!row) return res.status(404).json({ error: 'Bank account not found' });
+      res.json(row);
+    } catch (err) {
+      console.error('[Banking] updateAccount error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to update bank account' });
+    }
+  });
+
+  app.delete('/api/bank-accounts/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      await banking.deleteAccount(req.params.id, req.companyId || '');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Banking] deleteAccount error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to delete bank account' });
+    }
+  });
+
+  app.get('/api/bank-transactions', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const filters = {
+        accountId: req.query.account_id,
+        type: req.query.type,
+        status: req.query.status,
+        startDate: req.query.start_date,
+        endDate: req.query.end_date
+      };
+      const rows = await banking.getTransactions(req.companyId || '', filters);
+      res.json(rows);
+    } catch (err) {
+      console.error('[Banking] getTransactions error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch bank transactions' });
+    }
+  });
+
+  app.post('/api/bank-transactions', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const row = await banking.createTransaction(req.body, req.companyId || '');
+      res.status(201).json(row);
+    } catch (err) {
+      console.error('[Banking] createTransaction error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to create bank transaction' });
+    }
+  });
+
+  app.post('/api/bank-transfers', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const row = await banking.transferFunds(req.body, req.companyId || '');
+      res.status(201).json(row);
+    } catch (err) {
+      console.error('[Banking] transferFunds error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to process transfer' });
+    }
+  });
+
+  app.get('/api/bank-accounts/:id/balance', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const asOfDate = req.query.as_of_date || null;
+      const balance = await banking.getAccountBalance(req.params.id, req.companyId || '', asOfDate);
+      res.json({ accountId: req.params.id, balance, asOfDate });
+    } catch (err) {
+      console.error('[Banking] getBalance error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch account balance' });
+    }
+  });
+
+  app.get('/api/bank-accounts/:id/reconciliation', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const startDate = req.query.start_date;
+      const endDate = req.query.end_date;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'start_date and end_date are required' });
+      }
+      const summary = await banking.getReconciliationSummary(req.params.id, req.companyId || '', startDate, endDate);
+      res.json(summary);
+    } catch (err) {
+      console.error('[Banking] reconciliation error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch reconciliation summary' });
+    }
+  });
+
+  // --- Financial Reporting Endpoints ---
+  app.get('/api/reports/profit-and-loss', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const startDate = req.query.start_date;
+      const endDate = req.query.end_date;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'start_date and end_date are required' });
+      }
+      const report = await reporting.getProfitAndLoss(req.companyId || '', startDate, endDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] P&L error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate P&L report' });
+    }
+  });
+
+  app.get('/api/reports/balance-sheet', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const asOfDate = req.query.as_of_date || null;
+      const report = await reporting.getBalanceSheet(req.companyId || '', asOfDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] Balance Sheet error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate Balance Sheet' });
+    }
+  });
+
+  app.get('/api/reports/cash-flow', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const startDate = req.query.start_date;
+      const endDate = req.query.end_date;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'start_date and end_date are required' });
+      }
+      const report = await reporting.getCashFlowStatement(req.companyId || '', startDate, endDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] Cash Flow error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate Cash Flow statement' });
+    }
+  });
+
+  app.get('/api/reports/ar-aging', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const asOfDate = req.query.as_of_date || null;
+      const report = await reporting.getARAging(req.companyId || '', asOfDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] AR Aging error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate AR Aging report' });
+    }
+  });
+
+  app.get('/api/reports/ap-aging', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const asOfDate = req.query.as_of_date || null;
+      const report = await reporting.getAPAging(req.companyId || '', asOfDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] AP Aging error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate AP Aging report' });
+    }
+  });
+
+  app.get('/api/reports/trial-balance', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const asOfDate = req.query.as_of_date || null;
+      const report = await reporting.getTrialBalance(req.companyId || '', asOfDate);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] Trial Balance error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate Trial Balance' });
+    }
+  });
+
+  app.get('/api/reports/budget-vs-actual', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const fiscalYear = req.query.fiscal_year;
+      const period = req.query.period;
+      if (!fiscalYear || !period) {
+        return res.status(400).json({ error: 'fiscal_year and period are required' });
+      }
+      const report = await reporting.getBudgetVsActual(req.companyId || '', fiscalYear, period);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] Budget vs Actual error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate Budget vs Actual report' });
+    }
+  });
+
+  app.get('/api/reports/vat', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const period = req.query.period;
+      if (!period) {
+        return res.status(400).json({ error: 'period is required (format: YYYY-MM)' });
+      }
+      const report = await reporting.getVATReport(req.companyId || '', period);
+      res.json(report);
+    } catch (err) {
+      console.error('[Reports] VAT error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate VAT report' });
+    }
+  });
+
+  // --- VAT Management Endpoints ---
+  app.get('/api/vat/transactions', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const period = req.query.period;
+      if (!period) {
+        return res.status(400).json({ error: 'period is required (format: YYYY-MM)' });
+      }
+      const filters = {
+        transaction_type: req.query.transaction_type,
+        status: req.query.status,
+        vat_category: req.query.vat_category
+      };
+      const transactions = await vatManagement.getVATTransactions(req.companyId || '', period, filters);
+      res.json(transactions);
+    } catch (err) {
+      console.error('[VAT] getTransactions error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch VAT transactions' });
+    }
+  });
+
+  app.post('/api/vat/transactions', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const transaction = await vatManagement.recordVATTransaction(req.body, req.companyId || '');
+      res.status(201).json(transaction);
+    } catch (err) {
+      console.error('[VAT] recordTransaction error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to record VAT transaction' });
+    }
+  });
+
+  app.put('/api/vat/transactions/:id/status', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { status } = req.body;
+      const result = await vatManagement.updateVATStatus(req.params.id, status, req.companyId || '');
+      if (!result) return res.status(404).json({ error: 'VAT transaction not found' });
+      res.json(result);
+    } catch (err) {
+      console.error('[VAT] updateStatus error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to update VAT status' });
+    }
+  });
+
+  app.get('/api/vat/summary', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const period = req.query.period;
+      if (!period) {
+        return res.status(400).json({ error: 'period is required (format: YYYY-MM)' });
+      }
+      const summary = await vatManagement.getVATSummary(req.companyId || '', period);
+      res.json(summary);
+    } catch (err) {
+      console.error('[VAT] getSummary error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch VAT summary' });
+    }
+  });
+
+  app.get('/api/vat/periods', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const periods = await vatManagement.getVATPeriods(req.companyId || '');
+      res.json(periods);
+    } catch (err) {
+      console.error('[VAT] getPeriods error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch VAT periods' });
+    }
+  });
+
+  app.post('/api/vat/transactions/:id/reverse', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const result = await vatManagement.reverseVATTransaction(req.params.id, req.companyId || '', reason);
+      res.json(result);
+    } catch (err) {
+      console.error('[VAT] reverse error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to reverse VAT transaction' });
+    }
+  });
+
+  app.post('/api/vat/import-from-invoices', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const period = req.body.period;
+      if (!period) {
+        return res.status(400).json({ error: 'period is required (format: YYYY-MM)' });
+      }
+      const result = await vatManagement.importFromInvoices(req.companyId || '', period);
+      res.json(result);
+    } catch (err) {
+      console.error('[VAT] import error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to import VAT from invoices' });
+    }
+  });
+
+  // --- Currency Management Endpoints ---
+  app.get('/api/currencies', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const currencies = await currency.getCurrencies();
+      res.json(currencies);
+    } catch (err) {
+      console.error('[Currency] getCurrencies error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch currencies' });
+    }
+  });
+
+  app.post('/api/currencies', requireRole('Admin'), async (req, res) => {
+    try {
+      const { code, name, symbol, decimalPlaces } = req.body;
+      if (!code || !name || !symbol) {
+        return res.status(400).json({ error: 'Code, name, and symbol are required' });
+      }
+      const result = await currency.addCurrency(code, name.toUpperCase(), symbol, decimalPlaces);
+      res.status(201).json(result);
+    } catch (err) {
+      console.error('[Currency] addCurrency error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to add currency' });
+    }
+  });
+
+  app.get('/api/currencies/rates', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const fromCurrency = req.query.from_currency;
+      const toCurrency = req.query.to_currency;
+      if (!fromCurrency || !toCurrency) {
+        return res.status(400).json({ error: 'from_currency and to_currency are required' });
+      }
+      const rate = await currency.getExchangeRate(fromCurrency, toCurrency);
+      res.json({ fromCurrency, toCurrency, rate });
+    } catch (err) {
+      console.error('[Currency] getExchangeRate error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch exchange rate' });
+    }
+  });
+
+  app.post('/api/currencies/rates', requireRole('Admin'), async (req, res) => {
+    try {
+      const { fromCurrency, toCurrency, rate, date } = req.body;
+      if (!fromCurrency || !toCurrency || !rate) {
+        return res.status(400).json({ error: 'fromCurrency, toCurrency, and rate are required' });
+      }
+      const result = await currency.updateExchangeRate(fromCurrency, toCurrency, rate, date);
+      res.status(201).json(result);
+    } catch (err) {
+      console.error('[Currency] updateExchangeRate error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to update exchange rate' });
+    }
+  });
+
+  app.get('/api/companies/currency', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const companyCurrency = await currency.getCompanyCurrency(req.companyId || '');
+      res.json({ currency: companyCurrency });
+    } catch (err) {
+      console.error('[Currency] getCompanyCurrency error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch company currency' });
+    }
+  });
+
   // --- Invoice Endpoints ---
   app.get('/api/invoices', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
@@ -923,12 +1566,12 @@ async function startServer() {
       const { body } = req;
       const id = body.id || randomUUID();
       db.run(
-        `INSERT INTO invoices (id, customer_id, customer_name, subtotal, total_amount, currency, status, payment_method, due_date, invoice_number, line_items_json, notes, document_title, company_id, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO invoices (id, customer_id, customer_name, subtotal, total_amount, currency, status, payment_method, due_date, invoice_number, other_charges, line_items_json, notes, document_title, company_id, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, body.customer_id || null, body.customer_name || null, body.subtotal || 0,
          body.total_amount || 0, body.currency || 'MWK', body.status || 'unpaid',
          body.payment_method || null, body.due_date || null, body.invoice_number || null,
-         JSON.stringify(body.line_items || []), body.notes || null, body.document_title || null,
+         body.other_charges || 0, JSON.stringify(body.line_items || []), body.notes || null, body.document_title || null,
          req.companyId || '', req.user?.id || null],
         function (err) {
           if (err) { console.error('[Invoices] POST error:', err); return res.status(500).json({ error: 'Failed to create invoice' }); }
@@ -947,7 +1590,7 @@ async function startServer() {
       const { body } = req;
       const fields = [];
       const params = [];
-      const allowed = ['customer_id', 'customer_name', 'subtotal', 'total_amount', 'currency', 'status', 'payment_method', 'paid_amount', 'due_date', 'invoice_number', 'notes', 'document_title', 'line_items_json'];
+      const allowed = ['customer_id', 'customer_name', 'subtotal', 'total_amount', 'currency', 'status', 'payment_method', 'paid_amount', 'due_date', 'invoice_number', 'other_charges', 'notes', 'document_title', 'line_items_json'];
       for (const field of allowed) {
         if (body[field] !== undefined) {
           fields.push(`${field} = ?`);
@@ -1024,6 +1667,76 @@ async function startServer() {
     } catch (err) {
       console.error('[CustomerPayments] POST error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to create payment' });
+    }
+  });
+
+  // --- Payment Allocation Endpoints ---
+  const PaymentAllocationService = require('./services/paymentAllocationService.cjs');
+  const paymentAllocation = new PaymentAllocationService(db);
+
+  app.post('/api/payments/allocate', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { paymentId, allocations } = req.body;
+      const companyId = req.companyId || '';
+      
+      // Get payment details
+      const payment = await new Promise((resolve, reject) => {
+        db.get('SELECT * FROM customer_payments WHERE id = ? AND company_id = ?', [paymentId, companyId], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+
+      if (!payment) {
+        return res.status(404).json({ error: 'Payment not found' });
+      }
+
+      const result = await paymentAllocation.allocatePayment(payment, allocations, companyId);
+      res.status(201).json(result);
+    } catch (err) {
+      console.error('[PaymentAllocation] allocate error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to allocate payment' });
+    }
+  });
+
+  app.get('/api/payments/:paymentId/allocations', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const allocations = await paymentAllocation.getPaymentAllocations(req.params.paymentId, req.companyId || '');
+      res.json(allocations);
+    } catch (err) {
+      console.error('[PaymentAllocation] get error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch allocations' });
+    }
+  });
+
+  app.get('/api/customers/:customerId/outstanding-invoices', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const invoices = await paymentAllocation.getOutstandingInvoices(req.params.customerId, req.companyId || '');
+      res.json(invoices);
+    } catch (err) {
+      console.error('[PaymentAllocation] outstanding error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch outstanding invoices' });
+    }
+  });
+
+  app.post('/api/payments/suggest-allocation', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { customerId, amount } = req.body;
+      const suggestion = await paymentAllocation.suggestAllocation(customerId, amount, req.companyId || '');
+      res.json(suggestion);
+    } catch (err) {
+      console.error('[PaymentAllocation] suggest error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to generate allocation suggestion' });
+    }
+  });
+
+  app.post('/api/payments/allocations/:allocationId/reverse', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const result = await paymentAllocation.reverseAllocation(req.params.allocationId, req.companyId || '');
+      res.json(result);
+    } catch (err) {
+      console.error('[PaymentAllocation] reverse error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to reverse allocation' });
     }
   });
 
@@ -1923,9 +2636,9 @@ async function startServer() {
       const now = new Date().toISOString();
       await new Promise((resolve, reject) => {
         db.run(
-          `INSERT INTO sales_orders (id, quotation_id, customer_id, orderDate, deliveryDate, status, items, subtotal, discounts, tax, total, notes, created_by, created_at, company_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [o.id, o.quotationId || null, o.customerId || null, o.orderDate || now, o.deliveryDate || null, o.status || 'Draft', JSON.stringify(o.items), o.subtotal || 0, o.discounts || 0, o.tax || 0, o.total || 0, o.notes || '', req.userId, now, req.companyId || ''],
+          `INSERT INTO sales_orders (id, quotation_id, customer_id, orderDate, deliveryDate, status, items, subtotal, discounts, tax, other_charges, total, notes, created_by, created_at, company_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [o.id, o.quotationId || null, o.customerId || null, o.orderDate || now, o.deliveryDate || null, o.status || 'Draft', JSON.stringify(o.items), o.subtotal || 0, o.discounts || 0, o.tax || 0, o.otherCharges || 0, o.total || 0, o.notes || '', req.userId, now, req.companyId || ''],
           function(err) {
             if (err) return reject(err);
             resolve();
@@ -1943,8 +2656,8 @@ async function startServer() {
     const id = req.params.id;
     const o = req.body || {};
     db.run(
-      `UPDATE sales_orders SET quotation_id = ?, customer_id = ?, orderDate = ?, deliveryDate = ?, status = ?, items = ?, subtotal = ?, discounts = ?, tax = ?, total = ?, notes = ?, updated_by = ?, updated_at = ? WHERE id = ? AND company_id = ?`,
-      [o.quotationId || null, o.customerId || null, o.orderDate || null, o.deliveryDate || null, o.status || 'Draft', JSON.stringify(o.items || []), o.subtotal || 0, o.discounts || 0, o.tax || 0, o.total || 0, o.notes || '', req.userId, new Date().toISOString(), id, req.companyId || ''],
+      `UPDATE sales_orders SET quotation_id = ?, customer_id = ?, orderDate = ?, deliveryDate = ?, status = ?, items = ?, subtotal = ?, discounts = ?, tax = ?, other_charges = ?, total = ?, notes = ?, updated_by = ?, updated_at = ? WHERE id = ? AND company_id = ?`,
+      [o.quotationId || null, o.customerId || null, o.orderDate || null, o.deliveryDate || null, o.status || 'Draft', JSON.stringify(o.items || []), o.subtotal || 0, o.discounts || 0, o.tax || 0, o.otherCharges || 0, o.total || 0, o.notes || '', req.userId, new Date().toISOString(), id, req.companyId || ''],
       function(err) {
         if (err) return sendError(res, 500, err.message, 'UPDATE_SALES_ORDER_FAILED');
         res.json({ status: 'updated' });
@@ -2278,7 +2991,8 @@ app.get('/api/invoices/:id/details', (req, res) => {
       }
 
       const currentQuantity = item.quantity || 0;
-      const effectiveQuantity = type === 'OUT' ? -Math.abs(quantity) : Math.abs(quantity);
+      const transactionType = type || 'OUT';
+      const effectiveQuantity = transactionType === 'OUT' ? -Math.abs(quantity) : Math.abs(quantity);
 
       // Check if sufficient quantity for deductions
       if (effectiveQuantity < 0 && currentQuantity < Math.abs(quantity)) {
@@ -2301,8 +3015,8 @@ app.get('/api/invoices/:id/details', (req, res) => {
             (id, item_id, warehouse_id, batch_id, type, quantity, previous_quantity, new_quantity, 
               unit_cost, total_cost, reason, reference, reference_id, performed_by, timestamp, company_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [transactionId, itemId, warehouseId || null, batchId || null, type || (isDeduction ? 'OUT' : 'IN'),
-              quantity, currentQuantity, newQuantity, unitCost, isDeduction ? -totalCost : totalCost,
+            [transactionId, itemId, warehouseId || null, batchId || null, transactionType,
+              quantity, currentQuantity, newQuantity, unitCost, totalCost,
               reason, reference || null, referenceId || null, performedBy || 'system', new Date().toISOString(), req.companyId || ''],
             (err) => {
             if (err) {

@@ -91,8 +91,8 @@ const qboStyles = `
     }
     .settings-input:focus {
         outline: none;
-        border-color: #2CA01C;
-        box-shadow: 0 0 0 2px rgba(44, 160, 28, 0.1);
+        border-color: #2563EB;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
     }
     .settings-section-header {
         padding: 20px 32px;
@@ -691,14 +691,14 @@ const Settings: React.FC = () => {
                     <div className="flex items-center gap-2 text-[10px] font-bold text-[#6B6C6F] uppercase tracking-widest mb-1">
                         <span>Settings</span>
                         <span className="text-[#D4D7DC]">/</span>
-                        <span className="text-[#2CA01C]">{activeGroupTitle}</span>
+                        <span className="text-blue-600">{activeGroupTitle}</span>
                     </div>
                     <h1 className="text-xl font-bold text-[#393A3D] flex items-center gap-2">
                         {activeItemLabel}
                     </h1>
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={handleSave} className="bg-[#2CA01C] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-[#248017] transition-all flex items-center gap-2 active:scale-95 shadow-md shadow-green-500/10">
+                    <button onClick={handleSave} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2 active:scale-95 shadow-md shadow-blue-500/10">
                         <CheckCircle2 size={18} /> Save Settings
                     </button>
                 </div>
@@ -713,7 +713,7 @@ const Settings: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder="Search settings..."
-                                className="w-full pl-10 pr-4 py-2 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md text-sm outline-none focus:ring-2 focus:ring-[#2CA01C]/20 focus:border-[#2CA01C] transition-all font-medium text-[#393A3D]"
+                                className="w-full pl-10 pr-4 py-2 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-[#393A3D]"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
@@ -730,13 +730,13 @@ const Settings: React.FC = () => {
                                             key={item.id}
                                             onClick={() => setActiveTab(item.id)}
                                             className={`w-full flex items-center justify-between px-4 py-3 border-l-4 transition-all text-left ${activeTab === item.id
-                                                ? 'bg-green-50 border-[#2CA01C] text-[#2CA01C]'
+                                                ? 'bg-blue-50 border-blue-600 text-blue-600'
                                                 : 'border-transparent text-[#6B6C6F] hover:bg-[#F4F5F8]'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <item.icon size={18} className={activeTab === item.id ? 'text-[#2CA01C]' : 'text-[#6B6C6F]'} />
-                                                <span className={`text-[13px] font-bold ${activeTab === item.id ? 'text-[#2CA01C]' : 'text-[#393A3D]'}`}>{item.label}</span>
+                                                <item.icon size={18} className={activeTab === item.id ? 'text-blue-600' : 'text-[#6B6C6F]'} />
+                                                <span className={`text-[13px] font-bold ${activeTab === item.id ? 'text-blue-600' : 'text-[#393A3D]'}`}>{item.label}</span>
                                             </div>
                                         </button>
                                     ))}
@@ -900,7 +900,7 @@ const Settings: React.FC = () => {
                                     <div className="p-8">
                                         <button
                                             onClick={() => setCustomizeOpen(true)}
-                                            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 flex items-center gap-2"
+                                            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center gap-2"
                                         >
                                             Open Dashboard Customizer
                                         </button>
@@ -962,7 +962,7 @@ const Settings: React.FC = () => {
                                                     checked={config.appearance?.glassmorphism || false}
                                                     onChange={e => setConfig({ ...config, appearance: { ...config.appearance, glassmorphism: e.target.checked } })}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
 
@@ -1174,7 +1174,7 @@ const Settings: React.FC = () => {
                                                     ...config, 
                                                     vat: { ...(config.vat || { enabled: true, rate: 16.5, filingFrequency: 'Monthly' }), pricingMode: 'VAT' } 
                                                 })}
-                                                className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${config.vat?.pricingMode === 'VAT' ? 'bg-white text-[#2CA01C] shadow-sm' : 'text-[#6B6C6F] hover:text-[#393A3D]'}`}
+                                                className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${config.vat?.pricingMode === 'VAT' ? 'bg-white text-blue-600 shadow-sm' : 'text-[#6B6C6F] hover:text-[#393A3D]'}`}
                                             >
                                                 {config.vat?.pricingMode === 'VAT' && <CheckCircle2 size={16} />}
                                                 VAT Mode
@@ -1184,7 +1184,7 @@ const Settings: React.FC = () => {
                                                     ...config, 
                                                     vat: { ...(config.vat || { enabled: true, rate: 16.5, filingFrequency: 'Monthly' }), pricingMode: 'MarketAdjustment' } 
                                                 })}
-                                                className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${config.vat?.pricingMode === 'MarketAdjustment' ? 'bg-white text-[#2CA01C] shadow-sm' : 'text-[#6B6C6F] hover:text-[#393A3D]'}`}
+                                                className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${config.vat?.pricingMode === 'MarketAdjustment' ? 'bg-white text-blue-600 shadow-sm' : 'text-[#6B6C6F] hover:text-[#393A3D]'}`}
                                             >
                                                 {config.vat?.pricingMode === 'MarketAdjustment' && <CheckCircle2 size={16} />}
                                                 Market Adjustment Mode
@@ -1214,7 +1214,7 @@ const Settings: React.FC = () => {
                                                     checked={activePricingSettings.enableRounding}
                                                     onChange={e => updatePricingSettings({ enableRounding: e.target.checked })}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
 
@@ -1415,12 +1415,12 @@ const Settings: React.FC = () => {
                                             ))}
                                         </div>
 
-                                        <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                                            <p className="text-xs font-bold text-emerald-700">Rounding Analytics</p>
-                                            <p className="text-[11px] text-emerald-700/90 mt-1">
+                                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                            <p className="text-xs font-bold text-blue-700">Rounding Analytics</p>
+                                            <p className="text-[11px] text-blue-700/90 mt-1">
                                                 Extra profit captured by rounding: {currency}{Number(roundingAnalytics.totalExtraProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </p>
-                                            <p className="text-[11px] text-emerald-700/90">
+                                            <p className="text-[11px] text-blue-700/90">
                                                 Rounded price recalculations: {Number(roundingAnalytics.roundedTransactions || 0)}
                                             </p>
                                         </div>
@@ -1447,7 +1447,7 @@ const Settings: React.FC = () => {
                                                             checked={config.transactionSettings?.pos?.showItemImages}
                                                             onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, showItemImages: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="flex justify-between items-center group/item">
@@ -1462,7 +1462,7 @@ const Settings: React.FC = () => {
                                                             checked={config.transactionSettings?.pos?.enableShortcuts}
                                                             onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, enableShortcuts: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="flex justify-between items-center group/item">
@@ -1477,7 +1477,7 @@ const Settings: React.FC = () => {
                                                     checked={config.transactionSettings?.pos?.allowReturns}
                                                     onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, allowReturns: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="flex justify-between items-center group/item">
@@ -1492,7 +1492,7 @@ const Settings: React.FC = () => {
                                                             checked={config.transactionSettings?.pos?.showShortcutHints !== false}
                                                             onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, showShortcutHints: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="flex justify-between items-center group/item">
@@ -1507,7 +1507,7 @@ const Settings: React.FC = () => {
                                                             checked={config.transactionSettings?.pos?.allowDiscounts}
                                                             onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, allowDiscounts: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                             </div>
@@ -1519,7 +1519,7 @@ const Settings: React.FC = () => {
                                                             <button
                                                                 key={cols}
                                                                 onClick={() => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, gridColumns: cols } } })}
-                                                                className={`py-2 px-3 rounded-md text-[11px] font-bold border transition-all ${config.transactionSettings?.pos?.gridColumns === cols ? 'bg-[#2CA01C] border-[#2CA01C] text-white shadow-sm' : 'bg-white border-[#D4D7DC] text-[#6B6C6F] hover:border-[#2CA01C]'}`}
+                                                                className={`py-2 px-3 rounded-md text-[11px] font-bold border transition-all ${config.transactionSettings?.pos?.gridColumns === cols ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-[#D4D7DC] text-[#6B6C6F] hover:border-blue-600'}`}
                                                             >
                                                                 {cols}
                                                             </button>
@@ -1538,7 +1538,7 @@ const Settings: React.FC = () => {
                                                     checked={config.transactionSettings?.pos?.showCategoryFilters}
                                                     onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, showCategoryFilters: e.target.checked } } })}
                                                         />
-                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                             </div>
@@ -1643,7 +1643,7 @@ const Settings: React.FC = () => {
                                                     checked={config.transactionSettings?.autoPrintReceipt}
                                                     onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, autoPrintReceipt: e.target.checked } })}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
                                         <div className="flex justify-between items-center group/item">
@@ -1658,17 +1658,17 @@ const Settings: React.FC = () => {
                                                     checked={config.transactionSettings?.showReceiptPreview !== false}
                                                     onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, showReceiptPreview: e.target.checked } })}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${printerConnected ? 'bg-emerald-100' : 'bg-slate-200'}`}>
-                                                    <Printer size={20} className={printerConnected ? 'text-emerald-600' : 'text-slate-500'} />
+                                                <div className={`p-2 rounded-lg ${printerConnected ? 'bg-blue-100' : 'bg-slate-200'}`}>
+                                                    <Printer size={20} className={printerConnected ? 'text-blue-600' : 'text-slate-500'} />
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-slate-800 text-sm">Thermal Printer</p>
-                                                    <p className={`text-[11px] ${printerConnected ? 'text-emerald-600 font-medium' : 'text-slate-500'}`}>
+                                                    <p className={`text-[11px] ${printerConnected ? 'text-blue-600 font-medium' : 'text-slate-500'}`}>
                                                         {printerConnected ? printerDeviceName : 'Not connected'}
                                                     </p>
                                                 </div>
@@ -1722,7 +1722,7 @@ const Settings: React.FC = () => {
                                                                 notify('Test print failed', 'error');
                                                             }
                                                         }}
-                                                        className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                                                        className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-2"
                                                     >
                                                         <Printer size={14} />
                                                         Test Print
@@ -1761,7 +1761,7 @@ const Settings: React.FC = () => {
                                                         checked={config.transactionSettings?.quickItemEntry}
                                                         onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, quickItemEntry: e.target.checked } })}
                                                     />
-                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div>
@@ -1809,7 +1809,7 @@ const Settings: React.FC = () => {
                                                     <button
                                                         key={engine}
                                                         onClick={() => setConfig({ ...config, invoiceTemplates: { ...config.invoiceTemplates, engine: engine as InvoiceTemplatesConfig['engine'] } })}
-                                                        className={`py-3 rounded-md text-[11px] font-bold border transition-all ${config.invoiceTemplates?.engine === engine ? 'bg-[#2CA01C] border-[#2CA01C] text-white shadow-sm' : 'bg-white border-[#D4D7DC] text-[#6B6C6F] hover:border-[#2CA01C]'}`}
+                                                        className={`py-3 rounded-md text-[11px] font-bold border transition-all ${config.invoiceTemplates?.engine === engine ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white border-[#D4D7DC] text-[#6B6C6F] hover:border-blue-600'}`}
                                                     >
                                                         {engine}
                                                     </button>
@@ -1837,7 +1837,7 @@ const Settings: React.FC = () => {
                                                             checked={config.invoiceTemplates[item.key as keyof InvoiceTemplatesConfig]}
                                                             onChange={e => setConfig({ ...config, invoiceTemplates: { ...config.invoiceTemplates, [item.key]: e.target.checked } })}
                                                         />
-                                                        <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                             ))}
@@ -1946,7 +1946,7 @@ const Settings: React.FC = () => {
                                     <div className="flex justify-between items-center mb-8">
                                         <div>
                                             <h3 className="text-[11px] font-black text-[#6B6C6F] uppercase tracking-[0.2em] flex items-center gap-3">
-                                                <Binary size={18} className="text-[#2CA01C]" /> Chart of Accounts Mapping
+                                                <Binary size={18} className="text-blue-600" /> Chart of Accounts Mapping
                                             </h3>
                                             <p className="text-xs text-[#6B6C6F] mt-1">Direct system transactions to specific ledger accounts.</p>
                                         </div>
@@ -1961,9 +1961,9 @@ const Settings: React.FC = () => {
                                             { key: 'accountsPayable', label: 'Accounts Payable', icon: Users, desc: 'Supplier debt' },
                                             { key: 'bankAccount', label: 'Primary Bank Account', icon: Landmark, desc: 'Default cash/bank' }
                                         ].map(item => (
-                                            <div key={item.key} className="p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-[#2CA01C] transition-all flex flex-col gap-4">
+                                            <div key={item.key} className="p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-blue-600 transition-all flex flex-col gap-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-[#F4F5F8] rounded-md text-[#6B6C6F] group-hover:bg-green-50 group-hover:text-[#2CA01C] transition-all">
+                                                    <div className="p-3 bg-[#F4F5F8] rounded-md text-[#6B6C6F] group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
                                                         <item.icon size={20} />
                                                     </div>
                                                     <div>
@@ -1975,7 +1975,7 @@ const Settings: React.FC = () => {
                                                     <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-[#D4D7DC]" size={14} />
                                                     <input
                                                         type="text"
-                                                        className="w-full pl-10 pr-5 py-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-mono font-bold text-[#2CA01C] outline-none focus:ring-2 focus:ring-[#2CA01C]/10 focus:border-[#2CA01C] transition-all text-xs"
+                                                        className="w-full pl-10 pr-5 py-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-mono font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all text-xs"
                                                         value={config.glMapping[item.key] || ''}
                                                         onChange={e => setConfig({ ...config, glMapping: { ...(config.glMapping || {}), [item.key]: e.target.value } })}
                                                         placeholder="e.g. 1000-0001"
@@ -1994,7 +1994,7 @@ const Settings: React.FC = () => {
                                     <div className="flex justify-between items-center mb-8">
                                         <div>
                                             <h3 className="text-[11px] font-black text-[#6B6C6F] uppercase tracking-[0.2em] flex items-center gap-3">
-                                                <Landmark size={18} className="text-[#2CA01C]" /> Payment Details
+                                                <Landmark size={18} className="text-blue-600" /> Payment Details
                                             </h3>
                                             <p className="text-xs text-[#6B6C6F] mt-1">Manage bank and mobile money accounts for payments.</p>
                                         </div>
@@ -2027,7 +2027,7 @@ const Settings: React.FC = () => {
                                                         }
                                                     });
                                                 }}
-                                                className="px-3 py-1.5 bg-[#2CA01C] text-white rounded-md text-xs font-bold hover:bg-[#1f8a14] transition-all"
+                                                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-bold hover:bg-[#1f8a14] transition-all"
                                             >
                                                 + Add Bank Account
                                             </button>
@@ -2130,7 +2130,7 @@ const Settings: React.FC = () => {
                                                         }
                                                     });
                                                 }}
-                                                className="px-3 py-1.5 bg-[#2CA01C] text-white rounded-md text-xs font-bold hover:bg-[#1f8a14] transition-all"
+                                                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-bold hover:bg-[#1f8a14] transition-all"
                                             >
                                                 + Add Mobile Money
                                             </button>
@@ -2206,7 +2206,7 @@ const Settings: React.FC = () => {
                                         <div className="flex justify-between items-center mb-8">
                                             <div>
                                                 <h3 className="text-[11px] font-black text-[#6B6C6F] uppercase tracking-[0.2em] flex items-center gap-3">
-                                                    <Hash size={18} className="text-[#2CA01C]" /> Transaction Numbering Logic
+                                                    <Hash size={18} className="text-blue-600" /> Transaction Numbering Logic
                                                 </h3>
                                                 <p className="text-xs text-[#6B6C6F] mt-1">Set one numbering pattern. Each document keeps its own built-in prefix automatically.</p>
                                             </div>
@@ -2215,7 +2215,7 @@ const Settings: React.FC = () => {
                                         <div className="grid grid-cols-2 gap-10">
                                             <div className="p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm flex flex-col gap-6">
                                                 <div className="flex items-start gap-4">
-                                                    <div className="p-4 bg-[#F4F5F8] rounded-md text-[#2CA01C]">
+                                                    <div className="p-4 bg-[#F4F5F8] rounded-md text-blue-600">
                                                         <Hash size={24} />
                                                     </div>
                                                     <div>
@@ -2245,7 +2245,7 @@ const Settings: React.FC = () => {
                                                             type="number"
                                                             min={1}
                                                             placeholder="e.g. 1"
-                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md text-center font-bold text-sm outline-none focus:ring-2 focus:ring-[#2CA01C]/10 focus:border-[#2CA01C] transition-all"
+                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md text-center font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
                                                             value={sharedNumberingRule.startNumber || 1}
                                                             onChange={e => updateSharedNumbering({ startNumber: parseInt(e.target.value, 10) || 1 })}
                                                         />
@@ -2255,7 +2255,7 @@ const Settings: React.FC = () => {
                                                         <input
                                                             type="text"
                                                             placeholder="e.g. P7, HQ, BRANCH01"
-                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-bold text-sm outline-none focus:ring-2 focus:ring-[#2CA01C]/10 focus:border-[#2CA01C] transition-all"
+                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
                                                             value={sharedNumberingRule.extension || ''}
                                                             onChange={e => updateSharedNumbering({ extension: e.target.value })}
                                                         />
@@ -2264,7 +2264,7 @@ const Settings: React.FC = () => {
                                                     <div className="col-span-2">
                                                         <label className="text-[9px] font-black text-slate-400 uppercase block mb-3 px-1">Reset Sequence</label>
                                                         <select
-                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-bold text-sm outline-none focus:ring-2 focus:ring-[#2CA01C]/10 focus:border-[#2CA01C] transition-all cursor-pointer"
+                                                            className="w-full p-3 bg-[#F4F5F8] border border-[#D4D7DC] rounded-md font-bold text-sm outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all cursor-pointer"
                                                             value={sharedNumberingRule.resetInterval || 'Never'}
                                                             onChange={e => updateSharedNumbering({ resetInterval: e.target.value as NumberingRule['resetInterval'] })}
                                                         >
@@ -2276,16 +2276,16 @@ const Settings: React.FC = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+                                                <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
                                                     One change here updates the numbering style used throughout sales, POS, procurement, inventory, and supporting transaction documents.
                                                 </div>
                                             </div>
 
                                             <div className="p-6 bg-slate-900 rounded-lg shadow-xl text-white border border-white/5">
                                                 <div className="flex items-center gap-3 mb-6">
-                                                    <FileCheck size={18} className="text-[#2CA01C]" />
+                                                    <FileCheck size={18} className="text-blue-600" />
                                                     <div>
-                                                        <p className="text-[10px] font-black text-[#2CA01C] uppercase tracking-widest">Live Preview</p>
+                                                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Live Preview</p>
                                                         <p className="text-xs text-slate-300 mt-1">Every document keeps its own prefix, then follows the shared pattern.</p>
                                                     </div>
                                                 </div>
@@ -2313,7 +2313,7 @@ const Settings: React.FC = () => {
                                         <div className="flex justify-between items-end mb-10">
                                             <div>
                                                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-                                                    <Shield size={18} className="text-emerald-600" /> Approval Thresholds & Controls
+                                                    <Shield size={18} className="text-blue-600" /> Approval Thresholds & Controls
                                                 </h3>
                                                 <p className="text-xs text-slate-500 mt-1">Define which transactions require administrative authorization.</p>
                                             </div>
@@ -2325,9 +2325,9 @@ const Settings: React.FC = () => {
                                                 { key: 'quotation', label: 'Sales Quotations', icon: PenTool, desc: 'Customer proposals' },
                                                 { key: 'expense', label: 'Operating Expenses', icon: ExternalLink, desc: 'Direct cost recording' }
                                             ].map(item => (
-                                                <div key={item.key} className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-[#2CA01C] transition-all flex flex-col h-full">
+                                                <div key={item.key} className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-blue-600 transition-all flex flex-col h-full">
                                                     <div className="flex items-center gap-4 mb-6">
-                                                        <div className="p-3 bg-[#F4F5F8] rounded-md text-[#6B6C6F] group-hover:bg-green-50 group-hover:text-[#2CA01C] transition-all">
+                                                        <div className="p-3 bg-[#F4F5F8] rounded-md text-[#6B6C6F] group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
                                                             <item.icon size={20} />
                                                         </div>
                                                         <div>
@@ -2357,7 +2357,7 @@ const Settings: React.FC = () => {
                                                                         setConfig({ ...config, transactionSettings: { ...config.transactionSettings, approvalThresholds: thresholds } });
                                                                     }}
                                                                 />
-                                                                <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                                <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                                             </label>
                                                         </div>
 
@@ -2368,7 +2368,7 @@ const Settings: React.FC = () => {
                                                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
                                                                     <input
                                                                         type="number"
-                                                                        className="w-full bg-[#F4F5F8] border border-[#D4D7DC] rounded-md pl-10 pr-5 py-3 font-bold text-[#393A3D] outline-none focus:ring-2 focus:ring-[#2CA01C]/10 focus:border-[#2CA01C] transition-all text-sm"
+                                                                        className="w-full bg-[#F4F5F8] border border-[#D4D7DC] rounded-md pl-10 pr-5 py-3 font-bold text-[#393A3D] outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all text-sm"
                                                                         value={config.transactionSettings?.approvalThresholds?.[item.key] || 0}
                                                                         onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, approvalThresholds: { ...config.transactionSettings?.approvalThresholds, [item.key]: parseFloat(e.target.value) || 0 } } })}
                                                                     />
@@ -2393,13 +2393,13 @@ const Settings: React.FC = () => {
 
                                     <section className="pt-10 border-t border-slate-100">
                                         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
-                                            <Cpu size={18} className="text-emerald-600" /> External API Connections
+                                            <Cpu size={18} className="text-blue-600" /> External API Connections
                                         </h3>
                                         <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 space-y-8 shadow-sm">
                                             {(config.integrationSettings?.externalApis || []).map((api, idx) => (
-                                                <div key={api.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-100 group hover:border-emerald-200 transition-all">
+                                                <div key={api.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-100 group hover:border-blue-200 transition-all">
                                                     <div className="flex items-center gap-6">
-                                                        <div className="p-5 bg-white rounded-2xl shadow-sm text-slate-400 group-hover:text-emerald-600 transition-all">
+                                                        <div className="p-5 bg-white rounded-2xl shadow-sm text-slate-400 group-hover:text-blue-600 transition-all">
                                                             <Globe size={24} />
                                                         </div>
                                                         <div>
@@ -2408,11 +2408,11 @@ const Settings: React.FC = () => {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-6">
-                                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${api.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${api.enabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
                                                             {api.enabled ? 'Active' : 'Disabled'}
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <button className="p-2.5 text-slate-400 hover:text-[#2CA01C] hover:bg-[#2CA01C]/10 rounded-xl transition-all" title="Edit settings" aria-label="Edit API settings"><Settings2 size={18} /></button>
+                                                            <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-600/10 rounded-xl transition-all" title="Edit settings" aria-label="Edit API settings"><Settings2 size={18} /></button>
                                                             <button className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Delete" aria-label="Delete API credential"><Trash2 size={18} /></button>
                                                         </div>
                                                     </div>
@@ -2436,7 +2436,7 @@ const Settings: React.FC = () => {
                                                     });
                                                     notify('New API connection added. Configure details below.', 'info');
                                                 }}
-                                                className="w-full py-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 font-black uppercase text-[11px] tracking-widest hover:border-[#2CA01C] hover:text-[#2CA01C] hover:bg-[#2CA01C]/30 transition-all flex items-center justify-center gap-3"
+                                                className="w-full py-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 font-black uppercase text-[11px] tracking-widest hover:border-blue-600 hover:text-blue-600 hover:bg-blue-600/30 transition-all flex items-center justify-center gap-3"
                                             >
                                                 <Plus size={18} /> Connect New Service
                                             </button>
@@ -2445,11 +2445,11 @@ const Settings: React.FC = () => {
 
                                     <section className="pt-10 border-t border-slate-100">
                                         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
-                                            <Webhook size={18} className="text-[#2CA01C]" /> Webhook Outlets
+                                            <Webhook size={18} className="text-blue-600" /> Webhook Outlets
                                         </h3>
                                         <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 space-y-8 shadow-sm">
                                             {(config.integrationSettings?.webhooks || []).map((hook, idx) => (
-                                                <div key={hook.id} className="p-6 bg-slate-50 rounded-lg border border-slate-100 group hover:border-[#2CA01C]/50 transition-all">
+                                                <div key={hook.id} className="p-6 bg-slate-50 rounded-lg border border-slate-100 group hover:border-blue-600/50 transition-all">
                                                     <div className="flex justify-between items-start mb-6">
                                                         <div>
                                                             <p className="font-black text-slate-800 uppercase text-xs tracking-widest mb-1">Destination URL</p>
@@ -2466,12 +2466,12 @@ const Settings: React.FC = () => {
                                                                     setConfig({ ...config, integrationSettings: { ...config.integrationSettings, webhooks: updatedHooks } });
                                                                 }}
                                                             />
-                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                         </label>
                                                     </div>
                                                     <div className="flex flex-wrap gap-3">
                                                         {(hook.events || []).map(event => (
-                                                            <span key={event} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest shadow-sm group-hover:border-[#2CA01C]/50 transition-all">{event}</span>
+                                                            <span key={event} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest shadow-sm group-hover:border-blue-600/50 transition-all">{event}</span>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -2494,7 +2494,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                     });
                                                     notify('New webhook endpoint added. Configure URL and events below.', 'info');
                                                 }}
-                                                className="w-full py-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 font-black uppercase text-[11px] tracking-widest hover:border-[#2CA01C] hover:text-[#2CA01C] hover:bg-[#2CA01C]/30 transition-all flex items-center justify-center gap-3"
+                                                className="w-full py-6 border-2 border-dashed border-slate-200 rounded-lg text-slate-400 font-black uppercase text-[11px] tracking-widest hover:border-blue-600 hover:text-blue-600 hover:bg-blue-600/30 transition-all flex items-center justify-center gap-3"
                                             >
                                                 <Plus size={18} /> Register Webhook
                                             </button>
@@ -2509,7 +2509,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
                                     <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-10">
                                         <div className="flex items-center gap-3">
-                                            <ShoppingBag size={18} className="text-[#2CA01C]" />
+                                            <ShoppingBag size={18} className="text-blue-600" />
                                             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Feature Management</h3>
                                         </div>
                                         <div className="grid grid-cols-2 gap-10">
@@ -2520,9 +2520,9 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 { key: 'crm', label: 'CRM & Comms', icon: Smartphone, desc: 'Lead tracking and SMS/WhatsApp broadcast' },
                                                 { key: 'loyalty', label: 'Loyalty Rewards', icon: Zap, desc: 'Point accumulation and redemption logic' }
                                             ].map(mod => (
-                                                <div key={mod.key} className="p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm flex items-center justify-between group hover:border-[#2CA01C] transition-all">
+                                                <div key={mod.key} className="p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm flex items-center justify-between group hover:border-blue-600 transition-all">
                                                     <div className="flex items-center gap-6">
-                                                        <div className="p-4 bg-[#F4F5F8] rounded-md border border-[#D4D7DC] text-[#6B6C6F] group-hover:text-[#2CA01C] group-hover:border-[#2CA01C] transition-all shadow-sm">
+                                                        <div className="p-4 bg-[#F4F5F8] rounded-md border border-[#D4D7DC] text-[#6B6C6F] group-hover:text-blue-600 group-hover:border-blue-600 transition-all shadow-sm">
                                                             <mod.icon size={28} />
                                                         </div>
                                                         <div className="min-w-0">
@@ -2537,7 +2537,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.enabledModules[mod.key]}
                                                             onChange={e => setConfig({ ...config, enabledModules: { ...config.enabledModules, [mod.key]: e.target.checked } })}
                                                         />
-                                                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
 </div>
                                             ))}
@@ -2552,7 +2552,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
                                     <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-10">
                                         <div className="flex items-center gap-3">
-                                            <Box size={18} className="text-emerald-600" />
+                                            <Box size={18} className="text-blue-600" />
                                             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Stock & Inventory Policy</h3>
                                         </div>
                                         <div className="grid grid-cols-2 gap-10">
@@ -2564,7 +2564,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             <button
                                                                 key={method}
                                                                  onClick={() => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, valuationMethod: method as InventorySettingsConfig['valuationMethod'] } })}
-                                                                className={`py-3 rounded-md font-bold text-[10px] uppercase tracking-widest transition-all border ${config.inventorySettings?.valuationMethod === method ? 'bg-[#2CA01C] text-white border-[#2CA01C] shadow-sm' : 'bg-white text-[#6B6C6F] border-[#D4D7DC] hover:border-[#2CA01C] hover:bg-green-50'}`}
+                                                                className={`py-3 rounded-md font-bold text-[10px] uppercase tracking-widest transition-all border ${config.inventorySettings?.valuationMethod === method ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-[#6B6C6F] border-[#D4D7DC] hover:border-blue-600 hover:bg-blue-50'}`}
                                                             >
                                                                 {method}
                                                             </button>
@@ -2574,7 +2574,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 <div className="h-px bg-slate-200/50"></div>
                                                 <div className="flex justify-between items-center group/item">
                                                     <div>
-                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-emerald-600 transition-colors">Allow Negative Stock</p>
+                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-blue-600 transition-colors">Allow Negative Stock</p>
                                                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Allow sales and production even if stock is zero.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -2584,13 +2584,13 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.inventorySettings?.allowNegativeStock}
                                                             onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, allowNegativeStock: e.target.checked } })}
                                                         />
-                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="h-px bg-slate-200/50"></div>
                                                 <div className="flex justify-between items-center group/item">
                                                     <div>
-                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-emerald-600 transition-colors">Auto-Generate Barcodes</p>
+                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-blue-600 transition-colors">Auto-Generate Barcodes</p>
                                                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Create unique barcodes for new items automatically.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -2600,13 +2600,13 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.inventorySettings?.autoBarcode}
                                                             onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, autoBarcode: e.target.checked } })}
                                                         />
-                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="h-px bg-slate-200/50"></div>
                                                 <div className="flex justify-between items-center group/item">
                                                     <div>
-                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-emerald-600 transition-colors">Track Batch Numbers</p>
+                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-blue-600 transition-colors">Track Batch Numbers</p>
                                                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Enable lot/batch tracking for perishable goods.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -2616,7 +2616,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.inventorySettings?.trackBatches}
                                                             onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, trackBatches: e.target.checked } })}
                                                         />
-                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                             </div>
@@ -2625,7 +2625,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 <div>
                                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-1">Default Warehouse</label>
                                                     <select
-                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all text-sm shadow-sm"
+                                                        className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm shadow-sm"
                                                         value={config.inventorySettings?.defaultWarehouseId || ''}
                                                         onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, defaultWarehouseId: e.target.value } })}
                                                     >
@@ -2638,7 +2638,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 <div className="h-px bg-slate-200/50"></div>
                                                 <div className="flex justify-between items-center group/item">
                                                     <div>
-                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-emerald-600 transition-colors">Track Serial Numbers</p>
+                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-blue-600 transition-colors">Track Serial Numbers</p>
                                                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Enable unique serial tracking for electronics.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -2648,13 +2648,13 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.inventorySettings?.trackSerialNumbers}
                                                             onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, trackSerialNumbers: e.target.checked } })}
                                                         />
-                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <div className="h-px bg-slate-200/50"></div>
                                                 <div className="flex justify-between items-center group/item">
                                                     <div>
-                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-emerald-600 transition-colors">Low Stock Alerts</p>
+                                                        <p className="font-black text-slate-800 uppercase text-sm tracking-tight group-hover/item:text-blue-600 transition-colors">Low Stock Alerts</p>
                                                         <p className="text-[10px] text-slate-500 mt-1 font-medium">Notify users when items fall below reorder level.</p>
                                                     </div>
                                                     <label className="relative inline-flex items-center cursor-pointer">
@@ -2664,7 +2664,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             checked={config.inventorySettings?.lowStockAlerts}
                                                             onChange={e => setConfig({ ...config, inventorySettings: { ...config.inventorySettings, lowStockAlerts: e.target.checked } })}
                                                         />
-                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                                        <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                             </div>
@@ -2727,7 +2727,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                                     }
                                                                 })}
                                                             />
-                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                         </label>
                                                     </div>
                                                     <div className="flex justify-between items-center group/item">
@@ -2748,7 +2748,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                                     }
                                                                 })}
                                                             />
-                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                            <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                         </label>
                                                     </div>
                                                     <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
@@ -2788,11 +2788,11 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                     <div className="h-px bg-slate-50"></div>
                                                     <div className="flex justify-between items-center group/item p-6 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <div>
-                                                            <p className="font-black text-slate-800 uppercase text-base group-hover/item:text-[#2CA01C] transition-colors">Multi-Factor Authentication</p>
+                                                            <p className="font-black text-slate-800 uppercase text-base group-hover/item:text-blue-600 transition-colors">Multi-Factor Authentication</p>
                                                             <p className="text-[10px] text-slate-500 mt-1 font-medium italic">Require a 6-digit TOTP code for administrative access.</p>
                                                             <div className="mt-3 flex gap-2">
                                                                 {normalizedSecuritySettings.requireTwoFactor ? (
-                                                                     <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
+                                                                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[9px] font-black uppercase tracking-widest border border-blue-200 flex items-center gap-1.5 shadow-sm shadow-blue-500/10">
                                                                          <CheckCircle2 size={12} /> Active & Configured
                                                                      </span>
                                                                 ) : (
@@ -2813,7 +2813,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             ) : (
                                                                 <button 
                                                                     onClick={() => setShow2FASetup(true)}
-                                                                    className="px-8 py-3 bg-[#2CA01C] text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-green-500/20 hover:bg-green-700 transition-all active:scale-95 flex items-center gap-2"
+                                                                    className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2"
                                                                 >
                                                                     <Smartphone size={16} /> Setup MFA Now
                                                                 </button>
@@ -2875,7 +2875,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                         <div className="flex justify-between items-end mb-10">
                                             <div>
                                                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
-                                                    <Beaker size={18} className="text-emerald-500" /> Quality Audit Terminal
+                                                    <Beaker size={18} className="text-blue-600" /> Quality Audit Terminal
                                                 </h3>
                                                 <p className="text-[10px] text-slate-500 font-medium italic">Physical-to-Ledger verification sweep.</p>
                                             </div>
@@ -2884,45 +2884,45 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 disabled={isProcessing}
                                                 className="bg-[#393A3D] text-white px-8 py-4 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-black flex items-center gap-3 shadow-md transition-all disabled:opacity-50 active:scale-95 border border-white/5"
                                             >
-                                                {isProcessing ? <RefreshCw size={20} className="animate-spin text-[#2CA01C]" /> : <Zap size={20} className="text-[#2CA01C]" />}
+                                                {isProcessing ? <RefreshCw size={20} className="animate-spin text-blue-600" /> : <Zap size={20} className="text-blue-600" />}
                                                 {isProcessing ? 'Auditing...' : 'Run Logic Sweep'}
                                             </button>
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-10 mb-12">
-                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-[#2CA01C] transition-all">
+                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-blue-600 transition-all">
                                                 <p className="text-[10px] font-bold text-[#6B6C6F] uppercase tracking-widest mb-2">Pass Status</p>
                                                 <div className="text-5xl font-bold text-[#393A3D] flex items-baseline gap-2">
                                                     {testResults.length > 0 ? '100%' : '0%'}
-                                                    <span className="text-xs font-bold text-[#2CA01C]">SEALED</span>
+                                                    <span className="text-xs font-bold text-blue-600">SEALED</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-[#2CA01C] transition-all">
+                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm group hover:border-blue-600 transition-all">
                                                 <p className="text-[10px] font-bold text-[#6B6C6F] uppercase tracking-widest mb-2">Logical Drifts</p>
-                                                <div className="text-5xl font-bold text-[#2CA01C] transition-transform group-hover:scale-110">0</div>
+                                                <div className="text-5xl font-bold text-blue-600 transition-transform group-hover:scale-110">0</div>
                                             </div>
                                             <div className="bg-[#393A3D] p-6 rounded-lg shadow-md text-white border border-white/5 group overflow-hidden relative">
                                                 <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform"><Database size={120} /></div>
-                                                <p className="text-[10px] font-bold text-[#2CA01C] uppercase tracking-widest mb-2 relative z-10">Ledger Sync</p>
+                                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 relative z-10">Ledger Sync</p>
                                                 <div className="text-3xl font-bold uppercase tracking-tighter relative z-10">ACCURATE</div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-4 mb-16">
                                             {testResults.map((r, i) => (
-                                                <div key={i} className="flex items-center justify-between p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm animate-in slide-in-from-left-4 duration-500 group hover:border-[#2CA01C] transition-all" style={{ animationDelay: `${i * 150}ms` }}>
+                                                <div key={i} className="flex items-center justify-between p-6 bg-white rounded-lg border border-[#D4D7DC] shadow-sm animate-in slide-in-from-left-4 duration-500 group hover:border-blue-600 transition-all" style={{ animationDelay: `${i * 150}ms` }}>
                                                     <div className="flex items-center gap-6">
-                                                        <div className="p-4 bg-[#F4F5F8] text-[#6B6C6F] rounded-md border border-[#D4D7DC] group-hover:text-[#2CA01C] group-hover:border-[#2CA01C] transition-all">
+                                                        <div className="p-4 bg-[#F4F5F8] text-[#6B6C6F] rounded-md border border-[#D4D7DC] group-hover:text-blue-600 group-hover:border-blue-600 transition-all">
                                                             <FileCheck size={28} />
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-[#393A3D] uppercase tracking-tighter text-lg group-hover:text-[#2CA01C] transition-colors">{r.name}</div>
+                                                            <div className="font-bold text-[#393A3D] uppercase tracking-tighter text-lg group-hover:text-blue-600 transition-colors">{r.name}</div>
                                                             <div className="text-[10px] text-[#6B6C6F] font-bold uppercase tracking-widest mt-1">{r.cases} Real-time Records Scanned</div>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-6">
-                                                        <div className="text-[10px] font-bold text-[#2CA01C] tracking-[0.2em]">{r.status}</div>
-                                                        <CheckCircle2 size={28} className="text-[#2CA01C] group-hover:scale-110 transition-transform" />
+                                                        <div className="text-[10px] font-bold text-blue-600 tracking-[0.2em]">{r.status}</div>
+                                                        <CheckCircle2 size={28} className="text-blue-600 group-hover:scale-110 transition-transform" />
                                                     </div>
                                                 </div>
                                             ))}
@@ -2941,8 +2941,8 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                             onChange={handleRestoreBackupFile}
                                         />
                                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mb-12">
-                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm flex flex-col items-center text-center group hover:border-[#2CA01C] transition-all">
-                                                <div className="w-20 h-20 rounded-lg bg-green-50 text-[#2CA01C] flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform"><HardDriveDownload size={40} /></div>
+                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm flex flex-col items-center text-center group hover:border-blue-600 transition-all">
+                                                <div className="w-20 h-20 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform"><HardDriveDownload size={40} /></div>
                                                 <h4 className="text-2xl font-bold text-[#393A3D] mb-2">Backup Database</h4>
                                                 <p className="text-sm text-[#6B6C6F] leading-relaxed mb-4 max-w-xs mx-auto">Create a full offline snapshot of your live IndexedDB data and saved local system settings.</p>
                                                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-6">
@@ -2950,7 +2950,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                 </div>
                                                 <button onClick={handleManualBackupDownload} className="w-full py-4 bg-[#393A3D] text-white rounded-md font-bold uppercase text-[11px] tracking-widest hover:bg-black transition-all shadow-md active:scale-95">Download Vault Binary</button>
                                             </div>
-                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm flex flex-col items-center text-center group hover:border-[#2CA01C] transition-all">
+                                            <div className="bg-white p-6 rounded-lg border border-[#D4D7DC] shadow-sm flex flex-col items-center text-center group hover:border-blue-600 transition-all">
                                                 <div className="w-20 h-20 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform"><Database size={40} /></div>
                                                 <h4 className="text-2xl font-bold text-[#393A3D] mb-2">Restore Database</h4>
                                                 <p className="text-sm text-[#6B6C6F] leading-relaxed mb-4 max-w-xs mx-auto">Restore a previously downloaded Prime ERP backup file and reload the full local database state.</p>
@@ -2973,7 +2973,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                             </div>
                                         </div>
 
-                                        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 space-y-8 shadow-sm group hover:border-[#2CA01C] transition-all">
+                                        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 space-y-8 shadow-sm group hover:border-blue-600 transition-all">
                                             <div className="flex justify-between items-center group/item">
                                                 <div>
                                                     <p className="font-black text-slate-800 uppercase text-base group-hover/item:text-blue-600 transition-colors">Automated Cloud Backups</p>
@@ -2992,7 +2992,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                                             }
                                                         })}
                                                     />
-                                                    <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                                                    <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div className="h-px bg-slate-100"></div>
@@ -3087,19 +3087,19 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
 
                                     <section>
                                         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-10 flex items-center gap-3">
-                                            <ShieldCheck size={18} className="text-emerald-600" /> License Status
+                                            <ShieldCheck size={18} className="text-blue-600" /> License Status
                                         </h3>
                                         <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm">
-                                            <div className={`flex items-center justify-between p-8 rounded-3xl border ${systemInfo?.license?.valid ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                                            <div className={`flex items-center justify-between p-8 rounded-3xl border ${systemInfo?.license?.valid ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}`}>
                                                 <div className="flex items-center gap-6">
-                                                    <div className={`p-5 rounded-2xl ${systemInfo?.license?.valid ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                                    <div className={`p-5 rounded-2xl ${systemInfo?.license?.valid ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}`}>
                                                         {systemInfo?.license?.valid ? <CheckCircle2 size={32} /> : <AlertTriangle size={32} />}
                                                     </div>
                                                     <div>
-                                                        <p className={`font-black uppercase tracking-tighter text-xl ${systemInfo?.license?.valid ? 'text-emerald-900' : 'text-rose-900'}`}>
+                                                        <p className={`font-black uppercase tracking-tighter text-xl ${systemInfo?.license?.valid ? 'text-blue-900' : 'text-rose-900'}`}>
                                                             {systemInfo?.license?.valid ? 'SYSTEM ACTIVATED' : 'LICENSE INVALID'}
                                                         </p>
-                                                        <p className={`text-xs font-bold ${systemInfo?.license?.valid ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                        <p className={`text-xs font-bold ${systemInfo?.license?.valid ? 'text-blue-600' : 'text-rose-600'}`}>
                                                             {systemInfo?.license?.valid
                                                                 ? `Full Professional License active until ${new Date(systemInfo.license.expiry).toLocaleDateString()}`
                                                                 : systemInfo?.license?.message || 'Please install a valid license.lic file in the root directory.'}
@@ -3169,7 +3169,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                         {activeTab === 'ProfitMargins' && (
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                                    <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                                         <TrendingUp size={20} className="text-white" />
                                     </div>
                                     <div>

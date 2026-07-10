@@ -39,7 +39,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
             <div className="group/field">
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1 group-hover/field:text-rose-600 transition-colors">Complexity Requirement</label>
               <div className="flex gap-3">
-                <span className="px-6 py-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl text-[10px] font-black tracking-widest">NUMERIC</span>
+                <span className="px-6 py-3 bg-blue-50 text-blue-700 border border-blue-100 rounded-2xl text-[10px] font-black tracking-widest">NUMERIC</span>
                 <span className="px-6 py-3 bg-[#2CA01C]/50 text-[#2CA01C] border border-[#2CA01C]/50 rounded-2xl text-[10px] font-black tracking-widest">SPECIAL CHAR</span>
               </div>
             </div>
@@ -84,7 +84,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
                       setConfig({ ...config, integrationSettings: { ...config.integrationSettings, externalApis: newApis } });
                     }}
                   />
-                  <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                  <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-10">
@@ -126,7 +126,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
               const newApis = [...(config.integrationSettings?.externalApis || []), { id: `api-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, name: 'New API Connection', enabled: false, baseUrl: 'https://' }];
               setConfig({ ...config, integrationSettings: { ...config.integrationSettings, externalApis: newApis } });
             }}
-            className="w-full py-6 border-2 border-dashed border-[#D4D7DC] rounded-lg text-[#6B6C6F] font-bold uppercase text-xs tracking-widest hover:border-[#2CA01C] hover:text-[#2CA01C] hover:bg-green-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+            className="w-full py-6 border-2 border-dashed border-[#D4D7DC] rounded-lg text-[#6B6C6F] font-bold uppercase text-xs tracking-widest hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
           >
             <Plus size={20} /> Register New API Endpoint
           </button>
@@ -167,7 +167,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
                         setConfig({ ...config, integrationSettings: { ...config.integrationSettings, webhooks: newHooks } });
                       }}
                     />
-                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
+                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                   <button
                     onClick={() => {
@@ -194,7 +194,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
                         newHooks[index] = { ...hook, events: newEvents };
                         setConfig({ ...config, integrationSettings: { ...config.integrationSettings, webhooks: newHooks } });
                       }}
-                      className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${(hook.events || []).includes(event) ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-600/20' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-600'}`}
+                      className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${(hook.events || []).includes(event) ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-600'}`}
                     >
                       {event.replace('.', ' ')}
                     </button>
@@ -208,7 +208,7 @@ export const IntegrationsTab: React.FC<IntegrationsTabProps> = ({ config, setCon
               const newHooks = [...(config.integrationSettings?.webhooks || []), { id: `hook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, url: 'https://', events: [], enabled: false }];
               setConfig({ ...config, integrationSettings: { ...config.integrationSettings, webhooks: newHooks } });
             }}
-            className="w-full py-6 border-2 border-dashed border-[#D4D7DC] rounded-lg text-[#6B6C6F] font-bold uppercase text-xs tracking-widest hover:border-[#2CA01C] hover:text-[#2CA01C] hover:bg-green-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+            className="w-full py-6 border-2 border-dashed border-[#D4D7DC] rounded-lg text-[#6B6C6F] font-bold uppercase text-xs tracking-widest hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
           >
             <Plus size={20} /> Configure New Webhook Outlet
           </button>

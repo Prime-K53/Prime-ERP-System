@@ -604,10 +604,10 @@ export function resolveExamMaterialEnhanced(
   preferredId?: string,
   config?: MatchCriteria
 ): MatchResult | null {
-  // 1. Check for preferred ID first
+  // 1. Check for preferred ID first (respect user-selected material regardless of stock)
   if (preferredId) {
     const preferred = inventory.find(item => item.id === preferredId);
-    if (preferred && preferred.stock > 0) {
+    if (preferred) {
       return {
         item: preferred,
         score: 100,
@@ -723,7 +723,7 @@ export async function resolveMaterialFromConfig(
     // Try preferred item
     if (config.preferredItemId) {
       const preferred = inventory.find(item => item.id === config.preferredItemId);
-      if (preferred && preferred.stock > 0) {
+      if (preferred) {
         return {
           item: preferred,
           score: 100,
@@ -737,7 +737,7 @@ export async function resolveMaterialFromConfig(
     // Try fallback items
     if (config.fallbackItemIds && config.fallbackItemIds.length > 0) {
       for (const fallbackId of config.fallbackItemIds) {
-        const item = inventory.find(i => i.id === fallbackId && i.stock > 0);
+        const item = inventory.find(i => i.id === fallbackId);
         if (item) {
           return {
             item,

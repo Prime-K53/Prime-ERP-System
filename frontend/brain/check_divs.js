@@ -1,7 +1,7 @@
 
 import fs from 'fs';
 
-const content = fs.readFileSync('frontend/views/inventory/components/ItemModal.tsx', 'utf8');
+const content = fs.readFileSync('frontend/components/items/ItemModal/ItemModal.tsx', 'utf8');
 
 function checkDivs(text) {
     const stack = [];

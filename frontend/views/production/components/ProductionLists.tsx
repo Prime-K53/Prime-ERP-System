@@ -116,7 +116,7 @@ const useContextMenu = () => {
 
 export const WorkOrderKanban: React.FC<WorkOrderKanbanProps> = ({ orders, onUpdateStatus, onView, onPreview, onCancel, onDelete, onConvertInvoice }) => {
     const { inventory } = useInventory();
-    const columns: WorkOrder['status'][] = ['Scheduled', 'In Progress', 'QA', 'Completed'];
+    const columns: WorkOrder['status'][] = ['Scheduled', 'In Progress', 'On Hold', 'QA', 'Completed'];
     const [draggedId, setDraggedId] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
     const { openMenuId, menuPos, menuRef, handleContextMenu, setOpenMenuId } = useContextMenu();
@@ -125,6 +125,7 @@ export const WorkOrderKanban: React.FC<WorkOrderKanbanProps> = ({ orders, onUpda
         switch(status) {
             case 'Scheduled': return 'bg-amber-50/40 border-amber-100/50 shadow-inner';
             case 'In Progress': return 'bg-blue-50/40 border-blue-100/50 shadow-inner';
+            case 'On Hold': return 'bg-orange-50/40 border-orange-100/50 shadow-inner';
             case 'QA': return 'bg-purple-50/40 border-purple-100/50 shadow-inner';
             case 'Completed': return 'bg-emerald-50/40 border-emerald-100/50 shadow-inner';
             default: return 'bg-slate-50';
@@ -319,17 +320,36 @@ export const WorkOrderKanban: React.FC<WorkOrderKanbanProps> = ({ orders, onUpda
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    const nextStatus = status === 'Scheduled' ? 'In Progress' : status === 'In Progress' ? 'QA' : 'Completed';
+                                                    const nextStatus = status === 'Scheduled' ? 'In Progress'
+                                                        : status === 'In Progress' ? 'QA'
+                                                        : status === 'QA' ? 'Completed'
+                                                        : status;
                                                     onUpdateStatus(wo.id, nextStatus);
                                                 }} 
                                                 className={`${
                                                     status === 'Scheduled' ? 'bg-blue-600' : 
-                                                    status === 'In Progress' ? 'bg-purple-600' : 'bg-emerald-600'
+                                                    status === 'In Progress' ? 'bg-purple-600' :
+                                                    status === 'QA' ? 'bg-emerald-600'
+                                                    : 'bg-slate-600'
                                                 } text-white p-1.5 rounded-lg shadow-md hover:scale-110 transition-all ring-2 ring-white`}
-                                                title={`Move to ${status === 'Scheduled' ? 'In Progress' : status === 'In Progress' ? 'QA' : 'Completed'}`}
+                                                title={`Move to ${status === 'Scheduled' ? 'In Progress' : status === 'In Progress' ? 'QA' : status === 'QA' ? 'Completed' : status}`}
                                             >
                                                 {status === 'Scheduled' ? <Play size={12} fill="currentColor"/> : 
-                                                 status === 'In Progress' ? <ShieldCheck size={12}/> : <CheckCircle size={12}/>}
+                                                 status === 'In Progress' ? <ShieldCheck size={12}/> :
+                                                 status === 'QA' ? <CheckCircle size={12}/> :
+                                                 <Play size={12} fill="currentColor"/>}
+                                            </button>
+                                        )}
+                                        {status === 'In Progress' && (
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onUpdateStatus(wo.id, 'On Hold');
+                                                }}
+                                                className="bg-white text-amber-600 p-1.5 rounded-lg shadow-sm hover:bg-amber-50 border border-amber-200 transition-all"
+                                                title="Put on Hold"
+                                            >
+                                                <PauseCircle size={12}/>
                                             </button>
                                         )}
                                     </div>

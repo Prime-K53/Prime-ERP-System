@@ -189,6 +189,7 @@ const initDb = () => {
                 { name: 'origin_batch_id', type: 'TEXT' },
                 { name: 'rounding_difference', type: 'REAL DEFAULT 0' },
                 { name: 'rounding_method', type: 'TEXT' },
+                { name: 'other_charges', type: 'REAL DEFAULT 0' },
                 { name: 'adjustment_total', type: 'REAL DEFAULT 0' },
                 { name: 'adjustment_snapshots_json', type: 'TEXT' },
                 { name: 'idempotency_key', type: 'TEXT' },
@@ -238,20 +239,27 @@ const initDb = () => {
         customer_id TEXT,
         customer_name TEXT,
         sub_account_name TEXT,
-        total_amount REAL DEFAULT 0,
-        material_total REAL DEFAULT 0,
-        adjustment_total REAL DEFAULT 0,
-        profit_margin_total REAL DEFAULT 0,
-        rounding_total REAL DEFAULT 0,
+        total_amount REAL DEFAULT 0 CHECK (total_amount >= 0),
+        material_total REAL DEFAULT 0 CHECK (material_total >= 0),
+        adjustment_total REAL DEFAULT 0 CHECK (adjustment_total >= 0),
+        profit_margin_total REAL DEFAULT 0 CHECK (profit_margin_total >= 0),
+        rounding_total REAL DEFAULT 0 CHECK (rounding_total >= 0),
+        other_charges REAL DEFAULT 0 CHECK (other_charges >= 0),
         adjustment_snapshots_json TEXT,
-        status TEXT DEFAULT 'Paid',
+        status TEXT DEFAULT 'Paid' CHECK (status IN ('Draft', 'Pending', 'Paid', 'Partially Paid', 'Voided', 'Refunded')),
         payment_method TEXT,
         source TEXT,
         items_json TEXT,
         payments_json TEXT,
         last_synced_at DATETIME,
         sync_checksum TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by TEXT,
+        updated_by TEXT,
+        void_reason TEXT,
+        voided_at DATETIME,
+        idempotency_key TEXT UNIQUE
       )`, (err) => {
         if (!err) {
           db.all("PRAGMA table_info(sales)", (err, rows) => {
@@ -263,7 +271,13 @@ const initDb = () => {
                 { name: 'adjustment_total', type: 'REAL DEFAULT 0' },
                 { name: 'profit_margin_total', type: 'REAL DEFAULT 0' },
                 { name: 'rounding_total', type: 'REAL DEFAULT 0' },
-                { name: 'adjustment_snapshots_json', type: 'TEXT' }
+                { name: 'other_charges', type: 'REAL DEFAULT 0' },
+                { name: 'adjustment_snapshots_json', type: 'TEXT' },
+                { name: 'updated_at', type: 'DATETIME DEFAULT CURRENT_TIMESTAMP' },
+                { name: 'created_by', type: 'TEXT' },
+                { name: 'updated_by', type: 'TEXT' },
+                { name: 'void_reason', type: 'TEXT' },
+                { name: 'voided_at', type: 'DATETIME' }
               ];
 
               columnsToAdd.forEach(col => {
@@ -274,6 +288,17 @@ const initDb = () => {
                   });
                 }
               });
+              
+              // Add unique index for idempotency_key (skip if column doesn't exist yet)
+              try {
+                db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_idempotency ON sales(idempotency_key)`, (err) => {
+                  if (err && !err.message.includes('duplicate column name')) {
+                    console.error('Error creating idempotency index:', err);
+                  }
+                });
+              } catch (e) {
+                // Index might fail if column doesn't exist yet, that's ok
+              }
             }
           });
         }
@@ -792,6 +817,7 @@ const initDb = () => {
         subtotal REAL DEFAULT 0,
         discounts REAL DEFAULT 0,
         tax REAL DEFAULT 0,
+        other_charges REAL DEFAULT 0,
         total REAL DEFAULT 0,
         notes TEXT,
         created_by TEXT,
@@ -927,6 +953,109 @@ const initDb = () => {
 
       db.run(`CREATE INDEX IF NOT EXISTS idx_user_companies_user ON user_companies(user_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_user_companies_company ON user_companies(company_id)`);
+
+      // ==================== BANKING MODULE ====================
+      db.run(`CREATE TABLE IF NOT EXISTS bank_accounts (
+        id TEXT PRIMARY KEY,
+        account_name TEXT NOT NULL,
+        account_number TEXT NOT NULL,
+        bank_name TEXT NOT NULL,
+        branch_code TEXT,
+        account_type TEXT DEFAULT 'checking' CHECK(account_type IN ('checking', 'savings', 'credit', 'petty_cash')),
+        currency TEXT DEFAULT 'USD',
+        opening_balance REAL DEFAULT 0,
+        current_balance REAL DEFAULT 0,
+        status TEXT DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'Closed')),
+        company_id TEXT NOT NULL,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_accounts_company ON bank_accounts(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_accounts_status ON bank_accounts(status)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS bank_transactions (
+        id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('deposit', 'withdrawal', 'transfer')),
+        amount REAL NOT NULL CHECK(amount > 0),
+        currency TEXT DEFAULT 'USD',
+        description TEXT,
+        reference_type TEXT,
+        reference_id TEXT,
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'failed', 'cancelled')),
+        reconciled INTEGER DEFAULT 0,
+        reconciled_at DATETIME,
+        company_id TEXT NOT NULL,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (account_id) REFERENCES bank_accounts(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_transactions_account ON bank_transactions(account_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_transactions_date ON bank_transactions(date)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_transactions_reconciled ON bank_transactions(reconciled)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_bank_transactions_company ON bank_transactions(company_id)`);
+
+      // ==================== VAT/TAX MODULE ====================
+      db.run(`CREATE TABLE IF NOT EXISTS vat_transactions (
+        id TEXT PRIMARY KEY,
+        transaction_type TEXT NOT NULL CHECK(transaction_type IN ('sale', 'purchase', 'adjustment')),
+        reference_id TEXT NOT NULL,
+        reference_type TEXT NOT NULL,
+        vat_rate REAL NOT NULL,
+        vat_amount REAL NOT NULL,
+        net_amount REAL NOT NULL,
+        gross_amount REAL NOT NULL,
+        vat_category TEXT DEFAULT 'standard' CHECK(vat_category IN ('standard', 'reduced', 'zero', 'exempt')),
+        is_recoverable INTEGER DEFAULT 1,
+        period TEXT NOT NULL,
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'filed', 'paid')),
+        company_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_vat_transactions_period ON vat_transactions(period)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_vat_transactions_company ON vat_transactions(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_vat_transactions_reference ON vat_transactions(reference_id, reference_type)`);
+
+      // ==================== PURCHASE ORDER ITEMS (with company_id) ====================
+      db.run(`CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id TEXT PRIMARY KEY,
+        purchase_order_id TEXT NOT NULL,
+        item_id TEXT,
+        item_name TEXT NOT NULL,
+        quantity REAL NOT NULL CHECK(quantity > 0),
+        unit_price REAL NOT NULL CHECK(unit_price >= 0),
+        total_price REAL NOT NULL CHECK(total_price >= 0),
+        company_id TEXT NOT NULL,
+        FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_po_items_po ON purchase_order_items(purchase_order_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_po_items_company ON purchase_order_items(company_id)`);
+
+      // ==================== SALE ITEMS (ensure company_id exists) ====================
+      db.run(`CREATE TABLE IF NOT EXISTS sale_items (
+        id TEXT PRIMARY KEY,
+        sale_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        variant_id TEXT,
+        item_name TEXT,
+        quantity INTEGER NOT NULL,
+        unit_price REAL NOT NULL DEFAULT 0,
+        unit_cost REAL DEFAULT 0,
+        line_total REAL DEFAULT 0,
+        discount REAL DEFAULT 0,
+        item_type TEXT,
+        consumption_snapshot_json TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_sale_items_item ON sale_items(item_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_sale_items_company ON sale_items(company_id)`);
 
       // Production resources (work centers and resources) — must be queued
       // BEFORE migration ALTER TABLEs so they exist when initDb() resolves.
@@ -1261,6 +1390,33 @@ const initDb = () => {
       db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_customer ON customer_payments(customer_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_date ON customer_payments(date)`);
 
+      // Payment Allocation Tables
+      db.run(`CREATE TABLE IF NOT EXISTS payment_allocations (
+        id TEXT PRIMARY KEY,
+        payment_id TEXT NOT NULL,
+        company_id TEXT NOT NULL,
+        total_allocated REAL NOT NULL DEFAULT 0,
+        excess_amount REAL DEFAULT 0,
+        excess_handling TEXT DEFAULT 'credit_to_customer',
+        reversed INTEGER DEFAULT 0,
+        reversed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (payment_id) REFERENCES customer_payments(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_payment_allocations_company ON payment_allocations(company_id)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS payment_allocation_lines (
+        id TEXT PRIMARY KEY,
+        allocation_id TEXT NOT NULL,
+        invoice_id TEXT NOT NULL,
+        amount REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (allocation_id) REFERENCES payment_allocations(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_payment_allocation_lines_allocation ON payment_allocation_lines(allocation_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_payment_allocation_lines_invoice ON payment_allocation_lines(invoice_id)`);
+
       db.run(`CREATE TABLE IF NOT EXISTS assets (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -1285,9 +1441,18 @@ const initDb = () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
 
-      const migrationPromises = columns.map(col => {
+      // Add company_id to newly created tables if not already present
+      const newTableColumns = [
+        { table: 'bank_accounts', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'bank_transactions', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'vat_transactions', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'purchase_order_items', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" }
+      ];
+
+      const allColumns = [...columns, ...newTableColumns];
+      const migrationPromises = allColumns.map(col => {
         return new Promise((res) => {
-          db.run(`ALTER TABLE ${col.table} ADD COLUMN ${col.column} ${col.type}`, (err) => {
+          db.run(`ALTER TABLE ${col.table} ADD COLUMN IF NOT EXISTS ${col.column} ${col.type}`, (err) => {
             // Ignore error if column exists or other migration issues
             res();
           });
@@ -1303,6 +1468,11 @@ const initDb = () => {
           runIndex(`CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON invoices(customer_id)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_company_id ON sales(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_source ON sales(source)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_category_date ON expenses(category, expense_date)`)

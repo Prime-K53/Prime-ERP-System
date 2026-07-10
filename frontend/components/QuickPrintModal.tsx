@@ -71,10 +71,10 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
   const premiumCard = `${cardClass} backdrop-blur-sm border border-slate-200/80 hover:border-slate-300/80 transition-all duration-200`;
   const premiumInput = `${inputClass} bg-white/80 backdrop-blur-sm border-slate-200/80 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 tabular-nums`;
   const premiumLabel = 'block text-xs font-semibold text-indigo-700 mb-1.5 flex items-center gap-1.5';
-  const toggleActiveBg = 'bg-gradient-to-r from-indigo-500 to-purple-600';
+  const toggleActiveBg = 'bg-blue-600';
   const toggleInactiveBg = 'bg-slate-300';
   const isPhotocopy = type === 'photocopy';
-  const accentGradient = isPhotocopy ? 'from-slate-600 to-slate-500' : 'from-blue-600 to-indigo-600';
+  const accentGradient = isPhotocopy ? 'from-slate-600 to-slate-500' : 'bg-blue-600';
   const iconBg = isPhotocopy ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-600';
   const Icon = isPhotocopy ? Copy : Printer;
 
@@ -155,7 +155,7 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
             )}
 
             <div className={premiumCard}>
-              {renderCardHeader(<TrendingUp size={15} className="text-white" />, 'Cost Summary', undefined, 'from-emerald-500 to-teal-600')}
+              {renderCardHeader(<TrendingUp size={15} className="text-white" />, 'Cost Summary', undefined, 'bg-blue-600')}
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500">Total {isPhotocopy ? 'Sheets' : 'Pages'}</span>
@@ -201,7 +201,7 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
               Cancel
             </button>
-            <button type="button" onClick={handleConfirm} className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2">
+            <button type="button" onClick={handleConfirm} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2">
               <Sparkles size={13} /> Add to Cart
             </button>
           </div>

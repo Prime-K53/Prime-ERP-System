@@ -19,7 +19,7 @@ export const CloudTab: React.FC<CloudTabProps> = ({ config, setConfig, notify, i
         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Cloud Sync (Stage 1)</h3>
       </div>
       <div className="grid grid-cols-2 gap-10">
-        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-10 group hover:border-[#2CA01C]/50 transition-all">
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-10 group hover:border-blue-600/50 transition-all">
           <div className="flex justify-between items-center group/header">
             <div>
               <p className="font-black text-slate-900 uppercase text-lg group-hover/header:text-[#2CA01C] transition-colors">Sync Connectivity</p>
@@ -32,7 +32,7 @@ export const CloudTab: React.FC<CloudTabProps> = ({ config, setConfig, notify, i
                 checked={config.cloudSync?.enabled}
                 onChange={e => setConfig({ ...config, cloudSync: { ...config.cloudSync, enabled: e.target.checked } as any })}
               />
-              <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+              <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
           <div className="space-y-8">
@@ -81,7 +81,7 @@ export const CloudTab: React.FC<CloudTabProps> = ({ config, setConfig, notify, i
                     checked={config.cloudSync?.autoSyncEnabled}
                     onChange={e => setConfig({ ...config, cloudSync: { ...config.cloudSync, autoSyncEnabled: e.target.checked } as any })}
                   />
-                  <div className="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2CA01C]"></div>
+                  <div className="w-12 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
               <div className="h-px bg-white/5"></div>
@@ -125,7 +125,7 @@ export const CloudTab: React.FC<CloudTabProps> = ({ config, setConfig, notify, i
                   }
                 }}
                 disabled={isProcessing}
-                className="w-full bg-[#2CA01C] hover:bg-green-700 text-white font-bold text-[10px] uppercase tracking-widest py-4 rounded-md shadow-md transition-all flex items-center justify-center gap-3 active:scale-95 group/btn disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest py-4 rounded-md shadow-md transition-all flex items-center justify-center gap-3 active:scale-95 group/btn disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw size={18} className={`group-hover/btn:rotate-180 transition-transform duration-500 ${isProcessing ? 'animate-spin' : ''}`} /> Force Cloud Reconciliation
               </button>

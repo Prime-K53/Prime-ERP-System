@@ -146,7 +146,7 @@ class ExaminationProductionService {
         message: `${createdJobs.length} work order(s) created for batch "${payload.batchName}" (${payload.schoolName})`,
         entityType: 'ExaminationBatch',
         entityId: payload.batchId,
-        actionUrl: '/production/work-orders',
+        actionUrl: '/industrial/work-orders',
       });
 
       logger.info('Batch sent to production', {

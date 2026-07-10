@@ -189,7 +189,7 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
                   <span className="text-[11px] font-bold text-slate-500">Local Opencode Server</span>
                   {localServerChecking && <Loader2 size={14} className="animate-spin text-slate-400" />}
                   {!localServerChecking && localServerDetected && (
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold border border-emerald-200">
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold border border-blue-200">
                       Detected
                     </span>
                   )}
@@ -207,7 +207,7 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
                     }}
                     className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all ${
                       useLocalServer
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
                   >
@@ -294,7 +294,7 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
             <button
               onClick={handleFetchModels}
               disabled={fetching}
-              className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-purple-700 transition-all disabled:opacity-40 flex items-center gap-2 active:scale-95 shadow-lg shadow-purple-600/20"
+              className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-40 flex items-center gap-2 active:scale-95 shadow-lg shadow-purple-600/20"
             >
               <RefreshCw size={14} className={fetching ? 'animate-spin' : ''} />
               {fetching ? 'Fetching...' : 'Fetch live models'}
@@ -354,7 +354,7 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
             <button
               onClick={handleTest}
               disabled={testing || !modelInput}
-              className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-3 active:scale-95 shadow-lg shadow-indigo-600/20"
+              className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-3 active:scale-95 shadow-lg shadow-indigo-600/20"
             >
               {testing ? <Loader2 size={16} className="animate-spin" /> : <Network size={16} />}
               {testing ? 'Testing...' : 'Test Connection'}
@@ -362,14 +362,14 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
 
             <button
               onClick={handleSave}
-              className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-3 active:scale-95 shadow-lg shadow-emerald-600/20"
+              className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-3 active:scale-95 shadow-lg shadow-blue-600/20"
             >
               <CheckCircle2 size={16} /> Save Configuration
             </button>
 
             {testResult && (
               <div className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-bold text-xs ${
-                testResult.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                testResult.ok ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
               }`}>
                 {testResult.ok ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
                 <span className="max-w-[300px] truncate">{testResult.message}</span>
@@ -386,7 +386,7 @@ export const AIProviderTab: React.FC<AIProviderTabProps> = ({ config, setConfig,
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {AI_PROVIDER_OPTIONS.map(opt => (
-            <div key={opt.value} className={`p-5 rounded-2xl border transition-all ${provider === opt.value ? 'border-indigo-200 bg-indigo-50' : 'border-slate-100 bg-white'}`}>
+            <div key={opt.value} className={`p-5 rounded-2xl border transition-all ${provider === opt.value ? 'border-blue-200 bg-blue-50' : 'border-slate-100 bg-white'}`}>
               <h4 className="font-black text-slate-800 text-sm mb-1">{opt.label}</h4>
               <p className="text-[11px] text-slate-500 mb-2">{opt.desc}</p>
               <code className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-600">{opt.defaultBaseUrl}/chat/completions</code>

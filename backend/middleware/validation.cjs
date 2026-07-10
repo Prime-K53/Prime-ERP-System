@@ -312,6 +312,97 @@ const taskSchemas = {
   })
 };
 
+// Banking validation schemas
+const bankingSchemas = {
+  createAccount: z.object({
+    name: z.string().min(1, 'Account name is required'),
+    account_number: z.string().min(1, 'Account number is required'),
+    bank_name: z.string().min(1, 'Bank name is required'),
+    account_type: z.enum(['checking', 'savings', 'credit']).optional(),
+    currency: z.string().length(3).default('USD'),
+    opening_balance: z.number().min(0).default(0),
+    is_active: z.boolean().default(true)
+  }),
+  createTransaction: z.object({
+    account_id: z.string().min(1, 'Account ID is required'),
+    type: z.enum(['deposit', 'withdrawal', 'transfer']),
+    amount: z.number().positive('Amount must be positive'),
+    currency: z.string().length(3).default('USD'),
+    description: z.string().max(500).optional(),
+    reference: z.string().optional(),
+    to_account_id: z.string().optional(),
+    transaction_date: z.string().datetime().optional()
+  }),
+  transfer: z.object({
+    from_account_id: z.string().min(1, 'Source account is required'),
+    to_account_id: z.string().min(1, 'Destination account is required'),
+    amount: z.number().positive('Amount must be positive'),
+    currency: z.string().length(3).default('USD'),
+    description: z.string().max(500).optional(),
+    reference: z.string().optional()
+  }).refine(data => data.from_account_id !== data.to_account_id, {
+    message: 'Source and destination accounts cannot be the same',
+    path: ['to_account_id']
+  })
+};
+
+// Payment allocation validation schemas
+const paymentSchemas = {
+  allocate: z.object({
+    paymentId: z.string().min(1, 'Payment ID is required'),
+    allocations: z.array(z.object({
+      invoiceId: z.string().min(1, 'Invoice ID is required'),
+      amount: z.number().positive('Allocation amount must be positive')
+    })).min(1, 'At least one allocation is required')
+  }),
+  suggestAllocation: z.object({
+    customerId: z.string().min(1, 'Customer ID is required'),
+    amount: z.number().positive('Amount must be positive')
+  })
+};
+
+// VAT validation schemas
+const vatSchemas = {
+  createTransaction: z.object({
+    transaction_type: z.enum(['sale', 'purchase', 'adjustment']),
+    reference_id: z.string().min(1, 'Reference ID is required'),
+    reference_type: z.enum(['invoice', 'expense', 'purchase_order']),
+    vat_rate: z.number().min(0).max(100),
+    vat_amount: z.number().min(0),
+    net_amount: z.number().min(0),
+    gross_amount: z.number().min(0),
+    vat_category: z.string().default('standard'),
+    is_recoverable: z.boolean().default(true),
+    period: z.string().regex(/^\d{4}-\d{2}$/, 'Period must be in YYYY-MM format').optional(),
+    status: z.enum(['pending', 'submitted', 'paid', 'cancelled']).default('pending')
+  }),
+  updateStatus: z.object({
+    status: z.enum(['pending', 'submitted', 'paid', 'cancelled'])
+  }),
+  reverse: z.object({
+    reason: z.string().min(1, 'Reason is required').max(500)
+  }),
+  importFromInvoices: z.object({
+    period: z.string().regex(/^\d{4}-\d{2}$/, 'Period must be in YYYY-MM format')
+  })
+};
+
+// Currency validation schemas
+const currencySchemas = {
+  addCurrency: z.object({
+    code: z.string().length(3, 'Currency code must be 3 letters'),
+    name: z.string().min(1, 'Currency name is required'),
+    symbol: z.string().min(1, 'Currency symbol is required'),
+    decimalPlaces: z.number().int().min(0).max(6).default(2)
+  }),
+  updateRate: z.object({
+    fromCurrency: z.string().length(3, 'Currency code must be 3 letters'),
+    toCurrency: z.string().length(3, 'Currency code must be 3 letters'),
+    rate: z.number().positive('Rate must be positive'),
+    date: z.string().datetime().optional()
+  })
+};
+
 // Profit margin validation schemas
 const profitMarginSchemas = {
   create: z.object({
@@ -491,5 +582,9 @@ module.exports = {
   examinationSchemas,
   profitMarginSchemas,
   workspaceSchemas,
-  taskSchemas
+  taskSchemas,
+  bankingSchemas,
+  paymentSchemas,
+  vatSchemas,
+  currencySchemas
 };

@@ -118,8 +118,10 @@ export interface CostMaterialItem {
   cost_price?: number | null;
   cost_per_unit?: number | null;
   cost?: number | null;
+  costPrice?: number | null;
   conversionRate?: number | null;
   conversion_rate?: number | null;
+  conversionFactor?: number | null;
 }
 
 export interface FinishingOptionInput {
@@ -135,7 +137,9 @@ export interface MaterialCostInput {
   pages: number;
   copies: number;
   finishingOptions: FinishingOptionInput[];
-  inventory?: Array<{ id: string; cost_price?: number | null; cost_per_unit?: number | null; cost?: number | null }>;
+  inventory?: Array<{ id: string; cost_price?: number | null; cost_per_unit?: number | null; cost?: number | null; costPrice?: number | null }>;
+  paperUnitCost?: number;
+  tonerUnitCost?: number;
 }
 
 export interface MaterialCostResult {
@@ -146,14 +150,34 @@ export interface MaterialCostResult {
   baseCost: number;
 }
 
-const getItemUnitCost = (item: CostMaterialItem | null | undefined): number => {
-  if (!item) return 0;
-  return Number(item.cost_price ?? item.cost_per_unit ?? item.cost ?? 0);
+const toFiniteNumber = (value: unknown): number | undefined => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const getItemConversionRate = (item: CostMaterialItem | null | undefined): number => {
-  if (!item) return 500;
-  return Number(item.conversionRate ?? item.conversion_rate ?? 500);
+const firstPositiveNumber = (...values: unknown[]): number | undefined => {
+  return values
+    .map(toFiniteNumber)
+    .find((value): value is number => value !== undefined && value > 0);
+};
+
+export const getItemUnitCost = (item: CostMaterialItem | null | undefined): number => {
+  if (!item) return 0;
+  return firstPositiveNumber(
+    item.cost_price,
+    item.cost_per_unit,
+    item.cost,
+    item.costPrice
+  ) ?? 0;
+};
+
+export const getItemConversionRate = (item: CostMaterialItem | null | undefined, fallback = 500): number => {
+  if (!item) return fallback;
+  return firstPositiveNumber(
+    item.conversionRate,
+    item.conversion_rate,
+    item.conversionFactor
+  ) ?? fallback;
 };
 
 export function calculateMaterialCosts(input: MaterialCostInput): MaterialCostResult {
@@ -162,7 +186,7 @@ export function calculateMaterialCosts(input: MaterialCostInput): MaterialCostRe
     const sheetsPerCopy = Math.ceil(input.pages / 2);
     const totalSheetsVal = sheetsPerCopy * input.copies;
     const reamSize = getItemConversionRate(input.paper);
-    const paperUnitCost = getItemUnitCost(input.paper);
+    const paperUnitCost = input.paperUnitCost ?? getItemUnitCost(input.paper);
     const costPerSheet = reamSize > 0 ? paperUnitCost / reamSize : 0;
     paperCostVal = Number((totalSheetsVal * costPerSheet).toFixed(2));
   }
@@ -171,7 +195,7 @@ export function calculateMaterialCosts(input: MaterialCostInput): MaterialCostRe
   if (input.toner) {
     const capacity = 20000;
     const totalPagesVal = input.pages * input.copies;
-    const tonerUnitCost = getItemUnitCost(input.toner);
+    const tonerUnitCost = input.tonerUnitCost ?? getItemUnitCost(input.toner);
     const costPerPage = tonerUnitCost / capacity;
     tonerCostVal = Number((totalPagesVal * costPerPage).toFixed(2));
   }
@@ -189,7 +213,7 @@ export function calculateMaterialCosts(input: MaterialCostInput): MaterialCostRe
       const optionInventoryCost = (o.items || []).reduce((itemSum, itemConfig) => {
         const item = (input.inventory || []).find(i => i.id === itemConfig.itemId);
         if (!item) return itemSum;
-        const itemCost = Number(item.cost_price ?? item.cost_per_unit ?? item.cost ?? 0);
+        const itemCost = getItemUnitCost(item);
         return itemSum + (itemCost * itemConfig.quantity * input.copies);
       }, 0);
       return sum + optionInventoryCost;

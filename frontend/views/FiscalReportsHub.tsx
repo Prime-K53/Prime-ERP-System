@@ -11,42 +11,42 @@ const FiscalReportsHub: React.FC = () => {
       label: 'Profit & loss',
       description: 'Review revenue, expenses, and net profit over a specific period.',
       icon: <TrendingUp />,
-      color: 'bg-emerald-50 text-emerald-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=IncomeStatement'
     },
     {
       label: 'Balance sheet',
       description: 'Snapshot of assets, liabilities, and equity at a point in time.',
       icon: <Scale />,
-      color: 'bg-indigo-50 text-indigo-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=BalanceSheet'
     },
     {
       label: 'Cash flow',
       description: 'Track the flow of cash in and out of your business.',
       icon: <Activity />,
-      color: 'bg-cyan-50 text-cyan-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=CashFlow'
     },
     {
       label: 'Trial balance',
       description: 'Verify the mathematical accuracy of your ledger balances.',
       icon: <FileCheck />,
-      color: 'bg-violet-50 text-violet-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=TrialBalance'
     },
     {
       label: 'Budget analysis',
       description: 'Compare actual spending against your planned budgets.',
       icon: <Target />,
-      color: 'bg-amber-50 text-amber-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=Budget'
     },
     {
       label: 'Aged receivables',
       description: 'Track outstanding customer invoices and their overdue status.',
       icon: <History />,
-      color: 'bg-orange-50 text-orange-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=AgedAR'
     },
     {
@@ -60,7 +60,7 @@ const FiscalReportsHub: React.FC = () => {
       label: 'Aged reports',
       description: 'Aged receivables and payables analysis.',
       icon: <FileText />,
-      color: 'bg-purple-50 text-purple-500',
+      color: 'bg-blue-50 text-blue-600',
       path: '/fiscal-reports/financials?type=AgedAP'
     }
   ];

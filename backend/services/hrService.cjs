@@ -22,24 +22,24 @@ class HRService {
     });
   }
 
-  async postPayrollLedger(run, companyId) {
+  async postPayrollLedger(run, companyId, currency = 'USD') {
     let expenseAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%wage%' OR name LIKE '%salary%' OR code = '6300')",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'expense' AND (name LIKE '%wage%' OR name LIKE '%salary%' OR name LIKE '%payroll%' OR code = '6300')",
       [companyId]
     );
     let liabilityAccount = await this._get(
-      "SELECT * FROM accounts WHERE company_id = ? AND type = 'liability' AND name LIKE '%payable%'",
+      "SELECT * FROM chart_of_accounts WHERE company_id = ? AND type = 'liability' AND (name LIKE '%payable%' OR name LIKE '%accrued%')",
       [companyId]
     );
     const totalAmount = (run.total_gross || 0);
     if (totalAmount <= 0 || !expenseAccount || !liabilityAccount) return;
     await this._saveLedgerEntry({
-      account_id: expenseAccount.id, entry_type: 'debit', amount: totalAmount,
+      account_id: expenseAccount.id, entry_type: 'debit', amount: totalAmount, currency,
       description: `Payroll ${run.name || run.id}`,
       reference_type: 'payroll', reference_id: run.id
     }, companyId);
     await this._saveLedgerEntry({
-      account_id: liabilityAccount.id, entry_type: 'credit', amount: totalAmount,
+      account_id: liabilityAccount.id, entry_type: 'credit', amount: totalAmount, currency,
       description: `Payroll liability ${run.name || run.id}`,
       reference_type: 'payroll', reference_id: run.id
     }, companyId);
@@ -113,7 +113,7 @@ class HRService {
     return this._all('SELECT * FROM payroll_runs WHERE company_id = ? ORDER BY created_at DESC', [companyId]);
   }
 
-  async createPayrollRun(data, companyId) {
+  async createPayrollRun(data, companyId, currency = 'USD') {
     const id = data.id || crypto.randomUUID();
     await this._run(
       `INSERT INTO payroll_runs (id, name, period_start, period_end, status, total_gross, total_deductions, total_net, employee_count, company_id)
@@ -123,7 +123,7 @@ class HRService {
        data.employee_count || 0, companyId]
     );
     const run = await this._get('SELECT * FROM payroll_runs WHERE id = ?', [id]);
-    await this.postPayrollLedger(run, companyId);
+    await this.postPayrollLedger(run, companyId, currency);
     return run;
   }
 
