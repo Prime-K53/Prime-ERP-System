@@ -330,6 +330,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const { addItem, updateItem, deleteItem } = useInventory();
   const { companyConfig, notify, user: USER } = useAuth();
   const currencySymbol = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || 'K';
+  const defaultMarkup = companyConfig?.pricingSettings?.defaultMarkup ?? 20;
 
   const [category, setCategory] = useState<Category>('raw');
   const [name, setName] = useState('');
@@ -454,6 +455,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       }
 
       if (item.type === 'Service') {
+        setPricingMethod((item as any).pricingConfig?.pricingMethod || 'per_job');
         setServicePaperCost(sp?.paperCost || 0);
         setServiceTonerCost(sp?.tonerCost || 0);
         setServiceSP(item.sellingPrice || item.price || 0);
@@ -803,11 +805,11 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       costPrice: effectiveBase,
       profitAmount: effectiveProfit,
       profitMargin: effectiveMarkup,
-      minimumMargin: 20,
+      minimumMargin: defaultMarkup,
       pricingValidated: category === 'product'
         ? productSP >= productBase * (1 + TARGET_MARKUP)
         : category === 'service'
-          ? serviceSP >= serviceBase * (1 + TARGET_MARKUP)
+          ? serviceSP >= serviceBase * (1 + defaultMarkup / 100)
           : true,
       costingMethod: category !== 'service' ? costingMethod : undefined,
       updatedBy: USER?.id,
@@ -1081,17 +1083,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         <p style={s.fieldHint}>Variants are optional. The product BOM above determines Total Base Price.</p>
       </div>
       <div style={s.section}>
-        <p style={s.sectionTitle}>Stock &amp; Reorder</p>
-        <div style={s.grid2}>
-          <Field label="Total Stock on Hand" hint="Sum across all variants">
-            <input type="number" style={{ ...s.input, ...s.mono }} value={productStock} onChange={e => setProductStock(Number(e.target.value) || 0)} />
-          </Field>
-          <Field label="Reorder Level">
-            <input type="number" style={{ ...s.input, ...s.mono }} value={productReorder} onChange={e => setProductReorder(Number(e.target.value) || 0)} />
-          </Field>
-        </div>
-      </div>
-      <div style={s.section}>
         <p style={s.sectionTitle}>Cost Inputs</p>
         <div style={s.grid3}>
           <Field label="Paper Cost"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={productPaperCost} onChange={e => setProductPaperCost(Number(e.target.value) || 0)} /></div></Field>
@@ -1131,7 +1122,12 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   );
   };
 
-  const renderServiceTab = () => (
+  const renderServiceTab = () => {
+    const pricingHint = pricingMethod === 'per_job' ? 'Paper + Toner + selected Finishing (flat per job)'
+      : pricingMethod === 'per_page' ? 'Paper + Toner + selected Finishing (per page)'
+      : 'Paper + Toner + selected Finishing (per sheet)';
+
+    return (
     <div>
       <div style={s.section}>
         <p style={s.sectionTitle}>Pricing Method</p>
@@ -1149,7 +1145,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         <div style={s.grid3}>
           <Field label="Paper"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={servicePaperCost} onChange={e => setServicePaperCost(Number(e.target.value) || 0)} /></div></Field>
           <Field label="Toner"><div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={serviceTonerCost} onChange={e => setServiceTonerCost(Number(e.target.value) || 0)} /></div></Field>
-          <Field label="Min. Markup Required"><input type="text" readOnly style={{ ...s.input, ...s.mono }} value="20%" /></Field>
+          <Field label="Min. Markup Required"><input type="text" readOnly style={{ ...s.input, ...s.mono }} value={`${defaultMarkup}%`} /></Field>
         </div>
       </div>
       <div style={s.section}>
@@ -1175,10 +1171,10 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       <div style={s.section}>
         <p style={s.sectionTitle}>Pricing</p>
         <div style={s.grid2}>
-          <Field label="Total Base Price" hint="Paper + Toner + selected Finishing">
+          <Field label="Total Base Price" hint={pricingHint}>
             <input type="text" readOnly style={{ ...s.input, ...s.mono, background: VAR_STYLES.paper, fontWeight: 700, color: VAR_STYLES.ink700 }} value={formatCurrency(serviceBase, currencySymbol)} />
           </Field>
-          <Field label="Selling Price">
+          <Field label={`Selling Price${pricingMethod === 'per_job' ? ' (per job)' : pricingMethod === 'per_page' ? ' (per page)' : ' (per sheet)'}`}>
             <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={serviceSP} onChange={e => setServiceSP(Number(e.target.value) || 0)} /></div>
           </Field>
         </div>
@@ -1198,7 +1194,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
               </div>
             <div style={s.costItem}>
               <div style={s.costItemK}>Suggested @</div>
-              <div style={{ ...s.costItemV, fontSize: 12.5 }}>38% markup</div>
+              <div style={{ ...s.costItemV, fontSize: 12.5 }}>{TARGET_MARKUP * 100}% markup</div>
             </div>
           </div>
         )}

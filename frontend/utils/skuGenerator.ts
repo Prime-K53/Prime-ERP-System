@@ -27,7 +27,7 @@ export const generateAutoSKU = (categoryOrType: string, name: string, attributes
     let maxNum = 0;
     collection.forEach((item: any) => {
       const sku = String(item?.sku || '');
-      if (!sku.startsWith(`INV-${prefix}`)) return;
+      if (!sku.startsWith('INV-')) return;
       const parts = sku.split('-');
       const last = parts[parts.length - 1];
       const parsed = parseInt(last, 10);
