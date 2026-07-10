@@ -419,7 +419,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setActive(item.status !== 'Inactive');
       setBarcode(item.barcode || '');
 
-      if ((item as any).classification === 'printing_service') setCategory('service');
+      if ((item as any).classification === 'printing_service' || item.type === 'Service') setCategory('service');
       else if (item.type === 'Product' || (item as any).classification === 'product') setCategory('product');
       else if (item.type === 'Stationery' || (item as any).classification === 'stationery') setCategory('stationery');
       else setCategory('raw');
