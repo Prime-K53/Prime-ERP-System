@@ -226,10 +226,15 @@ export const ServiceCalculatorModal: React.FC<{
     const [priceManuallySet, setPriceManuallySet] = useState(false);
     const [bomTemplate, setBomTemplate] = useState<any>(null);
 
-    const sp = service.smartPricing;
+    const sp = service.smartPricing || service.pricingConfig;
     const hasSmartPricing = !!sp;
 
-    const [enabledFinishing, setEnabledFinishing] = useState<string[]>(() => (sp?.finishingEnabled || []) as string[]);
+    const [enabledFinishing, setEnabledFinishing] = useState<string[]>(() => {
+        const fromSmart = sp?.finishingEnabled;
+        if (fromSmart && fromSmart.length > 0) return fromSmart as string[];
+        const fromConfig = sp?.finishingOptions?.filter((o: any) => o.active)?.map((o: any) => o.name || o.id) || [];
+        return fromConfig;
+    });
 
     useEffect(() => { let m = true; dbService.getSetting<Record<string, number>>('finishingOptionCosts').then(c => { if (m) setFinishingCostOverrides(c || {}); }).catch(() => { if (m) setFinishingCostOverrides({}); }); return () => { m = false; }; }, []);
 
@@ -244,8 +249,8 @@ export const ServiceCalculatorModal: React.FC<{
         }
     }, [sp?.bomTemplateId]);
 
-    const paper = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.paperItemId) : null, [sp, inventory]);
-    const toner = useMemo(() => sp ? inventory.find((i: any) => i.id === sp.tonerItemId) : null, [sp, inventory]);
+    const paper = useMemo(() => sp && sp.paperItemId ? inventory.find((i: any) => i.id === sp.paperItemId) : null, [sp, inventory]);
+    const toner = useMemo(() => sp && sp.tonerItemId ? inventory.find((i: any) => i.id === sp.tonerItemId) : null, [sp, inventory]);
 
     const normalizedAdjustments = useMemo(() => (marketAdjustments || []).filter((adj: any) => (adj.active ?? adj.isActive) && (!adj.applyToCategories?.length || adj.applyToCategories.includes(service.category))).map((adj: any) => ({ name: adj.name, type: adj.type, value: adj.value, percentage: adj.percentage ?? adj.value, calculatedAmount: adj.value, adjustmentId: adj.id, isActive: true })), [marketAdjustments, service.category]);
 
@@ -253,26 +258,80 @@ export const ServiceCalculatorModal: React.FC<{
         if (!sp) return 0;
         const savedCost = sp.finishingSelections?.find((o: any) => o?.id === id)?.price ?? (sp.finishingOptionCosts || {})[id] ?? finishingCostOverrides[id] ?? companyConfig?.productionSettings?.finishingOptions?.find((o: any) => o?.id === id)?.price ?? 0;
         if (savedCost > 0) return Number(savedCost);
+        if (sp.finishingOptions) {
+            const opt = sp.finishingOptions.find((o: any) => (o.name || o.id) === id);
+            if (opt && Number(opt.price) > 0) return Number(opt.price);
+        }
         const fees = ((sp.finishingEnabled || []) as string[]);
         const fb = fees.length > 0 && Number(sp.finishingCost) > 0 ? Number(sp.finishingCost) / (fees.length * Math.max(1, Number(sp.copies) || 1)) : 0;
         return fb > 0 ? Number(fb.toFixed(2)) : ({ binding: 150, coverPages: 20, cutting: 30, holePunch: 20, folding: 15, stapling: 10 }[id] || 0);
     }, [sp, companyConfig, finishingCostOverrides]);
 
     const costBreakdown = useMemo(() => {
-        const p = paper && sp ? { sheetsPerCopy: Math.ceil(pages / 2), totalSheets: Math.ceil(pages / 2) * copies, costPerSheet: (() => { const rs = Number(paper.conversionRate || paper.conversion_rate || 500); return rs > 0 ? Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0) / rs : 0; })(), paperCost: 0 } : { sheetsPerCopy: 0, totalSheets: 0, costPerSheet: 0, paperCost: 0 };
-        if (p.paperCost === 0 && p.totalSheets > 0) p.paperCost = Number((p.totalSheets * p.costPerSheet).toFixed(2));
-        const t = toner && sp ? { tonerCostPerPage: (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000), tonerCost: Number(((pages * copies) * (Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000)).toFixed(2)) } : { tonerCostPerPage: 0, tonerCost: 0 };
-        const fd = sp ? (enabledFinishing.map(id => ({ id, name: getFinishingName(id), cost: resolveFinishingCost(id), total: resolveFinishingCost(id) }))) : [];
-        const fc = Number(fd.reduce((s, f) => s + f.total, 0).toFixed(2));
-        return { paperCost: p.paperCost, tonerCost: t.tonerCost, finishingCost: fc, baseCost: Number((p.paperCost + t.tonerCost + fc).toFixed(2)), sheetsPerCopy: p.sheetsPerCopy, totalSheets: p.totalSheets, costPerSheet: p.costPerSheet, tonerCostPerPage: t.tonerCostPerPage, finishingDetails: fd };
+        let paperCost = 0, sheetsPerCopy = 0, totalSheets = 0, costPerSheet = 0;
+        let tonerCost = 0, tonerCostPerPage = 0;
+        let fd: any[] = [], fc = 0;
+
+        if (sp) {
+            sheetsPerCopy = Math.ceil(pages / 2);
+            totalSheets = sheetsPerCopy * copies;
+
+            if (paper) {
+                const rs = Number(paper.conversionRate || paper.conversion_rate || 500);
+                costPerSheet = rs > 0 ? Number(paper.cost_price || paper.cost_per_unit || paper.cost || 0) / rs : 0;
+                paperCost = Number((totalSheets * costPerSheet).toFixed(2));
+            } else if (Number(sp.paperCost) > 0) {
+                costPerSheet = Number(sp.paperCost);
+                paperCost = Number((totalSheets * costPerSheet).toFixed(2));
+            }
+
+            if (toner) {
+                tonerCostPerPage = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000;
+                tonerCost = Number(((pages * copies) * tonerCostPerPage).toFixed(2));
+            } else if (Number(sp.tonerCost) > 0) {
+                tonerCostPerPage = Number(sp.tonerCost);
+                tonerCost = Number((pages * copies * tonerCostPerPage).toFixed(2));
+            }
+
+            fd = enabledFinishing.map(id => {
+                let cost = resolveFinishingCost(id);
+                if (cost === 0 && sp.finishingOptions) {
+                    const opt = sp.finishingOptions.find((o: any) => (o.name || o.id) === id);
+                    if (opt) cost = Number(opt.price) || 0;
+                }
+                return { id, name: getFinishingName(id), cost, total: cost };
+            });
+            fc = Number(fd.reduce((s, f) => s + f.total, 0).toFixed(2));
+        }
+
+        return { paperCost, tonerCost, finishingCost: fc, baseCost: Number((paperCost + tonerCost + fc).toFixed(2)), sheetsPerCopy, totalSheets, costPerSheet, tonerCostPerPage, finishingDetails: fd };
     }, [pages, copies, paper, toner, sp, enabledFinishing, resolveFinishingCost]);
 
     const computePageScaledCost = useCallback((pageCount: number, copyCount: number): number => {
         if (!sp) { const flat = service.serviceConfig?.baseLaborCost || service.serviceConfig?.baseRate || service.cost || 0; return flat * (pageCount / (Number(service.pages) || 1)) * copyCount; }
-        const p = inventory.find((i: any) => i.id === sp.paperItemId); const tn = inventory.find((i: any) => i.id === sp.tonerItemId);
-        const pc = p ? Number((Math.ceil(pageCount / 2) * copyCount * (Number(p.conversionRate || p.conversion_rate || 500) > 0 ? Number(p.cost_price || p.cost_per_unit || p.cost || 0) / Number(p.conversionRate || p.conversion_rate || 500) : 0)).toFixed(2)) : 0;
-        const tc = tn ? Number(((pageCount * copyCount) * (Number(tn.cost_price || tn.cost_per_unit || tn.cost || 0) / 20000)).toFixed(2)) : 0;
-        const fc = enabledFinishing.reduce((s, id) => s + resolveFinishingCost(id), 0);
+        const totalSheets = Math.ceil(pageCount / 2) * copyCount;
+        const totalPages = pageCount * copyCount;
+        let pc = 0, tc = 0;
+        if (sp.paperItemId) {
+            const p = inventory.find((i: any) => i.id === sp.paperItemId);
+            if (p) pc = Number((totalSheets * (Number(p.conversionRate || p.conversion_rate || 500) > 0 ? Number(p.cost_price || p.cost_per_unit || p.cost || 0) / Number(p.conversionRate || p.conversion_rate || 500) : 0)).toFixed(2));
+        } else if (Number(sp.paperCost) > 0) {
+            pc = Number((totalSheets * Number(sp.paperCost)).toFixed(2));
+        }
+        if (sp.tonerItemId) {
+            const tn = inventory.find((i: any) => i.id === sp.tonerItemId);
+            if (tn) tc = Number((totalPages * (Number(tn.cost_price || tn.cost_per_unit || tn.cost || 0) / 20000)).toFixed(2));
+        } else if (Number(sp.tonerCost) > 0) {
+            tc = Number((totalPages * Number(sp.tonerCost)).toFixed(2));
+        }
+        const fc = enabledFinishing.reduce((s, id) => {
+            let cost = resolveFinishingCost(id);
+            if (cost === 0 && sp.finishingOptions) {
+                const opt = sp.finishingOptions.find((o: any) => (o.name || o.id) === id);
+                if (opt) cost = Number(opt.price) || 0;
+            }
+            return s + cost;
+        }, 0);
         return Number((pc + tc + fc).toFixed(2));
     }, [service, inventory, sp, enabledFinishing, resolveFinishingCost]);
 
