@@ -585,23 +585,35 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     [serviceFinishing]
   );
 
-  const productBase = useMemo(() => {
-    // Product-level BOM cost (primary source)
-    const productBomCost = Math.ceil(productBomPages / PAGES_PER_SHEET) * bomRates.paper
+  const bomRates = useMemo(() => {
+    const rawItems = allItems?.filter(i => i.type === 'Raw Material' || (i as any).classification === 'raw') || [];
+    const paperItem = rawItems.find(i => /paper|bond/i.test(i.name));
+    const tonerItem = rawItems.find(i => /toner|ink|cartridge/i.test(i.name));
+    const coverItem = rawItems.find(i => /card|cover|board/i.test(i.name));
+    const stapleItem = rawItems.find(i => /staple/i.test(i.name));
+    const paperRate = paperItem ? ((paperItem.cost_price || paperItem.cost || 0) / ((paperItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.paper;
+    const tonerRate = tonerItem ? ((tonerItem.cost_price || tonerItem.cost || 0) / ((tonerItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.toner;
+    const coverRate = coverItem ? ((coverItem.cost_price || coverItem.cost || 0) / ((coverItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.cover;
+    const stapleRate = stapleItem ? ((stapleItem.cost_price || stapleItem.cost || 0) / ((stapleItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.staple;
+    return { paper: paperRate, toner: tonerRate, cover: coverRate, staple: stapleRate, tape: BOM_DEFAULT_RATES.tape };
+  }, [allItems]);
+
+  const productBomTotal = useMemo(() => {
+    return Math.ceil(productBomPages / PAGES_PER_SHEET) * bomRates.paper
       + productBomPages * bomRates.toner
       + productBomCovers * bomRates.cover
       + productBomStaples * bomRates.staple
       + productBomTape * bomRates.tape;
-    if (productBomCost > 0) return productBomCost;
-    // Variant BOM costs (average, used when variants exist)
+  }, [productBomPages, productBomCovers, productBomStaples, productBomTape, bomRates]);
+
+  const productBase = useMemo(() => {
+    if (productBomTotal > 0) return productBomTotal;
     const variantsWithBom = variants.filter(v => v.bomCost > 0);
     if (variantsWithBom.length > 0) {
-      const avgBomCost = variantsWithBom.reduce((sum, v) => sum + v.bomCost, 0) / variantsWithBom.length;
-      return avgBomCost;
+      return variantsWithBom.reduce((sum, v) => sum + v.bomCost, 0) / variantsWithBom.length;
     }
-    // Fall back to manual cost inputs
     return productPaperCost + productTonerCost + productFinishCost;
-  }, [productPaperCost, productTonerCost, productFinishCost, variants, productBomPages, productBomCovers, productBomStaples, productBomTape, bomRates]);
+  }, [productPaperCost, productTonerCost, productFinishCost, variants, productBomTotal]);
   const productProfit = useMemo(() => productSP - productBase, [productSP, productBase]);
   const productMarkup = useMemo(() => productBase > 0 ? (productProfit / productBase) * 100 : 0, [productProfit, productBase]);
 
@@ -635,19 +647,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     }
     setServiceFinishing(globalFinishingOptions.map(o => ({ name: o.name, price: o.price, active: false })));
   }, [open, item, globalFinishingOptions]);
-
-  const bomRates = useMemo(() => {
-    const rawItems = allItems?.filter(i => i.type === 'Raw Material' || (i as any).classification === 'raw') || [];
-    const paperItem = rawItems.find(i => /paper|bond/i.test(i.name));
-    const tonerItem = rawItems.find(i => /toner|ink|cartridge/i.test(i.name));
-    const coverItem = rawItems.find(i => /card|cover|board/i.test(i.name));
-    const stapleItem = rawItems.find(i => /staple/i.test(i.name));
-    const paperRate = paperItem ? ((paperItem.cost_price || paperItem.cost || 0) / ((paperItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.paper;
-    const tonerRate = tonerItem ? ((tonerItem.cost_price || tonerItem.cost || 0) / ((tonerItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.toner;
-    const coverRate = coverItem ? ((coverItem.cost_price || coverItem.cost || 0) / ((coverItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.cover;
-    const stapleRate = stapleItem ? ((stapleItem.cost_price || stapleItem.cost || 0) / ((stapleItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.staple;
-    return { paper: paperRate, toner: tonerRate, cover: coverRate, staple: stapleRate, tape: BOM_DEFAULT_RATES.tape };
-  }, [allItems]);
 
   const statBlend = useMemo(() => {
     const rows = statVariants.filter(v => v.name.trim());
