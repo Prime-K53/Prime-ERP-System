@@ -219,13 +219,29 @@ const normalizeBatchForStorage = (
 };
 
 const getLocalBatches = async () => {
+  let batches: any[] = [];
   try {
     const data = await examinationDb.examinationBatches.toArray();
-    return Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
+    batches = Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
   } catch {
     const data = await offlineDb.getAllBatches();
-    return Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
+    batches = Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
   }
+  try {
+    const syncedBatchRecords = await dbService.getAll<any>('examinationBatches');
+    if (Array.isArray(syncedBatchRecords) && syncedBatchRecords.length > 0) {
+      const syncedMap = new Map<string, any>();
+      for (const b of syncedBatchRecords) syncedMap.set(String(b.id), normalizeBatchForStorage(b));
+      for (const batch of batches) {
+        const existing = syncedMap.get(String(batch.id));
+        if (existing) syncedMap.set(String(batch.id), { ...existing, ...batch });
+        else syncedMap.set(String(batch.id), batch);
+      }
+      batches = Array.from(syncedMap.values());
+    }
+  } catch {
+  }
+  return batches;
 };
 
 const storeLocalBatches = async (batches: Array<Record<string, any>>) => {
@@ -234,6 +250,12 @@ const storeLocalBatches = async (batches: Array<Record<string, any>>) => {
     await examinationDb.examinationBatches.bulkPut(entries);
   } catch {
     await offlineDb.saveBatches(entries as BatchRecord[], { silent: true });
+  }
+  for (const entry of entries) {
+    try {
+      await dbService.put('examinationBatches', entry);
+    } catch {
+    }
   }
 };
 
@@ -244,6 +266,10 @@ const storeLocalBatch = async (batch: Record<string, any>) => {
   } catch {
     await offlineDb.saveBatch(entry as BatchRecord, { silent: true });
   }
+  try {
+    await dbService.put('examinationBatches', entry);
+  } catch {
+  }
   return entry;
 };
 
@@ -253,6 +279,10 @@ const removeLocalBatch = async (id: string) => {
   } catch {
     await offlineDb.deleteBatch(id, { silent: true });
   }
+  try {
+    await dbService.delete('examinationBatches', id);
+  } catch {
+  }
 };
 
 const enqueueOutbox = async (type: string, entityId: string, payload: Record<string, any>) => {
@@ -261,6 +291,18 @@ const enqueueOutbox = async (type: string, entityId: string, payload: Record<str
     : type.endsWith(':update')
       ? 'update'
       : 'create';
+
+  try {
+    const { durableSyncQueue } = await import('./durableSyncQueue');
+    await durableSyncQueue.enqueue({
+      table: 'examination_batches',
+      recordId: entityId,
+      operation: operation === 'delete' ? 'delete' : 'upsert' as const,
+      payload: { ...payload, id: entityId },
+      companyId: null,
+    });
+  } catch {
+  }
 
   return queueOfflineMutation({
     entityId,
