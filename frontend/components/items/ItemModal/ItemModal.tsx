@@ -1024,12 +1024,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
   );
 
   const renderProductTab = () => {
-    const productBomCost = Math.ceil(productBomPages / PAGES_PER_SHEET) * bomRates.paper
-      + productBomPages * bomRates.toner
-      + productBomCovers * bomRates.cover
-      + productBomStaples * bomRates.staple
-      + productBomTape * bomRates.tape;
-
     return (
     <div>
       <div style={s.section}>
@@ -1042,7 +1036,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         </div>
         <div style={s.bomCostRow}>
           <span style={s.bomCostLabel}>BOM Cost</span>
-          <span style={s.bomCostValue}>{formatCurrency(productBomCost, currencySymbol)}</span>
+          <span style={s.bomCostValue}>{formatCurrency(productBomTotal, currencySymbol)}</span>
         </div>
         <p style={s.bomRateNote}>Rates — Paper {formatCurrency(bomRates.paper, currencySymbol)}/sheet · Toner {formatCurrency(bomRates.toner, currencySymbol)}/page · Cover {formatCurrency(bomRates.cover, currencySymbol)}/ea · Staple {formatCurrency(bomRates.staple, currencySymbol)}/ea · Binding Tape {formatCurrency(bomRates.tape, currencySymbol)}/cm</p>
       </div>
