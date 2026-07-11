@@ -59,15 +59,15 @@ CREATE POLICY "Users can view their company"
   ON public.companies
   FOR SELECT
   TO authenticated
-  USING (id = (SELECT (data->>'companyId')::text FROM public.profiles WHERE user_id = auth.uid() LIMIT 1) OR id IN (SELECT company_id FROM public.profiles WHERE user_id = auth.uid()));
+  USING (id = public.get_user_company_id());
 
 -- Allow users to update their own company
 CREATE POLICY "Users can update their company"
   ON public.companies
   FOR UPDATE
   TO authenticated
-  USING (id IN (SELECT company_id FROM public.profiles WHERE user_id = auth.uid()))
-  WITH CHECK (id IN (SELECT company_id FROM public.profiles WHERE user_id = auth.uid()));
+  USING (id = public.get_user_company_id())
+  WITH CHECK (id = public.get_user_company_id());
 
 -- 5. Profiles table policies
 -- Allow authenticated users to insert profiles
@@ -84,7 +84,7 @@ CREATE POLICY "Users can view profiles"
   TO authenticated
   USING (
     user_id = auth.uid()
-    OR company_id IN (SELECT company_id FROM public.profiles WHERE user_id = auth.uid())
+    OR company_id = public.get_user_company_id()
   );
 
 -- Allow users to update their own profile
@@ -102,6 +102,22 @@ CREATE POLICY "Authenticated users can manage idempotency keys"
   TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- ============================================================================
+-- Helper: get the current user's company_id (SECURITY DEFINER to bypass RLS)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_user_company_id()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT company_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_user_company_id() TO authenticated;
 
 -- ============================================================================
 -- Updated cascade_delete_company that also deletes the auth user
