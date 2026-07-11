@@ -47,7 +47,7 @@ DROP POLICY IF EXISTS "Users can view company profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Authenticated users can insert companies" ON public.companies;
 DROP POLICY IF EXISTS "Authenticated users can insert profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Authenticated users can manage idempotency" ON public.idempotency_keys;
+DROP POLICY IF EXISTS "Authenticated users can manage idempotency keys" ON public.idempotency_keys;
 
 -- 4. Helper: get the current user's company_id (SECURITY DEFINER to bypass RLS)
 
