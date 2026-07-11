@@ -15,12 +15,13 @@ interface Contact {
 }
 
 const STATIC_TEMPLATES = [
-    { label: 'Payment Reminder', text: 'Dear Customer, this is a gentle reminder regarding your outstanding invoice. Please arrange payment at your earliest convenience.' },
-    { label: 'Order Ready', text: 'Good news! Your order is ready for collection. We are open until 5 PM today.' },
-    { label: 'Thank You', text: 'Thank you for choosing us! We appreciate your business and look forward to serving you again.' },
-    { label: 'Delay Notice', text: 'We apologize for the slight delay in your order. We are working to resolve it and will update you shortly.' },
-    { label: 'Meeting Request', text: 'Hi, I would like to schedule a brief meeting to discuss your requirements. Please let me know your availability.' }
+  { label: 'Brand Visibility Inspiration', text: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine." },
+  { label: 'Customer Appreciation', text: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive." },
+  { label: 'Business Growth Inspiration', text: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers." },
+  { label: 'Service Promotion', text: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today." },
+  { label: 'Repeat Customer Encouragement', text: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level." },
 ];
+
 
 const ChatApp: React.FC = () => {
   const { user, isOnline } = useAuth();

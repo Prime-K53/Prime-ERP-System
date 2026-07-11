@@ -8,150 +8,151 @@ import { aiService } from '../services/aiService';
 
 const AI_TEMPLATES = [
   {
-    id: 'business_cards',
-    name: 'Business Card Quote',
-    description: 'Follow up on a business card printing inquiry',
-    content: "Hi [Customer Name]! Thanks for your business card inquiry at [Company Name]. We offer premium 14pt card stock with glossy, matte, or spot UV finish. Reply with quantity and we'll send a quote within hours!"
+    id: 'ai-msg-001',
+    name: 'Corporate Client Engagement',
+    description: 'Corporate - Corporate Client Engagement',
+    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
   },
   {
-    id: 'quote_sent',
-    name: 'Print Quote Sent',
-    description: 'Notify customer their print quote is ready',
-    content: "Hi [Customer Name]! Your print quote #[Quote Number] from [Company Name] is ready. [Product] — [Quantity] units — [Amount]. Quote includes design, printing, finishing, and delivery. Reply to accept or ask questions!"
+    id: 'ai-msg-002',
+    name: 'Seasonal Motivation',
+    description: 'Seasonal - Seasonal Motivation',
+    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
   },
   {
-    id: 'order_confirmed',
-    name: 'Print Order Confirmed',
-    description: 'Confirm a new print order',
-    content: "Great news [Customer Name]! Your print order #[Order Number] for [Product] has been confirmed at [Company Name]. Files are being pre-flighted. We'll update you once production begins!"
+    id: 'ai-msg-003',
+    name: 'Premium Brand Positioning',
+    description: 'Premium - Premium Brand Positioning',
+    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
   },
   {
-    id: 'proof_ready',
-    name: 'Design Proof Ready',
-    description: 'Notify customer their print proof is available',
-    content: "Hi [Customer Name]! Your design proof for [Product] at [Company Name] is ready for review. View it here: [Proof Link]. Please approve or request changes. We'll print once approved!"
+    id: 'ai-msg-004',
+    name: 'Project Follow-up',
+    description: 'FollowUp - Project Follow-up',
+    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
   },
   {
-    id: 'in_production',
-    name: 'Order In Production',
-    description: 'Let customer know their order is being printed',
-    content: "Hi [Customer Name]! Your order #[Order Number] at [Company Name] is now on press. [Product] — [Quantity] copies — [Finishing]. Estimated completion: [Date]. We'll notify you when it's ready!"
+    id: 'ai-msg-005',
+    name: 'Brand Visibility Inspiration',
+    description: 'Visibility - Brand Visibility Inspiration',
+    content: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine."
   },
   {
-    id: 'ready_pickup',
-    name: 'Ready for Pickup',
-    description: 'Notify customer their prints are ready to collect',
-    content: "Hi [Customer Name]! Your order #[Order Number] at [Company Name] is printed, finished, and ready for pickup. We're open [Hours]. Please bring your order confirmation. See you soon!"
+    id: 'ai-msg-006',
+    name: 'Customer Appreciation',
+    description: 'Appreciation - Customer Appreciation',
+    content: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive."
   },
   {
-    id: 'order_shipped',
-    name: 'Order Shipped',
-    description: 'Notify customer their prints have been shipped',
-    content: "Hi [Customer Name]! Your print order #[Order Number] from [Company Name] is on its way! Carrier: [Carrier]. Tracking: [Tracking Link]. Estimated delivery: [Date]. Thank you for your business!"
+    id: 'ai-msg-007',
+    name: 'Business Growth Inspiration',
+    description: 'Growth - Business Growth Inspiration',
+    content: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers."
   },
   {
-    id: 'flyer_promo',
-    name: 'Flyer Printing Promo',
-    description: 'Promote flyer printing services',
-    content: "Hi [Customer Name]! Looking for flyer printing? [Company Name] is running a special: [Quantity] full-color flyers on 100lb gloss for just [Price]! Design service available. Offer ends [Date]. Reply to order!"
+    id: 'ai-msg-008',
+    name: 'Service Promotion',
+    description: 'Promotion - Service Promotion',
+    content: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today."
   },
   {
-    id: 'banner_sale',
-    name: 'Banner Printing Sale',
-    description: 'Promote banner and signage printing',
-    content: "Hi [Customer Name]! Need banners? [Company Name] offers weather-resistant vinyl banners starting at [Price] for [Size]. Full-color, hemmed, with grommets. Perfect for events, grand openings, and promotions!"
+    id: 'ai-msg-009',
+    name: 'Repeat Customer Encouragement',
+    description: 'Retention - Repeat Customer Encouragement',
+    content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level."
   },
   {
-    id: 'reorder_reminder',
-    name: 'Reorder Reminder',
-    description: 'Remind customer to reorder print materials',
-    content: "Hi [Customer Name]! It's been a while since your last print order at [Company Name]. We still have your [Product] files on file — ready to reprint anytime. Reply to order more or request a revised quote!"
+    id: 'ai-msg-010',
+    name: 'Referral Encouragement',
+    description: 'Referral - Referral Encouragement',
+    content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs. Let us know what you'd like printed next and we'll make it exceptional."
   },
   {
-    id: 'file_format_help',
-    name: 'File Format Help',
-    description: 'Assist customer with artwork file submission',
-    content: "Hi [Customer Name]! Need help with your print files? We accept PDF, AI, PSD, and CDR with 3mm bleed. Reply with your file format and we'll guide you. We also offer design services if needed!"
+    id: 'ai-msg-011',
+    name: 'Corporate Client Engagement',
+    description: 'Corporate - Corporate Client Engagement',
+    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
   },
   {
-    id: 'design_consult',
-    name: 'Design Consultation',
-    description: 'Offer graphic design services for print',
-    content: "Hi [Customer Name]! Need a design for your print project? Our in-house designers at [Company Name] can create professional layouts, logos, and artwork. Starting at [Price]. Reply with your requirements!"
+    id: 'ai-msg-012',
+    name: 'Seasonal Motivation',
+    description: 'Seasonal - Seasonal Motivation',
+    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
   },
   {
-    id: 'bulk_discount',
-    name: 'Bulk Print Discount',
-    description: 'Offer volume pricing for large print runs',
-    content: "Hi [Customer Name]! Printing in bulk? [Company Name] offers tiered pricing — the more you print, the more you save. Get up to [Discount]% off on orders over [Quantity] units. Request a bulk quote today!"
+    id: 'ai-msg-013',
+    name: 'Premium Brand Positioning',
+    description: 'Premium - Premium Brand Positioning',
+    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
   },
   {
-    id: 'invoice_reminder',
-    name: 'Print Invoice Reminder',
-    description: 'Polite reminder about outstanding print invoice',
-    content: "Hi [Customer Name]! Gentle reminder about invoice #[Invoice Number] from [Company Name] for [Amount], due on [Due Date]. You can pay via bank transfer, card, or PayPal. Reply if you need the payment link!"
+    id: 'ai-msg-014',
+    name: 'Project Follow-up',
+    description: 'FollowUp - Project Follow-up',
+    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
   },
   {
-    id: 'welcome_print',
-    name: 'Welcome to Our Print Shop',
-    description: 'Welcome new printing customers',
-    content: "Hi [Customer Name]! Welcome to [Company Name]! We offer business cards, flyers, brochures, banners, stickers, and more. Upload your artwork or describe your project and we'll get started. We're excited to work with you!"
+    id: 'ai-msg-015',
+    name: 'Brand Visibility Inspiration',
+    description: 'Visibility - Brand Visibility Inspiration',
+    content: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine."
   },
   {
-    id: 'sticker_promo',
-    name: 'Sticker & Label Printing',
-    description: 'Promote sticker and label printing services',
-    content: "Hi [Customer Name]! Custom stickers and labels at [Company Name] — kiss cut, die cut, waterproof vinyl, matte or gloss. Small runs welcome. Perfect for branding, packaging, and promotions. Request a quote!"
+    id: 'ai-msg-016',
+    name: 'Customer Appreciation',
+    description: 'Appreciation - Customer Appreciation',
+    content: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive."
   },
   {
-    id: 'proof_approved',
-    name: 'Proof Approved — Going to Print',
-    description: 'Confirm approval and start production',
-    content: "Thanks [Customer Name]! Your design proof for [Product] is approved. We'll begin printing shortly. Estimated completion: [Date]. We'll send a photo of the finished product before shipping!"
+    id: 'ai-msg-017',
+    name: 'Business Growth Inspiration',
+    description: 'Growth - Business Growth Inspiration',
+    content: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers."
   },
   {
-    id: 'satisfaction_check',
-    name: 'Print Quality Follow-up',
-    description: 'Check if customer is happy with their prints',
-    content: "Hi [Customer Name]! How are your prints from [Company Name] looking? We value your feedback. Reply with a photo or let us know if everything meets your expectations. We're here if you need adjustments!"
+    id: 'ai-msg-018',
+    name: 'Service Promotion',
+    description: 'Promotion - Service Promotion',
+    content: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today."
   },
   {
-    id: 'catalog_brochure',
-    name: 'Catalog & Brochure Printing',
-    description: 'Promote booklet and brochure printing',
-    content: "Hi [Customer Name]! Need catalogs or brochures? [Company Name] offers saddle-stitched, spiral-bound, and perfect-bound booklets. Full color, premium paper stocks. Design included. Request a sample pack!"
+    id: 'ai-msg-019',
+    name: 'Repeat Customer Encouragement',
+    description: 'Retention - Repeat Customer Encouragement',
+    content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level."
   },
   {
-    id: 'seasonal_print',
-    name: 'Seasonal Printing Special',
-    description: 'Promote seasonal/holiday printing services',
-    content: "Hi [Customer Name]! [Season] is here! [Company Name] is running specials on [Product] — perfect for [Occasion]. Order by [Date] to guarantee delivery. Reply to learn more or place your order!"
+    id: 'ai-msg-020',
+    name: 'Referral Encouragement',
+    description: 'Referral - Referral Encouragement',
+    content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs. Let us know what you'd like printed next and we'll make it exceptional."
   },
   {
-    id: 'large_format',
-    name: 'Large Format Printing',
-    description: 'Promote large format and signage',
-    content: "Hi [Customer Name]! [Company Name] now offers large format printing — billboards, vehicle wraps, window graphics, trade show displays, and more. UV-resistant, weatherproof. Request a site survey and quote!"
+    id: 'ai-msg-021',
+    name: 'Corporate Client Engagement',
+    description: 'Corporate - Corporate Client Engagement',
+    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
   },
   {
-    id: 'referral_print',
-    name: 'Refer a Business',
-    description: 'Ask for referrals to other businesses',
-    content: "Hi [Customer Name]! Enjoying our print services? Refer another business to [Company Name] and you'll get [Reward] credit on your next order. Share your referral code: [Referral Code]. Thank you for your trust!"
+    id: 'ai-msg-022',
+    name: 'Seasonal Motivation',
+    description: 'Seasonal - Seasonal Motivation',
+    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
   },
   {
-    id: 'packaging_print',
-    name: 'Custom Packaging Printing',
-    description: 'Promote custom box and packaging printing',
-    content: "Hi [Customer Name]! Elevate your brand with custom packaging from [Company Name]. We print boxes, bags, tissue paper, and labels. Short runs available. Make your unboxing experience unforgettable. Get a quote!"
+    id: 'ai-msg-023',
+    name: 'Premium Brand Positioning',
+    description: 'Premium - Premium Brand Positioning',
+    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
   },
   {
-    id: 'color_matching',
-    name: 'PMS Color Matching',
-    description: 'Offer Pantone color matching service',
-    content: "Hi [Customer Name]! Need exact brand colors? [Company Name] offers Pantone PMS color matching on all print jobs. Provide your PMS codes and we'll match them precisely. Reply with your color requirements!"
-  }
+    id: 'ai-msg-024',
+    name: 'Project Follow-up',
+    description: 'FollowUp - Project Follow-up',
+    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
+  },
 ];
+
 
 interface WhatsAppMarketingModalProps {
   open: boolean;
