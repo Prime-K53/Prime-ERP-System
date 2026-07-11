@@ -7,150 +7,150 @@ import { getPlaceholder } from '../constants/placeholders';
 import { aiService } from '../services/aiService';
 
 const AI_TEMPLATES = [
-  {
-    id: 'ai-msg-001',
-    name: 'Corporate Client Engagement',
-    description: 'Corporate - Corporate Client Engagement',
-    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
-  },
-  {
-    id: 'ai-msg-002',
-    name: 'Seasonal Motivation',
-    description: 'Seasonal - Seasonal Motivation',
-    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
-  },
-  {
-    id: 'ai-msg-003',
-    name: 'Premium Brand Positioning',
-    description: 'Premium - Premium Brand Positioning',
-    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
-  },
-  {
-    id: 'ai-msg-004',
-    name: 'Project Follow-up',
-    description: 'FollowUp - Project Follow-up',
-    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
-  },
-  {
-    id: 'ai-msg-005',
-    name: 'Brand Visibility Inspiration',
-    description: 'Visibility - Brand Visibility Inspiration',
-    content: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine."
-  },
-  {
-    id: 'ai-msg-006',
-    name: 'Customer Appreciation',
-    description: 'Appreciation - Customer Appreciation',
-    content: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive."
-  },
-  {
-    id: 'ai-msg-007',
-    name: 'Business Growth Inspiration',
-    description: 'Growth - Business Growth Inspiration',
-    content: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers."
-  },
-  {
-    id: 'ai-msg-008',
-    name: 'Service Promotion',
-    description: 'Promotion - Service Promotion',
-    content: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today."
-  },
-  {
-    id: 'ai-msg-009',
-    name: 'Repeat Customer Encouragement',
-    description: 'Retention - Repeat Customer Encouragement',
-    content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level."
-  },
-  {
-    id: 'ai-msg-010',
-    name: 'Referral Encouragement',
-    description: 'Referral - Referral Encouragement',
-    content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs. Let us know what you'd like printed next and we'll make it exceptional."
-  },
-  {
-    id: 'ai-msg-011',
-    name: 'Corporate Client Engagement',
-    description: 'Corporate - Corporate Client Engagement',
-    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
-  },
-  {
-    id: 'ai-msg-012',
-    name: 'Seasonal Motivation',
-    description: 'Seasonal - Seasonal Motivation',
-    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
-  },
-  {
-    id: 'ai-msg-013',
-    name: 'Premium Brand Positioning',
-    description: 'Premium - Premium Brand Positioning',
-    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
-  },
-  {
-    id: 'ai-msg-014',
-    name: 'Project Follow-up',
-    description: 'FollowUp - Project Follow-up',
-    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
-  },
-  {
-    id: 'ai-msg-015',
-    name: 'Brand Visibility Inspiration',
-    description: 'Visibility - Brand Visibility Inspiration',
-    content: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine."
-  },
-  {
-    id: 'ai-msg-016',
-    name: 'Customer Appreciation',
-    description: 'Appreciation - Customer Appreciation',
-    content: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive."
-  },
-  {
-    id: 'ai-msg-017',
-    name: 'Business Growth Inspiration',
-    description: 'Growth - Business Growth Inspiration',
-    content: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers."
-  },
-  {
-    id: 'ai-msg-018',
-    name: 'Service Promotion',
-    description: 'Promotion - Service Promotion',
-    content: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today."
-  },
-  {
-    id: 'ai-msg-019',
-    name: 'Repeat Customer Encouragement',
-    description: 'Retention - Repeat Customer Encouragement',
-    content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level."
-  },
-  {
-    id: 'ai-msg-020',
-    name: 'Referral Encouragement',
-    description: 'Referral - Referral Encouragement',
-    content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs. Let us know what you'd like printed next and we'll make it exceptional."
-  },
-  {
-    id: 'ai-msg-021',
-    name: 'Corporate Client Engagement',
-    description: 'Corporate - Corporate Client Engagement',
-    content: "We're honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints. Your next opportunity deserves outstanding printing and we're ready to help."
-  },
-  {
-    id: 'ai-msg-022',
-    name: 'Seasonal Motivation',
-    description: 'Seasonal - Seasonal Motivation',
-    content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign. What would you like us to create for you next?"
-  },
-  {
-    id: 'ai-msg-023',
-    name: 'Premium Brand Positioning',
-    description: 'Premium - Premium Brand Positioning',
-    content: "We're grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice. We'd be excited to work on your next project."
-  },
-  {
-    id: 'ai-msg-024',
-    name: 'Project Follow-up',
-    description: 'FollowUp - Project Follow-up',
-    content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention. Tell us about your next idea and we'll help bring it to life."
-  },
+{
+        id: 'ai-msg-001',
+        name: 'Customer Appreciation',
+        description: 'Appreciation - Customer Appreciation',
+        content: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise."
+    },
+    {
+        id: 'ai-msg-002',
+        name: 'Business Growth Inspiration',
+        description: 'Growth - Business Growth Inspiration',
+        content: "It is always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We are ready to produce quality marketing materials that help your brand stand out from the crowd."
+    },
+    {
+        id: 'ai-msg-003',
+        name: 'Service Promotion',
+        description: 'Promotion - Service Promotion',
+        content: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you are ready, we can create eye-catching banners, brochures, menus, and marketing materials."
+    },
+    {
+        id: 'ai-msg-004',
+        name: 'Repeat Customer Encouragement',
+        description: 'Retention - Repeat Customer Encouragement',
+        content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise."
+    },
+    {
+        id: 'ai-msg-005',
+        name: 'Referral Encouragement',
+        description: 'Referral - Referral Encouragement',
+        content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs."
+    },
+    {
+        id: 'ai-msg-006',
+        name: 'Corporate Client Engagement',
+        description: 'Corporate - Corporate Client Engagement',
+        content: "We are honored that you chose us for your printing needs. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints."
+    },
+    {
+        id: 'ai-msg-007',
+        name: 'Seasonal Motivation',
+        description: 'Seasonal - Seasonal Motivation',
+        content: "We truly appreciate your continued support. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign."
+    },
+    {
+        id: 'ai-msg-008',
+        name: 'Premium Brand Positioning',
+        description: 'Premium - Premium Brand Positioning',
+        content: "We are grateful to be part of your journey. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice."
+    },
+    {
+        id: 'ai-msg-009',
+        name: 'Project Follow-up',
+        description: 'FollowUp - Project Follow-up',
+        content: "Thank you for choosing quality and professionalism. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention."
+    },
+    {
+        id: 'ai-msg-010',
+        name: 'Brand Visibility Inspiration',
+        description: 'Visibility - Brand Visibility Inspiration',
+        content: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints."
+    },
+    {
+        id: 'ai-msg-011',
+        name: 'Customer Appreciation',
+        description: 'Appreciation - Customer Appreciation',
+        content: "We are truly grateful for your continued trust in our printing services. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise."
+    },
+    {
+        id: 'ai-msg-012',
+        name: 'Business Growth Inspiration',
+        description: 'Growth - Business Growth Inspiration',
+        content: "We admire your dedication to growing your business every day. Every successful brand begins with a strong first impression. We are ready to produce quality marketing materials that help your brand stand out from the crowd."
+    },
+    {
+        id: 'ai-msg-013',
+        name: 'Service Promotion',
+        description: 'Promotion - Service Promotion',
+        content: "We value the relationship we have built with you over time. The right print materials can open new doors for growth. Whenever you are ready, we can create eye-catching banners, brochures, menus, and marketing materials."
+    },
+    {
+        id: 'ai-msg-014',
+        name: 'Repeat Customer Encouragement',
+        description: 'Retention - Repeat Customer Encouragement',
+        content: "We treasure the long-standing relationship we share with you. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise."
+    },
+    {
+        id: 'ai-msg-015',
+        name: 'Referral Encouragement',
+        description: 'Referral - Referral Encouragement',
+        content: "We are inspired by the amazing work you do in your industry. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs."
+    },
+    {
+        id: 'ai-msg-016',
+        name: 'Corporate Client Engagement',
+        description: 'Corporate - Corporate Client Engagement',
+        content: "Your corporate partnership is greatly valued by our entire team. Every successful brand begins with a strong first impression. We would love to help with your next batch of business cards, flyers, stickers, or event prints."
+    },
+    {
+        id: 'ai-msg-017',
+        name: 'Seasonal Motivation',
+        description: 'Seasonal - Seasonal Motivation',
+        content: "As the seasons change, we remain grateful for your partnership. The right print materials can open new doors for growth. Ask us about brochures, posters, packaging, T-shirts, and promotional materials for your next campaign."
+    },
+    {
+        id: 'ai-msg-018',
+        name: 'Premium Brand Positioning',
+        description: 'Premium - Premium Brand Positioning',
+        content: "Your commitment to excellence inspires our premium service approach. Every successful brand begins with a strong first impression. We can help transform your ideas into professional print products that customers will notice."
+    },
+    {
+        id: 'ai-msg-019',
+        name: 'Project Follow-up',
+        description: 'FollowUp - Project Follow-up',
+        content: "We wanted to follow up on your recent experience with us. The right print materials can open new doors for growth. Let us help you prepare professional brochures, signage, labels, and branded products that attract attention."
+    },
+    {
+        id: 'ai-msg-020',
+        name: 'Brand Visibility Inspiration',
+        description: 'Visibility - Brand Visibility Inspiration',
+        content: "We believe your brand deserves to be seen by everyone. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints."
+    },
+    {
+        id: 'ai-msg-021',
+        name: 'Customer Appreciation',
+        description: 'Appreciation - Customer Appreciation',
+        content: "Your support means the world to our entire printing team. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise."
+    },
+    {
+        id: 'ai-msg-022',
+        name: 'Business Growth Inspiration',
+        description: 'Growth - Business Growth Inspiration',
+        content: "Your ambitious spirit inspires our team to deliver our best work. Every successful brand begins with a strong first impression. We are ready to produce quality marketing materials that help your brand stand out from the crowd."
+    },
+    {
+        id: 'ai-msg-023',
+        name: 'Service Promotion',
+        description: 'Promotion - Service Promotion',
+        content: "Your continued partnership inspires us to innovate constantly. The right print materials can open new doors for growth. Whenever you are ready, we can create eye-catching banners, brochures, menus, and marketing materials."
+    },
+    {
+        id: 'ai-msg-024',
+        name: 'Repeat Customer Encouragement',
+        description: 'Retention - Repeat Customer Encouragement',
+        content: "Your consistent trust in our services is truly humbling. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise."
+    },
 ];
 
 

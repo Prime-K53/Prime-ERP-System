@@ -15,11 +15,11 @@ interface Contact {
 }
 
 const STATIC_TEMPLATES = [
-  { label: 'Brand Visibility Inspiration', text: "Thank you for trusting us with your vision. Every successful brand begins with a strong first impression. Our team can support your next project with invitations, receipt books, calendars, labels, and custom prints. Whenever you're ready, we're here to help your brand shine." },
-  { label: 'Customer Appreciation', text: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise. Let's make your next project even more impressive." },
-  { label: 'Business Growth Inspiration', text: "It's always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We're ready to produce quality marketing materials that help your brand stand out from the crowd. We look forward to helping you reach even more customers." },
-  { label: 'Service Promotion', text: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you're ready, we can create eye-catching banners, brochures, menus, and marketing materials. Your next successful campaign could start with a simple message to us today." },
-  { label: 'Repeat Customer Encouragement', text: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise. We'd love to help you take your brand to the next level." },
+{ label: 'Customer Appreciation', text: "Every order you place inspires us to do even better. The right print materials can open new doors for growth. Your next campaign could benefit from fresh flyers, banners, packaging, and branded merchandise." },
+    { label: 'Business Growth Inspiration', text: "It is always a pleasure serving a customer like you. Every successful brand begins with a strong first impression. We are ready to produce quality marketing materials that help your brand stand out from the crowd." },
+    { label: 'Service Promotion', text: "Your loyalty is deeply appreciated. The right print materials can open new doors for growth. Whenever you are ready, we can create eye-catching banners, brochures, menus, and marketing materials." },
+    { label: 'Repeat Customer Encouragement', text: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise." },
+    { label: 'Referral Encouragement', text: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs." },
 ];
 
 
