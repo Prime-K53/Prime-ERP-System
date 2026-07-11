@@ -49,7 +49,21 @@ DROP POLICY IF EXISTS "Authenticated users can insert profiles" ON public.profil
 DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Authenticated users can manage idempotency" ON public.idempotency_keys;
 
--- 4. Companies table policies
+-- 4. Helper: get the current user's company_id (SECURITY DEFINER to bypass RLS)
+
+CREATE OR REPLACE FUNCTION public.get_user_company_id()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT company_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_user_company_id() TO authenticated;
+
+-- 5. Companies table policies
 -- Allow any authenticated user to insert (first-time setup creates the company)
 CREATE POLICY "Authenticated users can insert companies"
   ON public.companies
@@ -72,7 +86,7 @@ CREATE POLICY "Users can update their company"
   USING (id = public.get_user_company_id())
   WITH CHECK (id = public.get_user_company_id());
 
--- 5. Profiles table policies
+-- 6. Profiles table policies
 -- Allow authenticated users to insert profiles
 CREATE POLICY "Authenticated users can insert profiles"
   ON public.profiles
@@ -98,29 +112,13 @@ CREATE POLICY "Users can update own profile"
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
--- 6. Idempotency keys table policies
+-- 7. Idempotency keys table policies
 CREATE POLICY "Authenticated users can manage idempotency keys"
   ON public.idempotency_keys
   FOR ALL
   TO authenticated
   USING (true)
   WITH CHECK (true);
-
--- ============================================================================
--- Helper: get the current user's company_id (SECURITY DEFINER to bypass RLS)
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION public.get_user_company_id()
-RETURNS TEXT
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT company_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.get_user_company_id() TO authenticated;
 
 -- ============================================================================
 -- Updated cascade_delete_company that also deletes the auth user
