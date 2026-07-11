@@ -2461,8 +2461,16 @@ const examinationService = {
     }
   },
 
-  getBOMCalculations: async (batchId) => {
-    return await runQuery('SELECT * FROM examination_bom_calculations WHERE batch_id = ? ORDER BY class_id, item_name', [batchId]);
+  getBOMCalculations: async (batchId, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const batchFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_bom_calculations.batch_id AND company_id = ?)'
+      : '';
+    const params = companyId ? [batchId, companyId] : [batchId];
+    return await runQuery(
+      `SELECT * FROM examination_bom_calculations WHERE batch_id = ? ${batchFilter} ORDER BY class_id, item_name`,
+      params
+    );
   },
 
   getMarketAdjustmentMeta: async (companyId) => {
@@ -2837,7 +2845,9 @@ const examinationService = {
       throw new Error('Batch id is required to lock pricing snapshot.');
     }
 
-    const existingBatch = await runGet('SELECT id FROM examination_batches WHERE id = ?', [normalizedBatchId]);
+    const batchFilter = companyId ? 'AND company_id = ?' : '';
+    const batchParams = companyId ? [normalizedBatchId, companyId] : [normalizedBatchId];
+    const existingBatch = await runGet(`SELECT id FROM examination_batches WHERE id = ? ${batchFilter}`, batchParams);
     if (!existingBatch) {
       throw new Error('Batch not found');
     }
@@ -2865,21 +2875,19 @@ const examinationService = {
            locked_conversion_rate = ?,
            locked_adjustments_json = ?,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [
-        reason,
-        userId,
-        pricingEngine.roundCurrency(paperUnitCost),
-        pricingEngine.roundCurrency(tonerUnitCost),
-        paperConversionRate,
-        lockedAdjustmentsJson,
-        normalizedBatchId
-      ]
+       WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+      companyId
+        ? [reason, userId, pricingEngine.roundCurrency(paperUnitCost), pricingEngine.roundCurrency(tonerUnitCost), paperConversionRate, lockedAdjustmentsJson, normalizedBatchId, companyId]
+        : [reason, userId, pricingEngine.roundCurrency(paperUnitCost), pricingEngine.roundCurrency(tonerUnitCost), paperConversionRate, lockedAdjustmentsJson, normalizedBatchId]
     );
 
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [normalizedBatchId, companyId] : [normalizedBatchId];
     const classCountRow = await runGet(
-      'SELECT COUNT(*) AS total FROM examination_classes WHERE batch_id = ?',
-      [normalizedBatchId]
+      `SELECT COUNT(*) AS total FROM examination_classes WHERE batch_id = ? ${classFilter}`,
+      classParams
     );
 
     return {
@@ -3272,7 +3280,8 @@ const examinationService = {
   },
 
   // --- Classes ---
-  createClass: async (batchId, data) => {
+  createClass: async (batchId, data, options = {}, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     const id = randomUUID();
     const className = String(data.class_name || '').trim();
     const learnersRaw = Number(data.number_of_learners);
@@ -3292,8 +3301,10 @@ const examinationService = {
       throw new Error('Number of learners exceeds allowed maximum (10000)');
     }
 
-    // Verify batch exists before attempting insert. We still handle FK errors below
-    const batch = await runGet('SELECT id FROM examination_batches WHERE id = ?', [batchId]);
+    // Verify batch exists and belongs to user's company before attempting insert
+    const batchFilter = companyId ? 'AND company_id = ?' : '';
+    const batchParams = companyId ? [batchId, companyId] : [batchId];
+    const batch = await runGet(`SELECT id FROM examination_batches WHERE id = ? ${batchFilter}`, batchParams);
     if (!batch) {
       throw new Error(`Batch with ID ${batchId} not found. Please create the batch first.`);
     }
@@ -3323,7 +3334,7 @@ const examinationService = {
       if (!batchStatus || batchStatus.status !== 'Finalized') {
         calculation_status = 'queued';
         Promise.resolve()
-          .then(() => examinationService.calculateBatch(batchId, { trigger: 'AUTO_CLASS_CREATE' }))
+          .then(() => examinationService.calculateBatch(batchId, { trigger: 'AUTO_CLASS_CREATE' }, companyId))
           .catch((calcError) => {
             const asyncError = String(calcError?.message || calcError);
             console.error(`Failed to calculate batch ${batchId} after class creation:`, asyncError);
@@ -3339,8 +3350,13 @@ const examinationService = {
     return Object.assign({}, created, { calculation_status, calculation_error });
   },
 
-  updateClass: async (id, data) => {
-    const currentClass = await runGet('SELECT * FROM examination_classes WHERE id = ?', [id]);
+  updateClass: async (id, data, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [id, companyId] : [id];
+    const currentClass = await runGet(`SELECT * FROM examination_classes WHERE id = ? ${classFilter}`, classParams);
     if (!currentClass) {
       throw new Error('Class not found');
     }
@@ -3372,31 +3388,43 @@ const examinationService = {
     params.push(id);
     await runRun(`UPDATE examination_classes SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, params);
 
-    await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_UPDATE' });
+    await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_UPDATE' }, companyId);
     return await runGet('SELECT * FROM examination_classes WHERE id = ?', [id]);
   },
 
-  deleteClass: async (id) => {
-    const currentClass = await runGet('SELECT * FROM examination_classes WHERE id = ?', [id]);
+  deleteClass: async (id, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [id, companyId] : [id];
+    const currentClass = await runGet(`SELECT * FROM examination_classes WHERE id = ? ${classFilter}`, classParams);
     if (!currentClass) {
       return { success: true };
     }
 
     await runRun('DELETE FROM examination_classes WHERE id = ?', [id]);
-    await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_DELETE' });
+    await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_DELETE' }, companyId);
     return { success: true };
   },
 
-  updateClassPricing: async (classId, payload, options = {}) => {
+  updateClassPricing: async (classId, payload, options = {}, companyId) => {
     await ensureExaminationPricingSchema();
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
 
-    const currentClass = await runGet('SELECT * FROM examination_classes WHERE id = ?', [classId]);
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [classId, companyId] : [classId];
+    const currentClass = await runGet(`SELECT * FROM examination_classes WHERE id = ? ${classFilter}`, classParams);
     if (!currentClass) {
       throw new Error('Class not found');
     }
+    const batchFilter = companyId ? 'AND company_id = ?' : '';
+    const batchParams = companyId ? [currentClass.batch_id, companyId] : [currentClass.batch_id];
     const currentBatch = await runGet(
-      'SELECT id, status FROM examination_batches WHERE id = ?',
-      [currentClass.batch_id]
+      `SELECT id, status FROM examination_batches WHERE id = ? ${batchFilter}`,
+      batchParams
     );
     if (!currentBatch) {
       throw new Error('Batch not found');
@@ -3491,25 +3519,36 @@ const examinationService = {
     await examinationService.calculateBatch(currentClass.batch_id, {
       trigger: isManualOverride ? 'MANUAL_OVERRIDE' : 'MANUAL_OVERRIDE_RESET',
       userId
-    });
+    }, companyId);
 
-    return await examinationService.getBatchById(currentClass.batch_id);
+    return await examinationService.getBatchById(currentClass.batch_id, companyId);
   },
 
-  getClassPricingHistory: async (classId, limit = 100) => {
+  getClassPricingHistory: async (classId, limit = 100, companyId) => {
     await ensureExaminationPricingSchema();
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+    const whereClause = companyId
+      ? `WHERE class_id = ?
+         AND class_id IN (
+           SELECT id FROM examination_classes
+           WHERE id = examination_pricing_audit.class_id
+           AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)
+         )`
+      : `WHERE class_id = ?`;
+    const params = companyId ? [classId, companyId] : [classId];
     return await runQuery(
       `SELECT * FROM examination_pricing_audit
-       WHERE class_id = ?
+       ${whereClause}
        ORDER BY datetime(created_at) DESC
        LIMIT ?`,
-      [classId, safeLimit]
+      [...params, safeLimit]
     );
   },
 
   // --- Subjects ---
-  createSubject: async (classId, data) => {
+  createSubject: async (classId, data, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     const id = randomUUID();
     let { subject_name, name, pages, extra_copies, paper_size, orientation } = data;
 
@@ -3530,8 +3569,12 @@ const examinationService = {
       throw new Error('Extra copies cannot be negative');
     }
 
-    // Validate class exists before creating subject
-    const cls = await runGet('SELECT batch_id FROM examination_classes WHERE id = ?', [classId]);
+    // Validate class exists and belongs to user's company before creating subject
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [classId, companyId] : [classId];
+    const cls = await runGet(`SELECT batch_id FROM examination_classes WHERE id = ? ${classFilter}`, classParams);
     if (!cls) {
       throw new Error(`Class with ID ${classId} not found. Please create the class first.`);
     }
@@ -3547,7 +3590,7 @@ const examinationService = {
       const batchStatus = await runGet('SELECT status FROM examination_batches WHERE id = ?', [cls.batch_id]);
       if (batchStatus && batchStatus.status !== 'Finalized') {
         try {
-          await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_CREATE' });
+          await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_CREATE' }, companyId);
         } catch (calcError) {
           console.error(`Failed to calculate batch ${cls.batch_id} after subject creation:`, calcError.message);
           // Don't throw - subject was created successfully, just calculation failed
@@ -3558,8 +3601,13 @@ const examinationService = {
     return await runGet('SELECT * FROM examination_subjects WHERE id = ?', [id]);
   },
 
-  updateSubject: async (id, data) => {
-    const currentSubject = await runGet('SELECT * FROM examination_subjects WHERE id = ?', [id]);
+  updateSubject: async (id, data, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const subjectFilter = companyId
+      ? 'AND class_id IN (SELECT id FROM examination_classes WHERE id = examination_subjects.class_id AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?))'
+      : '';
+    const subjectParams = companyId ? [id, companyId] : [id];
+    const currentSubject = await runGet(`SELECT * FROM examination_subjects WHERE id = ? ${subjectFilter}`, subjectParams);
     if (!currentSubject) {
       throw new Error('Subject not found');
     }
@@ -3604,14 +3652,19 @@ const examinationService = {
 
     const cls = await runGet('SELECT batch_id FROM examination_classes WHERE id = ?', [currentSubject.class_id]);
     if (cls?.batch_id) {
-      await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_UPDATE' });
+      await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_UPDATE' }, companyId);
     }
 
     return await runGet('SELECT * FROM examination_subjects WHERE id = ?', [id]);
   },
 
-  deleteSubject: async (id) => {
-    const currentSubject = await runGet('SELECT * FROM examination_subjects WHERE id = ?', [id]);
+  deleteSubject: async (id, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const subjectFilter = companyId
+      ? 'AND class_id IN (SELECT id FROM examination_classes WHERE id = examination_subjects.class_id AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?))'
+      : '';
+    const subjectParams = companyId ? [id, companyId] : [id];
+    const currentSubject = await runGet(`SELECT * FROM examination_subjects WHERE id = ? ${subjectFilter}`, subjectParams);
     if (!currentSubject) {
       return { success: true };
     }
@@ -3620,23 +3673,24 @@ const examinationService = {
     await runRun('DELETE FROM examination_subjects WHERE id = ?', [id]);
 
     if (cls?.batch_id) {
-      await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_DELETE' });
+      await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_DELETE' }, companyId);
     }
 
     return { success: true };
   },
 
   // --- Calculation Logic ---
-  calculateBatch: async (batchId, options = {}) => {
+  calculateBatch: async (batchId, options = {}, companyId) => {
     await ensureExaminationPricingSchema();
 
     const startedAt = Date.now();
     const trigger = String(options?.trigger || 'MANUAL').trim() || 'MANUAL';
     const userId = options?.userId || 'System';
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
 
-    const batch = await examinationService.getBatchById(batchId);
+    const batch = await examinationService.getBatchById(batchId, companyId);
     if (!batch) throw new Error('Batch not found');
-    const defaultMaterialConfig = await resolveExamMaterialConfiguration();
+    const defaultMaterialConfig = await resolveExamMaterialConfiguration(companyId);
     const {
       paperItem,
       tonerItem,
@@ -3647,7 +3701,7 @@ const examinationService = {
     } = await resolveMaterialOverridesFromOptions(options, defaultMaterialConfig);
     const activeAdjustments = Array.isArray(options?.adjustments)
       ? options.adjustments
-      : await resolveEffectiveClassAdjustments();
+      : await resolveEffectiveClassAdjustments(companyId);
     const marketAdjustmentSaleRef = `EXAM-BATCH-${batchId}`;
     const isPricingSnapshotLocked = toBoolean(batch?.pricing_lock_enabled);
     const lockedAdjustments = isPricingSnapshotLocked
@@ -4040,17 +4094,20 @@ const examinationService = {
       }
     }
 
-    return await examinationService.getBatchById(batchId);
+    return await examinationService.getBatchById(batchId, companyId);
   },
 
-  calculateClassPreview: async (classId, options = {}) => {
+  calculateClassPreview: async (classId, options = {}, companyId) => {
     await ensureExaminationPricingSchema();
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
 
-    const cls = await examinationService.getClassById(classId);
+    const cls = await examinationService.getClassById(classId, companyId);
     if (!cls) throw new Error('Class not found');
-    const batch = await runGet('SELECT id, rounding_method, rounding_value FROM examination_batches WHERE id = ?', [cls.batch_id]);
+    const batchFilter = companyId ? 'AND company_id = ?' : '';
+    const batchParams = companyId ? [cls.batch_id, companyId] : [cls.batch_id];
+    const batch = await runGet(`SELECT id, rounding_method, rounding_value FROM examination_batches WHERE id = ? ${batchFilter}`, batchParams);
 
-    const defaultMaterialConfig = await resolveExamMaterialConfiguration();
+    const defaultMaterialConfig = await resolveExamMaterialConfiguration(companyId);
     const {
       paperItem,
       tonerItem,
@@ -4065,7 +4122,7 @@ const examinationService = {
     const effectiveConversionRate = paperConversionRate;
     const effectiveTonerPagesPerUnit = tonerPagesPerUnit;
 
-    const activeAdjustments = await resolveEffectiveClassAdjustments();
+    const activeAdjustments = await resolveEffectiveClassAdjustments(companyId);
     const roundingConfig = resolveBatchRoundingConfig(batch, options);
     const learners = Math.max(1, Math.floor(Number(cls.number_of_learners) || 0));
 
@@ -4140,7 +4197,7 @@ const examinationService = {
   approveBatch: async (batchId, userId = 'System', companyId) => {
     companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     await ensureExaminationPricingSchema();
-    const batch = await examinationService.getBatchById(batchId);
+    const batch = await examinationService.getBatchById(batchId, companyId);
     if (!batch) throw new Error('Batch not found');
     batchWorkflow.assertCanApproveBatch(batch.status);
 
@@ -4243,7 +4300,7 @@ const examinationService = {
       throw error;
     }
 
-    const approvedBatch = await examinationService.getBatchById(batchId);
+    const approvedBatch = await examinationService.getBatchById(batchId, companyId);
     return { batch: approvedBatch, warnings };
   },
 
@@ -4251,7 +4308,7 @@ const examinationService = {
     companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     const requestedInvoiceNumber = options?.invoiceNumber || options?.invoice_number;
     await ensureExaminationInvoiceSchema();
-    const batch = await examinationService.getBatchById(batchId);
+    const batch = await examinationService.getBatchById(batchId, companyId);
     if (!batch) throw new Error('Batch not found');
     batchWorkflow.assertCanGenerateInvoice(batch.status);
     const invoiceDraft = examinationInvoiceAdapter.createInvoiceFromBatch({
@@ -4544,8 +4601,13 @@ const examinationService = {
 
   // --- New Methods for Examination Pricing Redesign ---
 
-  getClassById: async (classId) => {
-    const cls = await runGet('SELECT * FROM examination_classes WHERE id = ?', [classId]);
+  getClassById: async (classId, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const batchFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const params = companyId ? [classId, companyId] : [classId];
+    const cls = await runGet(`SELECT * FROM examination_classes WHERE id = ? ${batchFilter}`, params);
     if (!cls) return null;
 
     // Attach subjects
@@ -4554,14 +4616,21 @@ const examinationService = {
     return cls;
   },
 
-  updateClassFinancialMetrics: async (classId, payload, { userId }) => {
-    const currentClass = await runGet('SELECT * FROM examination_classes WHERE id = ?', [classId]);
+  updateClassFinancialMetrics: async (classId, payload, { userId }, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const classFilter = companyId
+      ? 'AND batch_id IN (SELECT id FROM examination_batches WHERE id = examination_classes.batch_id AND company_id = ?)'
+      : '';
+    const classParams = companyId ? [classId, companyId] : [classId];
+    const currentClass = await runGet(`SELECT * FROM examination_classes WHERE id = ? ${classFilter}`, classParams);
     if (!currentClass) {
       throw new Error(`Class ${classId} not found`);
     }
+    const batchFilter = companyId ? 'AND company_id = ?' : '';
+    const batchParams = companyId ? [currentClass.batch_id, companyId] : [currentClass.batch_id];
     const currentBatch = await runGet(
-      'SELECT id, status FROM examination_batches WHERE id = ?',
-      [currentClass.batch_id]
+      `SELECT id, status FROM examination_batches WHERE id = ? ${batchFilter}`,
+      batchParams
     );
     if (!currentBatch) {
       throw new Error(`Batch ${currentClass.batch_id} not found`);
@@ -4649,8 +4718,9 @@ const examinationService = {
     return await runGet('SELECT * FROM examination_classes WHERE id = ?', [classId]);
   },
 
-  syncPricingToBatchClasses: async (batchId, { settings, adjustments, triggerSource, userId }) => {
-    const batch = await examinationService.getBatchById(batchId);
+  syncPricingToBatchClasses: async (batchId, { settings, adjustments, triggerSource, userId }, companyId) => {
+    companyId = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
+    const batch = await examinationService.getBatchById(batchId, companyId);
     if (!batch) {
       throw new Error(`Batch ${batchId} not found`);
     }

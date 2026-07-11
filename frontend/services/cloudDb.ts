@@ -695,6 +695,13 @@ export const cloudDb = {
         }
         throw companyError;
       }
+
+      // After successful company deletion, remind user to clean up the auth user
+      console.info(
+        'Company data deleted. IMPORTANT: The Supabase Auth user still exists. ' +
+        'If you need to re-register with the same email, go to your Supabase Dashboard → ' +
+        'Authentication → Users and delete this user manually, then you can create a new company.'
+      );
     });
   },
 };
