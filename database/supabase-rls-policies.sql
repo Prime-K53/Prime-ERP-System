@@ -44,6 +44,9 @@ DROP POLICY IF EXISTS "Users can insert their profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view company profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Authenticated users can insert companies" ON public.companies;
+DROP POLICY IF EXISTS "Authenticated users can insert profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Authenticated users can manage idempotency" ON public.idempotency_keys;
 
 -- 4. Companies table policies
