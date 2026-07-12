@@ -1477,10 +1477,10 @@ export const transactionService = {
 
     async processRecurringInvoice(invoice: Invoice, subId: string, updatedSub: any) {
         return dbService.executeAtomicOperation(
-            ['invoices', 'subscriptions', 'ledger', 'customers', 'inventory', 'inventoryTransactions', 'bomTemplates', 'marketAdjustments', 'marketAdjustmentTransactions', 'customerPayments', 'bankAccounts', 'bankTransactions'],
+            ['invoices', 'recurringInvoices', 'ledger', 'customers', 'inventory', 'inventoryTransactions', 'bomTemplates', 'marketAdjustments', 'marketAdjustmentTransactions', 'customerPayments', 'bankAccounts', 'bankTransactions'],
             async (tx) => {
                 const invoiceStore = tx.objectStore('invoices');
-                const subStore = tx.objectStore('subscriptions');
+                const subStore = tx.objectStore('recurringInvoices');
                 const ledgerStore = tx.objectStore('ledger');
                 const customerStore = tx.objectStore('customers');
                 const inventoryStore = tx.objectStore('inventory');

@@ -2757,6 +2757,21 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         Adjustment applied: {currency}{calculatedOtherCharges.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 )}
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-medium text-slate-700">Discount</span>
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={formData.discount || ''}
+                                            onChange={e => setFormData({ ...formData, discount: Math.max(0, Number(e.target.value) || 0) })}
+                                            className="w-24 text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
+                                        />
+                                        <span className="text-[10px] text-slate-400">{currency}</span>
+                                    </div>
+                                </div>
                                 <textarea
                                     className="w-full text-sm border border-gray-200 rounded-md px-3 py-2 bg-white resize-y min-h-[48px] focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
                                     placeholder="Narration / notes..."
@@ -2786,6 +2801,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 onChange={e => setFormData({ ...formData, roundingEnabled: e.target.checked })}
                                             />
                                         </div>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-slate-500">Discount</span>
+                                        <span className="font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">
+                                            -{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-slate-500">Other Charges</span>

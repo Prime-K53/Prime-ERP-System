@@ -368,6 +368,7 @@ export const mapToInvoiceData = (item: any, companyConfig: any, targetType?: str
                 total: toNum(i.total || i.subtotal || (toNum(i.quantity || i.qty, 1) * toNum(i.price || i.unitPrice || i.cost))),
             })),
             subtotal: toNum(item.totalAmount || item.total || item.total_amount || item.total_cost || item.subtotal || 0),
+            discount: toNum(item.discount || item.totalDiscount || 0),
             roundingDifference: toNum(item.roundingDifference || item.roundingTotal || item.rounding_difference || 0),
             roundingMethod: String(item.roundingMethod || item.rounding_method || ''),
             amountPaid: toNum(item.paidAmount || item.amountPaid || item.paid_amount || 0),

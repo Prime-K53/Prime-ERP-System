@@ -41,6 +41,7 @@ export const FinancialDocSchema = BaseDocSchema.extend({
     total: z.number(),
   })),
   subtotal: z.number(),
+  discount: z.number().default(0),
   roundingDifference: z.number().optional(),
   roundingMethod: z.string().optional(),
   amountPaid: z.number().default(0),
