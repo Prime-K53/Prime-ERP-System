@@ -376,7 +376,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     }, [customerNames, customerSearch]);
 
     const filteredInventory = useMemo(() => {
-        const base = inventory.filter((i: Item) => i.type !== 'Material' && i.type !== 'Service');
+        const base = inventory.filter((i: Item) => i.type !== 'Raw Material' && i.type !== 'Material' && i.type !== 'Service');
         if (!itemSearch) return base;
         return base.filter((i: Item) =>
             (i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase()))
