@@ -2056,49 +2056,154 @@ const handleVariantSelect = async (variant: ProductVariant) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
-                <div className="px-5 py-3 border-b border-indigo-800 bg-gradient-to-r from-indigo-700 to-slate-800 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-base font-semibold text-white">
-                            {isEditing ? 'Edit' : 'Create'} {type}
-                            <span className="ml-2 text-sm font-mono text-indigo-200">#{formData.id}</span>
-                        </h2>
-                        {isDuplicateInvoice && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 border border-red-200">
-                                <AlertCircle size={12} /> Duplicate invoice number
-                            </span>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {isPriceLocked && (
-                            <button
-                                onClick={() => {
-                                    const reason = window.prompt("Enter audit reason for price unlock:");
-                                    if (reason && reason.trim()) {
-                                        setLocalUnlock(true);
-                                        setAuditReason(reason.trim());
-                                        notify("Price unlocked for revision", "info");
-                                    }
-                                }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 flex items-center gap-1.5"
-                            >
-                                <ShieldCheck size={13} /> Unlock Price
-                            </button>
-                        )}
-                        {onPreview && (
-                            <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 bg-white/10 border border-white/20 hover:bg-white/20 hover:text-white flex items-center gap-1.5">
-                                <Eye size={13} /> Preview
-                            </button>
-                        )}
-                        <button onClick={handleCancelForm} className="p-1.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10">
-                            <X size={16} />
-                        </button>
-                    </div>
-                </div>
+        <div className="fixed inset-0 z-50 bg-[#E9E5DC] flex items-center justify-center p-4">
+            <div className="w-full max-w-[1040px] bg-[#FEFDFB] rounded-[14px] overflow-hidden shadow-[0_30px_60px_-20px_rgba(16,43,40,0.35),0_0_0_1px_rgba(16,43,40,0.06)] grid grid-cols-[266px_1fr] h-[88vh] max-h-[88vh]">
 
-                <div className="flex flex-1 overflow-hidden">
-                    <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* DOCKET SIDEBAR */}
+                <aside className="bg-[#102B28] p-[26px_24px_22px] flex flex-col relative overflow-y-auto scrollbar-thin [scrollbar-color:rgba(255,255,255,0.25)_transparent] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-[repeating-linear-gradient(#FEFDFB_50%,transparent_0%)] after:bg-[length:1px_14px] after:opacity-50">
+                    <div className="text-[10.5px] font-bold tracking-[1.6px] uppercase text-[#5FA8A0] mb-[6px]">Sales Flow</div>
+                    <div className="font-['DM_Serif_Display',serif] text-[27px] leading-[1.15] text-white mb-[4px]">{type}</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#87C1BB] tracking-[0.5px] mb-[18px]">#{formData.id}</div>
+
+                    {formData.status && (
+                        <div className="self-start border-[2.5px] border-[#B8863B] text-[#B8863B] font-['JetBrains_Mono',monospace] text-[12.5px] font-bold tracking-[2px] uppercase px-[14px] py-[6px] rounded-[6px] -rotate-6 mb-[24px] bg-[rgba(184,134,59,0.08)]">
+                            {formData.status}
+                        </div>
+                    )}
+
+                    {isQuotation && (
+                        <div className="flex gap-[4px] mb-[24px] border-b border-[rgba(255,255,255,0.12)]">
+                            {(['General', 'Printing'] as QuotationWorkflowType[]).map(entry => (
+                                <button key={entry} type="button" onClick={() => handleQuotationTypeChange(entry)}
+                                    className={`bg-none border-none text-[12.5px] font-semibold px-[4px] pb-[8px] mr-[16px] cursor-pointer border-b-2 transition-colors ${
+                                        formData.quotationType === entry
+                                            ? 'text-white border-[#B8863B]'
+                                            : 'text-[#5FA8A0] border-transparent'
+                                    }`}>
+                                    {entry === 'Printing' ? 'Print Service' : entry}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Customer</label>
+                        <div className="relative" ref={customerDropdownRef}>
+                            <input type="text" placeholder="Search customer..."
+                                value={customerSearch}
+                                onChange={e => { setCustomerSearch(e.target.value); setIsCustomerDropdownOpen(true); }}
+                                onFocus={() => setIsCustomerDropdownOpen(true)}
+                                className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
+                            {isCustomerDropdownOpen && (
+                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                    {filteredCustomers.length === 0 ? (
+                                        <div className="p-3 text-center">
+                                            <p className="text-xs text-slate-400 mb-2">No customers found</p>
+                                            {customerSearch.length > 1 && (
+                                                <button onClick={handleQuickAddCustomer}
+                                                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mx-auto">
+                                                    <UserPlus size={12} /> Add &quot;{customerSearch}&quot;
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        filteredCustomers.map(name => (
+                                            <button key={name} onClick={() => { selectCustomer(name); setIsCustomerDropdownOpen(false); }}
+                                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex justify-between items-center border-b border-gray-100 last:border-0">
+                                                <span className="font-medium text-slate-700">{name}</span>
+                                                <span className="text-xs font-medium text-red-500">{currency}{getCustomerOutstanding(name).toLocaleString()}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Voucher Date</label>
+                        <input type="date" value={formData.date}
+                            onChange={e => handleVoucherDateChange(e.target.value)}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                    </div>
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Due Date</label>
+                        <input type="date" value={formData.dueDate}
+                            onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                    </div>
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Reference</label>
+                        <input type="text" placeholder="Reference..."
+                            value={formData.referenceDoc || ''}
+                            onChange={e => setFormData({ ...formData, referenceDoc: e.target.value })}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
+                    </div>
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Invoice Status</label>
+                        <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                            <option className="text-[#23282A]">{type === 'Invoice' ? 'Sales Invoice' : type === 'Quotation' ? 'Quotation' : type}</option>
+                            <option className="text-[#23282A]">Proforma</option>
+                            <option className="text-[#23282A]">Credit Note</option>
+                        </select>
+                    </div>
+
+                    <div className="docket-field mb-[16px]">
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[5px]">Sales Account</label>
+                        <div className="flex gap-[6px]">
+                            <select value={formData.salesAccountId}
+                                onChange={e => setFormData({ ...formData, salesAccountId: e.target.value })}
+                                className="flex-1 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                                {revenueAccounts.map(acc => (
+                                    <option key={acc.id} value={acc.id} className="text-[#23282A]">{acc.name}</option>
+                                ))}
+                            </select>
+                            <button className="text-[11px] font-bold font-['Inter',sans-serif] bg-[rgba(255,255,255,0.1)] text-[#DBEBE9] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] cursor-pointer whitespace-nowrap hover:bg-[rgba(255,255,255,0.16)]">Balance</button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1"></div>
+                    <div className="text-[10.5px] text-[#5FA8A0] leading-[1.5] pt-[16px] border-t border-dashed border-[rgba(255,255,255,0.15)]">
+                        Doc #{formData.id} &middot; issued from Sales Flow
+                    </div>
+                </aside>
+
+                {/* MAIN CONTENT */}
+                <div className="flex flex-col min-w-0 min-h-0 h-full">
+                    <div className="flex justify-end items-center px-[26px] pt-[16px]">
+                        <div className="flex items-center gap-2">
+                            {isPriceLocked && (
+                                <button onClick={() => {
+                                    const reason = window.prompt("Enter audit reason for price unlock:");
+                                    if (reason && reason.trim()) { setLocalUnlock(true); setAuditReason(reason.trim()); notify("Price unlocked for revision", "info"); }
+                                }}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 flex items-center gap-1.5">
+                                    <ShieldCheck size={13} /> Unlock Price
+                                </button>
+                            )}
+                            {onPreview && (
+                                <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-[#E2DED3] hover:border-[#87C1BB] hover:text-[#2C6F67] flex items-center gap-1.5 transition-colors">
+                                    <Eye size={13} /> Preview
+                                </button>
+                            )}
+                            <button onClick={handleCancelForm}
+                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E2DED3] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#87C1BB] hover:text-[#2C6F67] transition-colors">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    {isDuplicateInvoice && (
+                        <div className="mx-[26px] mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-600 border border-red-200">
+                            <AlertCircle size={12} /> Duplicate invoice number
+                        </div>
+                    )}
+
+                    <div className="flex-1 min-h-0 overflow-y-auto px-[26px] pt-[6px] [scrollbar-width:thin] [scrollbar-color:#87C1BB_#FBFAF7]">
                         <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                             {isQuotation && (
                                 <div className="col-span-2 flex items-center justify-between bg-indigo-50 rounded-lg px-4 py-2.5 border border-indigo-100">
@@ -2312,28 +2417,28 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             );
                         })()}
 
-                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1 py-1 bg-transparent rounded">
+                        <div className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#8A8578] uppercase tracking-[0.6px] px-[2px] py-[4px]">
                             Line Items
                         </div>
 
-                        <div className="flex items-center gap-2 px-1">
+                        <div className="flex items-center gap-[6px] px-[2px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
-                                <kbd className="px-1 py-0.5 bg-white border border-indigo-200 rounded text-[10px] font-mono">F10</kbd> Photocopy
+                                className="inline-flex items-center gap-[3px] px-[8px] py-[4px] text-[11px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
+                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F10</kbd> Photocopy
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors">
-                                <kbd className="px-1 py-0.5 bg-white border border-indigo-200 rounded text-[10px] font-mono">F11</kbd> Type & Print
+                                className="inline-flex items-center gap-[3px] px-[8px] py-[4px] text-[11px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
+                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F11</kbd> Type &amp; Print
                             </button>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-[8px]">
                             <div className="flex-1 relative" ref={itemDropdownRef}>
-                                <div className="flex items-center border border-gray-200 rounded-md bg-white px-3 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all">
-                                    <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">Item</span>
+                                <div className="flex items-center border border-[#D4CFC2] rounded-[4px] bg-[#FEFDFB] px-[8px] py-[4px] gap-[6px] focus-within:border-[#87C1BB] transition-all">
+                                    <span className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#2C6F67] whitespace-nowrap">Item</span>
                                     <input
                                         type="text"
-                                        className="flex-1 text-sm bg-transparent outline-none"
+                                        className="flex-1 text-[12px] bg-transparent outline-none"
                                         placeholder="Search inventory..."
                                         value={itemSearch}
                                         onFocus={() => setIsItemDropdownOpen(true)}
@@ -2344,9 +2449,9 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     />
                                 </div>
                                 {isItemDropdownOpen && (
-                                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                    <div className="absolute z-50 mt-[4px] w-full bg-[#FEFDFB] border border-[#D4CFC2] rounded-[6px] shadow-[0_8px_24px_-6px_rgba(16,43,40,0.15)] max-h-60 overflow-y-auto">
                                         {filteredInventory.length === 0 ? (
-                                            <div className="p-4 text-center text-xs text-slate-400">No matching items</div>
+                                            <div className="p-[12px] text-center text-[11px] text-[#B8B2A2] font-['JetBrains_Mono',monospace]">No matching items</div>
                                         ) : (
                                             filteredInventory.map(item => {
                                                 const hasVariants = item.variants && item.variants.length > 0;
@@ -2364,21 +2469,21 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                             setIsItemDropdownOpen(false);
                                                             setItemSearch('');
                                                         }}
-                                                        className="w-full px-3 py-2 text-left hover:bg-slate-50 flex justify-between items-center border-b border-gray-100 last:border-0"
+                                                        className="w-full px-[10px] py-[7px] text-left hover:bg-[#F8F7F2] flex justify-between items-center border-b border-[#F0EFE8] last:border-b-0 transition-colors"
                                                     >
                                                         <div>
-                                                            <div className="text-sm font-medium text-slate-700">{item.name}</div>
-                                                            <div className="text-[10px] text-slate-400 font-mono">{item.sku || 'NO-SKU'}</div>
+                                                            <div className="text-[12px] font-medium text-[#0E2926]">{item.name}</div>
+                                                            <div className="text-[9px] text-[#B8B2A2] font-['JetBrains_Mono',monospace]">{item.sku || 'NO-SKU'}</div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-sm font-semibold text-slate-800">
+                                                            <div className="text-[12px] font-semibold text-[#0E2926]">
                                                                 {isPriceRange
                                                                     ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}`
                                                                     : `${currency}${Number((hasVariants ? minPrice : item.price) || 0).toLocaleString()}`
                                                                 }
                                                             </div>
                                                             {isStockTracked && (
-                                                                <div className={`text-[10px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                                                                <div className={`text-[9px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-[#B8B2A2]'} font-['JetBrains_Mono',monospace]`}>
                                                                     {stock} left
                                                                 </div>
                                                             )}
@@ -2391,11 +2496,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 )}
                             </div>
                             <div className="flex-1 relative" ref={serviceDropdownRef}>
-                                <div className="flex items-center border border-gray-200 rounded-md bg-white px-3 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all">
-                                    <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">Services</span>
+                                <div className="flex items-center border border-[#D4CFC2] rounded-[4px] bg-[#FEFDFB] px-[8px] py-[4px] gap-[6px] focus-within:border-[#87C1BB] transition-all">
+                                    <span className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#2C6F67] whitespace-nowrap">Services</span>
                                     <input
                                         type="text"
-                                        className="flex-1 text-sm bg-transparent outline-none"
+                                        className="flex-1 text-[12px] bg-transparent outline-none"
                                         placeholder="Search services..."
                                         value={serviceSearch}
                                         onFocus={() => setIsServiceDropdownOpen(true)}
@@ -2437,21 +2542,22 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 px-1 text-xs">
-                            <span className="text-slate-500">Units left: <span className="font-medium text-slate-700">
+                        <div className="flex items-center gap-[8px] px-[2px] text-[10px] font-['JetBrains_Mono',monospace]">
+                            <span className="text-[#8A8578]">Units left: <span className="font-medium text-[#0E2926]">
                                 {formData.items.length > 0 ? `${Math.min(...formData.items.map((i: any) => {
                                     const inv = inventory.find((inv: Item) => inv.id === (i.parentId || i.id));
                                     return inv?.stock ?? 0;
                                 }))}` : '—'}
                             </span></span>
-                            <a href="#" className="text-indigo-600 hover:text-indigo-700 hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
+                            <span className="text-[#D4CFC2]">|</span>
+                            <a href="#" className="text-[#2C6F67] hover:text-[#0E2926] hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
                                 Alt+F2: Item History
                             </a>
                         </div>
 
                         {isPrintingQuotation && (
-                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                                <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-2.5 flex items-center justify-between text-white">
+                            <div className="bg-[#FEFDFB] border border-[#D4CFC2]">
+                                <div className="bg-[#102B28] px-[14px] py-[9px] flex items-center justify-between text-white">
                                     <div className="flex items-center gap-2">
                                         <FileText size={16} />
                                         <span className="text-sm font-semibold">Print Service Quotation</span>
@@ -2581,10 +2687,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         )}
 
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="px-4 py-2 bg-slate-50 border-b border-gray-200 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-slate-600">Items</span>
-                                <span className="text-xs text-slate-400">{analysis.processedItems.length} item{analysis.processedItems.length !== 1 ? 's' : ''}</span>
+                        <div className="bg-[#FEFDFB] border border-[#D4CFC2]">
+                            <div className="px-[12px] py-[7px] bg-[#F8F7F2] border-b border-[#E2DED3] flex items-center justify-between">
+                                <span className="text-[11px] font-semibold text-[#0E2926] uppercase tracking-[0.3px]">Items</span>
+                                <span className="text-[10px] font-['JetBrains_Mono',monospace] text-[#8A8578]">{analysis.processedItems.length} item{analysis.processedItems.length !== 1 ? 's' : ''}</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -2596,19 +2702,19 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <col style={{width: '6%'}} />
                                     </colgroup>
                                     <thead>
-                                        <tr className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                            <th className="px-3 py-2 text-left border-b border-gray-200">Item</th>
-                                            <th className="px-3 py-2 text-center border-b border-gray-200">QTY</th>
-                                            <th className="px-3 py-2 text-right border-b border-gray-200">Price</th>
-                                            <th className="px-3 py-2 text-right border-b border-gray-200">Amount</th>
-                                            <th className="px-3 py-2 text-center border-b border-gray-200"></th>
+                                        <tr className="text-[10px] font-semibold text-[#8A8578] uppercase tracking-[0.6px] bg-[#F8F7F2]">
+                                            <th className="px-[10px] py-[6px] text-left border-b border-[#E2DED3] font-['JetBrains_Mono',monospace]">Item</th>
+                                            <th className="px-[10px] py-[6px] text-center border-b border-[#E2DED3] font-['JetBrains_Mono',monospace]">QTY</th>
+                                            <th className="px-[10px] py-[6px] text-right border-b border-[#E2DED3] font-['JetBrains_Mono',monospace]">Price</th>
+                                            <th className="px-[10px] py-[6px] text-right border-b border-[#E2DED3] font-['JetBrains_Mono',monospace]">Amount</th>
+                                            <th className="px-[10px] py-[6px] text-center border-b border-[#E2DED3]"></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100">
+                                    <tbody className="divide-y divide-[#E2DED3]">
                                         {analysis.processedItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-3 py-8 text-center text-slate-400 text-sm">
-                                                    <FileText size={20} className="mx-auto mb-1 opacity-40" />
+                                                <td colSpan={5} className="px-[10px] py-[24px] text-center text-[#B8B2A2] text-[12px] font-['JetBrains_Mono',monospace]">
+                                                    <FileText size={18} className="mx-auto mb-[4px] opacity-40" />
                                                     Press Enter to add the first item
                                                 </td>
                                             </tr>
@@ -2618,8 +2724,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 const stock = invItem?.stock ?? 0;
                                                 const qty = Number(item.quantity) || 0;
                                                 return (
-                                                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                        <td className="px-3 py-2 text-sm text-slate-800 font-medium flex items-center gap-2">
+                                                    <tr key={idx} className="hover:bg-[#F8F7F2] transition-colors border-b border-[#F0EFE8] last:border-b-0">
+                                                        <td className="px-[10px] py-[7px] text-[12px] text-[#0E2926] font-medium flex items-center gap-[6px]">
                                                             {invItem?.image ? (
                                                                 <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-slate-200 overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all" title="View Photo">
                                                                     <OfflineImage src={invItem.image} alt="" className="w-full h-full object-cover" />
@@ -2680,23 +2786,19 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                            <div className="px-4 py-2 bg-slate-50 border-b border-gray-200 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-slate-500">
-                                    {analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty
-                                </span>
-                                <span className="text-sm font-semibold text-slate-800">
-                                    {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
+                        {/* PERFORATION DIVIDER */}
+                        <div className="relative my-[14px] border-t-2 border-dashed border-[#D4CFC2]">
+                            <span className="absolute right-[14px] -top-[10px] text-[10px] text-[#B8B2A2] bg-[#FEFDFB] px-[6px] font-['JetBrains_Mono',monospace] tracking-[0.5px]">✁ &nbsp;PERFORATION</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-[#8A8578] font-['JetBrains_Mono',monospace] mb-[4px] -mt-[4px]">
+                            <span>{analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty</span>
+                            <span>Subtotal: {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
 
                         <div className="grid grid-cols-[1fr_280px] gap-0">
-                            <div className="pr-4 border-r border-gray-200">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <input
-                                        type="checkbox"
-                                        className="rounded"
+                            <div className="pr-[14px] border-r border-[#E2DED3]">
+                                <div className="flex items-center gap-[6px] mb-[6px]">
+                                    <input type="checkbox" className="rounded accent-[#3D8B82]"
                                         checked={formData.otherChargesEnabled}
                                         onChange={e => {
                                             setFormData((prev: any) => ({
@@ -2711,11 +2813,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             }));
                                         }}
                                     />
-                                    <span className="text-xs font-medium text-slate-700">Other Charges</span>
+                                    <span className="text-[11px] font-medium text-[#0E2926]">Other Charges</span>
                                     {formData.otherChargesEnabled && (
                                         <>
-                                            <select
-                                                className="text-xs border border-gray-200 rounded px-2 py-1 bg-white flex-1 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
+                                            <select className="text-[11px] border border-[#D4CFC2] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] flex-1 focus:border-[#87C1BB] outline-none transition-colors"
                                                 value={formData.otherChargesAdjustment}
                                                 onChange={e => {
                                                     const adj = activeMarketAdjustments.find((a: any) => a.id === e.target.value);
@@ -2738,112 +2839,101 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 })}
                                             </select>
                                             {selectedAdjustment && formData.otherChargesPercent > 0 && (
-                                                <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">
-                                                    {formData.otherChargesPercent}%
-                                                </span>
+                                                <span className="text-[11px] font-semibold text-[#2C6F67] whitespace-nowrap">{formData.otherChargesPercent}%</span>
                                             )}
-                                            <button
-                                                onClick={handleCalculateCharges}
-                                                disabled={!formData.otherChargesAdjustment}
-                                                className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-40 flex items-center gap-1"
-                                            >
+                                            <button onClick={handleCalculateCharges} disabled={!formData.otherChargesAdjustment}
+                                                className="px-[8px] py-[3px] text-[11px] font-medium text-white bg-[#3D8B82] rounded-[4px] hover:bg-[#2C6F67] disabled:opacity-40 flex items-center gap-[3px] transition-colors">
                                                 <Calculator size={12} /> Calculate
                                             </button>
                                         </>
                                     )}
                                 </div>
                                 {formData.otherChargesEnabled && calculatedOtherCharges > 0 && (
-                                    <div className="mb-2 text-xs text-indigo-700 font-medium bg-indigo-50 border border-indigo-200 rounded px-2.5 py-1">
+                                    <div className="mb-[6px] text-[11px] text-[#2C6F67] font-medium bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.18)] rounded-[4px] px-[8px] py-[3px]">
                                         Adjustment applied: {currency}{calculatedOtherCharges.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xs font-medium text-slate-700">Discount</span>
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            placeholder="0.00"
+                                <div className="flex items-center gap-[6px] mb-[6px]">
+                                    <span className="text-[11px] font-medium text-[#0E2926]">Discount</span>
+                                    <div className="flex items-center gap-[3px]">
+                                        <input type="number" min="0" step="0.01" placeholder="0.00"
                                             value={formData.discount || ''}
                                             onChange={e => setFormData({ ...formData, discount: Math.max(0, Number(e.target.value) || 0) })}
-                                            className="w-24 text-xs border border-gray-200 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
+                                            className="w-[72px] text-[11px] border border-[#D4CFC2] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] focus:border-[#87C1BB] outline-none transition-colors font-['JetBrains_Mono',monospace]"
                                         />
-                                        <span className="text-[10px] text-slate-400">{currency}</span>
+                                        <span className="text-[10px] text-[#B8B2A2]">{currency}</span>
                                     </div>
                                 </div>
                                 <textarea
-                                    className="w-full text-sm border border-gray-200 rounded-md px-3 py-2 bg-white resize-y min-h-[48px] focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
+                                    className="w-full text-[11px] border border-[#D4CFC2] rounded-[4px] px-[8px] py-[5px] bg-[#FEFDFB] resize-y min-h-[44px] focus:border-[#87C1BB] outline-none transition-colors placeholder:text-[#B8B2A2]"
                                     placeholder="Narration / notes..."
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                 />
-                                <div className="text-[10px] text-slate-400 mt-0.5">Ctrl+Enter for new line</div>
+                                <div className="text-[9px] text-[#B8B2A2] mt-[2px] font-['JetBrains_Mono',monospace]">Ctrl+Enter for new line</div>
                             </div>
-                            <div className="pl-4 min-w-[240px]">
-                                <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-lg p-3 space-y-2 shadow-sm">
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500">Round Up</span>
-                                        <div className="flex items-center gap-1">
-                                            <select
-                                                className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
-                                                value={formData.roundingMethod || 'Nearest'}
-                                                onChange={e => setFormData({ ...formData, roundingMethod: e.target.value })}
-                                            >
-                                                {ROUNDING_METHODS.map(m => (
-                                                    <option key={m.value} value={m.value}>{m.label}</option>
-                                                ))}
-                                            </select>
-                                            <input
-                                                type="checkbox"
-                                                className="rounded ml-1 text-indigo-600"
-                                                checked={formData.roundingEnabled}
-                                                onChange={e => setFormData({ ...formData, roundingEnabled: e.target.checked })}
-                                            />
+                            <div className="pl-4 min-w-[260px]">
+                                <div className="relative bg-[#FCF9F2] border-[2px] border-[#C5BFAD] rounded-[2px] p-[14px_16px_12px] shadow-[inset_0_0_0_1px_#FEFDFB] overflow-hidden">
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                                        <span className="text-[64px] font-['DM_Serif_Display',serif] text-[rgba(197,191,173,0.15)] rotate-[-12deg] tracking-[4px]">COPY</span>
+                                    </div>
+                                    <div className="relative z-[1] space-y-[5px]">
+                                        <div className="flex justify-between items-center text-[11px]">
+                                            <span className="font-semibold tracking-[0.5px] uppercase text-[#8A8578] text-[10px]">Round Up</span>
+                                            <div className="flex items-center gap-[4px]">
+                                                <select
+                                                    className="text-[10px] border border-[#D4CFC2] rounded-[3px] px-[6px] py-[2px] bg-[#FEFDFB] font-['JetBrains_Mono',monospace] focus:border-[#87C1BB] outline-none transition-colors"
+                                                    value={formData.roundingMethod || 'Nearest'}
+                                                    onChange={e => setFormData({ ...formData, roundingMethod: e.target.value })}
+                                                >
+                                                    {ROUNDING_METHODS.map(m => (
+                                                        <option key={m.value} value={m.value}>{m.label}</option>
+                                                    ))}
+                                                </select>
+                                                <input
+                                                    type="checkbox"
+                                                    className="rounded accent-[#3D8B82]"
+                                                    checked={formData.roundingEnabled}
+                                                    onChange={e => setFormData({ ...formData, roundingEnabled: e.target.checked })}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span className="text-[#8A8578]">Discount</span>
+                                            <span className="font-['JetBrains_Mono',monospace] font-medium text-[#0E2926]">
+                                                -{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span className="text-[#8A8578]">Other Charges</span>
+                                            <span className="font-['JetBrains_Mono',monospace] font-medium text-[#0E2926]">
+                                                {currency}{(Number(formData.otherCharges || 0) + calculatedOtherCharges).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span className="text-[#8A8578]">Round Off</span>
+                                            <span className="font-['JetBrains_Mono',monospace] text-[#0E2926]">{roundOff.toFixed(2)}</span>
+                                        </div>
+                                        <hr className="border-t border-[#C5BFAD] my-[4px]" />
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[11px] font-semibold tracking-[0.5px] uppercase text-[#0E2926]">Total</span>
+                                            <span className="text-[15px] font-bold font-['DM_Serif_Display',serif] text-[#0E2926]">
+                                                {currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Discount</span>
-                                        <span className="font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">
-                                            -{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Other Charges</span>
-                                        <span className="font-medium text-slate-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
-                                            {currency}{(Number(formData.otherCharges || 0) + calculatedOtherCharges).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-slate-500">Round Off</span>
-                                        <span className="font-medium text-slate-600">{roundOff.toFixed(2)}</span>
-                                    </div>
-                                    <hr className="border-slate-200" />
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-semibold text-slate-700">Total Amount</span>
-                                        <span className="text-base font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 rounded px-3 py-1 whitespace-nowrap">
-                                            {currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
                                 </div>
-
-                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                            <FileText size={11} /> Draft
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded" style={{display: 'none'}}>
-                            <Check size={11} /> Saved
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => {
+                    <div className="border-t border-[#E2DED3] bg-[#FBFAF7] px-[18px] py-[10px] flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-[6px]">
+                            <span className="inline-flex items-center gap-1 px-[7px] py-[3px] text-[10px] font-['JetBrains_Mono',monospace] tracking-[0.3px] font-semibold text-[#B8863B] bg-[rgba(184,134,59,0.08)] border border-[rgba(184,134,59,0.2)] rounded-[4px] uppercase">
+                                Draft
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-[6px]">
+                            <button onClick={() => {
                                 if (!formData.items.length) { notify('Nothing to duplicate — add items first.', 'info'); return; }
                                 setFormData((prev: any) => ({
                                     ...prev,
@@ -2851,26 +2941,22 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 }));
                                 notify('Voucher duplicated', 'success');
                             }}
-                            className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1.5 transition-colors"
-                        >
-                            <Copy size={12} /> Duplicate
-                        </button>
-                        {isEditing && (
-                            <input
-                                type="text"
-                                value={auditReason}
-                                onChange={e => setAuditReason(e.target.value)}
-                                placeholder="Audit reason required (price unlock, quote override, etc.)"
-                                className="w-48 text-xs border border-amber-200 rounded px-2 py-1.5 bg-amber-50 placeholder:text-amber-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-300 outline-none transition-colors"
-                            />
-                        )}
-                        <button
-                            onClick={() => handleSubmission(false, false)}
-                            disabled={formData.items.length === 0 || (isEditing && !auditReason.trim()) || saving}
-                            className="px-5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg hover:from-indigo-700 hover:to-blue-700 shadow-sm flex items-center gap-1.5 disabled:opacity-40 transition-all"
-                        >
-                            <Check size={13} /> Save & Finalise
-                        </button>
+                                className="px-[10px] py-[6px] text-[11px] font-medium text-[#0E2926] bg-[#FEFDFB] border border-[#D4CFC2] rounded-[6px] hover:border-[#87C1BB] hover:bg-[#F8FAF9] flex items-center gap-[5px] transition-colors">
+                                <Copy size={12} /> Duplicate
+                            </button>
+                            {isEditing && (
+                                <input type="text" value={auditReason} onChange={e => setAuditReason(e.target.value)}
+                                    placeholder="Audit reason required (price unlock, quote override, etc.)"
+                                    className="w-[180px] text-[11px] border border-[#D4CFC2] rounded-[6px] px-[8px] py-[5px] bg-[#FEFDFB] placeholder:text-[#B8B2A2] font-['JetBrains_Mono',monospace] focus:border-[#B8863B] outline-none transition-colors"
+                                />
+                            )}
+                            <button
+                                onClick={() => handleSubmission(false, false)}
+                                disabled={formData.items.length === 0 || (isEditing && !auditReason.trim()) || saving}
+                                className="px-[16px] py-[7px] text-[11px] font-semibold text-white bg-[#3D8B82] rounded-[6px] hover:bg-[#2C6F67] shadow-[0_2px_4px_-1px_rgba(61,139,130,0.25)] flex items-center gap-[5px] disabled:opacity-40 transition-all">
+                                <Check size={13} /> Save &amp; Finalise
+                            </button>
+                        </div>
                     </div>
                 </div>
 
