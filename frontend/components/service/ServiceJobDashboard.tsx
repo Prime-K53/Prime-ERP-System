@@ -66,8 +66,7 @@ const ServiceJobDashboard: React.FC = () => {
     }
   };
 
-  const handleAssign = (job: ServiceJob) => {
-    console.log('Assign:', job.id);
+  const handleAssign = (_job: ServiceJob) => {
   };
 
   // Metrics

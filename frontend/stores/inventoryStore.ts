@@ -4,13 +4,12 @@ import { logger } from '../services/logger';
 import { Item, Warehouse } from '../types';
 import { api } from '../services/api';
 import { dbService } from '../services/db';
-import { SEED_ITEM_IDS, MOCK_WAREHOUSES } from '../constants';
+import { SEED_ITEM_IDS, SEED_ITEMS, MOCK_WAREHOUSES } from '../constants';
 import { generateNextId } from '../utils/helpers';
-import { isSupabaseConfigured } from '../services/cloudMode';
 import { validateMinimumMarkup } from '../services/pricingValidationService';
 
 import { transactionService } from '../services/transactionService';
-import { normalizeInventoryItemPricing } from '../utils/pricing';
+import { normalizeInventoryItemPricing, normalizeStoredPricing } from '../utils/pricing';
 import {
   recalculatePrice as recalculateProductPrice,
   repriceMasterInventoryFromAdjustments
@@ -57,21 +56,23 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         };
       });
 
-      if (loadedItems.length === 0 && loadedWarehouses.length === 0) {
-        if (!isSupabaseConfigured()) {
-          set({ inventory: normalizedItems, warehouses: MOCK_WAREHOUSES });
-          for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
+      if (loadedItems.length === 0) {
+        const items = normalizedItems.length > 0 ? normalizedItems : SEED_ITEMS.map(i => ({ ...normalizeStoredPricing(i), isSeed: (SEED_ITEM_IDS as readonly string[]).includes(i.id) }));
+        if (items.length > 0) {
+          for (const item of items) await dbService.put('inventory', item);
+          set({ inventory: items });
         } else {
-          set({ inventory: [], warehouses: [] });
+          set({ inventory: [] });
         }
       } else {
-        const repairedItems = normalizedItems.filter((item, index) => JSON.stringify(item) !== JSON.stringify(loadedItems[index]));
+        set({ inventory: normalizedItems });
+      }
 
-        if (repairedItems.length > 0) {
-          await Promise.all(repairedItems.map((item) => dbService.put('inventory', item)));
-        }
-
-        set({ inventory: normalizedItems, warehouses: loadedWarehouses });
+      if (loadedWarehouses.length === 0) {
+        for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
+        set(state => ({ ...state, warehouses: MOCK_WAREHOUSES }));
+      } else {
+        set(state => ({ ...state, warehouses: loadedWarehouses }));
       }
     } catch (error) {
       logger.error('Inventory Load Error:', error);

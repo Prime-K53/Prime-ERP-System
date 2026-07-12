@@ -1,3 +1,5 @@
+import { logger } from '@/services/logger';
+
 export interface AIConfig {
   provider: 'openai' | 'anthropic' | 'ollama' | 'openrouter';
   apiKey: string;

@@ -1,3 +1,4 @@
+import { logger } from '@/services/logger';
 import type { Item, ProductVariant } from '../types';
 
 type VolumePricingTierLike = {
@@ -266,7 +267,7 @@ export function calculateItemFinancials(
   // PHASE 1: Base Markup Layer
   const baseMarkupPrice = calculateSellingPriceFromMarkup(totalCost, pricingConfig?.markupPercent);
   if (pricingConfig?.markupPercent) {
-    console.log(`[Pricing Engine] Base Markup Layer (${pricingConfig.markupPercent}%): ${baseMarkupPrice}`);
+    logger.debug(`[Pricing Engine] Base Markup Layer (${pricingConfig.markupPercent}%): ${baseMarkupPrice}`);
   }
 
   // Apply market adjustment

@@ -612,14 +612,12 @@ const Payments: React.FC = () => {
             const linkedSale = payment.reference ? sales.find(s => s.id === payment.reference) : null;
 
             if (linkedSale) {
-                console.log('Building POS receipt for linked sale:', linkedSale.id);
                 const previewData = buildPosReceiptDoc({
                     sale: linkedSale,
                     cashierName: linkedSale.cashierId || 'Cashier',
                     customerName: linkedSale.customerName || 'Walk-in Customer',
                     footerMessage: companyConfig.transactionSettings?.pos?.receiptFooter || companyConfig.receiptFooter || ''
                 });
-                console.log('POS receipt preview data:', JSON.stringify(previewData, null, 2));
                 
                 // Validate required fields
                 if (!previewData.receiptNumber) throw new Error('Missing receiptNumber');
@@ -639,19 +637,16 @@ const Payments: React.FC = () => {
                     data: parsed.data
                 });
             } else {
-                console.log('Building customer receipt for payment:', payment.id);
                 const currentBalance = payment.customerId
                     ? await paymentService.getCustomerOutstandingBalance(payment.customerId)
                     : 0;
 
-                console.log('Customer balance:', currentBalance);
                 const formattedData = buildCustomerReceiptDoc({
                     payment,
                     customerName: payment.customerName,
                     currentBalance,
                     currencySymbol: currency
                 });
-                console.log('Customer receipt preview data:', JSON.stringify(formattedData, null, 2));
                 
                 // Validate required fields
                 if (!formattedData.receiptNumber) throw new Error('Missing receiptNumber');

@@ -1,7 +1,18 @@
 import React from 'react';
 import { Document, Page, View, Text, Font, Image } from '@react-pdf/renderer';
 import { docStyles as s } from './styles.ts';
-import { PrimeDocData } from './schemas.ts';
+import {
+  PrimeDocData,
+  SalesExchangeDoc,
+  LogisticsDoc,
+  StatementDoc,
+  FiscalReportDoc,
+  ReceiptDoc,
+  SupplierPaymentDoc,
+  PosReceiptDoc,
+  ExaminationInvoiceDoc,
+  SubscriptionDoc,
+} from './schemas.ts';
 import { CompanyConfig } from '../../../../types.ts';
 import { resolvePdfLogoSource, resolvePdfQrCodeSource } from '../../../../utils/companyAssetUtils.ts';
 import {
@@ -149,7 +160,7 @@ const SecurityFooter = ({
   legalFooterLine2,
   fontScale = 1,
 }: {
-  data: any;
+  data: Record<string, unknown>;
   companyName: string;
   legalFooterLine1: string;
   legalFooterLine2: string;
@@ -157,13 +168,13 @@ const SecurityFooter = ({
 }) => {
   const footerQrSize = 50;
   const documentNumber = String(
-    data?.number
-    || data?.invoiceNumber
-    || data?.orderNumber
-    || data?.receiptNumber
-    || data?.paymentId
-    || data?.exchangeNumber
-    || data?.reportName
+    data.number
+    || data.invoiceNumber
+    || data.orderNumber
+    || data.receiptNumber
+    || data.paymentId
+    || data.exchangeNumber
+    || data.reportName
     || 'N/A'
   ).trim() || 'N/A';
   const createdBy = String(
@@ -174,10 +185,10 @@ const SecurityFooter = ({
     || 'System User'
   ).trim() || 'System User';
   const createdOn = formatSecurityTimestamp(
-    data?.createdAtIso
+    String(data?.createdAtIso
     || data?.createdAt
     || data?.created_at
-    || data?.date
+    || data?.date || '')
   );
   const qrCodeDataUrl = resolvePdfQrCodeSource(String(data?.securityQrCodeDataUrl || '').trim());
 
@@ -221,11 +232,11 @@ const CleanInvoiceTemplate = ({
   templateSettings
 }: {
   type: string;
-  data: PrimeDocData;
+  data: Record<string, unknown>;
   config: CompanyConfig | null;
   templateSettings: ReturnType<typeof resolvePrimeTemplateSettings>;
 }) => {
-  const dataAny = data as PrimeDocData & Record<string, unknown>;
+  const dataAny = data;
   const fontScale = templateSettings.bodyFontSize / 12;
 
   // Company Details
@@ -246,38 +257,40 @@ const CleanInvoiceTemplate = ({
   else if (type === 'PO') docTitle = 'PURCHASE ORDER';
   else if (type === 'SUBSCRIPTION') docTitle = 'RECURRING INVOICE';
 
+  const pod = dataAny.proofOfDelivery as Record<string, unknown> | undefined;
+
   // Invoice Details
-  const invoiceNumber = dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime().toString();
-  const invoiceDate = dataAny.date || new Date().toLocaleDateString();
-  const dueDate = dataAny.dueDate;
+  const invoiceNumber = String(dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime());
+  const invoiceDate = String(dataAny.date || new Date().toLocaleDateString());
+  const dueDate = dataAny.dueDate ? String(dataAny.dueDate) : undefined;
   
   const docTitleForMeta = `${docTitle} ${invoiceNumber}`;
   
   // Recipient Details
   const resolvedRecipientName = String(
-    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || dataAny.proofOfDelivery?.receivedBy || dataAny.receivedBy || ''
+    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || pod?.receivedBy || dataAny.receivedBy || ''
   ).trim();
   const resolvedRecipientAddress = String(
-    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || dataAny.proofOfDelivery?.address || dataAny.proofOfDelivery?.deliveryLocation || ''
+    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || pod?.address || pod?.deliveryLocation || ''
   ).trim();
   const resolvedRecipientPhone = formatPhone(String(
-    dataAny.phone || dataAny.customerPhone || dataAny.customer_phone || dataAny.schoolPhone || dataAny.school_phone || dataAny.vendorPhone || dataAny.vendor_phone || dataAny.supplierPhone || dataAny.supplier_phone || dataAny.recipientPhone || dataAny.recipient_phone || dataAny.proofOfDelivery?.receiverPhone || dataAny.proofOfDelivery?.recipientPhone || dataAny.proofOfDelivery?.phone || ''
+    dataAny.phone || dataAny.customerPhone || dataAny.customer_phone || dataAny.schoolPhone || dataAny.school_phone || dataAny.vendorPhone || dataAny.vendor_phone || dataAny.supplierPhone || dataAny.supplier_phone || dataAny.recipientPhone || dataAny.recipient_phone || pod?.receiverPhone || pod?.recipientPhone || pod?.phone || ''
   ).trim());
 
   // Financials
-  const items = dataAny.items || [];
-  const subtotal = dataAny.subtotal || 0;
-  const amountPaid = dataAny.amountPaid || 0;
-  const totalAmount = dataAny.totalAmount || subtotal;
-  const tax = dataAny.tax || 0;
-  const discount = dataAny.discount || 0;
+  const items = (dataAny.items || []) as Array<Record<string, unknown>>;
+  const subtotal = Number(dataAny.subtotal) || 0;
+  const amountPaid = Number(dataAny.amountPaid) || 0;
+  const totalAmount = Number(dataAny.totalAmount) || subtotal;
+  const tax = Number(dataAny.tax) || 0;
+  const discount = Number(dataAny.discount) || 0;
   
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
-  const resolvedWalletBalance = Number(dataAny?.walletBalance || 0);
-  const resolvedOutstandingBalance = Math.max(0, Number(dataAny?.totalAmount || 0) - Number(dataAny?.amountPaid || 0));
+  const resolvedWalletBalance = Number(dataAny.walletBalance || 0);
+  const resolvedOutstandingBalance = Math.max(0, Number(dataAny.totalAmount || 0) - Number(dataAny.amountPaid || 0));
 
   const showPaymentTerms = templateSettings.showPaymentTerms;
-  const paymentTermsLabel = String(dataAny?.paymentTerms || '').trim() || getDefaultPaymentTermsLabel(config);
+  const paymentTermsLabel = String(dataAny.paymentTerms || '').trim() || getDefaultPaymentTermsLabel(config);
    
   const companyEnquiryLine = [companyName, companyAddress].filter(Boolean).join(', ');
   const companyFlatContact1 = `${companyEnquiryLine}, Phone ${companyPhone}`;
@@ -351,8 +364,8 @@ const CleanInvoiceTemplate = ({
           </View>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             {!!dataAny.status && (
-              <View style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: getStatusTone(dataAny.status).border, backgroundColor: getStatusTone(dataAny.status).border + '15' }}>
-                <Text style={{ fontSize: 12 * fontScale, color: getStatusTone(dataAny.status).text, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>{dataAny.status.toUpperCase()}</Text>
+              <View style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 4, borderWidth: 1, borderColor: getStatusTone(String(dataAny.status)).border, backgroundColor: getStatusTone(String(dataAny.status)).border + '15' }}>
+                <Text style={{ fontSize: 12 * fontScale, color: getStatusTone(String(dataAny.status)).text, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>{String(dataAny.status).toUpperCase()}</Text>
               </View>
             )}
           </View>
@@ -373,12 +386,12 @@ const CleanInvoiceTemplate = ({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
           <View style={{ flex: 1.5, paddingRight: 40 }}>
              {/* Notes region */}
-             {!!dataAny.notes && (
-                <View>
-                   <Text style={{ fontSize: 8 * fontScale, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 1 }}>Notes</Text>
-                   <Text style={{ fontSize: 10 * fontScale, color: '#475569', lineHeight: 1.4 }}>{dataAny.notes}</Text>
-                </View>
-             )}
+              {!!dataAny.notes && (
+                 <View>
+                    <Text style={{ fontSize: 8 * fontScale, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 1 }}>Notes</Text>
+                    <Text style={{ fontSize: 10 * fontScale, color: '#475569', lineHeight: 1.4 }}>{String(dataAny.notes)}</Text>
+                 </View>
+              )}
           </View>
 
           <View style={{ flex: 1, minWidth: 220 }}>
@@ -493,11 +506,11 @@ const ModernInvoiceTemplate = ({
   templateSettings
 }: {
   type: string;
-  data: PrimeDocData;
+  data: Record<string, unknown>;
   config: CompanyConfig | null;
   templateSettings: ReturnType<typeof resolvePrimeTemplateSettings>;
 }) => {
-  const dataAny = data as PrimeDocData & Record<string, unknown>;
+  const dataAny = data;
   const fontScale = templateSettings.bodyFontSize / 12;
 
   // Company Details
@@ -508,7 +521,7 @@ const ModernInvoiceTemplate = ({
   
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
   const accentColor = templateSettings.accentColor || '#739F99';
-  const dueDate = dataAny.dueDate;
+  const dueDate = dataAny.dueDate ? String(dataAny.dueDate) : undefined;
 
   let docTitle = 'Invoice';
   if (type === 'QUOTATION') docTitle = 'Quotation Document';
@@ -525,35 +538,40 @@ const ModernInvoiceTemplate = ({
   const titleFirst = titleWords[0];
   const titleRest = titleWords.slice(1).join(' ');
 
+  const pod = dataAny.proofOfDelivery as Record<string, unknown> | undefined;
+
   // Invoice Details
-  const invoiceNumber = dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime().toString();
-  const invoiceDate = dataAny.date || new Date().toLocaleDateString();
+  const invoiceNumber = String(dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime());
+  const invoiceDate = String(dataAny.date || new Date().toLocaleDateString());
   
   const docTitleForMeta = `${docTitle} ${invoiceNumber}`;
   
   // Recipient Details
   const resolvedRecipientName = String(
-    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || dataAny.proofOfDelivery?.receivedBy || dataAny.receivedBy || ''
+    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || pod?.receivedBy || dataAny.receivedBy || ''
   ).trim();
   const resolvedRecipientAddress = String(
-    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || dataAny.proofOfDelivery?.address || dataAny.proofOfDelivery?.deliveryLocation || ''
+    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || pod?.address || pod?.deliveryLocation || ''
   ).trim();
+  const resolvedRecipientPhone = formatPhone(String(
+    dataAny.phone || dataAny.customerPhone || dataAny.customer_phone || dataAny.schoolPhone || dataAny.school_phone || dataAny.vendorPhone || dataAny.vendor_phone || dataAny.supplierPhone || dataAny.supplier_phone || dataAny.recipientPhone || dataAny.recipient_phone || pod?.receiverPhone || pod?.recipientPhone || pod?.phone || ''
+  ).trim());
 
   // Financials
-  const items = dataAny.items || [];
-  const subtotal = dataAny.subtotal || 0;
-  const amountPaid = dataAny.amountPaid || 0;
-  const totalAmount = dataAny.totalAmount || subtotal;
-  const tax = dataAny.tax || 0;
-  const discount = dataAny.discount || 0;
+  const items = (dataAny.items || []) as Array<Record<string, unknown>>;
+  const subtotal = Number(dataAny.subtotal) || 0;
+  const amountPaid = Number(dataAny.amountPaid) || 0;
+  const totalAmount = Number(dataAny.totalAmount) || subtotal;
+  const tax = Number(dataAny.tax) || 0;
+  const discount = Number(dataAny.discount) || 0;
   
   const showDueDate = templateSettings.showDueDate;
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
-  const resolvedOutstandingBalance = Math.max(0, Number(dataAny?.totalAmount || 0) - Number(dataAny?.amountPaid || 0));
+  const resolvedOutstandingBalance = Math.max(0, Number(dataAny.totalAmount || 0) - Number(dataAny.amountPaid || 0));
   const outstandingDisplay = showInvoiceBalances && type === 'INVOICE' ? resolvedOutstandingBalance : (totalAmount - amountPaid);
-  const paymentTermsLabel = String(dataAny?.paymentTerms || '').trim() || getDefaultPaymentTermsLabel(config);
+  const paymentTermsLabel = String(dataAny.paymentTerms || '').trim() || getDefaultPaymentTermsLabel(config);
 
-  const qrCodeDataUrl = resolvePdfQrCodeSource(dataAny.securityQrCodeDataUrl);
+  const qrCodeDataUrl = resolvePdfQrCodeSource(String(dataAny.securityQrCodeDataUrl || ''));
 
   const renderRow = (item: any, i: number) => {
     const isService = item.category === 'service' || item.type === 'service' || item.isService === true;
@@ -658,13 +676,13 @@ const ModernInvoiceTemplate = ({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
           {/* Notes Bottom Left */}
           <View style={{ width: 200 }}>
-             {!!dataAny.notes && (
-                <View style={{ marginTop: 10 }}>
-                   <Text style={{ fontSize: 12 * fontScale, fontWeight: 'bold', color: '#111111', marginBottom: 6 }}>Notes:</Text>
-                   <Text style={{ fontSize: 10 * fontScale, color: '#333333', lineHeight: 1.5 }}>{dataAny.notes}</Text>
-                   <View style={{ width: '100%', height: 1, backgroundColor: '#111111', marginTop: 15 }} />
-                </View>
-             )}
+              {!!dataAny.notes && (
+                 <View style={{ marginTop: 10 }}>
+                    <Text style={{ fontSize: 12 * fontScale, fontWeight: 'bold', color: '#111111', marginBottom: 6 }}>Notes:</Text>
+                    <Text style={{ fontSize: 10 * fontScale, color: '#333333', lineHeight: 1.5 }}>{String(dataAny.notes)}</Text>
+                    <View style={{ width: '100%', height: 1, backgroundColor: '#111111', marginTop: 15 }} />
+                 </View>
+              )}
           </View>
 
           {/* Totals Section */}
@@ -766,11 +784,11 @@ const ProfessionalInvoiceTemplate = ({
   templateSettings
 }: {
   type: string;
-  data: PrimeDocData;
+  data: Record<string, unknown>;
   config: CompanyConfig | null;
   templateSettings: ReturnType<typeof resolvePrimeTemplateSettings>;
 }) => {
-  const dataAny = data as PrimeDocData & Record<string, unknown>;
+  const dataAny = data;
   const fontScale = templateSettings.bodyFontSize / 12;
 
   // Company Details
@@ -791,32 +809,37 @@ const ProfessionalInvoiceTemplate = ({
   else if (type === 'PO') docTitle = 'PURCHASE ORDER';
   else if (type === 'SUBSCRIPTION') docTitle = 'RECURRING INVOICE';
 
+  const pod = dataAny.proofOfDelivery as Record<string, unknown> | undefined;
+
   // Invoice Details
-  const invoiceNumber = dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime().toString();
-  const invoiceDate = dataAny.date || new Date().toLocaleDateString();
-  const dueDate = dataAny.dueDate;
+  const invoiceNumber = String(dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || dataAny.quotationNumber || new Date().getTime());
+  const invoiceDate = String(dataAny.date || new Date().toLocaleDateString());
+  const dueDate = dataAny.dueDate ? String(dataAny.dueDate) : undefined;
   
   const docTitleForMeta = `${docTitle} ${invoiceNumber}`;
   
   // Recipient Details
   const resolvedRecipientName = String(
-    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || dataAny.proofOfDelivery?.receivedBy || dataAny.receivedBy || ''
+    dataAny.clientName || dataAny.customerName || dataAny.customer_name || dataAny.schoolName || dataAny.school_name || dataAny.recipientName || dataAny.recipient_name || dataAny.vendorName || dataAny.vendor_name || dataAny.supplierName || dataAny.supplier_name || pod?.receivedBy || dataAny.receivedBy || ''
   ).trim();
   const resolvedRecipientAddress = String(
-    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || dataAny.proofOfDelivery?.address || dataAny.proofOfDelivery?.deliveryLocation || ''
+    dataAny.address || dataAny.customerAddress || dataAny.customer_address || dataAny.billingAddress || dataAny.billing_address || dataAny.shippingAddress || dataAny.shipping_address || dataAny.schoolAddress || dataAny.school_address || dataAny.vendorAddress || dataAny.vendor_address || dataAny.supplierAddress || dataAny.supplier_address || pod?.address || pod?.deliveryLocation || ''
   ).trim();
+  const resolvedRecipientPhone = formatPhone(String(
+    dataAny.phone || dataAny.customerPhone || dataAny.customer_phone || dataAny.schoolPhone || dataAny.school_phone || dataAny.vendorPhone || dataAny.vendor_phone || dataAny.supplierPhone || dataAny.supplier_phone || dataAny.recipientPhone || dataAny.recipient_phone || pod?.receiverPhone || pod?.recipientPhone || pod?.phone || ''
+  ).trim());
 
   // Financials
-  const items = dataAny.items || [];
-  const subtotal = dataAny.subtotal || 0;
-  const amountPaid = dataAny.amountPaid || 0;
-  const totalAmount = dataAny.totalAmount || subtotal;
-  const tax = dataAny.tax || 0;
-  const discount = dataAny.discount || 0;
+  const items = (dataAny.items || []) as Array<Record<string, unknown>>;
+  const subtotal = Number(dataAny.subtotal) || 0;
+  const amountPaid = Number(dataAny.amountPaid) || 0;
+  const totalAmount = Number(dataAny.totalAmount) || subtotal;
+  const tax = Number(dataAny.tax) || 0;
+  const discount = Number(dataAny.discount) || 0;
   
   const showDueDate = templateSettings.showDueDate;
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
-  const resolvedOutstandingBalance = Math.max(0, Number(dataAny?.totalAmount || 0) - Number(dataAny?.amountPaid || 0));
+  const resolvedOutstandingBalance = Math.max(0, Number(dataAny.totalAmount || 0) - Number(dataAny.amountPaid || 0));
   const outstandingDisplay = showInvoiceBalances && type === 'INVOICE' ? resolvedOutstandingBalance : (totalAmount - amountPaid);
   
   const renderRow = (item: any, i: number) => {
@@ -957,7 +980,7 @@ const ProfessionalInvoiceTemplate = ({
             {!!dataAny.notes && (
               <View style={{ marginBottom: 20 }}>
                 <Text style={{ fontSize: 9 * fontScale, fontWeight: 'bold', color: '#999999', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 1 }}>Notes</Text>
-                <Text style={{ fontSize: 10 * fontScale, color: '#444444', lineHeight: 1.4 }}>{dataAny.notes}</Text>
+                <Text style={{ fontSize: 10 * fontScale, color: '#444444', lineHeight: 1.4 }}>{String(dataAny.notes)}</Text>
               </View>
             )}
 
@@ -993,20 +1016,21 @@ const ProfessionalInvoiceTemplate = ({
 
 export const PrimeDocument = ({ type, data, configOverride = null, customers = [] }: DocProps & { customers?: any[] }) => {
   const isFinancial = type === 'INVOICE' || type === 'PO' || type === 'QUOTATION' || type === 'ORDER' || (type as string) === 'SALES_ORDER' || type === 'SUBSCRIPTION';
-  const dataAny = data as PrimeDocData & Record<string, unknown>;
+  const dataAny = data as Record<string, unknown>;
+  const pod = dataAny.proofOfDelivery as Record<string, unknown> | undefined;
   const config = configOverride || getStoredCompanyConfig();
   const templateSettings = resolvePrimeTemplateSettings(config);
 
   if (isFinancial && templateSettings.engine === 'Clean') {
-    return <CleanInvoiceTemplate type={type} data={data as PrimeDocData} config={config} templateSettings={templateSettings} />;
+    return <CleanInvoiceTemplate type={type} data={dataAny} config={config} templateSettings={templateSettings} />;
   }
 
   if (isFinancial && templateSettings.engine === 'Professional') {
-    return <ProfessionalInvoiceTemplate type={type} data={data as PrimeDocData} config={config} templateSettings={templateSettings} />;
+    return <ProfessionalInvoiceTemplate type={type} data={dataAny} config={config} templateSettings={templateSettings} />;
   }
 
   if (isFinancial && templateSettings.engine === 'Modern') {
-    return <ModernInvoiceTemplate type={type} data={data as PrimeDocData} config={config} templateSettings={templateSettings} />;
+    return <ModernInvoiceTemplate type={type} data={dataAny} config={config} templateSettings={templateSettings} />;
   }
 
   const fontScale = templateSettings.bodyFontSize / 12;
@@ -1087,7 +1111,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     || dataAny.vendor_name
     || dataAny.supplierName
     || dataAny.supplier_name
-    || dataAny.proofOfDelivery?.receivedBy
+    || pod?.receivedBy
     || dataAny.receivedBy
     || ''
   ).trim();
@@ -1105,8 +1129,8 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     || dataAny.vendor_address
     || dataAny.supplierAddress
     || dataAny.supplier_address
-    || dataAny.proofOfDelivery?.address
-    || dataAny.proofOfDelivery?.deliveryLocation
+    || pod?.address
+    || pod?.deliveryLocation
     || ''
   ).trim();
   const resolvedRecipientPhone = formatPhone(String(
@@ -1121,9 +1145,9 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     || dataAny.supplier_phone
     || dataAny.recipientPhone
     || dataAny.recipient_phone
-    || dataAny.proofOfDelivery?.receiverPhone
-    || dataAny.proofOfDelivery?.recipientPhone
-    || dataAny.proofOfDelivery?.phone
+    || pod?.receiverPhone
+    || pod?.recipientPhone
+    || pod?.phone
     || ''
   ).trim());
   const shouldRenderRecipientSection = Boolean(
@@ -1142,17 +1166,18 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
   };
 
   if (type === 'SALES_EXCHANGE') {
-    const d = data as PrimeDocData & Record<string, unknown>; // Cast for easier access to specialized fields
-    const items = d.items || [];
+    const d = data as Record<string, unknown>;
+    const items = (d.items || []) as Array<Record<string, unknown>>;
+    const cd = d.conversionDetails as Record<string, unknown> | undefined;
 
     return (
-      <Document title={`Sales Exchange - ${d.exchangeNumber}`} author={companyName}>
+      <Document title={`Sales Exchange - ${String(d.exchangeNumber)}`} author={companyName}>
         <Page size="A4" style={[s.page, pageStyle]}>
-          {!!d.isConverted && !!d.conversionDetails && (
+          {Boolean(d.isConverted) && !!cd && (
             <View style={[s.conversionBox, { position: 'absolute', top: 40, right: 40, zIndex: 10 }]}>
               <Text style={s.conversionTitle}>Conversion History</Text>
-              <Text>Converted from {d.conversionDetails.sourceType} {d.conversionDetails.sourceNumber}</Text>
-              <Text>on {d.conversionDetails.date}</Text>
+              <Text>Converted from {String(cd.sourceType)} {String(cd.sourceNumber)}</Text>
+              <Text>on {String(cd.date)}</Text>
             </View>
           )}
 
@@ -1160,9 +1185,9 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
             <View style={s.headerLeft}>
               <Text style={[s.title, titleStyle]}>Exchange Note</Text>
               <View style={s.infoText}>
-                <Text>Exchange # : {d.exchangeNumber}</Text>
-                <Text>Date : {d.date}</Text>
-                <Text>Ref Invoice : {d.invoiceNumber}</Text>
+                <Text>Exchange # : {String(d.exchangeNumber)}</Text>
+                <Text>Date : {String(d.date)}</Text>
+                <Text>Ref Invoice : {String(d.invoiceNumber)}</Text>
               </View>
             </View>
             <View style={s.headerRight}>
@@ -1173,13 +1198,13 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
           <View style={[s.billingSection, { marginTop: 20 }]}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: 'bold', marginBottom: 5, fontSize: 10, textTransform: 'uppercase', color: '#64748b' }}>Customer</Text>
-              <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{d.customerName}</Text>
+              <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{String(d.customerName)}</Text>
               <Text style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>{resolvedRecipientAddress || 'N/A'}</Text>
               <Text style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{resolvedRecipientPhone || 'N/A'}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: 'bold', marginBottom: 5, fontSize: 10, textTransform: 'uppercase', color: '#64748b' }}>Reason for Exchange</Text>
-              <Text style={{ fontSize: 11 }}>{d.reason}</Text>
+              <Text style={{ fontSize: 11 }}>{String(d.reason)}</Text>
             </View>
           </View>
 
@@ -1189,13 +1214,13 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
               <Text style={[s.colQty, { width: 60 }]}>Returned</Text>
               <Text style={[s.colQty, { width: 60 }]}>Replaced</Text>
             </View>
-            {items.map((item: any, i: number) => (
+            {items.map((item: Record<string, unknown>, i: number) => (
               <View key={i} style={s.row}>
-                <Text style={[s.colDesc, { fontSize: 10 }]}>{item.desc || 'N/A'}</Text>
-                <Text style={[s.colQty, { width: 60, fontSize: 10 }]}>{item.qtyReturned}</Text>
-                <Text style={[s.colQty, { width: 60, fontSize: 10 }]}>{item.qtyReplaced}</Text>
+                <Text style={[s.colDesc, { fontSize: 10 }]}>{String(item.desc || 'N/A')}</Text>
+                <Text style={[s.colQty, { width: 60, fontSize: 10 }]}>{Number(item.qtyReturned)}</Text>
+                <Text style={[s.colQty, { width: 60, fontSize: 10 }]}>{Number(item.qtyReplaced)}</Text>
                 <Text style={[s.colTotal, { fontSize: 10, fontWeight: 'bold' }]}>
-                  {currency} {formatAmount(item.priceDiff)}
+                  {currency} {formatAmount(Number(item.priceDiff))}
                 </Text>
               </View>
             ))}
@@ -1204,7 +1229,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
           {!!d.remarks && (
             <View style={{ marginTop: 20, padding: 12, backgroundColor: '#f8fafc', borderRadius: 6, borderLeftWidth: 3, borderLeftColor: '#3b82f6' }}>
               <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 5, textTransform: 'uppercase', color: '#475569' }}>Remarks / Special Instructions:</Text>
-              <Text style={{ fontSize: 10, color: '#1e293b', lineHeight: 1.5 }}>{d.remarks}</Text>
+              <Text style={{ fontSize: 10, color: '#1e293b', lineHeight: 1.5 }}>{String(d.remarks)}</Text>
             </View>
           )}
 
@@ -1236,7 +1261,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
   }
 
   if (type === 'RECEIPT') {
-    const rc = data as PrimeDocData & Record<string, unknown>;
+    const rc = data as ReceiptDoc;
     const isPartial = rc.paymentStatus === 'PARTIALLY PAID';
     const isOverpaid = rc.paymentStatus === 'OVERPAID';
     const overpaymentAmount = rc.overpaymentAmount || rc.walletDeposit || 0;
@@ -1352,7 +1377,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
   }
 
   if (type === 'SUPPLIER_PAYMENT') {
-    const sp = data as PrimeDocData & Record<string, unknown>;
+    const sp = data as SupplierPaymentDoc;
     return (
       <Document title={`Payment Voucher - ${sp.paymentId}`} author={companyName}>
         <Page size="A4" style={[s.page, pageStyle]}>
@@ -1434,7 +1459,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     );
   }
 if (type === 'POS_RECEIPT') {
-  const r = data as PrimeDocData & Record<string, unknown>;
+  const r = data as PosReceiptDoc;
 
   const scale = 1;
   const baseFontSize = 7.6 * scale;
@@ -1537,18 +1562,18 @@ if (type === 'POS_RECEIPT') {
   }
 
   if ((type === 'ACCOUNT_STATEMENT_SUMMARY' || type === 'ACCOUNT_STATEMENT') && 'finalBalance' in data) {
-    return <StatementSummaryTemplate data={dataAny} configOverride={config} />;
+    return <StatementSummaryTemplate data={data as StatementDoc} configOverride={config} />;
   }
 
   const isConverted = 'isConverted' in data && data.isConverted;
-  const conversionDetails = isConverted && 'conversionDetails' in data ? dataAny.conversionDetails : null;
+  const conversionDetails = isConverted && 'conversionDetails' in data ? (dataAny.conversionDetails as Record<string, unknown>) || null : null;
   const isFromOrder = conversionDetails?.sourceType === 'Order' || conversionDetails?.sourceType === 'JobOrder';
   const isFromQuotation = conversionDetails?.sourceType === 'Quotation';
   const isConvertedOrder = (type === 'INVOICE' || (type as string) === 'SALES_ORDER' || type === 'ORDER') && isConverted;
 
   let title: string;
   if (type === 'FISCAL_REPORT' && 'reportName' in data) {
-    title = dataAny.reportName;
+    title = String(dataAny.reportName);
   } else if (type === 'INVOICE' || (isConvertedOrder && isFromOrder)) {
     title = 'Invoice';
   } else {
@@ -1594,50 +1619,50 @@ if (type === 'POS_RECEIPT') {
                 <View style={s.infoText}>
                   {type === 'INVOICE' ? (
                     <>
-                      <Text>Invoice No. {(('invoiceNumber' in data && dataAny.invoiceNumber) || ('number' in data ? dataAny.number : 'INV'))}</Text>
-                      <Text>Invoice Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
-                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(data.dueDate)}</Text>}
-                      {isFromQuotation && <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {conversionDetails?.sourceNumber || 'N/A'}</Text>}
-                      {isFromOrder && <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Original Order: {conversionDetails?.sourceNumber || 'N/A'}</Text>}
+                      <Text>Invoice No. {String(('invoiceNumber' in data && dataAny.invoiceNumber) || ('number' in data ? dataAny.number : 'INV'))}</Text>
+                      <Text>Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
+                      {isFromQuotation && <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {String(conversionDetails?.sourceNumber || 'N/A')}</Text>}
+                      {isFromOrder && <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Original Order: {String(conversionDetails?.sourceNumber || 'N/A')}</Text>}
                     </>
                   ) : type === 'ORDER' ? (
                     <>
-                      <Text>Invoice No. INV-{('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'ORD')}</Text>
-                      <Text>Invoice Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {('orderNumber' in data && dataAny.orderNumber) || 'N/A'}</Text>
-                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(data.dueDate)}</Text>}
+                      <Text>Invoice No. INV-{String(('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'ORD'))}</Text>
+                      <Text>Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {String(('orderNumber' in data && dataAny.orderNumber) || 'N/A')}</Text>
+                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   ) : (type as string) === 'SALES_ORDER' ? (
                     <>
-                      <Text>Sales Order No. {('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'SO')}</Text>
-                      <Text>Sales Order Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
-                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(data.dueDate)}</Text>}
+                      <Text>Sales Order No. {String(('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'SO'))}</Text>
+                      <Text>Sales Order Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   ) : type === 'EXAMINATION_INVOICE' ? (
                     <>
-                      <Text>Service Invoice No. {'number' in data ? dataAny.number : 'INV'}</Text>
-                      <Text>Service Invoice Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
-                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(data.dueDate)}</Text>}
+                      <Text>Service Invoice No. {String('number' in data ? dataAny.number : 'INV')}</Text>
+                      <Text>Service Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   ) : type === 'SUBSCRIPTION' ? (
                     <>
-                      <Text>Recurring Inv. No. {'number' in data ? dataAny.number : 'SUB'}</Text>
-                      <Text>Issue Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
+                      <Text>Recurring Inv. No. {String('number' in data ? dataAny.number : 'SUB')}</Text>
+                      <Text>Issue Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
                       {'billingPeriodStart' in data && 'billingPeriodEnd' in data && !!dataAny.billingPeriodStart && !!dataAny.billingPeriodEnd && (
-                        <Text style={{ marginTop: 2 }}>Period: {dataAny.billingPeriodStart} to {dataAny.billingPeriodEnd}</Text>
+                        <Text style={{ marginTop: 2 }}>Period: {String(dataAny.billingPeriodStart)} to {String(dataAny.billingPeriodEnd)}</Text>
                       )}
                       {'frequency' in data && !!dataAny.frequency && (
                         <Text>Frequency: {toTitleCase(String(dataAny.frequency))}</Text>
                       )}
                       {'nextRunDate' in data && !!dataAny.nextRunDate && (
-                        <Text style={{ marginTop: 2, fontWeight: 'bold' }}>Next Run: {dataAny.nextRunDate}</Text>
+                        <Text style={{ marginTop: 2, fontWeight: 'bold' }}>Next Run: {String(dataAny.nextRunDate)}</Text>
                       )}
                     </>
                   ) : (
                     <>
-                      <Text>{toTitleCase(type)} No. {'number' in data ? dataAny.number : ('receiptNumber' in data ? dataAny.receiptNumber : 'STATEMENT')}</Text>
-                      <Text>{toTitleCase(type)} Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
-                      {type === 'QUOTATION' && Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Valid Until: {formatDateOnly(data.dueDate)}</Text>}
+                      <Text>{toTitleCase(type)} No. {String('number' in data ? dataAny.number : ('receiptNumber' in data ? dataAny.receiptNumber : 'STATEMENT'))}</Text>
+                      <Text>{toTitleCase(type)} Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      {type === 'QUOTATION' && Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Valid Until: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   )}
                 </View>
@@ -1652,8 +1677,8 @@ if (type === 'POS_RECEIPT') {
                 {renderBrandMark('left')}
                 <Text style={[s.title, titleStyle]}>{title}</Text>
                 <View style={s.infoText}>
-                  <Text>{toTitleCase(type)} No. {'number' in data ? dataAny.number : ('receiptNumber' in data ? dataAny.receiptNumber : 'STATEMENT')}</Text>
-                  <Text>{toTitleCase(type)} Date: {'date' in data ? dataAny.date : 'N/A'}</Text>
+                  <Text>{toTitleCase(type)} No. {String('number' in data ? dataAny.number : ('receiptNumber' in data ? dataAny.receiptNumber : 'STATEMENT'))}</Text>
+                  <Text>{toTitleCase(type)} Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
                 </View>
               </View>
               <View style={s.headerRight}>
@@ -1682,17 +1707,17 @@ if (type === 'POS_RECEIPT') {
 
             {/* Conversion Details Box */}
             {/* Conversion / Acceptance Details Box */}
-            {('isConverted' in data && !!data.isConverted) && (('conversionDetails' in data && !!data.conversionDetails) || type === 'QUOTATION') && (
+            {('isConverted' in data && !!data.isConverted) && (!!conversionDetails || type === 'QUOTATION') && (
               <View style={[s.conversionBox, { marginLeft: 20 }]}>
                 <Text style={s.conversionTitle}>{type === 'QUOTATION' ? 'Acceptance Details' : 'Conversion History'}</Text>
                 {type === 'QUOTATION' && 'date' in data ? (
                   <>
-                    <Text>Accepted on {formatDateOnly(dataAny.date)} by {resolvedRecipientName || 'N/A'}</Text>
+                    <Text>Accepted on {formatDateOnly(String(dataAny.date || ''))} by {resolvedRecipientName || 'N/A'}</Text>
                   </>
-                ) : 'conversionDetails' in data && data.conversionDetails ? (
+                ) : conversionDetails ? (
                   <>
                     <Text>
-                      Converted from {resolveConversionSourceNumber(dataAny)} on {formatDateOnly(dataAny.conversionDetails.date)} as accepted by {dataAny.conversionDetails.acceptedBy || resolvedRecipientName || 'N/A'}
+                      Converted from {resolveConversionSourceNumber(dataAny)} on {formatDateOnly(String(conversionDetails.date))} as accepted by {String(conversionDetails.acceptedBy || resolvedRecipientName || 'N/A')}
                     </Text>
                   </>
                 ) : null}
@@ -1718,7 +1743,7 @@ if (type === 'POS_RECEIPT') {
                 {/* 2. Item Rows with consistent 13px spacing */}
                 {/* For Invoice, Order, Quotation: Service items show simplified format */}
                 {/* For POS: All items show standard format */}
-                {('items' in data ? dataAny.items : []).map((item: any, i: number) => {
+                {(('items' in data ? dataAny.items : []) as Array<Record<string, unknown>>).map((item: Record<string, unknown>, i: number) => {
                   // Check if this is a service-type item (category, type, or isService flag)
                   const isService = item.category === 'service' ||
                                    item.type === 'service' ||
@@ -1729,20 +1754,20 @@ if (type === 'POS_RECEIPT') {
                     (type === 'INVOICE' || type === 'ORDER' || (type as string) === 'SALES_ORDER' || type === 'QUOTATION');
                   
                   // Format description based on item type and document type
-                  let formattedDesc = item.desc;
+                  let formattedDesc = String(item.desc || '');
                   if (useSimplifiedFormat) {
-                    const totalPages = item.totalPages || item.pages || 0;
-                    const copies = item.copies || item.qty || 1;
-                    const itemName = item.name || item.desc || 'Service';
+                    const totalPages = Number(item.totalPages || item.pages || 0);
+                    const copies = Number(item.copies || item.qty || 1);
+                    const itemName = String(item.name || item.desc || 'Service');
                     formattedDesc = `${itemName} (${totalPages} pages × ${copies} copies)`;
                   }
                   
                   return (
                     <View key={i} style={s.row}>
                       <Text style={s.colDesc}>{formattedDesc}</Text>
-                      <Text style={s.colQty}>×{item.qty}</Text>
-                      <Text style={s.colPrice}>{currency} {formatAmount(item.price)}</Text>
-                      <Text style={s.colTotal}>{currency} {formatAmount(item.total)}</Text>
+                      <Text style={s.colQty}>×{Number(item.qty)}</Text>
+                      <Text style={s.colPrice}>{currency} {formatAmount(Number(item.price))}</Text>
+                      <Text style={s.colTotal}>{currency} {formatAmount(Number(item.total))}</Text>
                     </View>
                   );
                 })}
@@ -1856,7 +1881,7 @@ if (type === 'POS_RECEIPT') {
                     </Text>
                     <Text style={{ fontSize: scaledFont(10), color: '#334155', marginTop: 4, lineHeight: 1.45 }}>
                       {paymentTermsLabel}
-                      {showDueDate && dataAny?.dueDate ? ` | Due by ${formatDateOnly(dataAny.dueDate)}` : ''}
+                      {showDueDate && dataAny?.dueDate ? ` | Due by ${formatDateOnly(String(dataAny.dueDate))}` : ''}
                     </Text>
                   </View>
                 )}
@@ -1896,12 +1921,12 @@ if (type === 'POS_RECEIPT') {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15, padding: 10, backgroundColor: '#f8fafc', borderRadius: 4, borderLeftWidth: 3, borderLeftColor: dataAny.priority === 'Critical' ? '#e11d48' : dataAny.priority === 'High' ? '#f59e0b' : '#3b82f6' }}>
               <View>
                 <Text style={{ fontSize: 10, color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Priority Level</Text>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: dataAny.priority === 'Critical' ? '#e11d48' : '#0f172a' }}>{dataAny.priority || 'Normal'}</Text>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: dataAny.priority === 'Critical' ? '#e11d48' : '#0f172a' }}>{String(dataAny.priority || 'Normal')}</Text>
               </View>
               {('technician' in data) && !!data.technician && (
                 <View style={{ textAlign: 'right' }}>
                   <Text style={{ fontSize: 10, color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>Technician</Text>
-                  <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{data.technician}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold' }}>{String(data.technician)}</Text>
                 </View>
               )}
             </View>
@@ -1983,13 +2008,7 @@ if (type === 'POS_RECEIPT') {
             <View style={s.remarksBox}>
               <Text style={s.remarksTitle}>Receiver's Remarks</Text>
               <Text style={{ fontSize: 9, color: '#666' }}>
-                {'notes' in data && dataAny.notes
-                  ? dataAny.notes
-                  : 'proofOfDelivery' in data && dataAny.proofOfDelivery?.remarks
-                    ? dataAny.proofOfDelivery.remarks
-                    : 'proofOfDelivery' in data && dataAny.proofOfDelivery?.notes
-                      ? dataAny.proofOfDelivery.notes
-                      : 'Please note any discrepancies or comments regarding the delivery here...'}
+                {String(dataAny.notes || pod?.remarks || pod?.notes || 'Please note any discrepancies or comments regarding the delivery here...')}
               </Text>
             </View>
           </View>
@@ -2029,15 +2048,15 @@ if (type === 'POS_RECEIPT') {
             <View style={{ marginTop: 30, borderTopWidth: 2, borderColor: '#000', paddingTop: 10 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                 <Text>Total Debits:</Text>
-                <Text>{currency} {formatAmount('totalInvoiced' in data ? dataAny.totalInvoiced : 0)}</Text>
+                <Text>{currency} {formatAmount(Number('totalInvoiced' in data ? dataAny.totalInvoiced : 0))}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                 <Text>Total Credits:</Text>
-                <Text>{currency} {formatAmount('totalReceived' in data ? dataAny.totalReceived : 0)}</Text>
+                <Text>{currency} {formatAmount(Number('totalReceived' in data ? dataAny.totalReceived : 0))}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5, padding: 8, backgroundColor: '#000', color: '#fff' }}>
                 <Text style={{ fontWeight: 'bold' }}>TOTAL OUTSTANDING:</Text>
-                <Text style={{ fontWeight: 'bold' }}>{currency} {formatAmount(data.finalBalance)}</Text>
+                <Text style={{ fontWeight: 'bold' }}>{currency} {formatAmount(Number('finalBalance' in data ? data.finalBalance : 0))}</Text>
               </View>
             </View>
           </View>
@@ -2116,14 +2135,14 @@ if (type === 'POS_RECEIPT') {
               <Text style={{ flex: 1.5, textAlign: 'right' }}>Total</Text>
             </View>
 
-            {('items' in data ? dataAny.items : []).map((item: any, i: number) => (
+            {(('items' in data ? dataAny.items : []) as Array<Record<string, unknown>>).map((item: Record<string, unknown>, i: number) => (
               <View key={i} style={s.row}>
                 <View style={{ flex: 3 }}>
-                  <Text style={{ fontWeight: 'normal', fontSize: 12 }}>{item.desc}</Text>
+                  <Text style={{ fontWeight: 'normal', fontSize: 12 }}>{String(item.desc)}</Text>
                 </View>
-                <Text style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>{item.qty}</Text>
-                <Text style={{ flex: 1, textAlign: 'right', fontSize: 12 }}>{formatAmount(item.price)}</Text>
-                <Text style={{ flex: 1.5, textAlign: 'right', fontSize: 12 }}>{formatAmount(item.total)}</Text>
+                <Text style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>{Number(item.qty)}</Text>
+                <Text style={{ flex: 1, textAlign: 'right', fontSize: 12 }}>{formatAmount(Number(item.price))}</Text>
+                <Text style={{ flex: 1.5, textAlign: 'right', fontSize: 12 }}>{formatAmount(Number(item.total))}</Text>
               </View>
             ))}
 
@@ -2143,28 +2162,28 @@ if (type === 'POS_RECEIPT') {
                 <View style={s.summaryBox}>
                   <View style={s.summaryRow}>
                     <Text style={{ fontWeight: 'bold' }}>Subtotal</Text>
-                    <Text>{currency} {formatAmount(dataAny.preRoundingTotalAmount || dataAny.subtotal || 0)}</Text>
+                    <Text>{currency} {formatAmount(Number(dataAny.preRoundingTotalAmount || dataAny.subtotal || 0))}</Text>
                   </View>
 
                   {dataAny.roundingDifference ? (
                     <View style={s.summaryRow}>
-                      <Text style={{ fontWeight: 'bold' }}>Rounding{dataAny.roundingMethod ? ` (${dataAny.roundingMethod})` : ''}</Text>
+                      <Text style={{ fontWeight: 'bold' }}>Rounding{String(dataAny.roundingMethod ? ` (${String(dataAny.roundingMethod)})` : '')}</Text>
                       <Text>{currency} {formatAmount(Number(dataAny.roundingDifference))}</Text>
                     </View>
                   ) : null}
 
                   <View style={[s.summaryRow, { borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingTop: 4, marginTop: 4 }]}>
                     <Text style={{ fontWeight: 'bold' }}>Grand Total</Text>
-                    <Text>{currency} {formatAmount('totalAmount' in data ? dataAny.totalAmount : 0)}</Text>
+                    <Text>{currency} {formatAmount(Number('totalAmount' in data ? dataAny.totalAmount : 0))}</Text>
                   </View>
                   <View style={s.summaryRow}>
                     <Text style={{ fontWeight: 'bold' }}>Amount Paid</Text>
-                    <Text>{currency} {formatAmount('amountPaid' in data ? dataAny.amountPaid : 0)}</Text>
+                    <Text>{currency} {formatAmount(Number('amountPaid' in data ? dataAny.amountPaid : 0))}</Text>
                   </View>
                   <View style={s.totalRow}>
                     <Text>Balance Due</Text>
                     <Text>
-                      {currency} {formatAmount(('totalAmount' in data ? dataAny.totalAmount : 0) - ('amountPaid' in data ? dataAny.amountPaid : 0))}
+                      {currency} {formatAmount(Number('totalAmount' in data ? dataAny.totalAmount : 0) - Number('amountPaid' in data ? dataAny.amountPaid : 0))}
                     </Text>
                   </View>
                 </View>
@@ -2194,7 +2213,7 @@ if (type === 'POS_RECEIPT') {
                 </Text>
                 <Text style={{ fontSize: scaledFont(10), color: '#334155', marginTop: 4, lineHeight: 1.45 }}>
                   {paymentTermsLabel}
-                  {showDueDate && dataAny?.dueDate ? ` | Due by ${formatDateOnly(dataAny.dueDate)}` : ''}
+                  {showDueDate && dataAny?.dueDate ? ` | Due by ${formatDateOnly(String(dataAny.dueDate))}` : ''}
                 </Text>
               </View>
             )}
@@ -2224,23 +2243,27 @@ if (type === 'POS_RECEIPT') {
               <Text style={{ fontSize: 9 }}>Vehicle No: {('vehicleNo' in data ? data.vehicleNo : '____________________')}</Text>
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              {Boolean(('signatureDataUrl' in data && dataAny.signatureDataUrl) || ('proofOfDelivery' in data && dataAny.proofOfDelivery?.signatureDataUrl)) ? (
+              {Boolean(dataAny.signatureDataUrl || pod?.signatureDataUrl) ? (
                 <View style={{ height: 40, width: 100, marginBottom: 5 }} />
               ) : (
                 <View style={{ height: 45 }} />
               )}
               <View style={[s.sigLine, { width: 180 }]} />
-              <Text style={{ fontSize: 9 }}>Received By: {('receivedBy' in data && dataAny.receivedBy) || ('proofOfDelivery' in data && dataAny.proofOfDelivery?.receivedBy) || ('conversionDetails' in data && data.conversionDetails?.acceptedBy) || '____________________'}</Text>
+              <Text style={{ fontSize: 9 }}>Received By: {String(dataAny.receivedBy || pod?.receivedBy || conversionDetails?.acceptedBy || '____________________')}</Text>
               <Text style={{ fontSize: 7, color: '#666' }}>Stamp & Signature</Text>
-              {Boolean('conversionDetails' in data && dataAny.conversionDetails?.locationStamp) ? (
-                <Text style={{ fontSize: 7, color: '#666', marginTop: 5 }}>
-                  GPS: {dataAny.conversionDetails.locationStamp.lat.toFixed(4)}, {dataAny.conversionDetails.locationStamp.lng.toFixed(4)}
-                </Text>
-              ) : Boolean('proofOfDelivery' in data && dataAny.proofOfDelivery?.locationStamp) ? (
-                <Text style={{ fontSize: 7, color: '#666', marginTop: 5 }}>
-                  GPS: {dataAny.proofOfDelivery.locationStamp.lat.toFixed(4)}, {dataAny.proofOfDelivery.locationStamp.lng.toFixed(4)}
-                </Text>
-              ) : null}
+              {(() => {
+                const locStamp = (conversionDetails?.locationStamp || pod?.locationStamp) as Record<string, unknown> | undefined;
+                const lat = Number(locStamp?.lat);
+                const lng = Number(locStamp?.lng);
+                if (lat || lng) {
+                  return (
+                    <Text style={{ fontSize: 7, color: '#666', marginTop: 5 }}>
+                      GPS: {lat.toFixed(4)}, {lng.toFixed(4)}
+                    </Text>
+                  );
+                }
+                return null;
+              })()}
             </View>
           </View>
         )}

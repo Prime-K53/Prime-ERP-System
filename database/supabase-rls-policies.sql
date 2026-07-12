@@ -58,7 +58,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT company_id FROM public.profiles WHERE user_id = auth.uid() LIMIT 1;
+  SELECT company_id FROM public.profiles WHERE user_id = auth.uid()::text LIMIT 1;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_user_company_id() TO authenticated;
@@ -100,7 +100,7 @@ CREATE POLICY "Users can view profiles"
   FOR SELECT
   TO authenticated
   USING (
-    user_id = auth.uid()
+    user_id = auth.uid()::text
     OR company_id = public.get_user_company_id()
   );
 
@@ -109,8 +109,8 @@ CREATE POLICY "Users can update own profile"
   ON public.profiles
   FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+  USING (user_id = auth.uid()::text)
+  WITH CHECK (user_id = auth.uid()::text);
 
 -- 7. Idempotency keys table policies
 CREATE POLICY "Authenticated users can manage idempotency keys"

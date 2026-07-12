@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { isSupabaseConfigured } from './cloudMode';
+import { logger } from './logger';
 
 export const STORE_TO_TABLE: Record<string, string> = {
   inventory: 'products',
@@ -103,6 +104,29 @@ const getStoredCompanyId = (): string | null => {
   }
 };
 
+const jwtDecode = (token: string): Record<string, unknown> | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+};
+
+const extractCompanyIdFromSession = async (): Promise<string | null> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return null;
+    const claims = jwtDecode(session.access_token);
+    if (!claims) return null;
+    const metadata = claims.user_metadata as Record<string, unknown> | undefined;
+    return (metadata?.company_id as string) || null;
+  } catch {
+    return null;
+  }
+};
+
 const getCompanyId = async (): Promise<string | null> => {
   if (activeCompanyId) return activeCompanyId;
 
@@ -142,6 +166,12 @@ const getCompanyId = async (): Promise<string | null> => {
         activeCompanyId = legacyProfile.company_id;
         return activeCompanyId;
       }
+    }
+
+    const sessionCompanyId = await extractCompanyIdFromSession();
+    if (sessionCompanyId) {
+      activeCompanyId = sessionCompanyId;
+      return activeCompanyId;
     }
   } catch {
     return null;
@@ -283,33 +313,73 @@ export const cloudDb = {
   async upsertCompany(config: Record<string, any>): Promise<string | null> {
     return withSession(async () => {
       const id = config.companyId || config.id || crypto.randomUUID();
-      const address = [
-        config.address,
-        config.addressLine1,
-        config.addressLine2,
-        config.city,
-        config.country,
-      ].filter(Boolean).join(', ');
 
-      const { data, error } = await supabase
+      // Minimal payload — only columns guaranteed by the SQL schema.
+      // Other fields (email, phone, logo_url, etc.) are stored in the data JSONB.
+      const payload: Record<string, any> = {
+        id,
+        company_name: config.companyName || config.company_name || 'Prime ERP Company',
+        data: { ...config, companyId: id },
+        updated_at: new Date().toISOString(),
+      };
+
+      // We already know the ID — avoid .select() because the SELECT RLS policy
+      // requires a profile (which doesn't exist yet during first-time setup).
+      const doUpsert = (p: Record<string, any>) => supabase
         .from('companies')
-        .upsert({
-          id,
-          company_name: config.companyName || config.company_name || 'Prime ERP Company',
-          registration_number: config.registrationNumber || config.registration_number || null,
-          email: config.email || null,
-          phone: config.phone || null,
-          address: address || null,
-          logo_url: config.logoUrl || config.logo_url || null,
-          data: { ...config, companyId: id },
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' })
-        .select('id')
-        .single();
+        .upsert(p, { onConflict: 'id' });
 
-      if (error) throw error;
-      setActiveCompanyId(data.id);
-      return data.id;
+      const doInsert = (p: Record<string, any>) => supabase
+        .from('companies')
+        .insert(p);
+
+      const doUpdate = (p: Record<string, any>) => supabase
+        .from('companies')
+        .update(p)
+        .eq('id', id);
+
+      // Try upsert first
+      const { error: uErr } = await doUpsert(payload);
+      if (!uErr) {
+        setActiveCompanyId(id);
+        return id;
+      }
+
+      // Fallback: insert
+      const { error: iErr } = await doInsert(payload);
+      if (!iErr) {
+        setActiveCompanyId(id);
+        return id;
+      }
+
+      // Fallback: update (if insert hit duplicate key 23505)
+      if (String(iErr.code) === '23505') {
+        const { error: updErr } = await doUpdate(payload);
+        if (!updErr) {
+          setActiveCompanyId(id);
+          return id;
+        }
+      }
+
+      // If the error mentions the "data" JSONB column, retry without it
+      const finalErr = uErr || iErr;
+      const msg = ((finalErr?.message || '') + (finalErr?.details || '')).toLowerCase();
+      if (msg.includes('column "data"')) {
+        logger.warn('[CloudDB] Retrying company creation without data column');
+        const slim = { id: payload.id, company_name: payload.company_name, updated_at: payload.updated_at };
+        const { error: suErr } = await doUpsert(slim);
+        if (!suErr) {
+          setActiveCompanyId(id);
+          return id;
+        }
+        const { error: siErr } = await doInsert(slim);
+        if (!siErr) {
+          setActiveCompanyId(id);
+          return id;
+        }
+      }
+
+      throw finalErr || new Error('Failed to create or update company');
     });
   },
 
@@ -327,8 +397,6 @@ export const cloudDb = {
       delete profileData.profileId;
       delete profileData.user_id;
       delete profileData.userId;
-      delete profileData.company_id;
-      delete profileData.companyId;
 
       const payload = {
         id: profile.profile_id || profile.profileId || crypto.randomUUID(),
@@ -390,6 +458,10 @@ export const cloudDb = {
    * Check if an operation has already been processed (idempotency check).
    */
   _idempotencyTableReady: null as boolean | null,
+  _idempotencyCache: new Map(),
+  _idempotencyCacheMax: 500,
+  _idempotencyCacheTtl: 60_000,
+  _pendingChecks: new Map(),
 
   async _ensureIdempotencyTable(): Promise<boolean> {
     if (this._idempotencyTableReady !== null) return this._idempotencyTableReady;
@@ -406,6 +478,26 @@ export const cloudDb = {
   },
 
   async checkIdempotency(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
+    // Check local cache first
+    const cached = this._idempotencyCache.get(operationId);
+    if (cached && Date.now() - cached.ts < this._idempotencyCacheTtl) {
+      return { alreadyProcessed: cached.alreadyProcessed, result: cached.result };
+    }
+
+    // Deduplicate concurrent checks for the same operationId
+    const pending = this._pendingChecks.get(operationId);
+    if (pending) return pending;
+
+    const promise = this._performIdempotencyCheck(operationId);
+    this._pendingChecks.set(operationId, promise);
+    try {
+      return await promise;
+    } finally {
+      this._pendingChecks.delete(operationId);
+    }
+  },
+
+  async _performIdempotencyCheck(operationId: string): Promise<{ alreadyProcessed: boolean; result?: string | null }> {
     if (!(await this._ensureIdempotencyTable())) return { alreadyProcessed: false };
     try {
       const companyId = await getCompanyId();
@@ -415,13 +507,21 @@ export const cloudDb = {
         .eq('id', operationId);
       if (companyId) query = query.eq('company_id', companyId);
       const { data } = await query.maybeSingle();
-      if (data) {
-        return { alreadyProcessed: true, result: data.result as string | null };
+      const result = data
+        ? { alreadyProcessed: true, result: data.result as string | null }
+        : { alreadyProcessed: false };
+
+      // Cache the result
+      if (this._idempotencyCache.size >= this._idempotencyCacheMax) {
+        const oldest = this._idempotencyCache.keys().next().value;
+        if (oldest) this._idempotencyCache.delete(oldest);
       }
+      this._idempotencyCache.set(operationId, { ...result, ts: Date.now() });
+
+      return result;
     } catch {
-      // Idempotency check is best-effort
+      return { alreadyProcessed: false };
     }
-    return { alreadyProcessed: false };
   },
 
   /**
@@ -457,7 +557,12 @@ export const cloudDb = {
       }
 
       const table = getTable(storeName);
-      const companyId = await getCompanyId();
+      let companyId = await getCompanyId();
+      const itemCompanyId = raw._companyId as string | undefined;
+      if (!companyId && itemCompanyId) {
+        companyId = itemCompanyId;
+        activeCompanyId = itemCompanyId;
+      }
 
       const version = raw._version as number | undefined;
       delete raw._updatedAt;

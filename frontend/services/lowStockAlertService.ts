@@ -14,7 +14,7 @@ interface AlertConfig {
 }
 
 const STORAGE_KEY = 'prime_erp_low_stock_alert_config';
-const BACKEND_URL = 'http://127.0.0.1:3000';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000';
 
 export const getAlertConfig = (): AlertConfig => {
   try {

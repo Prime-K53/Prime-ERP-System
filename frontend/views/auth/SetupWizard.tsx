@@ -201,8 +201,6 @@ const SetupWizard: React.FC = () => {
 
       if (SUPABASE_ENABLED && admin.email) {
         const supabasePassword = admin.password || `${admin.username}_${Date.now()}`;
-        console.log('[Setup] Starting Supabase signup for:', admin.email);
-        
         const signUpResult = await signUpSupabase(admin.email.trim(), supabasePassword, {
           username: admin.username.trim(),
           full_name: admin.fullName.trim(),
@@ -218,7 +216,6 @@ const SetupWizard: React.FC = () => {
           throw new Error(`Cloud account creation failed: ${signUpResult.error}`);
         }
         
-        console.log('[Setup] Supabase signup successful, user ID:', signUpResult.userId);
       }
 
       await completeSetup(
@@ -241,7 +238,12 @@ const SetupWizard: React.FC = () => {
 
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Setup failed.');
+      const message = err instanceof Error ? err.message
+        : err && typeof err === 'object' && 'message' in err ? String((err as any).message)
+        : err && typeof err === 'object' && 'error' in err ? String((err as any).error)
+        : err ? String(err)
+        : 'Setup failed. Please check your Supabase configuration and try again.';
+      setError(message);
     } finally {
       setSubmitting(false);
     }

@@ -366,7 +366,7 @@ class CurrencyService {
   private async fetchFromFixer(from: string, to: string): Promise<number> {
     const apiKey = this.settings.apiKey;
     const response = await fetch(
-      `http://data.fixer.io/api/latest?access_key=${apiKey}&symbols=${to}`
+      `https://data.fixer.io/api/latest?access_key=${apiKey}&symbols=${to}`
     );
     const data = await response.json();
     
@@ -379,7 +379,7 @@ class CurrencyService {
       return data.rates[to];
     } else {
       const fromResponse = await fetch(
-        `http://data.fixer.io/api/latest?access_key=${apiKey}&symbols=${from}`
+        `https://data.fixer.io/api/latest?access_key=${apiKey}&symbols=${from}`
       );
       const fromData = await fromResponse.json();
       const fromRate = fromData.rates[from];

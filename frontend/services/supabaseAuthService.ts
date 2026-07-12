@@ -47,12 +47,9 @@ export async function signUp(email: string, password: string, metadata?: Record<
       },
     }));
 
-    console.log('[Auth] signUp response:', { data, error });
-
     if (error) {
       logger.error('[Supabase] signUp error:', error);
       if (error.message?.toLowerCase().includes('already registered')) {
-        console.log('[Auth] Email already registered — attempting login to re-link existing auth user...');
         const { data: signInData, error: signInError } = await withTimeout(supabase.auth.signInWithPassword({
           email: targetEmail,
           password,
@@ -62,7 +59,6 @@ export async function signUp(email: string, password: string, metadata?: Record<
           return { success: false, error: 'An account with this email already exists. Use a different email or sign in with your existing password.' };
         }
         if (signInData?.user) {
-          console.log('[Auth] Re-linked existing auth user:', signInData.user.id);
           return {
             success: true,
             userId: signInData.user.id,
@@ -100,7 +96,6 @@ export async function signUp(email: string, password: string, metadata?: Record<
 
     // Check if session is returned immediately
     if (data.session) {
-      console.log('[Auth] Session returned immediately after signup');
       return {
         success: true,
         userId: data.user?.id,
@@ -177,9 +172,6 @@ export async function signIn(email: string, password: string): Promise<AuthResul
       email: getEmailForUser(email),
       password,
     }));
-
-    console.log("AUTH RESPONSE:", data);
-    console.log("AUTH ERROR:", error);
 
     if (error) {
       const authErr = error as Error & { status?: number; statusCode?: number; code?: string };

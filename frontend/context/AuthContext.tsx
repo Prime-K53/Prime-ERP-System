@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, UserRole, UserGroup, PasswordPolicy, CompanyConfig, AuditLogEntry, SystemAlert, Reminder } from '../types';
-import { INITIAL_USER_GROUPS, AVAILABLE_PERMISSIONS } from '../constants';
+import { INITIAL_USER_GROUPS, AVAILABLE_PERMISSIONS, SEED_ITEMS } from '../constants';
 import { generateNextId } from '../utils/helpers';
 import { dbService } from '../services/db';
 import { DEFAULT_PRICING_SETTINGS } from '../services/pricingRoundingService';
@@ -711,7 +711,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // startPeriodicSync fires fullSync() internally once — avoids duplicate pull
             startPeriodicSync(undefined, (result) => {
               if (result.pulled > 0 || result.pushed > 0) {
-                console.log(`[Auth] Initial Supabase sync: ${result.pulled} pulled, ${result.pushed} pushed`);
               }
               // After pull, restore any newly synced profit margins to localStorage
               restoreLocalMarginsFromSync().catch(() => {});
@@ -1194,24 +1193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const completeSetup = async (config: CompanyConfig, adminUser: User) => {
     if (SUPABASE_ENABLED) {
-      const cloudCompanyId = config.companyId || crypto.randomUUID();
-      const normalizedConfig: CompanyConfig = withNormalizedSecurityConfig(normalizeCompanyNumberingConfig({
-        ...defaultCompanyConfig,
-        ...config,
-        companyId: cloudCompanyId,
-        pricingSettings: {
-          ...DEFAULT_PRICING_SETTINGS,
-          ...(config.pricingSettings || {})
-        }
-      }));
-
-      dbService.setCurrentCompanyId(cloudCompanyId);
-      cloudDb.setActiveCompanyId(cloudCompanyId);
-      setCompanyConfig(normalizedConfig);
-
-      const savedCompanyId = await cloudDb.upsertCompany(normalizedConfig as CompanyConfig);
-      
-      // PRODUCTION-GRADE FIX: Wait for session with a robust timeout and listener
+      // Get current session/user first
       let session: any = null;
       try {
         const { data } = await withTimeout(supabase.auth.getSession(), 5000);
@@ -1225,7 +1207,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           session = await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-              subscription.unsubscribe();
               reject(new AuthFlowError('Auth timeout: No Supabase session available after 10s', {
                 code: 'signup_session_timeout',
                 userMessage: 'Account created, but we are still waiting for your session. Please try refreshing or signing in manually.'
@@ -1233,7 +1214,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }, 10000);
 
             const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-              console.log('[Auth] Auth state change during setup:', event, !!newSession);
               if (newSession) {
                 clearTimeout(timeout);
                 subscription.unsubscribe();
@@ -1253,6 +1233,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userMessage: 'Your account was created, but automatic login failed. Please sign in with your email and password.',
         });
       }
+
+      // Check if this user already has a profile/company
+      let existingCompanyId: string | null = null;
+      try {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (existingProfile?.company_id) {
+          existingCompanyId = existingProfile.company_id;
+        }
+      } catch {
+        // Best-effort; proceed with new company creation
+      }
+
+      const cloudCompanyId = existingCompanyId || config.companyId || crypto.randomUUID();
+      const normalizedConfig: CompanyConfig = withNormalizedSecurityConfig(normalizeCompanyNumberingConfig({
+        ...defaultCompanyConfig,
+        ...config,
+        companyId: cloudCompanyId,
+        pricingSettings: {
+          ...DEFAULT_PRICING_SETTINGS,
+          ...(config.pricingSettings || {})
+        }
+      }));
+
+      dbService.setCurrentCompanyId(cloudCompanyId);
+      cloudDb.setActiveCompanyId(cloudCompanyId);
+      setCompanyConfig(normalizedConfig);
+
+      const savedCompanyId = await cloudDb.upsertCompany(normalizedConfig as CompanyConfig);
 
       await cloudDb.upsertProfile({
         ...adminUser,
@@ -1279,6 +1291,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authMode: 'supabase',
         companyId: savedCompanyId || cloudCompanyId,
       } as User]);
+
+      // Seed master inventory on first setup
+      try {
+        const existing = await dbService.getAll('inventory');
+        if (existing.length === 0) {
+          for (const item of SEED_ITEMS) await dbService.put('inventory', item);
+        }
+        const existingWh = await dbService.getAll('warehouses');
+        if (existingWh.length === 0) {
+          const { MOCK_WAREHOUSES } = await import('../constants');
+          for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
+        }
+      } catch (e) {
+        console.warn('Failed to seed master inventory:', e);
+      }
+
       setRequiresSetup(false);
       setIsInitialized(true);
       return;
@@ -1329,6 +1357,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const updatedUsers = await dbService.getAll<User>('users');
     setAllUsers(updatedUsers);
+
+    // Seed master inventory on first setup
+    try {
+      const existing = await dbService.getAll('inventory');
+      if (existing.length === 0) {
+        for (const item of SEED_ITEMS) await dbService.put('inventory', item);
+      }
+      const existingWh = await dbService.getAll('warehouses');
+      if (existingWh.length === 0) {
+        const { MOCK_WAREHOUSES } = await import('../constants');
+        for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
+      }
+    } catch (e) {
+      console.warn('Failed to seed master inventory:', e);
+    }
+
     localStorage.setItem('nexus_initialized', 'true');
     setRequiresSetup(false);
     setIsInitialized(true);

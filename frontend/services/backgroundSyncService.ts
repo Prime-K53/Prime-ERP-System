@@ -1,7 +1,5 @@
 import { durableSyncQueue, classifyError, QueuedOperation, QueueMetrics } from './durableSyncQueue';
 import { cloudDb } from './cloudDb';
-import { syncConflictResolver } from './syncConflictResolver';
-import { syncService } from './syncService';
 
 type SyncEventType = 'sync-start' | 'sync-complete' | 'sync-failure' | 'sync-partial' | 'queue-empty' | 'queue-full' | 'dead-letter';
 type SyncCallback = (event: SyncEventType, data?: unknown) => void;

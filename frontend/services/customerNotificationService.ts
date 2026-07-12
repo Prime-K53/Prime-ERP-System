@@ -149,7 +149,7 @@ export const customerNotificationService = {
   ) {
     const config = getCompanyConfig();
     if (!config?.notificationSettings?.customerActivityNotifications) {
-      console.log(`[Notification] System disabled for ${type}`);
+      logger.info(`[Notification] System disabled for ${type}`);
       return;
     }
 
@@ -165,7 +165,7 @@ export const customerNotificationService = {
     }
 
     if (typeof window !== 'undefined' && !window.confirm(`Send notification to ${data.customerName} about this ${ACTIVITY_LABELS[type] || type}?`)) {
-      console.log(`[Notification] User cancelled notification for ${type} ${data.id}`);
+      logger.info(`[Notification] User cancelled notification for ${type} ${data.id}`);
       return;
     }
 
@@ -200,14 +200,14 @@ export const customerNotificationService = {
         }
         if (sentAny) {
           await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'sent', deliveryMode: 'external' });
-          console.log(`[Notification] Sent via webhook for ${type} to ${sanitizePhoneNumber(data.phoneNumber)} (${data.customerName})`);
+          logger.info(`[Notification] Sent via webhook for ${type}`);
           return;
         }
       }
 
       try {
         await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'sent', deliveryMode: 'ai' });
-        console.log(`[Notification] AI-processed for ${type} ${sanitizePhoneNumber(data.phoneNumber)} (${data.customerName})`);
+        logger.info(`[Notification] AI-processed for ${type}`);
       } catch (error) {
         logger.error(`[Notification] Failed to process ${type}:`, error);
         await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'failed', error: String(error) });
@@ -224,7 +224,7 @@ export const customerNotificationService = {
           dedupeKey: `notification:${type}:${data.id}`
         });
         await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'pending', deliveryMode: 'queued' });
-        console.log(`[Notification] Queued for offline delivery: ${type} to ${sanitizePhoneNumber(data.phoneNumber)} (${data.customerName})`);
+        logger.info(`[Notification] Queued for offline delivery: ${type}`);
       } catch (error) {
         logger.error(`[Notification] Failed to queue offline ${type}:`, error);
         await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'failed', error: String(error), deliveryMode: 'queued' });

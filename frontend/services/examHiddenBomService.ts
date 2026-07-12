@@ -61,7 +61,7 @@ export function resolveExamMaterial(
   
   if (result) {
     // Log match details for debugging
-    console.log(`[ExamMaterial] Resolved ${type}: ${result.item.name} ` +
+    logger.debug(`[ExamMaterial] Resolved ${type}: ${result.item.name} ` +
       `(score: ${result.score}, confidence: ${result.confidence}, ` +
       `type: ${result.matchType})`);
     return result.item;
@@ -216,11 +216,11 @@ export async function initializeExamHiddenBOM(): Promise<BOMTemplate | null> {
       // Check if it's the same before updating
       if (!isSameExamHiddenTemplate(existingHiddenBOM, hiddenBOM)) {
         await dbService.put('bomTemplates', hiddenBOM);
-        console.log('[ExamHiddenBOM] Updated hidden Examination BOM template');
+        logger.debug('[ExamHiddenBOM] Updated hidden Examination BOM template');
       }
     } else {
       await dbService.put('bomTemplates', hiddenBOM);
-      console.log('[ExamHiddenBOM] Created hidden Examination BOM template');
+      logger.debug('[ExamHiddenBOM] Created hidden Examination BOM template');
     }
     
     return hiddenBOM;

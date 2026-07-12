@@ -29,9 +29,6 @@ export const useAuditLogs = () => {
       correlationId: `cid-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
     };
 
-    // In a real system, this would be an API call
-    console.log('Capture Audit Log:', newEntry);
-    
     // Persist via AuthContext
     addAuditLog(newEntry);
     

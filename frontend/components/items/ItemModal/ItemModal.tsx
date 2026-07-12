@@ -120,7 +120,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   tabActive: {
     background: '#2563EB',
-    borderColor: 'transparent', color: '#fff',
+    color: '#fff',
     boxShadow: VAR_STYLES.shadowSm,
   },
   tabSvg: { width: 15, height: 15, flexShrink: 0 },
@@ -205,14 +205,14 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer', background: '#fff',
   },
   chipActive: {
-    borderColor: '#2563EB', background: 'linear-gradient(135deg, #EFF6FF, #FFFFFF)',
+    border: '1.5px solid #2563EB', background: 'linear-gradient(135deg, #EFF6FF, #FFFFFF)',
     boxShadow: '0 0 0 1px #2563EB inset',
   },
   chipTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
   chipName: { fontSize: 12.5, fontWeight: 600 },
   chipPrice: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, color: VAR_STYLES.ink700 },
   chipCheck: { width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${VAR_STYLES.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  chipCheckActive: { background: '#2563EB', borderColor: '#2563EB' },
+  chipCheckActive: { background: '#2563EB', border: '1.5px solid #2563EB' },
   costStrip: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
     background: VAR_STYLES.paper, border: `1px solid ${VAR_STYLES.line}`, borderRadius: 11, padding: '14px 16px',
@@ -225,7 +225,7 @@ const s: Record<string, React.CSSProperties> = {
     border: `1.5px solid ${VAR_STYLES.line}`, borderRadius: 10, padding: '12px 13px', cursor: 'pointer',
     background: '#fff',
   },
-  methodActive: { borderColor: '#2563EB', background: 'linear-gradient(135deg, #EFF6FF, #FFFFFF)' },
+  methodActive: { border: '1.5px solid #2563EB', background: 'linear-gradient(135deg, #EFF6FF, #FFFFFF)' },
   methodName: { fontSize: 13, fontWeight: 600, marginBottom: 3 },
   methodDesc: { fontSize: 11.5, color: VAR_STYLES.textDim, lineHeight: 1.4 },
   modalFooter: {
@@ -1388,11 +1388,11 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
                 <p style={s.sectionTitle}>Item Details</p>
                 <div style={{ ...s.grid2, marginBottom: 14 }}>
                   <Field label="Item Name" required>
-                    <input type="text" style={{ ...s.input, ...(nameError ? { borderColor: VAR_STYLES.danger } : {}) }} value={name} onChange={e => { setName(e.target.value); dirtyRef.current = true; }} placeholder="e.g. Bond Paper 80gsm" />
+                    <input type="text" style={{ ...s.input, ...(nameError ? { border: `1px solid ${VAR_STYLES.danger}` } : {}) }} value={name} onChange={e => { setName(e.target.value); dirtyRef.current = true; }} placeholder="e.g. Bond Paper 80gsm" />
                     {nameError && <p style={{ ...s.fieldHint, color: VAR_STYLES.danger }}>{nameError}</p>}
                   </Field>
                   <Field label="SKU / Code">
-                    <input type="text" style={{ ...s.input, ...s.mono, ...(skuError ? { borderColor: VAR_STYLES.danger } : {}) }} value={sku} onChange={e => { setSku(e.target.value); setSkuManuallySet(true); }} placeholder="Auto-generated" />
+                    <input type="text" style={{ ...s.input, ...s.mono, ...(skuError ? { border: `1px solid ${VAR_STYLES.danger}` } : {}) }} value={sku} onChange={e => { setSku(e.target.value); setSkuManuallySet(true); }} placeholder="Auto-generated" />
                     {skuError && <p style={{ ...s.fieldHint, color: VAR_STYLES.danger }}>{skuError}</p>}
                   </Field>
                   <Field label="Barcode">

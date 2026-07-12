@@ -39,7 +39,7 @@ export const safeJson = async (response: Response, context: string) => {
     return JSON.parse(raw);
   } catch (err) {
     logger.error(`[examinationService] JSON parse error in ${context}:`, err);
-    console.debug(`[examinationService] Failed content:`, raw);
+    logger.debug(`[examinationService] Failed content:`, raw);
     throw new Error(`Invalid response format from server in ${context}. Expected JSON.`);
   }
 };
@@ -68,7 +68,7 @@ export const toServiceError = async (response: Response, fallback: string) => {
       if (detailParts.length > 0) return `${fallback}: ${detailParts.join(' - ')}${statusSuffix}`;
     } catch (parseError) {
       logger.error(`[examinationService] Failed to parse JSON response:`, parseError);
-      console.debug(`[examinationService] Raw response text:`, raw);
+      logger.debug(`[examinationService] Raw response text:`, raw);
     }
 
     const compact = raw.replace(/\s+/g, ' ').trim();

@@ -37,7 +37,7 @@ router.post('/', (req, res) => {
       useful_life_years || 5, status || 'active', location || null, assigned_to || null,
       notes || null, warranty_expiry || null, req.companyId, now, now
     );
-    const asset = db.prepare('SELECT * FROM assets WHERE id = ?').get(id);
+    const asset = db.prepare('SELECT * FROM assets WHERE id = ? AND company_id = ?').get(id, req.companyId);
     res.status(201).json(asset);
   } catch (err) {
     console.error('[Assets] Create error:', err);
@@ -59,8 +59,9 @@ router.put('/:id', (req, res) => {
     updates.push('updated_at = ?');
     values.push(new Date().toISOString());
     values.push(req.params.id);
-    db.prepare(`UPDATE assets SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-    const asset = db.prepare('SELECT * FROM assets WHERE id = ?').get(req.params.id);
+    values.push(req.companyId);
+    db.prepare(`UPDATE assets SET ${updates.join(', ')} WHERE id = ? AND company_id = ?`).run(...values);
+    const asset = db.prepare('SELECT * FROM assets WHERE id = ? AND company_id = ?').get(req.params.id, req.companyId);
     res.json(asset);
   } catch (err) {
     console.error('[Assets] Update error:', err);
@@ -72,7 +73,7 @@ router.delete('/:id', (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM assets WHERE id = ? AND company_id = ?').get(req.params.id, req.companyId);
     if (!existing) return res.status(404).json({ error: 'Asset not found' });
-    db.prepare('DELETE FROM assets WHERE id = ?').run(req.params.id);
+    db.prepare('DELETE FROM assets WHERE id = ? AND company_id = ?').run(req.params.id, req.companyId);
     res.json({ success: true });
   } catch (err) {
     console.error('[Assets] Delete error:', err);

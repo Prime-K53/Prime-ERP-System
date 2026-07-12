@@ -458,9 +458,6 @@ export function startPeriodicSync(
   pushTimer = setInterval(async () => {
     if (navigator.onLine) {
       const result = await pullRemoteChanges().catch(() => ({ pulled: 0, errors: [] }));
-      if (result.pulled > 0) {
-        console.log(`[Sync] Incremental pull: ${result.pulled} records from ${result.errors.length > 0 ? result.errors.join(',') : 'all tables'}`);
-      }
     }
   }, Math.min(intervalMs, 30000));
 
@@ -468,9 +465,6 @@ export function startPeriodicSync(
   if (navigator.onLine) {
     const isFirstSync = !localStorage.getItem('nexus_last_sync_pull');
     pullRemoteChanges(undefined, isFirstSync).then(result => {
-      if (result.pulled > 0) {
-        console.log(`[Sync] Initial pull complete: ${result.pulled} records`);
-      }
       onSyncComplete?.({ pulled: result.pulled, pushed: 0, errors: result.errors });
     }).catch(err => console.warn('[Sync] Initial pull failed:', err));
   } else {

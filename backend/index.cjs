@@ -1,4 +1,3 @@
- reports hub
 try { require('dotenv').config({ path: require('path').join(__dirname, '.env') }); } catch {}
 console.log('--- SERVER SCRIPT STARTING ---');
 console.log('Requiring express...');

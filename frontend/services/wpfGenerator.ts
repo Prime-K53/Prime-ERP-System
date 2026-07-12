@@ -12,7 +12,7 @@ export const generateWpfFile = async (filePath: string, context: string): Promis
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GOOGLE_API_KEY || '' });
     
     const isXAML = filePath.toLowerCase().endsWith('.xaml');
     const isModel = filePath.toLowerCase().includes('model') && !filePath.toLowerCase().includes('viewmodel');

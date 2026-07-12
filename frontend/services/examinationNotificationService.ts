@@ -29,7 +29,7 @@ const getLocalNotificationsForUser = async (
   } catch {
     localNotifications = await dbService.getAll<ExaminationBatchNotification>('examinationBatchNotifications');
   }
-  console.debug('[NotificationService] Using cached notifications from local storage');
+  logger.debug('[NotificationService] Using cached notifications from local storage');
   return (localNotifications || [])
     .filter(n => n.user_id === userId)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -79,7 +79,7 @@ const fetchWithTimeout = async (
 
     try {
       const url = getUrl(joinPath(base, endpoint));
-      console.debug(`[examinationNotificationService] fetch attempt ${index + 1}/${baseCandidates.length} -> ${url} (timeout ${timeoutForAttempt}ms)`);
+      logger.debug(`[examinationNotificationService] fetch attempt ${index + 1}/${baseCandidates.length} -> ${url} (timeout ${timeoutForAttempt}ms)`);
       const start = Date.now();
       const response = await fetch(url, {
         ...options,
@@ -88,7 +88,7 @@ const fetchWithTimeout = async (
       });
       const duration = Date.now() - start;
       const contentType = response.headers.get('content-type') || '';
-      console.debug(`[API Response] ${response.status} ${url} in ${duration}ms (Content-Type: ${contentType})`);
+      logger.debug(`[API Response] ${response.status} ${url} in ${duration}ms (Content-Type: ${contentType})`);
 
       const shouldTryNext = !isLastAttempt
         && base.startsWith('/')
@@ -264,7 +264,7 @@ export const examinationNotificationService = {
 
     if (backendRetryAfter > Date.now()) {
       try {
-        console.debug('[NotificationService] Backend cooldown active, skipping remote fetch');
+        logger.debug('[NotificationService] Backend cooldown active, skipping remote fetch');
         return await getLocalNotificationsForUser(user, limit);
       } catch (localError) {
         console.warn('[NotificationService] Failed to fetch local notifications during backend cooldown:', localError);

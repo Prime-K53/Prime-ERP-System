@@ -126,11 +126,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
     const handleItemClick = (item: Item) => {
         const itemType = item.type || item.category || '';
         const isService = itemType === 'Service' || item.category === 'Service';
-        console.log('handleItemClick called', itemType, item.name, 'isVariantParent:', item.isVariantParent, 'isService:', isService);
         if (item.isVariantParent) {
             setSelectedProductForVariants(item);
         } else if (isService) {
-            console.log('Calling onConfigureService for:', item.name);
             onConfigureService(item);
         } else {
             addToCart(item);

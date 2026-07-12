@@ -277,3 +277,10 @@ export type SalesExchangeDoc = z.infer<typeof SalesExchangeSchema>;
 export type SubscriptionDoc = z.infer<typeof SubscriptionDocSchema>;
 export type ExaminationInvoiceDoc = z.infer<typeof ExaminationInvoiceSchema>;
 export type PrimeDocData = FinancialDoc | LogisticsDoc | ReceiptDoc | SupplierPaymentDoc | PosReceiptDoc | StatementDoc | FiscalReportDoc | SalesExchangeDoc | SubscriptionDoc | ExaminationInvoiceDoc;
+
+type UnionKeys<T> = T extends T ? keyof T : never;
+type PickType<T, K extends PropertyKey> = T extends Record<K, infer V> ? V : never;
+
+export type LoosePrimeDocData = {
+  [K in UnionKeys<PrimeDocData>]?: PickType<PrimeDocData, K>;
+};

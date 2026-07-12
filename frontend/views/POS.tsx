@@ -33,7 +33,7 @@ import { logger } from '../services/logger';
 
 import { generateNextId, roundToCurrency, formatNumber, downloadBlob } from '../utils/helpers';
 import { attachDocumentSecurity } from '../utils/documentSecurity';
-import { initializePrimePdfFonts } from './shared/components/PDF/templateSettings';
+import { initializePrimePdfFonts, resolvePrimeTemplateSettings, getStoredCompanyConfig } from './shared/components/PDF/templateSettings';
 import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredRoundingDifference, resolveStoredSellingPrice, calculatePhotocopyCostPerPage, calculateTypePrintingCostPerPage } from '../utils/pricing';
 import { calculateSellingPrice, calculateServicePrice } from '../utils/pricing/pricingEngine';
 import { aggregateMarketAdjustmentSnapshots, attachPricingBreakdown, getMarketAdjustmentSnapshots, getSnapshotCalculatedAmount, resolveItemAdjustmentSnapshots, summarizePricingBreakdown } from '../utils/pricingBreakdown';
@@ -70,7 +70,6 @@ const POS: React.FC = () => {
   } | null>(null);
     
     const handleConfigureService = (service: Item) => {
-        console.log('handleConfigureService called with:', service.name, service.type, service.category);
         if (isPrintingService(service)) {
             setSelectedPrintingService(service);
         } else {
@@ -1451,16 +1450,16 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
               <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider"><CheckCircle size={16} className="text-emerald-600" /> Sale Successful</h2>
               <button onClick={() => setQuickReceiptSale(null)} className="text-slate-400 hover:text-red-600"><X size={20} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 text-sm bg-white">
+            <div className="flex-1 overflow-y-auto p-8 bg-white" style={{ fontFamily: (() => { const s = resolvePrimeTemplateSettings(getStoredCompanyConfig()); return s.fontFamily === 'Helvetica' ? "'Helvetica', Arial, sans-serif" : s.fontFamily; })(), fontSize: 14, color: '#1E293B', lineHeight: 1.5 }}>
               <div className="text-center border-b border-slate-100 pb-6 mb-6">
-                <h1 className="font-bold text-lg text-slate-800 uppercase tracking-tight">{companyConfig.companyName}</h1>
-                <p className="text-slate-500 text-xs mt-1 font-medium">Receipt #{quickReceiptSale.id}</p>
+                <h1 className="font-bold uppercase tracking-tight" style={{ fontSize: 18, color: '#0F172A' }}>{companyConfig.companyName}</h1>
+                <p className="mt-1 font-medium" style={{ fontSize: 12, color: '#64748B' }}>Receipt #{quickReceiptSale.id}</p>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center"><span className="text-slate-500">Customer</span><span className="font-bold text-slate-800">{quickReceiptSale.customerName || 'Walk-in'}</span></div>
-                <div className="flex justify-between items-center"><span className="text-slate-500">Total Amount</span><span className="font-bold text-slate-800">{currency}{formatNumber(quickReceiptSale.totalAmount)}</span></div>
-                <div className="flex justify-between items-center"><span className="text-slate-500">Paid Amount</span><span className="font-bold text-slate-800">{currency}{formatNumber(quickReceiptSale.cash_tendered || quickReceiptSale.totalAmount)}</span></div>
-                <div className="flex justify-between items-center"><span className="text-slate-500">Change Due</span><span className="font-bold text-emerald-600">{currency}{formatNumber(quickReceiptSale.change_due || 0)}</span></div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center"><span style={{ fontSize: 12, color: '#64748B' }}>Customer</span><span className="font-bold" style={{ fontSize: 14, color: '#0F172A' }}>{quickReceiptSale.customerName || 'Walk-in'}</span></div>
+                <div className="flex justify-between items-center"><span style={{ fontSize: 12, color: '#64748B' }}>Total Amount</span><span className="font-bold" style={{ fontSize: 14, color: '#0F172A' }}>{currency}{formatNumber(quickReceiptSale.totalAmount)}</span></div>
+                <div className="flex justify-between items-center"><span style={{ fontSize: 12, color: '#64748B' }}>Paid Amount</span><span className="font-bold" style={{ fontSize: 14, color: '#0F172A' }}>{currency}{formatNumber(quickReceiptSale.cash_tendered || quickReceiptSale.totalAmount)}</span></div>
+                <div className="flex justify-between items-center"><span style={{ fontSize: 12, color: '#64748B' }}>Change Due</span><span className="font-bold" style={{ fontSize: 14, color: '#059669' }}>{currency}{formatNumber(quickReceiptSale.change_due || 0)}</span></div>
               </div>
             </div>
             <div className="p-6 bg-slate-50 border-t border-slate-200 flex gap-3">

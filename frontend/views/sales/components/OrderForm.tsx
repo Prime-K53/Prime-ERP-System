@@ -231,19 +231,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [showAiFraud, setShowAiFraud] = useState(false);
     const [aiDiscountSuggestion, setAiDiscountSuggestion] = useState<any>(null);
     const [aiGeneratingDesc, setAiGeneratingDesc] = useState(false);
-    const calculatedOtherCharges = useMemo(() => {
-        return (formData.items || []).reduce((sum, item) => sum + (Number(item.otherChargesAdjustment) || 0), 0);
-    }, [formData.items]);
-
-    // Derive Customer Names from Transactions and Customers List
-    const customerNames = useMemo(() => {
-        const names = new Set<string>();
-        customers?.forEach(c => names.add(c.name));
-        invoices?.forEach(inv => names.add(inv.customerName));
-        customerPayments?.forEach(rec => names.add(rec.customerName));
-        quotations?.forEach(q => names.add(q.customerName));
-        return Array.from(names).sort();
-    }, [customers, invoices, customerPayments, quotations]);
 
     const [formData, setFormData] = useState<any>({
         id: '',
@@ -284,6 +271,19 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         customerPricingSegment: '',
         referenceDoc: ''
     });
+
+    const calculatedOtherCharges = useMemo(() => {
+        return (formData.items || []).reduce((sum, item) => sum + (Number(item.otherChargesAdjustment) || 0), 0);
+    }, [formData.items]);
+
+    const customerNames = useMemo(() => {
+        const names = new Set<string>();
+        customers?.forEach(c => names.add(c.name));
+        invoices?.forEach(inv => names.add(inv.customerName));
+        customerPayments?.forEach(rec => names.add(rec.customerName));
+        quotations?.forEach(q => names.add(q.customerName));
+        return Array.from(names).sort();
+    }, [customers, invoices, customerPayments, quotations]);
 
     const findCustomerByName = (name: string) => {
         const normalized = name.trim().toLowerCase();

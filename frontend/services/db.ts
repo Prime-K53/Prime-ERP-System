@@ -129,13 +129,15 @@ interface NexusDB extends DBSchema {
     whatsappAutomations: { key: string; value: any; };
     productAttributes: { key: string; value: ProductAttribute; };
     taxRates: { key: string; value: TaxRate; };
+    customerPricingTiers: { key: string; value: any; };
+    discountRules: { key: string; value: any; };
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
 // Version bump required so existing IndexedDB instances run upgrade()
 // and create newly-added stores such as examinationBatchNotifications
 // and notificationAuditLogs, and taxRates.
-const DB_VERSION = 42;
+const DB_VERSION = 43;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
@@ -158,20 +160,29 @@ async function stampAllRecordsWithCompany(companyId: string): Promise<void> {
   if (!companyId) return;
   const companyStores = STORE_NAMES.filter(s => s !== 'settings' && s !== 'syncOutbox' && s !== 'idempotencyKeys');
   const db = await initDB();
-  const tx = db.transaction(companyStores, 'readwrite');
-  for (const store of companyStores) {
-    const objectStore = tx.objectStore(store);
-    let cursor = await objectStore.openCursor();
-    while (cursor) {
-      const record = cursor.value as Record<string, unknown>;
-      if (!record._companyId) {
-        record._companyId = companyId;
-        cursor.update(record);
+  const existingStores = [...db.objectStoreNames].filter(s => companyStores.includes(s as any)) as (keyof NexusDB)[];
+  if (existingStores.length === 0) return;
+  const tx = db.transaction(existingStores, 'readwrite');
+  let totalStamped = 0;
+  for (const store of existingStores) {
+    try {
+      const objectStore = tx.objectStore(store);
+      let cursor = await objectStore.openCursor();
+      while (cursor) {
+        const record = cursor.value as Record<string, unknown>;
+        if (!record._companyId) {
+          record._companyId = companyId;
+          await cursor.update(record);
+          totalStamped++;
+        }
+        cursor = await cursor.continue();
       }
-      cursor = await cursor.continue();
+    } catch {
+      // skip stores that fail mid-iteration
     }
   }
   await tx.done;
+  logger.debug(`Stamped ${totalStamped} items`);
 }
 
 export async function getCurrentCompanyId(): Promise<string> {
@@ -389,7 +400,7 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
     if (!cid) return [];
     return all.filter((item: any) => {
         const recordCompany = item?._companyId;
-        return !recordCompany || recordCompany === cid;
+        return recordCompany === cid;
     });
 });
 
@@ -403,7 +414,7 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
     const cid = await getCurrentCompanyId();
     if (!cid) return undefined;
     const recordCompany = (record as Record<string, unknown>)?._companyId;
-    if (recordCompany && recordCompany !== cid) return undefined;
+    if (recordCompany !== cid) return undefined;
     return record;
 });
 
@@ -579,7 +590,9 @@ const STORE_NAMES: (keyof NexusDB)[] = [
     'settings', 'customerNotificationLogs',
     'whatsappChats', 'whatsappTemplates', 'whatsappCampaigns', 'whatsappAutomations',
     'productAttributes',
-    'taxRates'
+    'taxRates',
+    'customerPricingTiers',
+    'discountRules'
 ];
 
 export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {

@@ -77,7 +77,7 @@ export const useDocumentPreview = () => {
       const mappedData = mapToInvoiceData(enrichedData, companyConfig, effectiveType, boms, inventory);
 
       if (openMode === 'print') {
-        console.log('[useDocumentPreview] Starting print generation', { type: effectiveType });
+        logger.debug('[useDocumentPreview] Starting print generation', { type: effectiveType });
         const startTime = performance.now();
 
         const securedData = await attachDocumentSecurity(mappedData as any, companyConfig?.companyName);
@@ -89,7 +89,7 @@ export const useDocumentPreview = () => {
         }) as any).toBlob();
 
         const duration = performance.now() - startTime;
-        console.log('[useDocumentPreview] Print PDF generated', {
+        logger.debug('[useDocumentPreview] Print PDF generated', {
           size: blob.size,
           durationMs: Math.round(duration),
         });

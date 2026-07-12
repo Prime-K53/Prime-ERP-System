@@ -18,6 +18,8 @@ interface NativePdfPreviewProps {
   hideHeader?: boolean;
   onLoadSuccess?: () => void;
   onLoadError?: (error: Error) => void;
+  pdfWidth?: number;
+  pdfHeight?: number;
 }
 
 const previewLog = (event: string, meta?: Record<string, unknown>) => {
@@ -41,6 +43,8 @@ export const NativePdfPreview: React.FC<NativePdfPreviewProps> = ({
   hideHeader = false,
   onLoadSuccess,
   onLoadError,
+  pdfWidth,
+  pdfHeight,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const blobUrlRef = useRef<string | null>(null);
@@ -287,7 +291,7 @@ export const NativePdfPreview: React.FC<NativePdfPreviewProps> = ({
     }
 
     return (
-      <div className={`relative flex h-full flex-col overflow-hidden ${className}`}>
+      <div className={`relative flex flex-col overflow-hidden ${className}`}>
         {slow && phase === 'load' && (
           <div className="z-10 border-b border-amber-200 bg-amber-50 px-4 py-2 text-[10px] text-amber-800">
             Preview is taking longer than expected. If it doesn't load, try downloading it.
@@ -299,7 +303,8 @@ export const NativePdfPreview: React.FC<NativePdfPreviewProps> = ({
             <iframe
               ref={iframeRef}
               src={previewUrl}
-              className="h-full w-full border-none bg-[#b5b0a8]"
+              className="border-none bg-[#b5b0a8]"
+              style={{ width: pdfWidth || '100%', height: pdfHeight || '100%' }}
               title={title}
             />
           )}
@@ -355,7 +360,8 @@ export const NativePdfPreview: React.FC<NativePdfPreviewProps> = ({
           <iframe
             ref={iframeRef}
             src={previewUrl}
-            className="h-full w-full border-none bg-[#b5b0a8]"
+            className="border-none bg-[#b5b0a8]"
+            style={{ width: pdfWidth || '100%', height: pdfHeight || '100%' }}
             title={title}
           />
         )}

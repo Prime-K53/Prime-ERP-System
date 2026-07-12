@@ -1,3 +1,5 @@
+import { logger } from '@/services/logger';
+
 export interface WorkflowTrigger {
   id: string;
   event: string;
@@ -35,7 +37,7 @@ class AutomatedWorkflowService {
 
   registerTrigger(trigger: WorkflowTrigger) {
     this.triggers.set(trigger.id, trigger);
-    console.log(`[Workflow] Registered trigger: ${trigger.event} → ${trigger.action}`);
+    logger.info(`[Workflow] Registered trigger: ${trigger.event} → ${trigger.action}`);
   }
 
   getTriggersForEvent(event: string): WorkflowTrigger[] {
@@ -48,7 +50,7 @@ class AutomatedWorkflowService {
 
     for (const trigger of matchingTriggers) {
       try {
-        console.log(`[Workflow] Firing trigger ${trigger.id}: ${event} → ${trigger.action}`);
+        logger.info(`[Workflow] Firing trigger ${trigger.id}: ${event} → ${trigger.action}`);
         if (trigger.action === 'send_notification') {
           const { notificationService } = await import('./notificationService');
           notificationService.addNotification({
