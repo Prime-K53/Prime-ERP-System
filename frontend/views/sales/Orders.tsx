@@ -1372,26 +1372,26 @@ const Orders: React.FC = () => {
                             { label: 'Annual Profit', value: `${currency}${invoiceStats.annualProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: TrendingUp, color: 'emerald' },
                             { label: 'Outstanding', value: `${currency}${invoiceStats.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: Wallet, color: 'indigo' },
                             { label: 'Overdue Amount', value: `${currency}${invoiceStats.overdue.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: AlertCircle, color: 'rose' }
-                        ].map((item, idx) => (
-                            <div key={idx} className="bg-white/80 backdrop-blur-md border border-slate-200/60 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all group flex items-center gap-3 relative overflow-hidden">
-                                <div className={`p - 2 rounded - xl bg - ${item.color} -50 text - ${item.color} -600 group - hover: scale - 110 transition - transform`}>
-                                    <item.icon size={18} />
+                        ].map((item, idx) => {
+                            const colorMap: Record<string, { border: string, bg: string, text: string }> = {
+                                blue: { border: 'border-l-blue-500', bg: 'bg-blue-50', text: 'text-blue-600' },
+                                emerald: { border: 'border-l-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
+                                indigo: { border: 'border-l-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600' },
+                                rose: { border: 'border-l-rose-500', bg: 'bg-rose-50', text: 'text-rose-600' },
+                            };
+                            const c = colorMap[item.color] || colorMap.blue;
+                            return (
+                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
+                                <div className={`p-2.5 ${c.bg} ${c.text} rounded-lg shrink-0`}>
+                                    <item.icon size={20} />
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">{item.label}</p>
-                                    <p className="text-base font-semibold text-slate-900 tracking-tight">{item.value}</p>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{item.label}</p>
+                                    <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{item.value}</p>
                                 </div>
-                                {idx === 0 && (
-                                    <button
-                                        onClick={() => setShowVisualDashboard(!showVisualDashboard)}
-                                        className="absolute top-2 right-2 p-1 text-slate-300 hover:text-blue-500 transition-colors"
-                                        title="Toggle Visual Analytics"
-                                    >
-                                        <PieChartIcon size={14} />
-                                    </button>
-                                )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </>
                 ) : null}
             </div>

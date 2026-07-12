@@ -2080,7 +2080,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             ? 'text-white border-[#B8863B]'
                                             : 'text-[#5FA8A0] border-transparent'
                                     }`}>
-                                    {entry === 'Printing' ? 'Print Service' : entry}
+                                    {entry === 'Printing' ? (formData.customerName ? `${currency}${getCustomerOutstanding(formData.customerName).toLocaleString()}` : 'Print Service') : entry}
                                 </button>
                             ))}
                         </div>
@@ -2256,11 +2256,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
                         <div className="flex items-center gap-[6px] px-[2px] mb-[11px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
-                                className="inline-flex items-center gap-[3px] px-[8px] py-[4px] text-[11px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
+                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
                                 <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F10</kbd> Photocopy
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
-                                className="inline-flex items-center gap-[3px] px-[8px] py-[4px] text-[11px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
+                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
                                 <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F11</kbd> Type &amp; Print
                             </button>
                         </div>
@@ -2553,7 +2553,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     <Image size={12} />
                                                                 </span>
                                                             )}
-                                                            <span>Quick photocopy</span>
+                                                            <span>{item.name || invItem?.name || item.productName || 'Item'}</span>
                                                         </td>
                                                         <td className="px-3 py-2 text-center text-sm text-slate-800">
                                                             {item.id?.startsWith('QUICK-')

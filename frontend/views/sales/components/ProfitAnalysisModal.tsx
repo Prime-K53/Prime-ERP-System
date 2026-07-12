@@ -100,24 +100,44 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
             
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 shadow-sm">
-                    <div className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2">Net Billings</div>
-                    <div className="text-2xl font-black text-blue-900">{currency}{(analysis.totalRevenue || 0).toLocaleString()}</div>
+            {/* KPI Cards (QBO Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+                        <DollarSign size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Net Billings</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{(analysis.totalRevenue || 0).toLocaleString()}</p>
+                    </div>
                 </div>
-                <div className="p-6 bg-slate-900 rounded-3xl shadow-xl text-white">
-                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2">True COGS</div>
-                    <div className="text-2xl font-black">{currency}{(analysis.totalCost || 0).toLocaleString()}</div>
-                    <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase">Includes Material & Labor</p>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-700 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg shrink-0">
+                        <TrendingUp size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">True COGS</p>
+                        <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{(analysis.totalCost || 0).toLocaleString()}</p>
+                        <p className="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase">Includes Material & Labor</p>
+                    </div>
                 </div>
-                <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 shadow-sm">
-                    <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2">Gross Result</div>
-                    <div className={`text-2xl font-black ${analysis.totalProfit >= 0 ? 'text-emerald-900' : 'text-rose-600'}`}>{currency}{(analysis.totalProfit || 0).toLocaleString()}</div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+                        <BarChart3 size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Gross Result</p>
+                        <p className={`text-lg md:text-xl font-semibold finance-nums ${analysis.totalProfit >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{currency}{(analysis.totalProfit || 0).toLocaleString()}</p>
+                    </div>
                 </div>
-                <div className="p-6 bg-purple-50 rounded-3xl border border-purple-100 shadow-sm">
-                    <div className="text-[10px] font-black text-purple-600 uppercase tracking-[0.2em] mb-2">Net Yield</div>
-                    <div className={`text-2xl font-black ${analysis.totalMargin >= 0 ? 'text-purple-900' : 'text-rose-600'}`}>{ (analysis.totalMargin || 0).toFixed(1) }%</div>
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all duration-200">
+                    <div className="p-2.5 bg-purple-50 text-purple-600 rounded-lg shrink-0">
+                        <PieChart size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Net Yield</p>
+                        <p className={`text-lg md:text-xl font-semibold finance-nums ${analysis.totalMargin >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{ (analysis.totalMargin || 0).toFixed(1) }%</p>
+                    </div>
                 </div>
             </div>
 

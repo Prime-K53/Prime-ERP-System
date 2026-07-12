@@ -422,72 +422,70 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {/* KPI Dashboard Row */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Balance</span>
-              <DollarSign size={16} className="text-blue-600" />
+        {/* KPI Dashboard Row (QBO Style) */}
+        <div className="p-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+              <DollarSign size={20} />
             </div>
-            <div className="text-2xl font-bold text-slate-900 finance-nums">
-              {currency}{kpis.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit">
-              <TrendingUp size={12} />
-              Good Standing
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Balance</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{kpis.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit">
+                <TrendingUp size={10} />
+                Good Standing
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Overdue Balance</span>
-              <AlertTriangle size={16} className="text-rose-500" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg shrink-0">
+              <AlertTriangle size={20} />
             </div>
-            <div className={`text-2xl font-bold finance-nums ${kpis.overdueBalance > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-              {currency}{kpis.overdueBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Overdue Balance</p>
+              <p className={`text-lg md:text-xl font-semibold finance-nums ${kpis.overdueBalance > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{currency}{kpis.overdueBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{customerInvoices.filter(i => i.status === 'Overdue').length} invoices</p>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">Based on {customerInvoices.filter(i => i.status === 'Overdue').length} invoices</p>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Credit Limit</span>
-              <BadgeCheck size={16} className="text-emerald-500" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+              <BadgeCheck size={20} />
             </div>
-            <div className="text-2xl font-bold text-slate-900 finance-nums">
-              {currency}{kpis.creditLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div className="flex-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Credit Limit</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{kpis.creditLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <div className="mt-1.5 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${(kpis.balance / kpis.creditLimit) > 0.8 ? 'bg-rose-500' : 'bg-blue-500'}`}
+                  style={{ width: `${Math.min((kpis.balance / kpis.creditLimit) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{Math.round((kpis.balance / kpis.creditLimit) * 100)}% Utilized</p>
             </div>
-            <div className="mt-2 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${(kpis.balance / kpis.creditLimit) > 0.8 ? 'bg-rose-500' : 'bg-blue-500'}`}
-                style={{ width: `${Math.min((kpis.balance / kpis.creditLimit) * 100, 100)}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">
-              {Math.round((kpis.balance / kpis.creditLimit) * 100)}% Utilized
-            </p>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Outstanding</span>
-              <Clock size={16} className="text-amber-500" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
+              <Clock size={20} />
             </div>
-            <div className={`text-2xl font-bold ${kpis.outstandingBalance > 0 ? 'text-rose-600' : 'text-slate-900'} finance-nums`}>
-              {currency}{(kpis.outstandingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Outstanding</p>
+              <p className={`text-lg md:text-xl font-semibold finance-nums ${kpis.outstandingBalance > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{currency}{(kpis.outstandingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">Open invoices & unpaid</p>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">Open invoices and unpaid amounts</p>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">YTD Purchases</span>
-              <TrendingUp size={16} className="text-blue-600" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+              <TrendingUp size={20} />
             </div>
-            <div className="text-2xl font-bold text-slate-900 finance-nums">
-              {currency}{kpis.ytdSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">YTD Purchases</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{kpis.ytdSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">FY {new Date().getFullYear()}</p>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">FY {new Date().getFullYear()}</p>
           </div>
         </div>
 

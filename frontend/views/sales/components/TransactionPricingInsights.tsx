@@ -14,7 +14,7 @@ const formatMoney = (currencySymbol: string, value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const cardBaseClass = 'rounded-2xl border p-4 shadow-sm';
+
 
 export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProps> = ({
   transaction,
@@ -44,48 +44,46 @@ export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProp
 
       <div className="p-6 space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className={`${cardBaseClass} border-slate-200 bg-slate-50/70`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Material Cost</span>
-              <Layers3 size={16} className="text-slate-400" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
+              <Layers3 size={20} />
             </div>
-            <div className="mt-3 text-xl font-black text-slate-900 tabular-nums">
-              {formatMoney(currencySymbol, summary.materialTotal)}
-            </div>
-          </div>
-
-          <div className={`${cardBaseClass} border-indigo-100 bg-indigo-50/60`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-500">Adjustments</span>
-              <Coins size={16} className="text-indigo-500" />
-            </div>
-            <div className="mt-3 text-xl font-black text-indigo-700 tabular-nums">
-              {formatMoney(currencySymbol, summary.adjustmentTotal)}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Material Cost</p>
+              <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{formatMoney(currencySymbol, summary.materialTotal)}</p>
             </div>
           </div>
 
-          <div className={`${cardBaseClass} border-emerald-100 bg-emerald-50/60`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">Profit Markup</span>
-              <TrendingUp size={16} className="text-emerald-500" />
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+              <Coins size={20} />
             </div>
-            <div className={`mt-3 text-xl font-black tabular-nums ${summary.profitMarginTotal >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-              {formatMoney(currencySymbol, summary.profitMarginTotal)}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Adjustments</p>
+              <p className="text-lg md:text-xl font-semibold text-indigo-700 finance-nums">{formatMoney(currencySymbol, summary.adjustmentTotal)}</p>
             </div>
           </div>
 
-          <div className={`${cardBaseClass} border-blue-100 bg-blue-50/60`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-blue-500">Round Up / Down</span>
-              {summary.roundingTotal >= 0 ? (
-                <ArrowUpRight size={16} className="text-blue-500" />
-              ) : (
-                <ArrowDownRight size={16} className="text-rose-500" />
-              )}
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
+              <TrendingUp size={20} />
             </div>
-            <div className={`mt-3 text-xl font-black tabular-nums ${summary.roundingTotal >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>
-              {summary.roundingTotal >= 0 ? '+' : ''}
-              {formatMoney(currencySymbol, summary.roundingTotal)}
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Profit Markup</p>
+              <p className={`text-lg md:text-xl font-semibold finance-nums ${summary.profitMarginTotal >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatMoney(currencySymbol, summary.profitMarginTotal)}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+              {summary.roundingTotal >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Round Up / Down</p>
+              <p className={`text-lg md:text-xl font-semibold finance-nums ${summary.roundingTotal >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
+                {summary.roundingTotal >= 0 ? '+' : ''}
+                {formatMoney(currencySymbol, summary.roundingTotal)}
+              </p>
             </div>
           </div>
         </div>
