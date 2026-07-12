@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-    Calendar as CalendarIcon, List, DollarSign, TrendingUp, RefreshCw,
-    Play, Pause, Edit2, Trash2, Mail, MoreVertical, CreditCard, CheckCircle, Eye,
-    ChevronLeft, ChevronRight, AlertCircle, ShoppingBag, Clock, Copy, Target, Activity, Zap,
+    Calendar as CalendarIcon, List, DollarSign,
+    Play, Pause, Edit2, Trash2, Mail, MoreVertical, Eye,
+    ChevronLeft, ChevronRight, AlertCircle, ShoppingBag, Clock, Copy, Activity, Zap,
     ArrowUpRight, ShieldCheck, User, ArrowRight, Wallet, Layout, Box, History as HistoryIcon, PlayCircle,
     Download
 } from 'lucide-react';
@@ -84,32 +84,11 @@ const useContextMenu = () => {
 const SubscriptionView: React.FC<SubscriptionViewProps> = ({ data, onEdit, onView, onDelete, onAction }) => {
     const { companyConfig } = useAuth(); const { invoices } = useFinance(); const { runRecurringBilling } = useSales();
     const { handlePreview } = useDocumentPreview();
-    const currency = companyConfig.currencySymbol;
     const [viewMode, setViewMode] = useState<'List' | 'Grid' | 'Calendar'>('List');
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isRunningBilling, setIsRunningBilling] = useState(false);
     const { openMenuId, menuPos, menuRef, handleContextMenu, setOpenMenuId } = useContextMenu();
     const { hoveredId, hoverPos, onMouseEnter, onMouseMove, onMouseLeave } = useHoverTimer(2000);
-
-    const stats = useMemo(() => {
-        let mrr = 0;
-        let activeCount = 0;
-        let totalSubscriptions = (data || []).length;
-        let upcomingTotal = 0;
-
-        (data || []).forEach(sub => {
-            if (sub.status === 'Active') {
-                activeCount++;
-                upcomingTotal += sub.total;
-                let monthlyVal = sub.total;
-                if (sub.frequency === 'Weekly') monthlyVal = sub.total * 4.33;
-                else if (sub.frequency === 'Quarterly') monthlyVal = sub.total / 3;
-                else if (sub.frequency === 'Annually') monthlyVal = sub.total / 12;
-                mrr += monthlyVal;
-            }
-        });
-        return { mrr, activeCount, upcomingTotal, totalSubscriptions, arr: mrr * 12 };
-    }, [data]);
 
     const handleRunBilling = async () => {
         setIsRunningBilling(true);
@@ -197,47 +176,6 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ data, onEdit, onVie
             {openMenuId && menuPos && currentSub && renderMenu(currentSub)}
             {hoveredId && hoverPos && hoveredSub && <HoverActionMenu id={hoveredId} type="Subscription" pos={hoverPos} data={hoveredSub} />}
             <div className="flex flex-col h-full space-y-6 print-force-white relative font-normal">
-
-            {/* Stats Header */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
-                <div className="bg-white/80 backdrop-blur-md p-4 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                        <TrendingUp size={24} />
-                    </div>
-                    <div className="font-normal">
-                        <p className="text-[12px] font-normal text-slate-400 uppercase tracking-widest">Est. MRR</p>
-                        <p className="text-base font-semibold text-slate-900">{currency}{stats.mrr.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                    </div>
-                </div>
-                <div className="bg-white/80 backdrop-blur-md p-4 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                        <RefreshCw size={24} />
-                    </div>
-                    <div className="font-normal">
-                        <p className="text-[12px] font-normal text-slate-400 uppercase tracking-widest">Active Plans</p>
-                        <p className="text-base font-semibold text-slate-900">{stats.activeCount}</p>
-                    </div>
-                </div>
-                <div className="bg-white/80 backdrop-blur-md p-4 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
-                        <CheckCircle size={24} />
-                    </div>
-                    <div className="font-normal">
-                        <p className="text-[12px] font-normal text-slate-400 uppercase tracking-widest">Next Run Value</p>
-                        <p className="text-base font-semibold text-slate-900">{currency}{stats.upcomingTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                    </div>
-                </div>
-                <div className="bg-slate-900 p-4 rounded-[2rem] shadow-xl flex items-center gap-4 text-white overflow-hidden relative font-normal">
-                    <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Target size={80} /></div>
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
-                        <Target size={24} />
-                    </div>
-                    <div>
-                        <p className="text-[12px] font-normal text-blue-400 uppercase tracking-widest">ARR Projection</p>
-                        <p className="text-base font-semibold">{currency}{(stats.arr / 1000).toFixed(1)}k</p>
-                    </div>
-                </div>
-            </div>
 
             {/* Content Area */}
             <div className="flex-1 bg-white/70 backdrop-blur-xl rounded-3xl shadow-sm border border-white/60 flex flex-col overflow-hidden min-h-0 print:bg-white print:border-none print:shadow-none font-normal">
