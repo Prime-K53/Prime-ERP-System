@@ -1176,13 +1176,7 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                 <button onClick={() => { setOpenMenuId(null); handlePreview('QUOTATION', quote); }} className="w-full text-left px-4 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 flex items-center gap-3 transition-colors">
                     <Eye size={14} /> Preview PDF Quotation
                 </button>
-                <button onClick={() => { setOpenMenuId(null); handlePreview('PO', quote); }} className="w-full text-left px-4 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                    <ShoppingBag size={14} /> Preview Purchase Order
-                </button>
                 <button onClick={() => { setOpenMenuId(null); props.onAction && props.onAction(quote, 'download_pdf'); }} className="w-full text-left px-4 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 flex items-center gap-3 transition-colors"><Download size={14} /> Download PDF Quotation</button>
-                <button onClick={() => { setOpenMenuId(null); handlePreview('WORK_ORDER', quote); }} className="w-full text-left px-4 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50 flex items-center gap-3 transition-colors">
-                    <Briefcase size={14} /> Preview Work Order
-                </button>
                 <button onClick={() => { setOpenMenuId(null); handlePreview('DELIVERY_NOTE', quote); }} className="w-full text-left px-4 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 flex items-center gap-3 transition-colors">
                     <Truck size={14} /> Preview Delivery Note
                 </button>

@@ -261,7 +261,7 @@ export const ExchangeDetailsModal: React.FC<ExchangeDetailsModalProps> = ({ exch
 
                 {(exchange.status === 'approved' || exchange.status === 'completed') && (
                   <button
-                    onClick={() => handlePreview('SALES_EXCHANGE', exchange)}
+                    onClick={() => { onClose(); handlePreview('SALES_EXCHANGE', exchange); }}
                     className="w-full py-4 bg-white border-2 border-indigo-600 text-indigo-600 rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center group"
                   >
                     PRINT EXCHANGE NOTE

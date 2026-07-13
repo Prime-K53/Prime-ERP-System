@@ -139,14 +139,6 @@ const DataImport: React.FC = () => {
               const validation = itemType !== 'Stationery'
                 ? validateMinimumMarkup(sellingPriceVal, costPriceVal)
                 : { valid: true, profit: 0, profitMarkup: 0, minimumMarkup: 0 };
-              if (!validation.valid) {
-                rejected.push({
-                  ...row,
-                  status: 'Rejected',
-                  message: `Markup (${validation.profitMarkup.toFixed(1)}%) below minimum (${validation.minimumMarkup}%). Minimum SP: ${((costPriceVal || 0) * (1 + validation.minimumMarkup / 100)).toFixed(2)}`
-                });
-                continue;
-              }
               const meta = typeMeta[itemType] || typeMeta['Product'];
               const item: Item = {
                 id: row.ID || row.id || generateNextId('item', currentInventory, companyConfig),
@@ -159,7 +151,7 @@ const DataImport: React.FC = () => {
                 profitAmount: validation.profit,
                 profitMargin: validation.profitMarkup,
                 minimumMargin: validation.minimumMarkup,
-                pricingValidated: true,
+                pricingValidated: validation.valid,
                 validationTimestamp: new Date().toISOString(),
                 stock: Number(row.Stock || row.stock || 0),
                 minStockLevel: Number(row.MinStock || row.minStock || 10),
@@ -173,7 +165,11 @@ const DataImport: React.FC = () => {
               };
               await addItem(item);
               currentInventory.push(item);
-              accepted.push({ ...row, status: 'Accepted', message: 'Successfully imported' });
+              if (!validation.valid) {
+                accepted.push({ ...row, status: 'Accepted', message: `Imported with low margin (${validation.profitMarkup.toFixed(1)}% vs min ${validation.minimumMarkup}%)` });
+              } else {
+                accepted.push({ ...row, status: 'Accepted', message: 'Successfully imported' });
+              }
             } else {
               rejected.push({ ...row, status: 'Rejected', message: 'Missing Name field' });
             }
@@ -250,14 +246,6 @@ const DataImport: React.FC = () => {
                 const validation = itemType !== 'Stationery'
                   ? validateMinimumMarkup(sellingPriceVal, costPriceVal, existing)
                   : { valid: true, profit: 0, profitMarkup: 0, minimumMarkup: 0 };
-                if (!validation.valid) {
-                  rejected.push({
-                    ...row,
-                    status: 'Rejected',
-                    message: `Markup (${validation.profitMarkup.toFixed(1)}%) below minimum (${validation.minimumMarkup}%). Minimum SP: ${((costPriceVal || 0) * (1 + validation.minimumMarkup / 100)).toFixed(2)}`
-                  });
-                  continue;
-                }
                 const meta = typeMeta[itemType] || typeMeta['Product'];
                 const updatedItem: Item = {
                   ...existing,
@@ -270,7 +258,7 @@ const DataImport: React.FC = () => {
                   profitAmount: validation.profit,
                   profitMargin: validation.profitMarkup,
                   minimumMargin: validation.minimumMarkup,
-                  pricingValidated: true,
+                  pricingValidated: validation.valid,
                   validationTimestamp: new Date().toISOString(),
                   stock: Number(row.Stock || row.stock || existing.stock || 0),
                   minStockLevel: Number(row.MinStock || row.minStock || existing.minStockLevel || 10),
@@ -282,7 +270,11 @@ const DataImport: React.FC = () => {
                   resourceSubtype: meta.resourceSubtype,
                 };
                 await updateItem(updatedItem);
-                accepted.push({ ...row, status: 'Updated', message: 'Successfully updated' });
+                if (!validation.valid) {
+                  accepted.push({ ...row, status: 'Updated', message: `Updated with low margin (${validation.profitMarkup.toFixed(1)}% vs min ${validation.minimumMarkup}%)` });
+                } else {
+                  accepted.push({ ...row, status: 'Updated', message: 'Successfully updated' });
+                }
               } else {
                 rejected.push({ ...row, status: 'Skipped', message: 'Product not found - no matching record to update' });
               }

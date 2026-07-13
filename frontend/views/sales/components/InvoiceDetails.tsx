@@ -187,7 +187,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                 <Truck size={16} /> Generate delivery note
                             </button>
                         )}
-                        <button onClick={() => handlePreview(isSubscription ? 'SUBSCRIPTION' : (isExaminationInvoice ? 'EXAMINATION_INVOICE' : 'INVOICE'), enrichedInvoice)} className="p-2 hover:bg-blue-50 bg-blue-50/30 border border-blue-200/60 rounded-lg text-blue-600 transition-all shadow-sm" title="Preview PDF">
+                        <button onClick={() => { onClose(); handlePreview(isSubscription ? 'SUBSCRIPTION' : (isExaminationInvoice ? 'EXAMINATION_INVOICE' : 'INVOICE'), enrichedInvoice); }} className="p-2 hover:bg-blue-50 bg-blue-50/30 border border-blue-200/60 rounded-lg text-blue-600 transition-all shadow-sm" title="Preview PDF">
                             <Eye size={18} />
                         </button>
                         <button onClick={() => onAction(invoice, 'download_pdf')} className="p-2 hover:bg-blue-50 bg-blue-50/30 border border-blue-200/60 rounded-lg text-blue-600 transition-all shadow-sm" title="Download PDF">

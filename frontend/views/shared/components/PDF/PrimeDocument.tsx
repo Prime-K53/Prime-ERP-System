@@ -1793,16 +1793,16 @@ if (type === 'POS_RECEIPT') {
                   <View style={s.summaryRight}>
                     <View style={s.summaryBox}>
                       <View style={s.summaryRow}>
-                        <Text style={{ fontWeight: 'bold' }}>{type === 'QUOTATION' ? 'Quoted Amount' : 'Subtotal'}</Text>
-                        <Text>{currency} {formatAmount('subtotal' in data ? data.subtotal : 0)}</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold' }}>{type === 'QUOTATION' ? 'Quoted Amount' : 'Subtotal'}</Text>
+                        <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('subtotal' in data ? data.subtotal : 0)}</Text>
                       </View>
 
                       {/* Total before payments - Hidden on Invoices, Orders, and Quotations */}
                       {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
-                        <View style={s.summaryRow}>
-                          <Text style={{ fontWeight: 'bold' }}>Total Amount</Text>
-                          <Text>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
-                        </View>
+                      <View style={s.summaryRow}>
+                        <Text style={{ fontWeight: 'bold' }}>Total Amount</Text>
+                        <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
+                      </View>
                       )}
 
                       {/* Amount Paid - Hidden on Quotations */}
@@ -1826,7 +1826,7 @@ if (type === 'POS_RECEIPT') {
                       {type === 'SUBSCRIPTION' && (
                         <View style={s.totalRow}>
                           <Text>Recurring Total</Text>
-                          <Text>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
+                          <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
                         </View>
                       )}
                     </View>

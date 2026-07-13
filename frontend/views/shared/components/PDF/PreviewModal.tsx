@@ -12,6 +12,7 @@ import { hydrateCompanyPdfAssets } from '../../../../utils/companyAssetUtils';
 import { downloadPdfSource, getPdfErrorMessage, type PDFPreviewSource, resolvePdfFilePreviewSource } from './pdfPreviewUtils';
 import { validateDocumentData } from './documentValidation';
 import { getDeviceProfile } from '../../../../utils/documentPreview';
+import { Z_LAYERS } from '../../../../constants/layers';
 
 const ZOOM_PRESETS = [0.75, 1, 1.25, 1.5] as const;
 const ZOOM_STEP = 0.1;
@@ -292,7 +293,7 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
   const hasContent = !!blobUrl;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#f3f0ea] dark:bg-slate-900 animate-in fade-in duration-200">
+    <div className="fixed inset-0 flex flex-col bg-[#f3f0ea] dark:bg-slate-900 animate-in fade-in duration-200" style={{ zIndex: Z_LAYERS.GLOBAL_PREVIEW }}>
       {/* Top Navigation */}
       <header className="flex shrink-0 items-center justify-between border-b border-[#d7d1c7] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-5 py-2 sm:py-3 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">

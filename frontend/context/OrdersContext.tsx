@@ -114,6 +114,7 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const newOrder: Order & Record<string, any> = {
         id: generateNextId('ORD', orders),
+        idempotencyKey: crypto.randomUUID(),
         orderNumber,
         customerId: '', // Quotation might not have customerId directly, we might need to look it up by name
         customerName: quotation.customerName,
@@ -185,6 +186,7 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const newOrder: Order = {
         id: generateNextId('ORD', orders),
+        idempotencyKey: crypto.randomUUID(),
         orderNumber,
         customerId: data.customerId || '',
         customerName: data.customerName || 'Walking Customer',

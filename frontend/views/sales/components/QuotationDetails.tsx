@@ -193,7 +193,7 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Document Actions</h3>
 
                   <button
-                    onClick={() => handlePreview('QUOTATION', quotation)}
+                    onClick={() => { onClose(); handlePreview('QUOTATION', quotation); }}
                     className="w-full px-4 py-3 bg-blue-600 text-white rounded-2xl text-[13px] font-bold tracking-tight hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100"
                   >
                     <Eye size={18} /> Preview Quotation

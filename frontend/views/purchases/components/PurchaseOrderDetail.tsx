@@ -181,7 +181,7 @@ const PurchaseOrderDetail: React.FC<PurchaseOrderDetailProps> = ({ purchase, sup
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => handlePreview('PO', purchaseWithVendor)} className="p-3 hover:bg-blue-50 bg-blue-50/30 border border-blue-200/60 rounded-2xl text-blue-600 transition-all shadow-sm" title="Preview PDF">
+                        <button onClick={() => { onClose(); handlePreview('PO', purchaseWithVendor); }} className="p-3 hover:bg-blue-50 bg-blue-50/30 border border-blue-200/60 rounded-2xl text-blue-600 transition-all shadow-sm" title="Preview PDF">
                             <Eye size={20} />
                         </button>
                         <button onClick={handleDownloadPDF} className="p-3 hover:bg-slate-50 bg-slate-100/50 border border-slate-200/60 rounded-2xl text-slate-600 transition-all shadow-sm" title="Download PDF">

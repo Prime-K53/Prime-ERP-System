@@ -160,6 +160,19 @@ class AIService {
     }
   }
 
+  async extractFileData(fileBase64: string, systemPrompt: string, userPrompt: string): Promise<string> {
+    try {
+      const messages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: [{ type: 'text', text: userPrompt }, { type: 'image_url', image_url: { url: fileBase64 } }] },
+      ];
+      return await this.provider.generateChat(messages, this.cfg({ model: 'openai/gpt-4o' }));
+    } catch (error) {
+      logger.error('File Extraction Error:', error);
+      throw error;
+    }
+  }
+
   async performOCR(images: string[], prompt?: string): Promise<string> {
     try {
       return await this.provider.generateChat(buildMultiImageMessages(images, prompt || P.OCR_DEFAULT_PROMPT), this.cfg({ model: 'deepseek/deepseek-r1:free' }));

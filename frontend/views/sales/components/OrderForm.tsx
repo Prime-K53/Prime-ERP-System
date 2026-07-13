@@ -31,7 +31,7 @@ import { useOrderFormAI, AISuggestionItem, AIPriceOptimisation, AIFraudFlag } fr
 import InventoryTransactionHistory from '../../inventory/components/InventoryTransactionHistory';
 import { OfflineImage } from '../../../components/OfflineImage';
 import { currencyService } from '../../../services/currencyService';
-
+import { AIGeneratorCard } from '../../../components/AIGeneratorCard';
 
 interface OrderFormProps {
     type: string;
@@ -41,36 +41,6 @@ interface OrderFormProps {
     onPreview?: () => void;
     saving?: boolean;
 }
-
-type QuotationWorkflowType = 'General' | 'Printing';
-
-type PrintServiceJob = {
-    id: string;
-    jobName: string;
-    paperSize: string;
-    colorMode: 'bw' | 'color';
-    sides: 'single' | 'duplex';
-    quantity: number;
-    pricePerUnit: number;
-    finishing: string[];
-};
-
-type PrintQuotationDetails = {
-    jobs: PrintServiceJob[];
-};
-
-const createPrintJobId = () => `PRINT-JOB-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const createEmptyPrintJob = (): PrintServiceJob => ({
-    id: createPrintJobId(),
-    jobName: '',
-    paperSize: 'A4',
-    colorMode: 'bw',
-    sides: 'single',
-    quantity: 1,
-    pricePerUnit: 0,
-    finishing: []
-});
 
 const RECURRING_STATUSES = ['Draft', 'Active', 'Paused', 'Cancelled', 'Expired'] as const;
 
@@ -140,80 +110,6 @@ const normalizeOtherCharges = (items: any[] = []): { items: any[]; otherChargesC
     return { items: normalized, otherChargesCalculated: roundToCurrency(totalAdj) };
 };
 
-const PAPER_SIZES = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Tabloid', 'Custom'];
-const COLOR_MODE_OPTIONS = [
-    { value: 'bw', label: 'Black & White', pricePerUnit: 0 },
-    { value: 'color', label: 'Full Color', pricePerUnit: 0 }
-];
-const SIDES_OPTIONS = [
-    { value: 'single', label: 'Single Sided' },
-    { value: 'duplex', label: 'Double Sided (Duplex)' }
-];
-
-const normalizePrintQuotationDetails = (raw: any): PrintQuotationDetails => {
-    const rawJobs = Array.isArray(raw?.jobs) ? raw.jobs : [];
-    const jobs = rawJobs.length > 0
-        ? rawJobs.map((entry: any) => ({
-            id: String(entry?.id || createPrintJobId()),
-            jobName: String(entry?.jobName || entry?.job_name || '').trim(),
-            paperSize: String(entry?.paperSize || entry?.paper_size || 'A4').trim() || 'A4',
-            colorMode: (entry?.colorMode === 'color' ? 'color' : 'bw') as 'bw' | 'color',
-            sides: (entry?.sides === 'duplex' ? 'duplex' : 'single') as 'single' | 'duplex',
-            quantity: Math.max(1, Math.floor(Number(entry?.quantity) || 1)),
-            pricePerUnit: Math.max(0, Number(entry?.pricePerUnit || entry?.price_per_unit) || 0),
-            finishing: Array.isArray(entry?.finishing) ? entry.finishing.map(String) : []
-        }))
-        : [createEmptyPrintJob()];
-
-    return { jobs };
-};
-
-const FINISHING_OPTIONS = ['Stapling', 'Binding', 'Lamination', 'Hole Punch', 'Folding', 'Cutting', 'Scoring', 'Padding'];
-
-const buildPrintQuotationItems = (details: PrintQuotationDetails): CartItem[] => {
-    return details.jobs
-        .map((job) => {
-            const name = String(job.jobName || '').trim();
-            const qty = Math.max(1, Math.floor(Number(job.quantity) || 1));
-            const price = roundToCurrency(Math.max(0, Number(job.pricePerUnit) || 0));
-
-            if (!name || price <= 0) {
-                return null;
-            }
-
-            const lineTotal = roundToCurrency(qty * price);
-
-            return {
-                id: job.id,
-                itemId: job.id,
-                sku: `PRINT-${job.colorMode === 'color' ? 'CLR' : 'BW'}-${job.paperSize}`,
-                name: `${name}`,
-                description: `${qty} x ${job.paperSize} ${job.colorMode === 'color' ? 'Color' : 'B&W'} ${job.sides === 'duplex' ? 'Duplex' : 'Single'}`,
-                quantity: qty,
-                price: price,
-                unitPrice: price,
-                basePrice: price,
-                cost: 0,
-                category: 'Printing',
-                type: 'Service',
-                unit: 'copy',
-                minStockLevel: 0,
-                stock: 0,
-                lineTotalNet: lineTotal,
-                adjustmentSnapshots: [],
-                serviceDetails: {
-                    mode: 'PRINTING_QUOTATION',
-                    jobName: name,
-                    paperSize: job.paperSize,
-                    colorMode: job.colorMode,
-                    sides: job.sides,
-                    finishing: job.finishing
-                }
-            } as CartItem;
-        })
-        .filter(Boolean) as CartItem[];
-};
-
 export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave, onCancel, onPreview, saving }) => {
     const { companyConfig, notify, user } = useAuth();
     const { invoices, recurringInvoices, accounts } = useFinance();
@@ -265,8 +161,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         paymentMethod: 'Cash',
         tax: 0,
         taxRate: 0,
-        quotationType: 'General' as QuotationWorkflowType,
-        printQuotationDetails: normalizePrintQuotationDetails(null),
         customerPricingTier: '',
         customerPricingSegment: '',
         referenceDoc: ''
@@ -412,7 +306,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [localUnlock, setLocalUnlock] = useState(false);
     const isQuotation = type === 'Quotation';
     const isRecurring = type === 'Recurring';
-    const isPrintingQuotation = isQuotation && formData.quotationType === 'Printing';
     const primaryActionLabel = isRecurring
         ? (isEditing
             ? 'Update Subscription'
@@ -420,29 +313,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 ? 'Create & Activate Subscription'
                 : 'Save Subscription')
         : (isEditing ? 'Commit Secure Patch' : 'Post & Seal Voucher');
-    const printQuotationDetails = useMemo(
-        () => normalizePrintQuotationDetails(formData.printQuotationDetails),
-        [formData.printQuotationDetails]
-    );
-    const generatedPrintItems = useMemo(
-        () => buildPrintQuotationItems(printQuotationDetails),
-        [printQuotationDetails]
-    );
-    const quotationLineItems = useMemo(
-        () => (isPrintingQuotation ? generatedPrintItems : formData.items),
-        [formData.items, generatedPrintItems, isPrintingQuotation]
-    );
     const manualOverrideItems = useMemo(
-        () => (isPrintingQuotation ? [] : (Array.isArray(formData.items) ? formData.items.filter((entry: any) => !entry?.isVariantParent) : [])),
-        [formData.items, isPrintingQuotation]
+        () => (Array.isArray(formData.items) ? formData.items.filter((entry: any) => !entry?.isVariantParent) : []),
+        [formData.items]
     );
     const selectedManualOverrideItem = useMemo(
         () => manualOverrideItems.find((entry: any) => entry.id === selectedManualOverrideItemId) || manualOverrideItems[0] || null,
         [manualOverrideItems, selectedManualOverrideItemId]
-    );
-    const printJobCount = useMemo(
-        () => printQuotationDetails.jobs.reduce((sum, job) => sum + Math.max(0, Math.floor(Number(job.quantity) || 0)), 0),
-        [printQuotationDetails]
     );
     const getPricingDisplayMeta = (label: string) => {
         const normalized = String(label || '').toLowerCase();
@@ -749,77 +626,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         });
     }, [customers, formData.customerName, formData.date, formData.subAccountName, type]);
 
-    const releaseReservedItems = (items: CartItem[]) => {
-        items.forEach((item: any) => {
-            const itemId = item.parentId || item.id;
-            const variantId = item.parentId ? item.id : undefined;
-            if (item.type !== 'Service') {
-                updateReservedStock(itemId, -(item.quantity || 0), `Quotation type changed`, variantId);
-            }
-        });
-    };
-
-    const handleQuotationTypeChange = (nextType: QuotationWorkflowType) => {
-        if (!isQuotation || formData.quotationType === nextType) return;
-
-        if (Array.isArray(formData.items) && formData.items.length > 0) {
-            releaseReservedItems(formData.items);
-        }
-
-        setFormData((prev: any) => ({
-            ...prev,
-            quotationType: nextType,
-            items: [],
-            printQuotationDetails: normalizePrintQuotationDetails(prev.printQuotationDetails)
-        }));
-    };
-
-    const updatePrintQuotationDetails = (updater: (prev: PrintQuotationDetails) => PrintQuotationDetails) => {
-        setFormData((prev: any) => ({
-            ...prev,
-            printQuotationDetails: updater(normalizePrintQuotationDetails(prev.printQuotationDetails))
-        }));
-    };
-
-    const handleAddPrintJob = () => {
-        updatePrintQuotationDetails((prev) => ({
-            ...prev,
-            jobs: [...prev.jobs, createEmptyPrintJob()]
-        }));
-    };
-
-    const handleUpdatePrintJob = (jobId: string, field: keyof PrintServiceJob, value: any) => {
-        updatePrintQuotationDetails((prev) => ({
-            ...prev,
-            jobs: prev.jobs.map((job) => {
-                if (job.id !== jobId) return job;
-                if (field === 'finishing') {
-                    return { ...job, finishing: Array.isArray(value) ? value : [] };
-                }
-                if (field === 'colorMode') {
-                    return { ...job, colorMode: value === 'color' ? 'color' : 'bw' };
-                }
-                if (field === 'sides') {
-                    return { ...job, sides: value === 'duplex' ? 'duplex' : 'single' };
-                }
-                if (field === 'quantity' || field === 'pricePerUnit') {
-                    return { ...job, [field]: Math.max(0, Number(value) || 0) };
-                }
-                return { ...job, [field]: value };
-            })
-        }));
-    };
-
-    const handleRemovePrintJob = (jobId: string) => {
-        updatePrintQuotationDetails((prev) => {
-            const remaining = prev.jobs.filter((job) => job.id !== jobId);
-            return {
-                ...prev,
-                jobs: remaining.length > 0 ? remaining : [createEmptyPrintJob()]
-            };
-        });
-    };
-
     const analysis = useMemo(() => {
         let totalGross = 0;
         let totalNet = 0;
@@ -827,7 +633,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         let totalQty = 0;
         const adjustmentBreakdown: Record<string, number> = {};
 
-        const processedItems = quotationLineItems.map((item: CartItem) => {
+        const processedItems = (Array.isArray(formData.items) ? formData.items : []).map((item: CartItem) => {
             totalQty += item.quantity || 0;
             const lineBase = (Number(item.basePrice || item.price) || 0) * item.quantity;
             totalNet += lineBase;
@@ -897,7 +703,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             totalQty,
             totalItems: processedItems.length,
         };
-    }, [quotationLineItems, formData.discount, formData.otherCharges, formData.customerPricingTier, inventory, marketAdjustments, companyConfig, calculatedOtherCharges]);
+    }, [formData.items, formData.discount, formData.otherCharges, formData.customerPricingTier, inventory, marketAdjustments, companyConfig, calculatedOtherCharges]);
 
     const finalDisplayTotal = analysis.totalAmount;
     const orderedAdjustmentEntries = useMemo(() => {
@@ -974,8 +780,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 nextRunDate: isRecurring
                     ? normalizeDateInputValue(initialData.nextRunDate || getDefaultRecurringNextRunDate(initialData.frequency || prev.frequency, initialData.startDate || initialData.date || prev.startDate))
                     : initialData.nextRunDate || prev.nextRunDate,
-                quotationType: initialData.quotationType || 'General',
-                printQuotationDetails: normalizePrintQuotationDetails(initialData.printQuotationDetails || initialData.examinationDetails),
                 referenceDoc: initialData.referenceDoc || ''
             }));
             setCustomerSearch(initialData.customerName || '');
@@ -1087,21 +891,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         if (isRecurring && formData.endDate && new Date(formData.endDate).getTime() < new Date(formData.startDate).getTime()) {
             notify("End date cannot be earlier than the subscription start date.", "error");
             return;
-        }
-
-        let normalizedPrintDetails = printQuotationDetails;
-        if (isPrintingQuotation) {
-            normalizedPrintDetails = normalizePrintQuotationDetails(formData.printQuotationDetails);
-            const validJobs = normalizedPrintDetails.jobs.filter((job) =>
-                String(job.jobName || '').trim() && Math.max(0, Number(job.pricePerUnit) || 0) > 0
-            );
-
-            if (validJobs.length === 0) {
-                notify("Add at least one print job with a name and price per unit.", "error");
-                return;
-            }
-
-            normalizedPrintDetails = { jobs: validJobs };
         }
 
         let resolvedCustomerName = formData.customerName.trim();
@@ -1311,8 +1100,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 ? normalizeDateInputValue(formData.nextRunDate || getDefaultRecurringNextRunDate(formData.frequency || 'Monthly', formData.startDate || formData.date))
                 : formData.nextRunDate,
             createdBy: user?.name || user?.username || 'System User',
-            quotationType: isPrintingQuotation ? 'Printing' : 'General',
-            printQuotationDetails: isPrintingQuotation ? normalizedPrintDetails : null,
             referenceDoc: formData.referenceDoc || ''
         };
 
@@ -2071,21 +1858,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         </div>
                     )}
 
-                    {isQuotation && (
-                        <div className="flex gap-[4px] mb-[14px] border-b border-[rgba(255,255,255,0.12)]">
-                            {(['General', 'Printing'] as QuotationWorkflowType[]).map(entry => (
-                                <button key={entry} type="button" onClick={() => handleQuotationTypeChange(entry)}
-                                    className={`bg-none border-none text-[12.5px] font-semibold px-[4px] pt-[7px] pb-[8px] mr-[16px] cursor-pointer border-b-2 transition-colors ${
-                                        formData.quotationType === entry
-                                            ? 'text-white border-[#B8863B]'
-                                            : 'text-[#5FA8A0] border-transparent'
-                                    }`}>
-                                    {entry === 'Printing' ? (formData.customerName ? `${currency}${getCustomerOutstanding(formData.customerName).toLocaleString()}` : 'Print Service') : entry}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
                     <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Customer</label>
                         <div className="relative" ref={customerDropdownRef}>
@@ -2377,86 +2149,91 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </a>
                         </div>
 
-                        {isPrintingQuotation && (
-                            <div className="bg-[#FEFDFB] border border-[#D4CFC2]">
-                                <div className="bg-[#102B28] px-[14px] py-[9px] flex items-center justify-between text-white">
-                                    <div className="flex items-center gap-2">
-                                        <FileText size={16} />
-                                        <span className="text-sm font-semibold">Print Service Quotation</span>
-                                    </div>
-                                    <span className="text-xs text-indigo-200">{printJobCount.toLocaleString()} total copies</span>
-                                </div>
-                                <div className="p-3 space-y-2">
-                                    {printQuotationDetails.jobs.map((job, index) => (
-                                        <div key={job.id} className="border border-slate-200 rounded-lg p-3 space-y-2 hover:border-slate-300 transition-colors">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-semibold text-slate-500">Job #{index + 1}</span>
-                                                <button onClick={() => handleRemovePrintJob(job.id)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
-                                            </div>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                <div>
-                                                    <label className="text-[10px] text-slate-500 font-medium">Job Name</label>
-                                                    <input type="text" value={job.jobName} onChange={e => handleUpdatePrintJob(job.id, 'jobName', e.target.value)} className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" placeholder="e.g. Brochures" />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] text-slate-500 font-medium">Paper Size</label>
-                                                    <select value={job.paperSize} onChange={e => handleUpdatePrintJob(job.id, 'paperSize', e.target.value)} className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors">
-                                                        {PAPER_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] text-slate-500 font-medium">Qty</label>
-                                                    <input type="number" min={1} value={job.quantity || ''} onChange={e => handleUpdatePrintJob(job.id, 'quantity', e.target.value)} className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] text-slate-500 font-medium">Price/Unit</label>
-                                                    <input type="number" min={0} step="0.01" value={job.pricePerUnit || ''} onChange={e => handleUpdatePrintJob(job.id, 'pricePerUnit', e.target.value)} className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors" />
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-[10px] text-slate-500">Color:</span>
-                                                    {COLOR_MODE_OPTIONS.map(opt => (
-                                                        <button key={opt.value} type="button" onClick={() => handleUpdatePrintJob(job.id, 'colorMode', opt.value)}
-                                                            className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${job.colorMode === opt.value ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                                            {opt.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-[10px] text-slate-500">Sides:</span>
-                                                    {SIDES_OPTIONS.map(opt => (
-                                                        <button key={opt.value} type="button" onClick={() => handleUpdatePrintJob(job.id, 'sides', opt.value)}
-                                                            className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${job.sides === opt.value ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                                                            {opt.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <div className="flex items-center gap-1 flex-1">
-                                                    <span className="text-[10px] text-slate-500">Finishing:</span>
-                                                    {FINISHING_OPTIONS.map(opt => {
-                                                        const isSelected = job.finishing.includes(opt);
-                                                        return (
-                                                            <button key={opt} type="button" onClick={() => {
-                                                                const next = isSelected ? job.finishing.filter(f => f !== opt) : [...job.finishing, opt];
-                                                                handleUpdatePrintJob(job.id, 'finishing', next);
-                                                            }} className={`px-1.5 py-0.5 text-[10px] rounded border transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}>
-                                                                {opt}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                            <div className="text-right text-xs">
-                                                <span className="text-slate-500">{job.quantity} x {currency}{job.pricePerUnit.toFixed(2)} = </span>
-                                                <span className="font-semibold text-indigo-700">{currency}{(job.quantity * job.pricePerUnit).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <button onClick={handleAddPrintJob} className="w-full py-2 text-xs font-medium text-indigo-600 border-2 border-dashed border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1">
-                                        <Plus size={13} /> Add Print Job
-                                    </button>
-                                </div>
+                        {(type === 'Quotation' || type === 'Invoice') && (
+                            <div className="mb-4">
+                                <AIGeneratorCard
+                                    type={type}
+                                    onPopulate={(data) => {
+                                        const normalize = (s: string) => s.toLowerCase().replace(/s$/, '');
+                                        const matchedItems = data.items.map((item, idx) => {
+                                            const desc = item.description.toLowerCase();
+                                            const match = inventory.find((inv: any) => {
+                                                const invName = inv.name?.toLowerCase() || '';
+                                                return invName === desc ||
+                                                    invName.includes(desc) ||
+                                                    desc.includes(invName) ||
+                                                    normalize(invName) === normalize(desc) ||
+                                                    normalize(invName).includes(normalize(desc)) ||
+                                                    normalize(desc).includes(normalize(invName));
+                                            });
+                                            if (match) {
+                                                return {
+                                                    id: `AI-${Date.now()}-${idx}`,
+                                                    name: match.name,
+                                                    description: item.description,
+                                                    productId: match.id,
+                                                    sku: match.sku || '',
+                                                    quantity: item.quantity,
+                                                    price: item.unitPrice,
+                                                    unitPrice: item.unitPrice,
+                                                    cost: match.cost || 0,
+                                                    type: match.type || 'Service',
+                                                    category: match.category || 'Service',
+                                                    discount: 0,
+                                                    taxRate: item.taxRate,
+                                                    adjustmentSnapshots: [],
+                                                    lineTotalNet: item.quantity * item.unitPrice,
+                                                };
+                                            }
+                                            const similar = inventory.find((inv: any) => {
+                                                const a = inv.name?.toLowerCase() || '';
+                                                const words = desc.split(/\s+/);
+                                                for (const word of words) {
+                                                    if (word.length > 2 && a.includes(word)) return true;
+                                                    if (word.length > 2 && normalize(a).includes(normalize(word))) return true;
+                                                }
+                                                const invWords = a.split(/\s+/);
+                                                for (const w of invWords) {
+                                                    if (w.length > 2 && desc.includes(w)) return true;
+                                                    if (w.length > 2 && normalize(desc).includes(normalize(w))) return true;
+                                                }
+                                                return false;
+                                            });
+                                            return {
+                                                id: `AI-${Date.now()}-${idx}`,
+                                                name: similar ? similar.name : item.description,
+                                                description: similar
+                                                    ? `${item.description} was not found and was replaced with ${similar.name}`
+                                                    : item.description,
+                                                productId: similar?.id || '',
+                                                sku: similar?.sku || '',
+                                                quantity: item.quantity,
+                                                price: item.unitPrice,
+                                                unitPrice: item.unitPrice,
+                                                cost: similar?.cost || 0,
+                                                type: similar?.type || 'Service',
+                                                category: similar?.category || 'Service',
+                                                discount: 0,
+                                                taxRate: item.taxRate,
+                                                adjustmentSnapshots: [],
+                                                lineTotalNet: item.quantity * item.unitPrice,
+                                            };
+                                        });
+                                        setFormData((prev: any) => ({
+                                            ...prev,
+                                            customerName: data.customer.name || prev.customerName,
+                                            billingAddress: data.customer.address || prev.billingAddress,
+                                            shippingAddress: data.customer.address || prev.shippingAddress,
+                                            items: matchedItems,
+                                            discount: data.discount.type === 'percentage'
+                                                ? (data.discount.value / 100) * data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+                                                : data.discount.value,
+                                            notes: data.notes,
+                                            dueDate: data.dueDate || prev.dueDate,
+                                            paymentTerms: data.paymentTerms || prev.paymentTerms,
+                                        }));
+                                    }}
+                                />
                             </div>
                         )}
 
@@ -2564,7 +2341,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     className={`w-16 text-center text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors ${qty > stock && stock > 0 ? 'text-red-600' : ''}`}
                                                                     value={qty}
                                                                     onChange={e => handleQuantityChange(idx, parseFloat(e.target.value) || 0)}
-                                                                    disabled={isPriceLocked || isPrintingQuotation}
+                                                                    disabled={isPriceLocked}
                                                                 />}
                                                         </td>
                                                         <td className="px-3 py-2 text-right text-sm text-slate-800">
@@ -2577,10 +2354,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     className="w-24 text-right text-sm border border-gray-200 rounded px-1.5 py-1 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 transition-colors"
                                                                     value={Number(item.price || 0)}
                                                                     onChange={e => {
-                                                                        if (isPriceLocked || isPrintingQuotation) return;
+                                                                        if (isPriceLocked) return;
                                                                         applyManualLineItemPrice(item.id, parseFloat(e.target.value) || 0);
                                                                     }}
-                                                                    disabled={isPriceLocked || isPrintingQuotation}
+                                                                    disabled={isPriceLocked}
                                                                 />}
                                                         </td>
                                                         <td className="px-3 py-2 text-right text-sm font-semibold text-indigo-700">
@@ -2589,7 +2366,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                         <td className="px-3 py-2 text-center">
                                                             <button
                                                                 onClick={() => handleRemoveItem(idx)}
-                                                                disabled={isPriceLocked || isPrintingQuotation}
+                                                                disabled={isPriceLocked}
                                                                 className="text-slate-300 hover:text-red-500 disabled:opacity-30 transition-colors"
                                                             >
                                                                 <X size={14} />
