@@ -1,9 +1,7 @@
 const crypto = require('crypto');
+const BaseService = require('./baseService.cjs');
 
-class ProductionService {
-  constructor(db) {
-    this.db = db;
-  }
+class ProductionService extends BaseService {
 
   async _saveLedgerEntry(entry, companyId) {
     const id = crypto.randomUUID();
@@ -82,33 +80,6 @@ class ProductionService {
     }, companyId);
   }
 
-  _run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastID: this.lastID });
-      });
-    });
-  }
-
-  _get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-  }
-
-  _all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-  }
-
   // ── Work Centers ───────────────────────────────────────────────────
   async getWorkCenters(companyId) {
     return this._all(
@@ -125,7 +96,7 @@ class ProductionService {
        data.capacity_per_day || 8, data.status || 'Active',
        data.location || null, companyId]
     );
-    return this._get('SELECT * FROM work_centers WHERE id = ?', [id]);
+    return this._get('SELECT * FROM work_centers WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   // ── Resources ──────────────────────────────────────────────────────
@@ -143,7 +114,7 @@ class ProductionService {
       [id, data.name, data.work_center_id, data.status || 'Active',
        data.resource_type || null, data.description || null, companyId]
     );
-    return this._get('SELECT * FROM production_resources WHERE id = ?', [id]);
+    return this._get('SELECT * FROM production_resources WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   // ── Work Orders ────────────────────────────────────────────────────
@@ -220,7 +191,17 @@ class ProductionService {
        data.status || 'Pending', data.total_amount || 0, data.quantity_produced || 0,
        data.unit_cost || 0, data.total_cost || 0, companyId]
     );
-    return this._get('SELECT * FROM production_batches WHERE id = ?', [id]);
+    return this._get('SELECT * FROM production_batches WHERE id = ? AND company_id = ?', [id, companyId]);
+  }
+
+  // ── Static singleton accessor ──────────────────────────────────────
+  static _instance = null;
+  static getInstance() {
+    if (!this._instance) {
+      const { getDatabase } = require('../db.cjs');
+      this._instance = new ProductionService(getDatabase());
+    }
+    return this._instance;
   }
 }
 

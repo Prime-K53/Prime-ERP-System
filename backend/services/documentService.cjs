@@ -22,8 +22,8 @@ class DocumentService {
   constructor() {
     this.layoutEngine = new LayoutEngine();
     this.consistencyService = new ConsistencyService();
-    // Guarded in-memory repository for unsaved/volatile documents
     this.memoryRepository = new Map();
+    this._memKey = (id, companyId) => `${companyId || ''}:${id}`;
   }
 
   /**
@@ -37,13 +37,17 @@ class DocumentService {
     const cid = (typeof companyId === 'string' && companyId.trim()) ? companyId.trim() : '';
     console.log(`[DocumentService] Resolving document ${id}...`, { identifierType, options: mergedOptions });
 
-    // 1. Check in-memory repository first (if it's a UUID or if we want to support logical in-memory)
-    if (mergedOptions.includeInMemory && this.memoryRepository.has(id)) {
-      const doc = this.memoryRepository.get(id);
-      
-      // Policy Check: VOID documents are never resolvable
+    const memKey = this._memKey(id, cid);
+
+    if (mergedOptions.includeInMemory && this.memoryRepository.has(memKey)) {
+      const doc = this.memoryRepository.get(memKey);
+
+      if (doc.company_id && doc.company_id !== cid) {
+        throw new ResolutionError(`Access denied - document belongs to different company`, id, identifierType, `[ID: ${id}] [Stage: Memory_Resolution] Company mismatch`, "ACCESS_DENIED");
+      }
+
       if (doc.status === 'voided') {
-        const diag = `[ID: ${id}] [Stage: Resolution] [Lifecycle: voided] Cannot resolve a voided document. VOID status is a terminal state and the document is locked for all operations including preview.`;
+        const diag = `[ID: ${id}] [Stage: Resolution] [Lifecycle: voided] Cannot resolve a voided document.`;
         throw new ResolutionError(`Document ${id} is voided and cannot be resolved.`, id, identifierType, diag, "ACCESS_DENIED");
       }
 
@@ -283,11 +287,11 @@ class DocumentService {
   /**
    * Batch Export: Exports multiple documents.
    */
-  async batchExport(ids) {
+  async batchExport(ids, companyId = '') {
     const results = [];
     for (const id of ids) {
       try {
-        const exportResult = await this.exportPdf(id);
+        const exportResult = await this.exportPdf(id, companyId);
         results.push({
           id,
           success: true,

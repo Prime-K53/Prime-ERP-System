@@ -50,9 +50,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       const seedIds = new Set(SEED_ITEM_IDS);
       const normalizedItems = loadedItems.map((item) => {
         const base = normalizeInventoryItemPricing(item);
+        const hasVariants = base.variants && base.variants.length > 0;
         return {
           ...base,
           isSeed: seedIds.has(item.id),
+          isVariantParent: hasVariants ? true : (base.isVariantParent || false),
         };
       });
 

@@ -276,7 +276,7 @@ const s: Record<string, React.CSSProperties> = {
   bomRateNote: { fontSize: 11, color: VAR_STYLES.textDim, marginTop: 10, lineHeight: 1.5 },
   bomCostRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: VAR_STYLES.paper, border: `1px solid ${VAR_STYLES.line}`, borderRadius: 10 },
   bomCostLabel: { fontSize: 13, fontWeight: 700, color: VAR_STYLES.ink700 },
-  bomCostValue: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 18, fontWeight: 700, color: VAR_STYLES.teal },
+  bomCostValue: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 18, fontWeight: 700, color: VAR_STYLES.teal600 },
   aiGenBtn: {
     fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 700,
     padding: '5px 11px', borderRadius: 8, border: 'none',
@@ -354,7 +354,6 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [rawReorder, setRawReorder] = useState(0);
   const [rawSupplier, setRawSupplier] = useState('');
   const [rawLocation, setRawLocation] = useState('');
-  const [barcode, setBarcode] = useState('');
 
   // Product
   const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number }[]>([]);
@@ -385,7 +384,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [statTotalStock, setStatTotalStock] = useState(0);
   const [statReorder, setStatReorder] = useState(0);
   const [statSupplier, setStatSupplier] = useState('');
-const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' | 'standard'>('weighted_average');
+  const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' | 'standard'>('weighted_average');
 
   // BOM Builder
   const [bomOpen, setBomOpen] = useState(false);
@@ -417,7 +416,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setSku(item.sku || '');
       setDescription(item.description || '');
       setActive(item.status !== 'Inactive');
-      setBarcode(item.barcode || '');
 
       if ((item as any).classification === 'printing_service' || item.type === 'Service') setCategory('service');
       else if (item.type === 'Product' || (item as any).classification === 'product') setCategory('product');
@@ -434,6 +432,9 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
         setRawReorder(item.reorderPoint || 0);
         setRawSupplier(item.preferredSupplierId || '');
         setRawLocation(item.binLocation || '');
+        setRawBuyUnit((item as any).purchaseUnit || (item as any).usageUnit || 'Ream');
+        setRawUseUnit((item as any).usageUnit || 'Sheet');
+        setRawConvRate((item as any).conversionRate || (item as any).conversionFactor || 500);
       }
 
       if (item.type === 'Product') {
@@ -509,8 +510,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       setDescription('');
       setActive(true);
       setSkuManuallySet(false);
-      setBarcode('');
-      const initialCategory = categoryFromSourceTab(sourceTab);
+       const initialCategory = categoryFromSourceTab(sourceTab);
       setCategory(initialCategory);
       const initialSku = generateAutoSKU(initialCategory, '', undefined, allItems);
       setSku(initialSku);
@@ -607,11 +607,13 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     const tonerItem = rawItems.find(i => /toner|ink|cartridge/i.test(i.name));
     const coverItem = rawItems.find(i => /card|cover|board/i.test(i.name));
     const stapleItem = rawItems.find(i => /staple/i.test(i.name));
+    const tapeItem = rawItems.find(i => /tape|binding tape/i.test(i.name));
     const paperRate = paperItem ? ((paperItem.cost_price || paperItem.cost || 0) / ((paperItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.paper;
     const tonerRate = tonerItem ? ((tonerItem.cost_price || tonerItem.cost || 0) / ((tonerItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.toner;
     const coverRate = coverItem ? ((coverItem.cost_price || coverItem.cost || 0) / ((coverItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.cover;
     const stapleRate = stapleItem ? ((stapleItem.cost_price || stapleItem.cost || 0) / ((stapleItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.staple;
-    return { paper: paperRate, toner: tonerRate, cover: coverRate, staple: stapleRate, tape: BOM_DEFAULT_RATES.tape };
+    const tapeRate = tapeItem ? ((tapeItem.cost_price || tapeItem.cost || 0) / ((tapeItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.tape;
+    return { paper: paperRate, toner: tonerRate, cover: coverRate, staple: stapleRate, tape: tapeRate };
   }, [allItems]);
 
   const productBomTotal = useMemo(() => {
@@ -709,7 +711,20 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
             <>
               <div style={s.briefItem}><span style={s.briefLabel}>Paper</span><span style={s.briefValue}>{formatCurrency(productPaperCost, currencySymbol)}</span></div>
               <div style={s.briefItem}><span style={s.briefLabel}>Toner</span><span style={s.briefValue}>{formatCurrency(productTonerCost, currencySymbol)}</span></div>
-              <div style={s.briefItem}><span style={s.briefLabel}>Finishing</span><span style={s.briefValue}>{formatCurrency(productFinishCost, currencySymbol)}</span></div>
+              {(productBomCovers > 0 || productBomStaples > 0 || productBomTape > 0 || productFinishCost > 0) && (
+                <div style={s.briefItem}>
+                  <span style={s.briefLabel}>Finishing</span>
+                  <span style={s.briefValue}>
+                    {formatCurrency(
+                      (productBomCovers * bomRates.cover) +
+                      (productBomStaples * bomRates.staple) +
+                      (productBomTape * bomRates.tape) +
+                      productFinishCost,
+                      currencySymbol
+                    )}
+                  </span>
+                </div>
+              )}
               <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Total Base Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700, fontSize: 13 }}>{formatCurrency(productBase, currencySymbol)}</span></div>
             </>
           )}
@@ -808,7 +823,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
       id: item?.id || '',
       name,
       sku: sku || generateAutoSKU(category, name, undefined, allItems),
-      barcode: barcode || undefined,
       type: category === 'raw' ? 'Raw Material' : category === 'product' ? 'Product' : category === 'service' ? 'Service' : 'Stationery',
       description,
       status: active ? 'Active' : 'Inactive',
@@ -901,7 +915,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
           costPerPack: v.packCost,
         })),
         reorderPoint: statReorder,
-        barcode: barcode || undefined,
         preferredSupplierId: statSupplier,
       };
       if (savedVariants.length === 0) {
@@ -942,7 +955,7 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
     } finally {
       setSaving(false);
     }
-  }, [item, name, sku, barcode, category, description, active, skuError, rawStock, rawBuyCost, rawBuyUnit, rawUseUnit, rawConvRate, rawReorder, rawSupplier, rawLocation, variants, productPaperCost, productTonerCost, productFinishCost, productStock, productReorder, productSP, pricingMethod, servicePaperCost, serviceTonerCost, serviceFinishing, serviceSP, serviceStock, serviceReorder, turnaround, rushSurcharge, trackStock, statVariants, statTotalStock, statReorder, statSupplier, costingMethod, USER, allItems, onSave, addItem, updateItem, deleteItem, notify, onClose, serviceFinishingTotal, productBase, serviceBase, productProfit, serviceProfit, productMarkup, serviceMarkup, statBlend, TARGET_MARKUP]);
+  }, [item, name, sku, category, description, active, skuError, rawStock, rawBuyCost, rawBuyUnit, rawUseUnit, rawConvRate, rawReorder, rawSupplier, rawLocation, variants, productPaperCost, productTonerCost, productFinishCost, productStock, productReorder, productSP, pricingMethod, servicePaperCost, serviceTonerCost, serviceFinishing, serviceSP, serviceStock, serviceReorder, turnaround, rushSurcharge, trackStock, statVariants, statTotalStock, statReorder, statSupplier, costingMethod, USER, allItems, onSave, addItem, updateItem, deleteItem, notify, onClose, serviceFinishingTotal, productBase, serviceBase, productProfit, serviceProfit, productMarkup, serviceMarkup, statBlend, TARGET_MARKUP]);
 
   useEffect(() => {
     if (!open) return;
@@ -1394,9 +1407,6 @@ const [costingMethod, setCostingMethod] = useState<'weighted_average' | 'fifo' |
                   <Field label="SKU / Code">
                     <input type="text" style={{ ...s.input, ...s.mono, ...(skuError ? { border: `1px solid ${VAR_STYLES.danger}` } : {}) }} value={sku} onChange={e => { setSku(e.target.value); setSkuManuallySet(true); }} placeholder="Auto-generated" />
                     {skuError && <p style={{ ...s.fieldHint, color: VAR_STYLES.danger }}>{skuError}</p>}
-                  </Field>
-                  <Field label="Barcode">
-                    <input type="text" style={{ ...s.input, ...s.mono }} value={barcode} onChange={e => { setBarcode(e.target.value); dirtyRef.current = true; }} placeholder="Scan or enter barcode" />
                   </Field>
                 </div>
                 <Field label="Description">

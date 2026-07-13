@@ -1,4 +1,4 @@
-const { createTestDb, createTestApp, generateTestId } = require('../setup.cjs');
+const { createTestDb, createTestApp, createTestSchema, generateTestId } = require('../setup.cjs');
 const { TEST_COMPANY_ID, TEST_USER_ID } = require('../helpers.cjs');
 
 describe('Production API Integration', () => {
@@ -6,6 +6,7 @@ describe('Production API Integration', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
+    await createTestSchema(db);
     production = createTestApp(db).services.production;
   });
 

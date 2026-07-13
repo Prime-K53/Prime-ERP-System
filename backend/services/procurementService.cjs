@@ -1,9 +1,7 @@
 const crypto = require('crypto');
+const BaseService = require('./baseService.cjs');
 
-class ProcurementService {
-  constructor(db) {
-    this.db = db;
-  }
+class ProcurementService extends BaseService {
 
   async _saveLedgerEntry(entry, companyId) {
     const id = crypto.randomUUID();
@@ -23,7 +21,7 @@ class ProcurementService {
   }
 
   async postGoodsReceiptLedger(grn, companyId, currency = 'USD') {
-    const items = await this._all('SELECT * FROM purchase_order_items WHERE purchase_order_id = ?', [grn.purchase_order_id]);
+    const items = await this._all('SELECT * FROM purchase_order_items WHERE purchase_order_id = ? AND company_id = ?', [grn.purchase_order_id, companyId]);
     const totalAmount = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
     if (totalAmount <= 0) return;
     const inventoryAccount = await this._get(
@@ -35,7 +33,7 @@ class ProcurementService {
       [companyId]
     );
     if (inventoryAccount && apAccount) {
-      const po = await this._get('SELECT * FROM purchase_orders WHERE id = ?', [grn.purchase_order_id]);
+      const po = await this._get('SELECT * FROM purchase_orders WHERE id = ? AND company_id = ?', [grn.purchase_order_id, companyId]);
       const poCurrency = po?.currency || currency;
       await this._saveLedgerEntry({
         account_id: inventoryAccount.id, entry_type: 'debit', amount: totalAmount,
@@ -48,33 +46,6 @@ class ProcurementService {
         reference_type: 'goods_receipt', reference_id: grn.id
       }, companyId);
     }
-  }
-
-  _run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastID: this.lastID });
-      });
-    });
-  }
-
-  _get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-  }
-
-  _all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
   }
 
   // ── Suppliers ──────────────────────────────────────────────────────
@@ -148,9 +119,9 @@ class ProcurementService {
     );
   }
 
-  async getPurchaseItems(purchaseId) {
+  async getPurchaseItems(purchaseId, companyId) {
     return this._all(
-      'SELECT * FROM purchase_order_items WHERE purchase_order_id = ?', [purchaseId]
+      'SELECT * FROM purchase_order_items WHERE purchase_order_id = ? AND company_id = ?', [purchaseId, companyId || '']
     );
   }
 
@@ -209,7 +180,7 @@ class ProcurementService {
       [id, data.purchase_order_id, data.received_date || new Date().toISOString(),
        'Received', data.notes || null, companyId, userId]
     );
-    const grn = await this._get('SELECT * FROM goods_receipts WHERE id = ?', [id]);
+    const grn = await this._get('SELECT * FROM goods_receipts WHERE id = ? AND company_id = ?', [id, companyId]);
     await this.postGoodsReceiptLedger(grn, companyId, currency);
     return grn;
   }

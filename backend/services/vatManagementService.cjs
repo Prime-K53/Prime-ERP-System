@@ -2,11 +2,9 @@
  * VAT/Tax Management Service
  * Handles VAT calculation, tracking, and reporting
  */
+const BaseService = require('./baseService.cjs');
 
-class VATManagementService {
-  constructor(db) {
-    this.db = db;
-  }
+class VATManagementService extends BaseService {
 
   /**
    * Calculate VAT for a transaction

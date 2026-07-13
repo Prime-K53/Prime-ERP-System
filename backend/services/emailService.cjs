@@ -15,12 +15,18 @@ const getTransporter = () => {
   });
 };
 
-const getFrom = () => process.env.SMTP_FROM || 'noreply@primeerp.com';
+const getFrom = (companyName) => {
+  const defaultFrom = process.env.SMTP_FROM || 'noreply@primeerp.com';
+  if (companyName) {
+    return `"${companyName}" <${defaultFrom}>`;
+  }
+  return `"Prime ERP System" <${defaultFrom}>`;
+};
 
-const sendEmail = async ({ to, subject, text, html }) => {
+const sendEmail = async ({ to, subject, text, html, companyName }) => {
   const transporter = getTransporter();
   const mailOptions = {
-    from: `"Prime ERP System" <${getFrom()}>`,
+    from: getFrom(companyName),
     to,
     subject,
     text,
@@ -31,7 +37,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
 };
 
 const sendEmailWithAttachment = async (options) => {
-  const { to, subject, body, filename, content, contentType = 'application/pdf' } = options;
+  const { to, subject, body, filename, content, contentType = 'application/pdf', companyName } = options;
 
   if (process.env.NODE_ENV === 'production') {
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -42,7 +48,7 @@ const sendEmailWithAttachment = async (options) => {
 
   const transporter = getTransporter();
   const mailOptions = {
-    from: `"Prime ERP System" <${getFrom()}>`,
+    from: getFrom(companyName),
     to: to,
     subject: subject,
     text: body,

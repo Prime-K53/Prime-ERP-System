@@ -2,10 +2,11 @@
  * Currency Management Service
  * Handles multi-currency support and exchange rates
  */
+const BaseService = require('./baseService.cjs');
 
-class CurrencyService {
-  constructor(db) {
-    this.db = db;
+class CurrencyService extends BaseService {
+  constructor() {
+    super();
     this.defaultCurrency = 'USD';
     this.exchangeRates = new Map();
   }
@@ -16,11 +17,11 @@ class CurrencyService {
   async getCompanyCurrency(companyId) {
     return new Promise((resolve, reject) => {
       this.db.get(
-        'SELECT default_currency FROM companies WHERE id = ?',
+        "SELECT value FROM settings WHERE key = 'default_currency' AND company_id = ?",
         [companyId],
         (err, row) => {
           if (err) return reject(err);
-          resolve(row?.default_currency || this.defaultCurrency);
+          resolve(row?.value || this.defaultCurrency);
         }
       );
     });
@@ -82,8 +83,9 @@ class CurrencyService {
   async updateExchangeRate(fromCurrency, toCurrency, rate, date = null) {
     const rateDate = date || new Date().toISOString().split('T')[0];
     
+    const svc = this;
     return new Promise((resolve, reject) => {
-      this.db.run(
+      svc.db.run(
         `INSERT INTO exchange_rates (from_currency, to_currency, rate, date)
          VALUES (?, ?, ?, ?)
          ON CONFLICT(from_currency, to_currency, date) 
@@ -91,11 +93,8 @@ class CurrencyService {
         [fromCurrency, toCurrency, rate, rateDate],
         function (err) {
           if (err) return reject(err);
-          
-          // Clear cache
           const cacheKey = `${fromCurrency}_${toCurrency}_${date || 'latest'}`;
-          this.exchangeRates.delete(cacheKey);
-          
+          svc.exchangeRates.delete(cacheKey);
           resolve({ fromCurrency, toCurrency, rate, date: rateDate });
         }
       );

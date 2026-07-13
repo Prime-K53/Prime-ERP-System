@@ -1,4 +1,4 @@
-const { createTestDb, createTestApp } = require('../setup.cjs');
+const { createTestDb, createTestApp, createTestSchema } = require('../setup.cjs');
 const { TEST_COMPANY_ID, TEST_USER_ID } = require('../helpers.cjs');
 
 describe('Procurement API Integration', () => {
@@ -6,6 +6,7 @@ describe('Procurement API Integration', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
+    await createTestSchema(db);
     procurement = createTestApp(db).services.procurement;
   });
 

@@ -1,38 +1,9 @@
 const crypto = require('crypto');
 
 const { randomUUID } = require('crypto');
+const BaseService = require('./baseService.cjs');
 
-class FinanceService {
-  constructor(db) {
-    this.db = db;
-  }
-
-  _run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastID: this.lastID });
-      });
-    });
-  }
-
-  _get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-  }
-
-  _all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-  }
+class FinanceService extends BaseService {
 
   // ── Chart of Accounts ──────────────────────────────────────────────
   async getAccounts(companyId) {
@@ -116,7 +87,7 @@ class FinanceService {
        entry.reference_id || null, entry.journal_id || null,
        entry.entry_date, companyId, entry.created_by || null]
     );
-    return this._get('SELECT * FROM ledger_entries WHERE id = ?', [id]);
+    return this._get('SELECT * FROM ledger_entries WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   // ── Expenses ───────────────────────────────────────────────────────
@@ -139,7 +110,7 @@ class FinanceService {
        data.payment_method || null, data.status || 'pending',
        data.receipt_url || null, companyId, data.created_by || null]
     );
-    return this._get('SELECT * FROM expenses WHERE id = ?', [id]);
+    return this._get('SELECT * FROM expenses WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async updateExpense(id, data, companyId) {
@@ -162,7 +133,7 @@ class FinanceService {
     if (data.status === 'cancelled') {
       await this.voidExpenseLedger(id, companyId);
     }
-    return this._get('SELECT * FROM expenses WHERE id = ?', [id]);
+    return this._get('SELECT * FROM expenses WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   _validateCurrency(currency) {
@@ -227,7 +198,7 @@ class FinanceService {
        data.account_id || null, data.payment_method || null,
        data.reference || null, companyId, data.created_by || null]
     );
-    return this._get('SELECT * FROM income WHERE id = ?', [id]);
+    return this._get('SELECT * FROM income WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async deleteIncome(id, companyId) {
@@ -252,7 +223,7 @@ class FinanceService {
       [id, data.name, data.account_id || null, data.fiscal_year,
        data.period, data.amount, companyId, data.notes || null]
     );
-    return this._get('SELECT * FROM budgets WHERE id = ?', [id]);
+    return this._get('SELECT * FROM budgets WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async updateBudget(id, data, companyId) {
@@ -271,7 +242,7 @@ class FinanceService {
       `UPDATE budgets SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`,
       params
     );
-    return this._get('SELECT * FROM budgets WHERE id = ?', [id]);
+    return this._get('SELECT * FROM budgets WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async deleteBudget(id, companyId) {
@@ -340,7 +311,7 @@ class FinanceService {
        FROM transfers t
        LEFT JOIN chart_of_accounts fa ON t.from_account_id = fa.id
        LEFT JOIN chart_of_accounts ta ON t.to_account_id = ta.id
-       WHERE t.id = ?`, [id]
+       WHERE t.id = ? AND t.company_id = ?`, [id, companyId]
     );
   }
 }

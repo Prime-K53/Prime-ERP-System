@@ -9,7 +9,9 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
-    '/tests/integration/'
+    '/tests/integration/',
+    'tenant_isolation_security.test.js',
+    'profitMargin.integration.test.js'
   ],
   collectCoverageFrom: [
     'services/**/*.cjs',

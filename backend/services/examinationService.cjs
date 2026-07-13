@@ -1262,9 +1262,12 @@ const persistClassAdjustmentRows = async ({
   batchId,
   classId,
   rows = [],
-  source = 'SYSTEM'
+  source = 'SYSTEM',
+  companyId = ''
 }) => {
-  await runRun('DELETE FROM examination_class_adjustments WHERE class_id = ?', [classId]);
+  const adjClause = companyId ? ' AND company_id = ?' : '';
+  const adjParams = companyId ? [classId, companyId] : [classId];
+  await runRun(`DELETE FROM examination_class_adjustments WHERE class_id = ?${adjClause}`, adjParams);
 
   const normalizedSource = source === 'MANUAL_OVERRIDE' ? 'MANUAL_OVERRIDE' : 'SYSTEM';
   let sequenceCounter = 0;
@@ -1980,8 +1983,8 @@ const resolveClassLiveTotalForRollup = (cls) => {
   );
 };
 
-const recalculateBatchFinancialTotalsFromClasses = async (batchId) => {
-  const batchRow = await runGet('SELECT rounding_method, rounding_value FROM examination_batches WHERE id = ?', [batchId]);
+const recalculateBatchFinancialTotalsFromClasses = async (batchId, companyId = '') => {
+  const batchRow = await runGet('SELECT rounding_method, rounding_value FROM examination_batches WHERE id = ? AND company_id = ?', [batchId, companyId]);
   const classes = await runQuery('SELECT * FROM examination_classes WHERE batch_id = ?', [batchId]);
 
   let totalAmount = 0;
@@ -2038,7 +2041,7 @@ const recalculateBatchFinancialTotalsFromClasses = async (batchId) => {
          expected_candidature = ?,
          calculated_cost_per_learner = ?,
          updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
+     WHERE id = ? AND company_id = ?`,
     [
       roundedTotalAmount,
       roundedMaterialTotal,
@@ -2050,7 +2053,8 @@ const recalculateBatchFinancialTotalsFromClasses = async (batchId) => {
       normalizePositiveRoundingStep(batchRow?.rounding_value, 50),
       learnerCount,
       calculatedCostPerLearner,
-      batchId
+      batchId,
+      companyId
     ]
   );
 
@@ -2987,8 +2991,8 @@ const examinationService = {
       if (!normalizedCandidate) return normalizedCandidate;
 
       const duplicate = await runGet(
-        'SELECT batch_number FROM examination_batches WHERE batch_number = ?',
-        [normalizedCandidate]
+        'SELECT batch_number FROM examination_batches WHERE batch_number = ? AND company_id = ?',
+        [normalizedCandidate, data?.company_id || '']
       );
       if (!duplicate) {
         return normalizedCandidate;
@@ -3001,8 +3005,8 @@ const examinationService = {
 
       const [, prefix, numericPart, suffix] = parts;
       const existingRows = await runQuery(
-        'SELECT batch_number FROM examination_batches WHERE batch_number LIKE ?',
-        [`${prefix}%`]
+        'SELECT batch_number FROM examination_batches WHERE batch_number LIKE ? AND company_id = ?',
+        [`${prefix}%`, data?.company_id || '']
       );
 
       const highestUsedNumber = (existingRows || []).reduce((max, row) => {
@@ -3026,8 +3030,8 @@ const examinationService = {
       const currentYear = new Date().getFullYear().toString();
       const batchYearPrefix = `BTC-PPS-${currentYear}-`;
       const lastBatchRow = await runQuery(
-        `SELECT batch_number FROM examination_batches WHERE batch_number LIKE ? ORDER BY batch_number DESC LIMIT 1`,
-        [`${batchYearPrefix}%`]
+        `SELECT batch_number FROM examination_batches WHERE batch_number LIKE ? AND company_id = ? ORDER BY batch_number DESC LIMIT 1`,
+        [`${batchYearPrefix}%`, data?.company_id || '']
       );
       let nextNum = 1;
       if (lastBatchRow && lastBatchRow.length > 0 && lastBatchRow[0].batch_number) {
@@ -3181,7 +3185,7 @@ const examinationService = {
     // Avoid getBatchById here because it does heavy joins (classes, subjects,
     // adjustments, material config) that are unnecessary for a brand-new batch
     // with no classes and can fail on partially-migrated schemas.
-    const batch = await runGet('SELECT * FROM examination_batches WHERE id = ?', [id]);
+    const batch = await runGet('SELECT * FROM examination_batches WHERE id = ? AND company_id = ?', [id, data?.company_id || '']);
     if (!batch) {
       throw new Error('Batch was created but could not be retrieved');
     }
@@ -3249,22 +3253,28 @@ const examinationService = {
 
       if (classIds.length > 0 && await tableExists('examination_subjects')) {
         const placeholders = classIds.map(() => '?').join(', ');
+        const companyClause = companyId ? ' AND company_id = ?' : '';
+        const subjectParams = companyId ? [...classIds, companyId] : classIds;
         await runRun(
-          `DELETE FROM examination_subjects WHERE class_id IN (${placeholders})`,
-          classIds
+          `DELETE FROM examination_subjects WHERE class_id IN (${placeholders})${companyClause}`,
+          subjectParams
         );
       }
 
-      await runRun('DELETE FROM examination_classes WHERE batch_id = ?', [id]);
+      const classCompanyClause = companyId ? ' AND company_id = ?' : '';
+      const classParams = companyId ? [id, companyId] : [id];
+      await runRun(`DELETE FROM examination_classes WHERE batch_id = ?${classCompanyClause}`, classParams);
     }
 
     for (const tableName of relatedBatchTables) {
       if (await tableExists(tableName)) {
-        await runRun(`DELETE FROM ${tableName} WHERE batch_id = ?`, [id]);
+        const companyClause = companyId ? ' AND company_id = ?' : '';
+        await runRun(`DELETE FROM ${tableName} WHERE batch_id = ?${companyClause}`, companyId ? [id, companyId] : [id]);
       }
     }
 
-    await runRun('DELETE FROM examination_batches WHERE id = ?', [id]);
+    const deleteParams = companyId ? [id, companyId] : [id];
+    await runRun(`DELETE FROM examination_batches WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`, deleteParams);
 
     // Audit Log
     await writeAuditLog({
@@ -3330,7 +3340,7 @@ const examinationService = {
     let calculation_status = 'not_triggered';
     let calculation_error = null;
     try {
-      const batchStatus = await runGet('SELECT status FROM examination_batches WHERE id = ?', [batchId]);
+      const batchStatus = await runGet('SELECT status FROM examination_batches WHERE id = ? AND company_id = ?', [batchId, companyId]);
       if (!batchStatus || batchStatus.status !== 'Finalized') {
         calculation_status = 'queued';
         Promise.resolve()
@@ -3386,7 +3396,8 @@ const examinationService = {
     if (fields.length === 0) return await runGet('SELECT * FROM examination_classes WHERE id = ?', [id]);
 
     params.push(id);
-    await runRun(`UPDATE examination_classes SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, params);
+    if (companyId) params.push(companyId);
+    await runRun(`UPDATE examination_classes SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`, params);
 
     await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_UPDATE' }, companyId);
     return await runGet('SELECT * FROM examination_classes WHERE id = ?', [id]);
@@ -3403,7 +3414,8 @@ const examinationService = {
       return { success: true };
     }
 
-    await runRun('DELETE FROM examination_classes WHERE id = ?', [id]);
+    const deleteClassClause = companyId ? ' AND company_id = ?' : '';
+    await runRun(`DELETE FROM examination_classes WHERE id = ?${deleteClassClause}`, companyId ? [id, companyId] : [id]);
     await examinationService.calculateBatch(currentClass.batch_id, { trigger: 'AUTO_CLASS_DELETE' }, companyId);
     return { success: true };
   },
@@ -3476,8 +3488,8 @@ const examinationService = {
              manual_override_by = ?,
              manual_override_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
-        [manualCost, overrideReason, userId, classId]
+         WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+        companyId ? [manualCost, overrideReason, userId, classId, companyId] : [manualCost, overrideReason, userId, classId]
       );
     } else {
       await runRun(
@@ -3488,8 +3500,8 @@ const examinationService = {
              manual_override_by = ?,
              manual_override_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
-        [userId, classId]
+         WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+        companyId ? [userId, classId, companyId] : [userId, classId]
       );
     }
 
@@ -3587,7 +3599,7 @@ const examinationService = {
 
     // Only trigger calculation if batch is not already finalized
     if (cls.batch_id) {
-      const batchStatus = await runGet('SELECT status FROM examination_batches WHERE id = ?', [cls.batch_id]);
+      const batchStatus = await runGet('SELECT status FROM examination_batches WHERE id = ? AND company_id = ?', [cls.batch_id, companyId]);
       if (batchStatus && batchStatus.status !== 'Finalized') {
         try {
           await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_CREATE' }, companyId);
@@ -3648,7 +3660,8 @@ const examinationService = {
     if (fields.length === 0) return await runGet('SELECT * FROM examination_subjects WHERE id = ?', [id]);
 
     params.push(id);
-    await runRun(`UPDATE examination_subjects SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, params);
+    if (companyId) params.push(companyId);
+    await runRun(`UPDATE examination_subjects SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`, params);
 
     const cls = await runGet('SELECT batch_id FROM examination_classes WHERE id = ?', [currentSubject.class_id]);
     if (cls?.batch_id) {
@@ -3670,7 +3683,8 @@ const examinationService = {
     }
 
     const cls = await runGet('SELECT batch_id FROM examination_classes WHERE id = ?', [currentSubject.class_id]);
-    await runRun('DELETE FROM examination_subjects WHERE id = ?', [id]);
+    const subjectDeleteClause = companyId ? ' AND company_id = ?' : '';
+    await runRun(`DELETE FROM examination_subjects WHERE id = ?${subjectDeleteClause}`, companyId ? [id, companyId] : [id]);
 
     if (cls?.batch_id) {
       await examinationService.calculateBatch(cls.batch_id, { trigger: 'AUTO_SUBJECT_DELETE' }, companyId);
@@ -3759,8 +3773,8 @@ const examinationService = {
              SET total_sheets = ?,
                  total_pages = ?,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?`,
-            [subjectConsumption.totalSheets, subjectConsumption.totalPages, sub.id]
+             WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+            companyId ? [subjectConsumption.totalSheets, subjectConsumption.totalPages, sub.id, companyId] : [subjectConsumption.totalSheets, subjectConsumption.totalPages, sub.id]
           );
         }
 
@@ -3849,8 +3863,8 @@ const examinationService = {
                  manual_override_reason = NULL,
                  manual_override_by = ?,
                  manual_override_at = CURRENT_TIMESTAMP
-             WHERE id = ?`,
-            [userId, cls.id]
+             WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+            companyId ? [userId, cls.id, companyId] : [userId, cls.id]
           );
         }
 
@@ -3884,7 +3898,8 @@ const examinationService = {
           batchId,
           classId: cls.id,
           rows: classAdjustmentRows,
-          source: isManualOverride ? 'MANUAL_OVERRIDE' : 'SYSTEM'
+          source: isManualOverride ? 'MANUAL_OVERRIDE' : 'SYSTEM',
+          companyId
         });
 
         await runRun(
@@ -3907,25 +3922,45 @@ const examinationService = {
                 financial_metrics_source = ?,
                 financial_metrics_updated_at = CURRENT_TIMESTAMP,
                 financial_metrics_updated_by = ?
-            WHERE id = ?`,
-          [
-            expectedFeePerLearner,
-            expectedTotal,
-            totalBomCost,
-            totalAdjustments,
-            marketAdjustmentTotal,
-            roundingAdjustmentTotal,
-            manualOverrideAmount,
-            adjustmentDeltaPercent,
-            finalCostPerLearner,
-            finalClassTotal,
-            expectedFeePerLearner,
-            finalFeePerLearner,
-            liveTotalPreview,
-            financialMetricsSource,
-            userId,
-            cls.id
-          ]
+            WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+          companyId
+            ? [
+                expectedFeePerLearner,
+                expectedTotal,
+                totalBomCost,
+                totalAdjustments,
+                marketAdjustmentTotal,
+                roundingAdjustmentTotal,
+                manualOverrideAmount,
+                adjustmentDeltaPercent,
+                finalCostPerLearner,
+                finalClassTotal,
+                expectedFeePerLearner,
+                finalFeePerLearner,
+                liveTotalPreview,
+                financialMetricsSource,
+                userId,
+                cls.id,
+                companyId
+              ]
+            : [
+                expectedFeePerLearner,
+                expectedTotal,
+                totalBomCost,
+                totalAdjustments,
+                marketAdjustmentTotal,
+                roundingAdjustmentTotal,
+                manualOverrideAmount,
+                adjustmentDeltaPercent,
+                finalCostPerLearner,
+                finalClassTotal,
+                expectedFeePerLearner,
+                finalFeePerLearner,
+                liveTotalPreview,
+                financialMetricsSource,
+                userId,
+                cls.id
+              ]
         );
 
         for (const adjustmentRow of classAdjustmentBreakdown.rows) {
@@ -4050,7 +4085,7 @@ const examinationService = {
              calculation_duration_ms = ?,
              last_calculated_at = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
+         WHERE id = ? AND company_id = ?`,
         [
           roundedBatchTotalAmount,
           roundedBatchMaterialTotal,
@@ -4066,7 +4101,8 @@ const examinationService = {
           batchWorkflow.resolveStatusAfterCalculation(batch.classes?.length || 0),
           trigger,
           calculationDuration,
-          batchId
+          batchId,
+          companyId
         ]
       );
 
@@ -4278,8 +4314,8 @@ const examinationService = {
       }
 
       await runRun(
-        'UPDATE examination_batches SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        ['Approved', batchId]
+        'UPDATE examination_batches SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
+        ['Approved', batchId, companyId]
       );
 
       await writeAuditLog({
@@ -4387,12 +4423,13 @@ const examinationService = {
         userId
       });
       await runRun(
-        'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
         [
           String(existingInvoice.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Invoiced',
           String(linkedLogicalInvoiceId || existingInvoice.invoice_number || existingInvoice.id),
           existingInvoiceTotal,
-          batchId
+          batchId,
+          companyId
         ]
       );
 
@@ -4569,8 +4606,8 @@ const examinationService = {
     });
 
     await runRun(
-      'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      ['Invoiced', String(linkedLogicalInvoiceId || invoiceRow.invoice_number || invoiceId), batchTotalAmount, batchId]
+      'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
+      ['Invoiced', String(linkedLogicalInvoiceId || invoiceRow.invoice_number || invoiceId), batchTotalAmount, batchId, companyId]
     );
 
     // Audit Log
@@ -4700,11 +4737,12 @@ const examinationService = {
     }
 
     params.push(classId);
+    if (companyId) params.push(companyId);
     await runRun(
-      `UPDATE examination_classes SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE examination_classes SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
       params
     );
-    await recalculateBatchFinancialTotalsFromClasses(currentClass.batch_id);
+    await recalculateBatchFinancialTotalsFromClasses(currentClass.batch_id, companyId);
 
     // Audit log
     await writeAuditLog({
@@ -4826,19 +4864,33 @@ const examinationService = {
             financial_metrics_updated_at = ?,
             cost_last_calculated_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?`,
-          [
-            expectedFeePerLearner,
-            finalFeePerLearner,
-            liveTotalPreview,
-            totalBomCost,
-            totalAdjustments,
-            totalCost,
-            triggerSource,
-            userId,
-            timestamp,
-            cls.id
-          ]
+          WHERE id = ?${companyId ? ' AND company_id = ?' : ''}`,
+          companyId
+            ? [
+                expectedFeePerLearner,
+                finalFeePerLearner,
+                liveTotalPreview,
+                totalBomCost,
+                totalAdjustments,
+                totalCost,
+                triggerSource,
+                userId,
+                timestamp,
+                cls.id,
+                companyId
+              ]
+            : [
+                expectedFeePerLearner,
+                finalFeePerLearner,
+                liveTotalPreview,
+                totalBomCost,
+                totalAdjustments,
+                totalCost,
+                triggerSource,
+                userId,
+                timestamp,
+                cls.id
+              ]
         );
 
         classesUpdated++;
@@ -4850,7 +4902,7 @@ const examinationService = {
       }
     }
     if (classesUpdated > 0) {
-      await recalculateBatchFinancialTotalsFromClasses(batchId);
+      await recalculateBatchFinancialTotalsFromClasses(batchId, companyId);
     }
 
     // Audit log
@@ -4929,33 +4981,35 @@ const examinationService = {
       expires_at: expiresAt
     });
   },
-  markNotificationRead: async (notificationId, userId) => {
+  markNotificationRead: async (notificationId, userId, companyId = '') => {
     await ensureNotificationSchema();
     if (!notificationId) return { success: false };
+    const notifClause = companyId ? ' AND company_id = ?' : '';
     if (userId) {
       await runRun(
         `UPDATE examination_batch_notifications
          SET is_read = 1, read_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND user_id = ?`,
-        [notificationId, userId]
+         WHERE id = ? AND user_id = ?${notifClause}`,
+        companyId ? [notificationId, userId, companyId] : [notificationId, userId]
       );
     } else {
       await runRun(
         `UPDATE examination_batch_notifications
          SET is_read = 1, read_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
-        [notificationId]
+         WHERE id = ?${notifClause}`,
+        companyId ? [notificationId, companyId] : [notificationId]
       );
     }
     return { success: true };
   },
-  deleteNotification: async (notificationId, userId) => {
+  deleteNotification: async (notificationId, userId, companyId = '') => {
     await ensureNotificationSchema();
     if (!notificationId) return { success: false };
+    const notifClause = companyId ? ' AND company_id = ?' : '';
     if (userId) {
-      await runRun('DELETE FROM examination_batch_notifications WHERE id = ? AND user_id = ?', [notificationId, userId]);
+      await runRun(`DELETE FROM examination_batch_notifications WHERE id = ? AND user_id = ?${notifClause}`, companyId ? [notificationId, userId, companyId] : [notificationId, userId]);
     } else {
-      await runRun('DELETE FROM examination_batch_notifications WHERE id = ?', [notificationId]);
+      await runRun(`DELETE FROM examination_batch_notifications WHERE id = ?${notifClause}`, companyId ? [notificationId, companyId] : [notificationId]);
     }
     return { success: true };
   },

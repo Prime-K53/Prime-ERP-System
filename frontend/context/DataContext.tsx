@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { logger } from '@/services/logger';
-import { useFinance } from './FinanceContext';
+import { useFinanceStore } from '../stores/financeStore';
 import { useInventory } from './InventoryContext';
 import { useProduction } from './ProductionContext';
 import { useSales } from './SalesContext';
@@ -55,7 +55,7 @@ type DataContextValue = {
 const DataContext = createContext<DataContextValue | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const finance = useFinance();
+    const finance = useFinanceStore();
     const inventory = useInventory();
     const production = useProduction();
     const sales = useSales();

@@ -3,11 +3,9 @@
  * Handles intelligent payment allocation to invoices and orders
  * Supports partial payments, overpayments, and excess handling
  */
+const BaseService = require('./baseService.cjs');
 
-class PaymentAllocationService {
-  constructor(db) {
-    this.db = db;
-  }
+class PaymentAllocationService extends BaseService {
 
   /**
    * Allocate a payment to one or more invoices/orders
@@ -255,8 +253,8 @@ class PaymentAllocationService {
                   if (index >= lines.length) {
                     // Mark allocation as reversed
                     this.db.run(
-                      'UPDATE payment_allocations SET reversed = 1, reversed_at = ? WHERE id = ?',
-                      [new Date().toISOString(), allocationId],
+                      'UPDATE payment_allocations SET reversed = 1, reversed_at = ? WHERE id = ? AND company_id = ?',
+                      [new Date().toISOString(), allocationId, companyId],
                       (err) => {
                         if (err) {
                           this.db.run('ROLLBACK');
@@ -283,8 +281,8 @@ class PaymentAllocationService {
                            ELSE 'Partially Paid'
                          END,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE id = ?`,
-                    [line.amount, line.amount, line.invoice_id],
+                     WHERE id = ? AND company_id = ?`,
+                    [line.amount, line.amount, line.invoice_id, companyId],
                     (err) => {
                       if (err) {
                         this.db.run('ROLLBACK');

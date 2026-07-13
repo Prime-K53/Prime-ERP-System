@@ -2,11 +2,9 @@
  * Banking Service - Manages bank accounts and transactions
  * Provides account management, transaction recording, and reconciliation
  */
+const BaseService = require('./baseService.cjs');
 
-class BankingService {
-  constructor(db) {
-    this.db = db;
-  }
+class BankingService extends BaseService {
 
   // ==================== BANK ACCOUNTS ====================
 

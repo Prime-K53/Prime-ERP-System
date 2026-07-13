@@ -1,4 +1,4 @@
-const { createTestDb } = require('../setup.cjs');
+const { createTestDb, createTestSchema } = require('../setup.cjs');
 const FinanceService = require('../../services/financeService.cjs');
 
 describe('FinanceService (unit)', () => {
@@ -7,6 +7,7 @@ describe('FinanceService (unit)', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
+    await createTestSchema(db);
     finance = new FinanceService(db);
   });
 
@@ -57,8 +58,19 @@ describe('FinanceService (unit)', () => {
 
   describe('transfers', () => {
     it('creates completed transfer by default', async () => {
+      const from = await finance.createAccount({
+        code: '1600', name: 'Source', type: 'asset', id: 'acct-a'
+      }, companyId);
+      const to = await finance.createAccount({
+        code: '1700', name: 'Destination', type: 'asset', id: 'acct-b'
+      }, companyId);
+      await new Promise((resolve, reject) => {
+        db.run('UPDATE chart_of_accounts SET balance = 1000 WHERE id = ?', [from.id], (err) => {
+          if (err) reject(err); else resolve();
+        });
+      });
       const transfer = await finance.createTransfer({
-        from_account_id: 'acct-a', to_account_id: 'acct-b', amount: 500
+        from_account_id: from.id, to_account_id: to.id, amount: 500
       }, companyId, 'test-user');
       expect(transfer.status).toBe('completed');
     });

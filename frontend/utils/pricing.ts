@@ -44,6 +44,7 @@ export function resolveStoredSellingPrice(source?: PricingCarrier | null): numbe
   return pickPreferredNumber(
     toFiniteNumber(source.smartPricingSnapshot?.roundedPrice),
     toFiniteNumber(source.selling_price),
+    toFiniteNumber((source as any).sellingPrice),
     toFiniteNumber(source.price),
     toFiniteNumber(source.calculated_price)
   );
@@ -130,12 +131,15 @@ export function normalizeStoredPricing<T extends PricingCarrier>(source: T): T {
 
 export function normalizeInventoryItemPricing(item: Item): Item {
   const normalizedItem = normalizeStoredPricing(item);
-  if (!item.variants || item.variants.length === 0) {
+  const hasVariants = item.variants && item.variants.length > 0;
+  
+  if (!hasVariants) {
     return normalizedItem;
   }
 
   return {
     ...normalizedItem,
+    isVariantParent: true,
     variants: item.variants.map((variant) => normalizeStoredPricing(variant as ProductVariant))
   };
 }

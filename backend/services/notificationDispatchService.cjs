@@ -10,16 +10,6 @@ const NOTIFICATION_EVENTS = {
   SYSTEM_ALERT: 'system_alert',
 };
 
-const getCompanyFromDb = (companyId) => {
-  try {
-    const { db } = require('../db.cjs');
-    const row = db.prepare('SELECT config FROM company_config WHERE id = ?').get(companyId);
-    return row ? JSON.parse(row.config) : null;
-  } catch {
-    return null;
-  }
-};
-
 const dispatchLowStockAlert = async ({ companyId, items, recipients }) => {
   const itemList = items.map(i => `  • ${i.name} (SKU: ${i.sku || 'N/A'}) — Stock: ${i.stock}, Reorder Point: ${i.reorderPoint}`).join('\n');
   const subject = `[Prime ERP] Low Stock Alert — ${items.length} item(s) need reorder`;

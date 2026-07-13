@@ -198,7 +198,7 @@ app.use('/api', verifyToken);
 app.use('/api', tenantContext);
 // Inject company currency into requests
 const CurrencyService = require('./services/currencyService.cjs');
-const currencyService = new CurrencyService(db);
+const currencyService = new CurrencyService();
 const currencyMiddleware = new CurrencyMiddleware(currencyService);
 app.use('/api', currencyMiddleware.injectCurrency());
 
@@ -353,7 +353,7 @@ function validateEnv() {
 async function postSaleLedgerEntries(saleId, totalAmount, materialTotal, customerId, customerName, companyId, userId) {
   try {
     const FinanceService = require('./services/financeService.cjs');
-    const finance = new FinanceService(db);
+    const finance = new FinanceService();
     
     // Find AR and Revenue accounts
     const arAccount = await finance.getAccounts(companyId).then(accounts => accounts.find(a => a.code === '1200' || a.name.toLowerCase().includes('accounts receivable')));
@@ -936,16 +936,11 @@ async function startServer() {
   app.use('/api/ai', verifyToken, aiRoutes);
 
   // --- Finance / Accounting Endpoints ---
-  const FinanceService = require('./services/financeService.cjs');
-  const finance = new FinanceService(db);
-  const BankingService = require('./services/bankingService.cjs');
-  const banking = new BankingService(db);
-  const FinancialReportingService = require('./services/financialReportingService.cjs');
-  const reporting = new FinancialReportingService(db);
-  const VATManagementService = require('./services/vatManagementService.cjs');
-  const vatManagement = new VATManagementService(db);
-  const CurrencyService = require('./services/currencyService.cjs');
-  const currency = new CurrencyService(db);
+  const finance = new (require('./services/financeService.cjs'))();
+  const banking = new (require('./services/bankingService.cjs'))();
+  const reporting = new (require('./services/financialReportingService.cjs'))();
+  const vatManagement = new (require('./services/vatManagementService.cjs'))();
+  const currency = new (require('./services/currencyService.cjs'))();
 
   // Chart of Accounts
   app.get('/api/accounts', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
@@ -1670,8 +1665,7 @@ async function startServer() {
   });
 
   // --- Payment Allocation Endpoints ---
-  const PaymentAllocationService = require('./services/paymentAllocationService.cjs');
-  const paymentAllocation = new PaymentAllocationService(db);
+  const paymentAllocation = new (require('./services/paymentAllocationService.cjs'))();
 
   app.post('/api/payments/allocate', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
@@ -1740,8 +1734,7 @@ async function startServer() {
   });
 
   // --- Procurement / Purchases Endpoints ---
-  const ProcurementService = require('./services/procurementService.cjs');
-  const procurement = new ProcurementService(db);
+  const procurement = new (require('./services/procurementService.cjs'))();
 
   // Suppliers
   app.get('/api/suppliers', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
@@ -1811,7 +1804,7 @@ async function startServer() {
     try {
       const po = await procurement.getPurchaseById(req.params.id, req.companyId || '');
       if (!po) return res.status(404).json({ error: 'Purchase order not found' });
-      const items = await procurement.getPurchaseItems(req.params.id);
+      const items = await procurement.getPurchaseItems(req.params.id, req.companyId || '');
       res.json({ ...po, items });
     } catch (err) {
       console.error('[Procurement] getPurchase error:', err?.message || err);
@@ -1935,7 +1928,7 @@ async function startServer() {
 
   // --- Production CRUD Endpoints ---
   const ProductionService = require('./services/productionService.cjs');
-  const production = new ProductionService(db);
+  const production = ProductionService.getInstance();
 
   app.post('/api/production/work-centers', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
@@ -2030,8 +2023,7 @@ async function startServer() {
   });
 
   // --- HR Endpoints ---
-  const HRService = require('./services/hrService.cjs');
-  const hr = new HRService(db);
+  const hr = new (require('./services/hrService.cjs'))();
 
   app.get('/api/employees', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
     try {
@@ -2977,6 +2969,13 @@ app.get('/api/invoices/:id/details', (req, res) => {
     try {
       const { itemId, warehouseId, quantity, batchId, reason, reference, referenceId, performedBy, type } = req.body;
 
+      // Resolve performer: prefer body value, fall back to authenticated user
+      const resolvedPerformer = performedBy || req.user?.id || req.user?.username || '';
+
+      // Capture IP and user agent for audit trail
+      const ipAddress = req.ip || req.connection?.remoteAddress || null;
+      const userAgent = req.get('User-Agent') || null;
+
       // Get current inventory
       const item = await new Promise((resolve, reject) => {
         db.get("SELECT * FROM inventory WHERE id = ? AND company_id = ?", [itemId, req.companyId || ''], (err, row) => {
@@ -3012,11 +3011,11 @@ app.get('/api/invoices/:id/details', (req, res) => {
 
           db.run(`INSERT INTO inventory_transactions 
             (id, item_id, warehouse_id, batch_id, type, quantity, previous_quantity, new_quantity, 
-              unit_cost, total_cost, reason, reference, reference_id, performed_by, timestamp, company_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+              unit_cost, total_cost, reason, reference, reference_id, performed_by, ip_address, user_agent, timestamp, company_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
             [transactionId, itemId, warehouseId || null, batchId || null, transactionType,
               quantity, currentQuantity, newQuantity, unitCost, totalCost,
-              reason, reference || null, referenceId || null, performedBy || 'system', new Date().toISOString(), req.companyId || ''],
+              reason, reference || null, referenceId || null, resolvedPerformer, ipAddress, userAgent, new Date().toISOString(), req.companyId || ''],
             (err) => {
             if (err) {
               db.run("ROLLBACK");
@@ -3067,7 +3066,7 @@ app.get('/api/invoices/:id/details', (req, res) => {
   });
   
   // Get warehouse inventory
-  app.get('/api/inventory/warehouse/:warehouseId', (req, res) => {
+  app.get('/api/inventory/warehouse/:warehouseId', checkPermission('view_inventory'), (req, res) => {
     const { warehouseId } = req.params;
     const companyId = req.companyId || '';
     
@@ -3081,7 +3080,7 @@ app.get('/api/invoices/:id/details', (req, res) => {
   });
   
   // Get active batches for item
-  app.get('/api/inventory/:itemId/batches', (req, res) => {
+  app.get('/api/inventory/:itemId/batches', checkPermission('view_inventory'), (req, res) => {
     const { itemId } = req.params;
     
     db.all(`SELECT * FROM material_batches 

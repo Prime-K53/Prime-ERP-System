@@ -9,28 +9,28 @@ class WorkspaceService {
     this.workspaceConfigPath = workspaceConfigPath;
   }
 
-  async initializeWorkspace(companyName) {
-    // Determine the user's Documents path (works on Windows, macOS, and Linux)
+  async initializeWorkspace(companyName, userId = null) {
     const documentsPath = path.join(os.homedir(), 'Documents');
-    const workspacePath = path.join(documentsPath, companyName);
+    const safeCompanyName = companyName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const userDir = userId ? `${safeCompanyName}_${userId.replace(/[^a-zA-Z0-9_-]/g, '')}` : safeCompanyName;
+    const workspacePath = path.join(documentsPath, userDir);
 
     if (!fs.existsSync(workspacePath)) {
       fs.mkdirSync(workspacePath, { recursive: true });
     }
 
-    // Only create Sync subfolder for live database sync
     const syncFolder = path.join(workspacePath, 'Sync');
     if (!fs.existsSync(syncFolder)) {
       fs.mkdirSync(syncFolder, { recursive: true });
     }
 
-    // Database path inside Sync folder
     const syncDbPath = path.join(syncFolder, path.basename(getDbPath()));
 
     const config = {
       workspacePath,
       dbPath: syncDbPath,
       companyName,
+      userId,
       initializedAt: new Date().toISOString()
     };
 

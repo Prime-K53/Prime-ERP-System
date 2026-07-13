@@ -1,10 +1,7 @@
 const crypto = require('crypto');
+const BaseService = require('./baseService.cjs');
 
-class HRService {
-  constructor(db) {
-    this.db = db;
-  }
-
+class HRService extends BaseService {
   async _saveLedgerEntry(entry, companyId) {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
@@ -45,33 +42,6 @@ class HRService {
     }, companyId);
   }
 
-  _run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve({ changes: this.changes, lastID: this.lastID });
-      });
-    });
-  }
-
-  _get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-  }
-
-  _all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-  }
-
   async getEmployees(companyId) {
     return this._all('SELECT * FROM employees WHERE company_id = ? ORDER BY name', [companyId]);
   }
@@ -85,7 +55,7 @@ class HRService {
        data.department || null, data.role || null,
        data.status || 'Active', data.salary || 0, companyId]
     );
-    return this._get('SELECT * FROM employees WHERE id = ?', [id]);
+    return this._get('SELECT * FROM employees WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async updateEmployee(id, data, companyId) {
@@ -101,7 +71,7 @@ class HRService {
     if (!fields.length) return this._get('SELECT * FROM employees WHERE id = ? AND company_id = ?', [id, companyId]);
     params.push(id, companyId);
     await this._run(`UPDATE employees SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`, params);
-    return this._get('SELECT * FROM employees WHERE id = ?', [id]);
+    return this._get('SELECT * FROM employees WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 
   async deleteEmployee(id, companyId) {
@@ -122,7 +92,7 @@ class HRService {
        data.total_gross || 0, data.total_deductions || 0, data.total_net || 0,
        data.employee_count || 0, companyId]
     );
-    const run = await this._get('SELECT * FROM payroll_runs WHERE id = ?', [id]);
+    const run = await this._get('SELECT * FROM payroll_runs WHERE id = ? AND company_id = ?', [id, companyId]);
     await this.postPayrollLedger(run, companyId, currency);
     return run;
   }
@@ -140,7 +110,7 @@ class HRService {
        data.deductions || 0, data.net_pay || 0, data.pay_period,
        data.status || 'Draft', companyId]
     );
-    return this._get('SELECT * FROM payslips WHERE id = ?', [id]);
+    return this._get('SELECT * FROM payslips WHERE id = ? AND company_id = ?', [id, companyId]);
   }
 }
 

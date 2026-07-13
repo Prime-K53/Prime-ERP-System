@@ -1,5 +1,4 @@
 import { platform } from './platform';
-import { HAS_REMOTE_BACKEND, SUPABASE_ANON_KEY } from '../config/api.js';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -94,36 +93,7 @@ class Logger {
     this.logs = [];
   }
 
-  private async sendToServer(entry: LogEntry) {
-    if (!HAS_REMOTE_BACKEND) {
-      return;
-    }
-
-    try {
-      const { getUrl } = await import('../config/api.js');
-      const rawConfig = localStorage.getItem('nexus_company_config');
-      const companyId = rawConfig ? JSON.parse(rawConfig)?.companyId : null;
-      await fetch(getUrl('logs'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'x-user-id': localStorage.getItem('prime_user_id') || 'unknown',
-          'x-user-role': localStorage.getItem('prime_user_role') || 'Admin',
-          ...(companyId ? { 'x-company-id': String(companyId) } : {}),
-        },
-        body: JSON.stringify({
-          ...entry,
-          error: entry.error ? {
-            name: entry.error.name,
-            message: entry.error.message,
-            stack: entry.error.stack
-          } : undefined
-        })
-      });
-    } catch (e) {
-    }
+  private async sendToServer(_entry: LogEntry) {
   }
 }
 

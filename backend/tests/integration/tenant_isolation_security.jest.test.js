@@ -2,8 +2,8 @@
  * Tenant Isolation Security Tests (Jest version)
  * Validates that cross-company data leakage is eliminated.
  */
-const { db, initDb, getDatabase } = require('../db.cjs');
-const { tenantContext } = require('../middleware/tenantContext.cjs');
+const { db, initDb, getDatabase } = require('../../db.cjs');
+const { tenantContext } = require('../../middleware/tenantContext.cjs');
 
 const COMPANY_A = 'comp-a-test';
 const COMPANY_B = 'comp-b-test';
@@ -144,18 +144,20 @@ describe('Tenant Isolation Security', () => {
     expect(saleAGone).toBeUndefined();
   });
 
-  test('tenantContext middleware attaches companyId from header', () => {
+  test('tenantContext middleware attaches companyId from header', (done) => {
     const mockReq = { headers: { 'x-company-id': COMPANY_A }, user: { id: USER_A_ID } };
     const mockRes = {};
-    let calledNext = false;
-    tenantContext(mockReq, mockRes, () => { calledNext = true; });
-    expect(mockReq.companyId).toBe(COMPANY_A);
-    expect(calledNext).toBe(true);
+    tenantContext(mockReq, mockRes, () => {
+      expect(mockReq.companyId).toBe(COMPANY_A);
+      done();
+    });
   });
 
-  test('tenantContext defaults to empty string when no header', () => {
+  test('tenantContext defaults to empty string when no header', (done) => {
     const mockReqNoHeader = { headers: {}, user: { id: USER_A_ID } };
-    tenantContext(mockReqNoHeader, {}, () => {});
-    expect(mockReqNoHeader.companyId).toBe('');
+    tenantContext(mockReqNoHeader, {}, () => {
+      expect(mockReqNoHeader.companyId).toBe('');
+      done();
+    });
   });
 });

@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { getDbPath } = require('../runtimePaths.cjs');
+const { getDatabase } = require('../db.cjs');
+const getDb = () => getDatabase();
 
 class BackupService {
   constructor(backupDir) {
@@ -52,10 +54,47 @@ class BackupService {
   }
 
   async verifyIntegrity(filePath) {
-    // Simple check if file exists and has content
     if (!fs.existsSync(filePath)) return false;
     const stats = fs.statSync(filePath);
     return stats.size > 0;
+  }
+
+  async exportCompanyData(companyId, exportDir = null) {
+    const dir = exportDir || path.join(this.backupDir, `company_${companyId}`);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const tables = [
+      'customers', 'inventory', 'sales', 'invoices', 'audit_logs',
+      'bank_accounts', 'bank_transactions', 'chart_of_accounts',
+      'ledger_entries', 'suppliers', 'purchase_orders', 'employees',
+      'payroll_runs', 'documents', 'examination_batches',
+      'examination_classes', 'examination_subjects'
+    ];
+
+    for (const table of tables) {
+      try {
+        const rows = await new Promise((resolve, reject) => {
+          getDb().all(
+            `SELECT * FROM "${table}" WHERE company_id = ?`,
+            [companyId],
+            (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows || []);
+            }
+          );
+        });
+        if (rows.length > 0) {
+          const filePath = path.join(dir, `${table}.json`);
+          fs.writeFileSync(filePath, JSON.stringify(rows, null, 2));
+        }
+      } catch (err) {
+        console.warn(`[BackupService] Could not export table ${table}: ${err.message}`);
+      }
+    }
+
+    return { path: dir, companyId };
   }
 }
 

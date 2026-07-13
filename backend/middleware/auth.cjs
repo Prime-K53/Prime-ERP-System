@@ -73,16 +73,17 @@ const getHeaderAuthUser = (req) => {
  * @returns {string} JWT token
  */
 const generateToken = (user) => {
-  return jwt.sign(
-    { 
-      id: user.id, 
-      username: user.username, 
-      role: user.role,
-      email: user.email 
-    },
-    JWT_SECRET,
-    { expiresIn: TOKEN_EXPIRATION }
-  );
+  const payload = {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    email: user.email,
+    company_id: user.company_id || user.companyId || ''
+  };
+  if (user.companies) {
+    payload.companies = user.companies;
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
 };
 
 /**

@@ -319,6 +319,7 @@ const initDb = () => {
         user_id TEXT NOT NULL,
         user_role TEXT NOT NULL,
         session_id TEXT,
+        company_id TEXT,
         action TEXT NOT NULL,
         entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
@@ -351,9 +352,33 @@ const initDb = () => {
         reference TEXT,
         reference_id TEXT,
         reason TEXT NOT NULL,
-        performed_by TEXT,
+        performed_by TEXT NOT NULL DEFAULT 'system',
+        ip_address TEXT,
+        user_agent TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      )`, (err) => {
+        if (!err) {
+          db.all("PRAGMA table_info(inventory_transactions)", (err, rows) => {
+            if (!err && rows) {
+              const existingColumns = new Set(rows.map(r => r.name));
+              const columnsToAdd = [
+                { name: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
+                { name: 'ip_address', type: 'TEXT' },
+                { name: 'user_agent', type: 'TEXT' },
+              ];
+              columnsToAdd.forEach(col => {
+                if (!existingColumns.has(col.name)) {
+                  db.run(`ALTER TABLE inventory_transactions ADD COLUMN ${col.name} ${col.type}`, (err) => {
+                    if (err) console.error(`Error adding ${col.name} column to inventory_transactions:`, err);
+                    else console.log(`Added ${col.name} column to inventory_transactions table`);
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
 
       // Material Batches Table (for batch/lot tracking)
       db.run(`CREATE TABLE IF NOT EXISTS material_batches (
@@ -369,8 +394,28 @@ const initDb = () => {
         supplier_name TEXT,
         warehouse_id TEXT,
         status TEXT DEFAULT 'active' CHECK(status IN ('active', 'depleted', 'expired')),
+        company_id TEXT NOT NULL DEFAULT '',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      )`, (err) => {
+        if (!err) {
+          db.all("PRAGMA table_info(material_batches)", (err, rows) => {
+            if (!err && rows) {
+              const existingColumns = new Set(rows.map(r => r.name));
+              const columnsToAdd = [
+                { name: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
+              ];
+              columnsToAdd.forEach(col => {
+                if (!existingColumns.has(col.name)) {
+                  db.run(`ALTER TABLE material_batches ADD COLUMN ${col.name} ${col.type}`, (err) => {
+                    if (err) console.error(`Error adding ${col.name} column to material_batches:`, err);
+                    else console.log(`Added ${col.name} column to material_batches table`);
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
 
       // Warehouse Inventory Table (for multi-warehouse support)
       db.run(`CREATE TABLE IF NOT EXISTS warehouse_inventory (
@@ -380,9 +425,29 @@ const initDb = () => {
         quantity INTEGER NOT NULL DEFAULT 0,
         reserved INTEGER NOT NULL DEFAULT 0,
         available INTEGER NOT NULL DEFAULT 0,
+        company_id TEXT NOT NULL DEFAULT '',
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(item_id, warehouse_id)
-      )`);
+      )`, (err) => {
+        if (!err) {
+          db.all("PRAGMA table_info(warehouse_inventory)", (err, rows) => {
+            if (!err && rows) {
+              const existingColumns = new Set(rows.map(r => r.name));
+              const columnsToAdd = [
+                { name: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
+              ];
+              columnsToAdd.forEach(col => {
+                if (!existingColumns.has(col.name)) {
+                  db.run(`ALTER TABLE warehouse_inventory ADD COLUMN ${col.name} ${col.type}`, (err) => {
+                    if (err) console.error(`Error adding ${col.name} column to warehouse_inventory:`, err);
+                    else console.log(`Added ${col.name} column to warehouse_inventory table`);
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
 
       // Material Categories Table
       db.run(`CREATE TABLE IF NOT EXISTS material_categories (
@@ -504,6 +569,7 @@ const initDb = () => {
 
       db.run(`CREATE TABLE IF NOT EXISTS examination_batch_notifications (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_id TEXT,
         user_id TEXT NOT NULL,
         notification_type TEXT NOT NULL,
@@ -519,6 +585,7 @@ const initDb = () => {
       )`);
       db.run(`CREATE TABLE IF NOT EXISTS notification_audit_logs (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         notification_id TEXT,
         user_id TEXT NOT NULL,
         action TEXT NOT NULL,
@@ -536,6 +603,7 @@ const initDb = () => {
       // Note: school_id references either schools(id) or customers(id) — app-level enforced
       db.run(`CREATE TABLE IF NOT EXISTS examination_batches (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_number TEXT UNIQUE,
         school_id TEXT NOT NULL,
         name TEXT NOT NULL, -- e.g. "Term 1 2026"
@@ -574,6 +642,7 @@ const initDb = () => {
       // 2. Examination Classes (Groups learners and pricing per class)
       db.run(`CREATE TABLE IF NOT EXISTS examination_classes (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_id TEXT NOT NULL,
         class_name TEXT NOT NULL,
         number_of_learners INTEGER NOT NULL,
@@ -601,6 +670,7 @@ const initDb = () => {
       // 3. Examination Subjects (The actual patch/paper details)
       db.run(`CREATE TABLE IF NOT EXISTS examination_subjects (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         class_id TEXT NOT NULL,
         subject_name TEXT NOT NULL,
         pages INTEGER NOT NULL,
@@ -617,6 +687,7 @@ const initDb = () => {
       // 3b. Examination Global Hidden BOM Defaults
       db.run(`CREATE TABLE IF NOT EXISTS bom_default_materials (
         material_type TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         preferred_item_id TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -626,6 +697,7 @@ const initDb = () => {
       // 4. Examination BOM Calculations (Stores cost breakdown)
       db.run(`CREATE TABLE IF NOT EXISTS examination_bom_calculations (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_id TEXT NOT NULL,
         class_id TEXT, -- Optional, if specific to a class
         item_id TEXT NOT NULL, -- Inventory Item ID (Paper, Toner), app-level FK to inventory(id)
@@ -647,6 +719,7 @@ const initDb = () => {
       // Stores original and redistributed adjustment amounts per class.
       db.run(`CREATE TABLE IF NOT EXISTS examination_class_adjustments (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_id TEXT NOT NULL,
         class_id TEXT NOT NULL,
         adjustment_id TEXT NOT NULL,
@@ -669,6 +742,7 @@ const initDb = () => {
       // Full history of automatic/manual pricing changes.
       db.run(`CREATE TABLE IF NOT EXISTS examination_pricing_audit (
         id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL DEFAULT '',
         batch_id TEXT NOT NULL,
         class_id TEXT,
         user_id TEXT,
@@ -760,6 +834,7 @@ const initDb = () => {
         email TEXT NOT NULL,
         code TEXT NOT NULL,
         purpose TEXT NOT NULL,
+        company_id TEXT,
         verified INTEGER DEFAULT 0,
         attempts INTEGER DEFAULT 0,
         expires_at TEXT NOT NULL,
@@ -937,8 +1012,27 @@ const initDb = () => {
         { table: 'production_resources', column: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
         { table: 'work_orders', column: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
         { table: 'production_batches', column: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
-        { table: 'sale_items', column: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' }
+        { table: 'sale_items', column: 'company_id', type: 'TEXT NOT NULL DEFAULT \'\'' },
+        { table: 'email_verifications', column: 'company_id', type: 'TEXT' }
       ];
+
+      // Process migrations: add missing columns to existing tables
+      const processedTables = new Set();
+      columns.forEach(({ table, column, type }) => {
+        if (processedTables.has(table)) return;
+        processedTables.add(table);
+        db.all(`PRAGMA table_info(${table})`, (err, rows) => {
+          if (err) return;
+          const existingColumns = new Set(rows.map(r => r.name));
+          columns.filter(c => c.table === table).forEach(({ column: colName, type: colType }) => {
+            if (!existingColumns.has(colName)) {
+              db.run(`ALTER TABLE ${table} ADD COLUMN ${colName} ${colType}`, (alterErr) => {
+                if (alterErr) console.error(`Error adding ${colName} to ${table}:`, alterErr.message);
+              });
+            }
+          });
+        });
+      });
 
       // User-company membership table for multi-tenant validation
       db.run(`CREATE TABLE IF NOT EXISTS user_companies (
@@ -1446,7 +1540,10 @@ const initDb = () => {
         { table: 'bank_accounts', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
         { table: 'bank_transactions', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
         { table: 'vat_transactions', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
-        { table: 'purchase_order_items', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" }
+        { table: 'purchase_order_items', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'inventory_transactions', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'warehouse_inventory', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" },
+        { table: 'material_batches', column: 'company_id', type: "TEXT NOT NULL DEFAULT ''" }
       ];
 
       const allColumns = [...columns, ...newTableColumns];
@@ -1475,7 +1572,26 @@ const initDb = () => {
           runIndex(`CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)`),
-          runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_category_date ON expenses(category, expense_date)`)
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_expenses_category_date ON expenses(category, expense_date)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_inventory_company_id ON inventory(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_inventory_transactions_company ON inventory_transactions(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_inventory_transactions_item ON inventory_transactions(item_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_warehouse_inventory_company ON warehouse_inventory(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_warehouse_inventory_item ON warehouse_inventory(item_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_warehouse_inventory_warehouse ON warehouse_inventory(warehouse_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_material_batches_company ON material_batches(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_material_batches_item ON material_batches(item_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_material_batches_status ON material_batches(status)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_batches_company_id ON examination_batches(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_classes_company_id ON examination_classes(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_subjects_company_id ON examination_subjects(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_bom_calculations_company_id ON examination_bom_calculations(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_class_adjustments_company_id ON examination_class_adjustments(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_pricing_audit_company_id ON examination_pricing_audit(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_batch_notifications_company_id ON examination_batch_notifications(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_notification_audit_logs_company_id ON notification_audit_logs(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_bom_default_materials_company_id ON bom_default_materials(company_id)`),
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_audit_logs_company_id ON audit_logs(company_id)`)
         ]).then(() => {
           resolve();
         });

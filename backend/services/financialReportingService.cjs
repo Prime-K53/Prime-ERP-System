@@ -2,11 +2,9 @@
  * Financial Reporting Service
  * Generates comprehensive financial reports including P&L, Balance Sheet, Cash Flow, etc.
  */
+const BaseService = require('./baseService.cjs');
 
-class FinancialReportingService {
-  constructor(db) {
-    this.db = db;
-  }
+class FinancialReportingService extends BaseService {
 
   /**
    * Generate Profit & Loss Statement

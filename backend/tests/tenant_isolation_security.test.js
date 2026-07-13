@@ -61,12 +61,13 @@ async function runTests() {
     'sales_exchanges', 'sales_exchange_items', 'sales_exchange_approvals',
     'reprint_jobs', 'market_adjustments', 'market_adjustment_transactions',
     'transaction_adjustment_snapshots', 'audit_logs', 'documents',
-    'tasks', 'classes', 'subjects', 'examination_batches',
-    'examination_classes', 'examination_subjects', 'examination_bom_calculations',
-    'examination_class_adjustments', 'examination_pricing_audit',
-    'examination_batch_notifications', 'notification_audit_logs',
-    'bom_default_materials', 'profit_margin_settings',
-    'profit_margin_audit_logs', 'work_centers', 'production_resources'
+    'tasks', 'classes', 'subjects',
+    'examination_batches', 'examination_classes', 'examination_subjects',
+    'examination_bom_calculations', 'examination_class_adjustments',
+    'examination_pricing_audit', 'examination_batch_notifications',
+    'notification_audit_logs', 'bom_default_materials',
+    'profit_margin_settings', 'profit_margin_audit_logs',
+    'work_centers', 'production_resources', 'work_orders', 'production_batches'
   ];
 
   for (const table of tables) {
@@ -195,8 +196,78 @@ async function runTests() {
     assert(mockReqNoHeader.companyId === '', 'Middleware defaults to empty string when no header');
   });
 
-  // 9. Cleanup test data
-  console.log('\n9. Cleanup\n');
+  // 9. Test examination classes and subjects isolation with company_id
+  console.log('\n9. Examination Classes & Subjects: company_id enforced\n');
+  if (await runQuery('SELECT 1 FROM pragma_table_info WHERE name = ? AND pk = 0', ['examination_classes'])) {
+    // Only run if table schema reflects company_id
+  }
+  await runExec('INSERT OR IGNORE INTO examination_classes (id, company_id, batch_id, class_name, number_of_learners) VALUES (?, ?, ?, ?, ?)',
+    ['class-a1', COMPANY_A, 'batch-a1', 'Class A1', 30]);
+  await runExec('INSERT OR IGNORE INTO examination_classes (id, company_id, batch_id, class_name, number_of_learners) VALUES (?, ?, ?, ?, ?)',
+    ['class-b1', COMPANY_B, 'batch-b1', 'Class B1', 25]);
+
+  const classesA = await runAll('SELECT id FROM examination_classes WHERE company_id = ?', [COMPANY_A]);
+  assert(classesA.some(c => c.id === 'class-a1'), 'Company A sees its classes');
+  assert(!classesA.some(c => c.id === 'class-b1'), 'Company A cannot see Company B\'s classes');
+
+  // UPDATE isolation on examination_classes
+  await runExec('UPDATE examination_classes SET number_of_learners = 99 WHERE id = ? AND company_id = ?',
+    ['class-b1', COMPANY_A]);
+  const classBAfter = await runQuery('SELECT number_of_learners FROM examination_classes WHERE id = ?', ['class-b1']);
+  assert(classBAfter.number_of_learners === 25, 'Company A cannot modify Company B\'s class');
+
+  // DELETE isolation on examination_classes
+  await runExec('DELETE FROM examination_classes WHERE id = ? AND company_id = ?', ['class-a1', COMPANY_B]);
+  const classAStillExists = await runQuery('SELECT id FROM examination_classes WHERE id = ?', ['class-a1']);
+  assert(classAStillExists !== undefined, 'Company B cannot delete Company A\'s class');
+
+  // 10. Test examination_subjects isolation
+  console.log('\n10. Examination Subjects: company_id enforced\n');
+  await runExec('INSERT OR IGNORE INTO examination_subjects (id, company_id, class_id, subject_name, pages) VALUES (?, ?, ?, ?, ?)',
+    ['subj-a1', COMPANY_A, 'class-a1', 'Math', 10]);
+  await runExec('INSERT OR IGNORE INTO examination_subjects (id, company_id, class_id, subject_name, pages) VALUES (?, ?, ?, ?, ?)',
+    ['subj-b1', COMPANY_B, 'class-b1', 'English', 12]);
+
+  const subjectsA = await runAll('SELECT id FROM examination_subjects WHERE company_id = ?', [COMPANY_A]);
+  assert(subjectsA.some(s => s.id === 'subj-a1'), 'Company A sees its subjects');
+  assert(!subjectsA.some(s => s.id === 'subj-b1'), 'Company A cannot see Company B\'s subjects');
+
+  // 11. Test examine_bom_calculations isolation
+  console.log('\n11. Examination BOM Calculations: company_id enforced\n');
+  await runExec('INSERT OR IGNORE INTO examination_bom_calculations (id, company_id, batch_id, item_id, quantity_required, unit_cost, total_cost) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ['bom-a1', COMPANY_A, 'batch-a1', 'item-1', 10, 5, 50]);
+  await runExec('INSERT OR IGNORE INTO examination_bom_calculations (id, company_id, batch_id, item_id, quantity_required, unit_cost, total_cost) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ['bom-b1', COMPANY_B, 'batch-b1', 'item-2', 20, 3, 60]);
+
+  const bomsA = await runAll('SELECT id FROM examination_bom_calculations WHERE company_id = ?', [COMPANY_A]);
+  assert(bomsA.some(b => b.id === 'bom-a1'), 'Company A sees its BOM calculations');
+  assert(!bomsA.some(b => b.id === 'bom-b1'), 'Company A cannot see Company B\'s BOM calculations');
+
+  // 12. Test examination_class_adjustments isolation
+  console.log('\n12. Examination Class Adjustments: company_id enforced\n');
+  await runExec('INSERT OR IGNORE INTO examination_class_adjustments (id, company_id, batch_id, class_id, adjustment_id, adjustment_name, adjustment_type, adjustment_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ['adj-a1', COMPANY_A, 'batch-a1', 'class-a1', 'adj-1', 'Discount', 'FIXED', 10]);
+  await runExec('INSERT OR IGNORE INTO examination_class_adjustments (id, company_id, batch_id, class_id, adjustment_id, adjustment_name, adjustment_type, adjustment_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ['adj-b1', COMPANY_B, 'batch-b1', 'class-b1', 'adj-2', 'Surcharge', 'FIXED', 20]);
+
+  const adjsA = await runAll('SELECT id FROM examination_class_adjustments WHERE company_id = ?', [COMPANY_A]);
+  assert(adjsA.some(a => a.id === 'adj-a1'), 'Company A sees its adjustments');
+  assert(!adjsA.some(a => a.id === 'adj-b1'), 'Company A cannot see Company B\'s adjustments');
+
+  // 13. Test validateCompanyOwnership utility
+  console.log('\n13. validateCompanyOwnership: ownership validation works\n');
+  const { validateCompanyOwnership } = require('../middleware/validation.cjs');
+  const owned = await validateCompanyOwnership('examination_batches', 'id', 'batch-a1', COMPANY_A);
+  assert(owned !== null, 'Company A owns batch-a1');
+  const notOwned = await validateCompanyOwnership('examination_batches', 'id', 'batch-b1', COMPANY_A);
+  assert(notOwned === null, 'Company A does NOT own batch-b1');
+
+  // 14. Cleanup test data
+  console.log('\n14. Cleanup\n');
+  await runExec('DELETE FROM examination_class_adjustments WHERE id IN (\'adj-a1\', \'adj-b1\')');
+  await runExec('DELETE FROM examination_bom_calculations WHERE id IN (\'bom-a1\', \'bom-b1\')');
+  await runExec('DELETE FROM examination_subjects WHERE id IN (\'subj-a1\', \'subj-b1\')');
+  await runExec('DELETE FROM examination_classes WHERE id IN (\'class-a1\', \'class-b1\')');
   await runExec('DELETE FROM user_companies WHERE user_id IN (?, ?)', [USER_A_ID, USER_B_ID]);
   await runExec('DELETE FROM sales WHERE id LIKE \'sale-%\'');
   await runExec('DELETE FROM examination_batches WHERE id IN (\'batch-a1\', \'batch-b1\')');
