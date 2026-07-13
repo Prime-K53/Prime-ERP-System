@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from './cloudMode';
 import { logger } from './logger';
 
 export const STORE_TO_TABLE: Record<string, string> = {
+  warehouses: 'warehouses',
   inventory: 'products',
   ledger: 'ledger_entries',
   batches: 'production_batches',

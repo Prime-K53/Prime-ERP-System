@@ -33,6 +33,7 @@ export interface SyncProgress {
 }
 
 const STORE_TO_TABLE: Record<string, string> = {
+  warehouses: 'warehouses',
   inventory: 'products',
   ledger: 'ledger_entries',
   batches: 'production_batches',
