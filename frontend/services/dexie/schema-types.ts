@@ -50,6 +50,11 @@ export const TABLE_DEFINITIONS: Record<string, TableDefinition> = {
   analyticsCache: { name: 'analyticsCache', primaryKey: 'id', indexes: ['cacheKey', ['category', 'updatedAt']], domain: 'analytics' },
   kpiCache: { name: 'kpiCache', primaryKey: 'id', indexes: ['kpiKey', ['period', 'updatedAt']], domain: 'analytics' },
   dashboardSnapshots: { name: 'dashboardSnapshots', primaryKey: 'id', indexes: ['snapshotKey', ['generatedAt', 'snapshotKey']], domain: 'analytics' },
+  referrals: { name: 'referrals', primaryKey: 'id', indexes: [['referrerId', 'createdAt'], ['referredCustomerId', 'createdAt'], ['status', 'createdAt']], domain: 'finance' },
+  referralCommissions: { name: 'referralCommissions', primaryKey: 'id', indexes: [['referrerId', 'createdAt'], ['referredCustomerId', 'createdAt'], ['invoiceId', 'createdAt'], ['status', 'createdAt']], domain: 'finance' },
+  referralWallets: { name: 'referralWallets', primaryKey: 'id', indexes: ['customerId', ['updatedAt', 'customerId']], domain: 'finance' },
+  referralTransactions: { name: 'referralTransactions', primaryKey: 'id', indexes: [['customerId', 'createdAt'], ['walletId', 'createdAt'], ['type', 'createdAt']], domain: 'finance' },
+  referralLogs: { name: 'referralLogs', primaryKey: 'id', indexes: [['createdAt', 'entityType'], ['entityId', 'createdAt']], domain: 'core' },
 };
 
 export const DOMAIN_TABLE_MAP: Record<Domain, string[]> = {} as Record<Domain, string[]>;

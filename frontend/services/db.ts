@@ -131,13 +131,18 @@ interface NexusDB extends DBSchema {
     taxRates: { key: string; value: TaxRate; };
     customerPricingTiers: { key: string; value: any; };
     discountRules: { key: string; value: any; };
+    referrals: { key: string; value: import('../types/referral').Referral; };
+    referralCommissions: { key: string; value: import('../types/referral').ReferralCommission; };
+    referralWallets: { key: string; value: import('../types/referral').ReferralWallet; };
+    referralTransactions: { key: string; value: import('../types/referral').ReferralTransaction; };
+    referralLogs: { key: string; value: import('../types/referral').ReferralLog; };
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
 // Version bump required so existing IndexedDB instances run upgrade()
 // and create newly-added stores such as examinationBatchNotifications
 // and notificationAuditLogs, and taxRates.
-const DB_VERSION = 43;
+const DB_VERSION = 44;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
@@ -544,6 +549,11 @@ const CLOUD_TABLE_MAP: Record<string, string> = {
   quotations: 'quotations',
   orders: 'orders',
   boms: 'boms',
+  referrals: 'referrals',
+  referralCommissions: 'referral_commissions',
+  referralWallets: 'referral_wallets',
+  referralTransactions: 'referral_transactions',
+  referralLogs: 'referral_logs',
 };
 
 function getCloudTable(storeName: string): string {
@@ -592,7 +602,12 @@ const STORE_NAMES: (keyof NexusDB)[] = [
     'productAttributes',
     'taxRates',
     'customerPricingTiers',
-    'discountRules'
+    'discountRules',
+    'referrals',
+    'referralCommissions',
+    'referralWallets',
+    'referralTransactions',
+    'referralLogs'
 ];
 
 export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {

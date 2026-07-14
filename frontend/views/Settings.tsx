@@ -12,7 +12,7 @@ import {
     Globe, Clock, Key, Lock, Gauge, Binary, Plus, X, Percent,
     Cpu, Layers, Smartphone, Layout, Users, ShoppingBag, ShoppingCart, Palette, Monitor,
     Factory, Box, Cloud, Bell, Mail, MessageSquare, ShieldAlert, Webhook, Sun, Moon, Laptop, Info, Undo2,
-    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles, Scissors
+    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles, Scissors, Award
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
@@ -54,6 +54,7 @@ import { AIProviderTab } from './settings/tabs/AIProviderTab';
 import { PricingAdminTab } from './settings/tabs/PricingAdminTab';
 import { AttributesTab } from './settings/tabs/AttributesTab';
 import { FinishingOptionsTab } from './settings/tabs/FinishingOptionsTab';
+import { ReferralSettingsTab } from './settings/tabs/ReferralSettingsTab';
 import ComplianceSettings, { ComplianceConfig } from '../components/ComplianceSettings';
 import CustomizeDashboard from '../components/dashboard/CustomizeDashboard';
 import { useDashboardStore } from '../stores/dashboardStore';
@@ -647,7 +648,8 @@ const Settings: React.FC = () => {
             items: [
                 { id: 'ProfitMargins', icon: TrendingUp, label: 'Profit Markups', desc: 'Global, category and line-item markup overrides' },
                 { id: 'Pricing', icon: Percent, label: 'Discount & Pricing Rules', desc: 'Customer pricing tiers, discount rules, and tax rates' },
-                { id: 'Finishing', icon: Scissors, label: 'Finishing Options', desc: 'Default pricing for binding, cutting, and other finishing services' }
+                { id: 'Finishing', icon: Scissors, label: 'Finishing Options', desc: 'Default pricing for binding, cutting, and other finishing services' },
+            { id: 'Referrals', icon: Award, label: 'Referral Settings', desc: 'Configure referral program and commission rules' }
             ]
         },
         {
@@ -3194,6 +3196,14 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                         {
                             activeTab === 'Finishing' && (
                                 <FinishingOptionsTab config={config} setConfig={setConfig} notify={notify} items={inventory} />
+                            )
+                        }
+
+                        {
+                            activeTab === 'Referrals' && (
+                                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
+                                    <ReferralSettingsTab notify={notify} />
+                                </div>
                             )
                         }
 

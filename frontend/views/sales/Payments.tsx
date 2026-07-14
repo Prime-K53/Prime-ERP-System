@@ -993,11 +993,6 @@ const Payments: React.FC = () => {
                 await handlePreviewReceipt(postedPayment || newPayment);
             }
 
-            // Deduct from wallet if paying via wallet
-            if (formData.paymentMethod === 'Wallet' && formData.customerId && paymentAmount > 0) {
-                await paymentService.updateCustomerWallet(formData.customerId, -paymentAmount);
-            }
-
             // Handle Examination Invoice payment sync
             if (location.state?.isExamInvoice && location.state?.sqliteInvoiceId) {
                 try {

@@ -37,7 +37,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
     pipelineStage: 'New',
     leadScore: 0,
     nextFollowUpDate: '',
-    estimatedDealValue: 0
+    estimatedDealValue: 0,
+    referredBy: ''
   });
 
   const [useBillingForShipping, setUseBillingForShipping] = useState(true);
@@ -68,7 +69,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
         pipelineStage: (customer as Customer & Record<string, unknown>).pipelineStage || 'New',
         leadScore: (customer as Customer & Record<string, unknown>).leadScore ?? 0,
         nextFollowUpDate: (customer as Customer & Record<string, unknown>).nextFollowUpDate || '',
-        estimatedDealValue: (customer as Customer & Record<string, unknown>).estimatedDealValue ?? 0
+        estimatedDealValue: (customer as Customer & Record<string, unknown>).estimatedDealValue ?? 0,
+        referredBy: (customer as Customer & Record<string, unknown>).referredBy || ''
       });
       setUseBillingForShipping(customer.billingAddress === customer.shippingAddress);
     } else {
@@ -76,7 +78,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
         name: '', phone: '', address: '', city: '', billingAddress: '', shippingAddress: '',
         balance: 0, walletBalance: 0, creditLimit: 0, notes: '',
         paymentTerms: getDefaultPaymentTermsForSegment('Individual'), subAccounts: [], segment: 'Individual', assignedSalesperson: '',
-        creditHold: false, tags: [], avgPaymentDays: 0, leadSource: '', pipelineStage: 'New', leadScore: 0, nextFollowUpDate: '', estimatedDealValue: 0
+        creditHold: false, tags: [], avgPaymentDays: 0, leadSource: '', pipelineStage: 'New', leadScore: 0, nextFollowUpDate: '', estimatedDealValue: 0, referredBy: ''
       });
       setUseBillingForShipping(true);
     }
@@ -375,6 +377,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                           <option value="Field Sales">Field Sales</option>
                           <option value="Email Campaign">Email Campaign</option>
                         </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Referred By (Customer ID)</label>
+                        <input type="text" name="referredBy" value={formData.referredBy || ''} onChange={handleChange}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          placeholder="Enter referring customer ID..." />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Pipeline Stage</label>

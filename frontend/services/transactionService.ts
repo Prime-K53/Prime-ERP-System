@@ -935,12 +935,13 @@ export const transactionService = {
                     if (payment.retained <= 0) continue;
 
                     let targetDebitAccount = gl.cashDrawerAccount;
-                    if (payment.accountId) {
+                    if (payment.method === 'Wallet') {
+                        targetDebitAccount = gl.customerDepositAccount;
+                    } else if (payment.accountId) {
                         targetDebitAccount = payment.accountId;
                     } else {
                         if (payment.method === 'Card' || payment.method === 'Bank Transfer') targetDebitAccount = gl.bankAccount;
                         if (payment.method === 'Mobile Money') targetDebitAccount = gl.mobileMoneyAccount;
-                        if (payment.method === 'Wallet') targetDebitAccount = gl.customerWalletAccount;
                     }
 
                     const payEntry: LedgerEntry = {
@@ -1668,12 +1669,13 @@ export const transactionService = {
                     await customerPaymentsStore.put(custPayment);
 
                     let targetDebitAccount = gl.bankAccount;
-                    if (paymentAccountId) {
+                    if (paymentMethod === 'Wallet') {
+                        targetDebitAccount = gl.customerDepositAccount;
+                    } else if (paymentAccountId) {
                         targetDebitAccount = paymentAccountId;
                     } else {
                         if (paymentMethod === 'Cash') targetDebitAccount = gl.cashDrawerAccount;
                         if (paymentMethod === 'Mobile Money') targetDebitAccount = gl.mobileMoneyAccount;
-                        if (paymentMethod === 'Wallet') targetDebitAccount = gl.customerWalletAccount;
                     }
 
                     const payEntry: LedgerEntry = {
@@ -2032,12 +2034,13 @@ export const transactionService = {
                     await customerPaymentsStore.put(custPayment);
 
                     let targetDebitAccount = gl.cashDrawerAccount;
-                    if (paymentAccountId) {
+                    if (paymentMethod === 'Wallet') {
+                        targetDebitAccount = gl.customerDepositAccount;
+                    } else if (paymentAccountId) {
                         targetDebitAccount = paymentAccountId;
                     } else {
                         if (paymentMethod === 'Card' || paymentMethod === 'Bank Transfer') targetDebitAccount = gl.bankAccount;
                         if (paymentMethod === 'Mobile Money') targetDebitAccount = gl.mobileMoneyAccount;
-                        if (paymentMethod === 'Wallet') targetDebitAccount = gl.customerWalletAccount;
                     }
 
                     const payEntry: LedgerEntry = {
@@ -2100,6 +2103,14 @@ export const transactionService = {
                 return { success: true, id: invoice.id };
             }
         );
+        try {
+            if (invoice.status === 'Paid' && invoice.customerId) {
+                const { referralService } = await import('./referralService');
+                await referralService.processInvoiceCommission(invoice);
+            }
+        } catch (e) {
+            logger.error('Failed to process referral commission', e);
+        }
     },
 
     async convertQuotationToInvoice(quotationId: string, invoiceData: Invoice) {
@@ -2526,7 +2537,7 @@ export const transactionService = {
                     await customerStore.put(customer);
                 }
 
-                // 6. Handle wallet only when explicitly selected.
+                // 6a. Handle wallet DEPOSIT (overpayment credited to wallet).
                 if (snapshot.walletDeposit > 0 && payment.excessHandling === 'Wallet' && customerId) {
                     const walletTx: WalletTransaction = {
                         id: generateId('WLT-PAY'),
@@ -2544,41 +2555,88 @@ export const transactionService = {
                     }
                 }
 
+                // 6b. Handle wallet PAYMENT (customer pays FROM wallet balance).
+                if (payment.paymentMethod === 'Wallet' && customerId && snapshot.amountRetained > 0) {
+                    if (!customer) throw new Error('Customer not found for wallet deduction');
+                    customer.walletBalance = toMoney((customer.walletBalance || 0) - snapshot.amountRetained);
+                    await customerStore.put(customer);
+                    const walletTx: WalletTransaction = {
+                        id: generateId('WLT-DBT'),
+                        customerId,
+                        amount: -snapshot.amountRetained,
+                        type: 'Debit',
+                        date: payment.date,
+                        description: `Wallet payment #${payment.id} applied to invoices`
+                    };
+                    await walletStore.put(walletTx);
+                }
+
                 // 7. Create Ledger entry for retained cash (ignore pure change-only records).
                 const gl = getGLConfig();
                 let targetDebitAccount = gl.cashDrawerAccount;
 
-                if (payment.accountId) {
+                if (payment.paymentMethod === 'Wallet') {
+                    targetDebitAccount = gl.customerDepositAccount;
+                } else if (payment.accountId) {
                     targetDebitAccount = payment.accountId;
                 } else {
                     if (payment.paymentMethod === 'Card' || payment.paymentMethod === 'Bank Transfer') targetDebitAccount = gl.bankAccount;
                     if (payment.paymentMethod === 'Mobile Money') targetDebitAccount = gl.mobileMoneyAccount;
-                    if (payment.paymentMethod === 'Wallet') targetDebitAccount = gl.customerWalletAccount;
                 }
 
                 if (snapshot.amountRetained > 0) {
-                    const creditAccountId = paymentPurpose === 'WALLET_TOPUP'
-                        ? gl.customerDepositAccount
-                        : gl.accountsReceivable;
+                    // Split ledger when overpayment goes to wallet alongside invoice payment
+                    if (snapshot.walletDeposit > 0 && payment.excessHandling === 'Wallet' && snapshot.amountApplied > 0) {
+                        const arEntry: LedgerEntry = {
+                            id: generateId('LG-PAY'),
+                            date: payment.date,
+                            description: `Payment #${payment.id} from ${payment.customerName} - Status: ${snapshot.paymentStatus}`,
+                            debitAccountId: targetDebitAccount,
+                            creditAccountId: gl.accountsReceivable,
+                            amount: snapshot.amountApplied,
+                            referenceId: payment.id,
+                            reconciled: false,
+                            customerId: customerId || payment.customerId,
+                            customerName: payment.customerName
+                        };
+                        await ledgerStore.put(arEntry);
+                        const depositEntry: LedgerEntry = {
+                            id: generateId('LG-PAY-WLT'),
+                            date: payment.date,
+                            description: `Wallet deposit from payment #${payment.id}`,
+                            debitAccountId: targetDebitAccount,
+                            creditAccountId: gl.customerDepositAccount,
+                            amount: snapshot.walletDeposit,
+                            referenceId: payment.id,
+                            reconciled: false,
+                            customerId: customerId || payment.customerId,
+                            customerName: payment.customerName
+                        };
+                        await ledgerStore.put(depositEntry);
+                    } else {
+                        const creditAccountId = paymentPurpose === 'WALLET_TOPUP'
+                            ? gl.customerDepositAccount
+                            : gl.accountsReceivable;
 
-                    const ledgerEntry: LedgerEntry = {
-                        id: generateId('LG-PAY'),
-                        date: payment.date,
-                        description: `Payment #${payment.id} from ${payment.customerName} - Status: ${snapshot.paymentStatus}`,
-                        debitAccountId: targetDebitAccount,
-                        creditAccountId,
-                        amount: snapshot.amountRetained,
-                        referenceId: payment.id,
-                        reconciled: false,
-                        customerId: customerId || payment.customerId,
-                        customerName: payment.customerName
-                    };
-                    await ledgerStore.put(ledgerEntry);
+                        const ledgerEntry: LedgerEntry = {
+                            id: generateId('LG-PAY'),
+                            date: payment.date,
+                            description: `Payment #${payment.id} from ${payment.customerName} - Status: ${snapshot.paymentStatus}`,
+                            debitAccountId: targetDebitAccount,
+                            creditAccountId,
+                            amount: snapshot.amountRetained,
+                            referenceId: payment.id,
+                            reconciled: false,
+                            customerId: customerId || payment.customerId,
+                            customerName: payment.customerName
+                        };
+                        await ledgerStore.put(ledgerEntry);
+                    }
                 }
 
-                // 8. Mirror to Banking (if a linked bank account exists)
+                // 8. Mirror to Banking (if a linked bank account exists — skip for wallet, no real money moved)
                 const bankAccounts = await ensureBankAccounts(bankAccountsStore);
-                const bankAccount = resolveBankAccountForPayment(bankAccounts, payment);
+                const bankAccount = payment.paymentMethod === 'Wallet' ? null : resolveBankAccountForPayment(bankAccounts, payment);
                 if (bankAccount && snapshot.amountRetained > 0) {
                     const allBankTransactions = await bankTransactionsStore.getAll();
                     const existing = allBankTransactions.find(tx =>
@@ -2622,6 +2680,19 @@ export const transactionService = {
                 return { success: true };
             }
         );
+        // Process referral commissions for paid invoices after atomic commit
+        try {
+            const invoiceIds = [...new Set((payment.allocations || []).map((a: any) => a.invoiceId).filter(Boolean))];
+            for (const invoiceId of invoiceIds) {
+                const invoice = await dbService.get<any>('invoices', invoiceId);
+                if (invoice && invoice.status === 'Paid') {
+                    const { referralService } = await import('./referralService');
+                    await referralService.processInvoiceCommission(invoice);
+                }
+            }
+        } catch (e) {
+            logger.error('Failed to process referral commissions', e);
+        }
     },
 
     async voidCustomerPayment(paymentId: string, reason: string) {
@@ -2712,18 +2783,19 @@ export const transactionService = {
 
                 // 4. Create Reversal Ledger Entry
                 const gl = getGLConfig();
-                    const retainedAmount = toMoney(
-                        payment.amountRetained ??
-                        payment.receiptSnapshot?.amountRetained ??
-                        payment.amount
-                    );
+                const retainedAmount = toMoney(
+                    payment.amountRetained ??
+                    payment.receiptSnapshot?.amountRetained ??
+                    payment.amount
+                );
                 let originalDebitAccount = gl.cashDrawerAccount;
-                if (payment.accountId) {
+                if (payment.paymentMethod === 'Wallet') {
+                    originalDebitAccount = gl.customerDepositAccount;
+                } else if (payment.accountId) {
                     originalDebitAccount = payment.accountId;
                 } else {
                     if (payment.paymentMethod === 'Card' || payment.paymentMethod === 'Bank Transfer') originalDebitAccount = gl.bankAccount;
                     if (payment.paymentMethod === 'Mobile Money') originalDebitAccount = gl.mobileMoneyAccount;
-                    if (payment.paymentMethod === 'Wallet') originalDebitAccount = gl.customerWalletAccount;
                 }
                 const originalCreditAccount = payment.receiptSnapshot?.paymentPurpose === 'WALLET_TOPUP'
                     ? gl.customerDepositAccount
@@ -2747,9 +2819,9 @@ export const transactionService = {
                 payment.voidReason = reason;
                 await paymentStore.put(payment);
 
-                // 6. Mirror reversal to Banking (if linked bank account exists)
+                // 6. Mirror reversal to Banking (if linked bank account exists — skip for wallet, no real money moved)
                 const bankAccounts = await ensureBankAccounts(bankAccountsStore);
-                const bankAccount = resolveBankAccountForPayment(bankAccounts, payment);
+                const bankAccount = payment.paymentMethod === 'Wallet' ? null : resolveBankAccountForPayment(bankAccounts, payment);
                 if (bankAccount) {
                     const allBankTransactions = await bankTransactionsStore.getAll();
                     const reversalRef = `VOID-${paymentId}`;
@@ -2794,6 +2866,16 @@ export const transactionService = {
                 return { success: true };
             }
         );
+        // Reverse referral commissions for voided payments
+        try {
+            const invoiceIds = [...new Set((payment.allocations || []).map((a: any) => a.invoiceId).filter(Boolean))];
+            for (const invoiceId of invoiceIds) {
+                const { referralService } = await import('./referralService');
+                await referralService.reverseCommissionForInvoice(invoiceId, `Payment ${paymentId} voided: ${reason}`);
+            }
+        } catch (e) {
+            logger.error('Failed to reverse referral commissions on void', e);
+        }
     },
 
     async saveCustomer(customer: Customer, oldCustomer?: Customer) {
@@ -2895,12 +2977,13 @@ export const transactionService = {
                     }
 
                     let originalDebitAccount = gl.cashDrawerAccount;
-                    if (payment.accountId) {
+                    if (payment.paymentMethod === 'Wallet') {
+                        originalDebitAccount = gl.customerDepositAccount;
+                    } else if (payment.accountId) {
                         originalDebitAccount = payment.accountId;
                     } else {
                         if (payment.paymentMethod === 'Card' || payment.paymentMethod === 'Bank Transfer') originalDebitAccount = gl.bankAccount;
                         if (payment.paymentMethod === 'Mobile Money') originalDebitAccount = gl.mobileMoneyAccount;
-                        if (payment.paymentMethod === 'Wallet') originalDebitAccount = gl.customerWalletAccount;
                     }
                     const originalCreditAccount = payment.receiptSnapshot?.paymentPurpose === 'WALLET_TOPUP'
                         ? gl.customerDepositAccount
@@ -2924,7 +3007,7 @@ export const transactionService = {
                     }
 
                     const bankAccounts = await ensureBankAccounts(bankAccountsStore);
-                    const bankAccount = resolveBankAccountForPayment(bankAccounts, payment);
+                    const bankAccount = payment.paymentMethod === 'Wallet' ? null : resolveBankAccountForPayment(bankAccounts, payment);
                     if (bankAccount && retainedAmount > 0) {
                         const allBankTransactions = await bankTransactionsStore.getAll();
                         const reversalRef = `VOID-${payment.id}`;
@@ -3001,6 +3084,12 @@ export const transactionService = {
                 return { success: true };
             }
         );
+        try {
+            const { referralService } = await import('./referralService');
+            await referralService.reverseCommissionForInvoice(id, `Invoice ${id} voided: ${reason}`);
+        } catch (e) {
+            logger.error('Failed to reverse referral commissions on invoice void', e);
+        }
     },
 
     async voidSale(id: string, reason: string) {
@@ -3103,12 +3192,13 @@ export const transactionService = {
                     if (retainedAmount > 0) {
                         // Reverse payment ledger entry
                         let originalDebitAccount = gl.cashDrawerAccount;
-                        if (payment.accountId) {
+                        if (payment.paymentMethod === 'Wallet') {
+                            originalDebitAccount = gl.customerDepositAccount;
+                        } else if (payment.accountId) {
                             originalDebitAccount = payment.accountId;
                         } else {
                             if (payment.paymentMethod === 'Card' || payment.paymentMethod === 'Bank Transfer') originalDebitAccount = gl.bankAccount;
                             if (payment.paymentMethod === 'Mobile Money') originalDebitAccount = gl.mobileMoneyAccount;
-                            if (payment.paymentMethod === 'Wallet') originalDebitAccount = gl.customerWalletAccount;
                         }
 
                         const reversal: LedgerEntry = {
@@ -3128,7 +3218,7 @@ export const transactionService = {
 
                         // Reverse bank transaction
                         const bankAccounts = await ensureBankAccounts(bankAccountsStore);
-                        const bankAccount = resolveBankAccountForPayment(bankAccounts, payment);
+                        const bankAccount = payment.paymentMethod === 'Wallet' ? null : resolveBankAccountForPayment(bankAccounts, payment);
                         if (bankAccount) {
                             const allBankTransactions = await bankTransactionsStore.getAll();
                             const reversalRef = `VOID-${payment.id}`;
@@ -3226,6 +3316,15 @@ export const transactionService = {
                 return { success: true };
             }
         );
+        try {
+            const { referralService } = await import('./referralService');
+            const saleData = await dbService.get<any>('sales', id);
+            if (saleData?.invoiceId) {
+                await referralService.reverseCommissionForInvoice(saleData.invoiceId, `Sale ${id} voided: ${reason}`);
+            }
+        } catch (e) {
+            logger.error('Failed to reverse referral commissions on sale void', e);
+        }
     },
 
     async syncInventoryValuation(accountId: string, physicalValue: number, currentLedgerBalance: number) {
@@ -4392,11 +4491,13 @@ export const transactionService = {
 
                 // 3. Ledger Entry
                 const gl = getGLConfig();
-                let targetDebitAccount = isWallet ? gl.customerWalletAccount : gl.cashDrawerAccount;
+                let targetDebitAccount = gl.cashDrawerAccount;
 
-                if (payment.accountId) {
+                if (isWallet) {
+                    targetDebitAccount = gl.customerDepositAccount;
+                } else if (payment.accountId) {
                     targetDebitAccount = payment.accountId;
-                } else if (!isWallet) {
+                } else {
                     if (payment.paymentMethod === 'Card' || payment.paymentMethod === 'Bank Transfer') targetDebitAccount = gl.bankAccount;
                     if (payment.paymentMethod === 'Mobile Money') targetDebitAccount = gl.mobileMoneyAccount;
                 }

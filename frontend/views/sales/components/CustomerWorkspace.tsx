@@ -30,6 +30,7 @@ import { AuditTimeline } from '../../shared/components/AuditTimeline';
 import AICustomerInsights from '../../../components/ai/AICustomerInsights';
 import CRMSegmentation from '../../../components/CRM/CRMSegmentation';
 import { currencyService } from '../../../services/currencyService';
+import { ReferralPanel } from './ReferralPanel';
 
 interface CustomerWorkspaceProps {
   customer: Customer;
@@ -48,7 +49,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
   const { addAuditLog, companyConfig, auditLogs, notify } = useAuth();
   const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit' | 'Referrals'>('Overview');
   const [accountMenu, setAccountMenu] = useState<{ id: string, type: 'debit' | 'credit', x: number, y: number } | null>(null);
   const [viewingAccountId, setViewingAccountId] = useState<string | null>(null);
 
@@ -492,7 +493,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
         {/* Tab Navigation */}
         <div className="px-6 border-b border-slate-200 bg-white sticky top-[65px] z-10">
           <div className="flex items-center gap-8">
-            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Documents', 'Segmentation', 'Settings', 'Security Audit'] as const).map(tab => (
+            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Documents', 'Segmentation', 'Settings', 'Security Audit', 'Referrals'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1314,6 +1315,12 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
           )}
         </div>
       </div>
+
+      {activeTab === 'Referrals' && (
+        <div className="animate-in fade-in duration-300">
+          <ReferralPanel customer={customer} currency={companyConfig?.currencySymbol || '$'} />
+        </div>
+      )}
 
       {/* Account Activity Modal */}
       {viewingAccountId && (

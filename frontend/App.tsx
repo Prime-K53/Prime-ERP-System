@@ -127,6 +127,7 @@ const Payments = lazyWithRetry('./views/sales/Payments', () => import('./views/s
 const Orders = lazyWithRetry('./views/sales/Orders', () => import('./views/sales/Orders'));
 const JobTickets = lazyWithRetry('./views/sales/JobTickets', () => import('./views/sales/JobTickets'));
 const Commissions = lazyWithRetry('./views/sales/Commissions', () => import('./views/sales/Commissions'));
+const Referrals = lazyWithRetry('./views/sales/Referrals', () => import('./views/sales/Referrals'));
 const Clients = lazyWithRetry('./views/sales/Clients', () => import('./views/sales/Clients'));
 const ShippingManager = lazyWithRetry('./views/sales/ShippingManager', () => import('./views/sales/ShippingManager'));
 const Tasks = lazyWithRetry('./views/Tasks', () => import('./views/Tasks'));
@@ -575,6 +576,7 @@ const AppLayout: React.FC = () => {
                   <Route path="/sales-flow/clients" element={<ProtectedRoute permission="sales.view"><Clients /></ProtectedRoute>} />
                   <Route path="/sales-flow/payments" element={<ProtectedRoute permission="sales.view"><Payments /></ProtectedRoute>} />
                   <Route path="/sales-flow/commissions" element={<ProtectedRoute permission="sales.view"><Commissions /></ProtectedRoute>} />
+                  <Route path="/sales-flow/referrals" element={<ProtectedRoute permission="sales.view"><Referrals /></ProtectedRoute>} />
                 </Route>
 
                 {/* Procurement */}

@@ -11,6 +11,10 @@ export type {
   InventoryRole, ResourceSubtype, CostingMethod,
   UnitConversionFactor, PurchaseLot
 } from './types/inventory';
+export type {
+  Referral, ReferralCommission, ReferralWallet,
+  ReferralTransaction, ReferralSettings, ReferralLog
+} from './types/referral';
 
 export interface AppearanceConfig {
   theme: 'Light' | 'Dark' | 'System';
