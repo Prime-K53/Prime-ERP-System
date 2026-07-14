@@ -1314,22 +1314,37 @@ const Payments: React.FC = () => {
                                                             ))}
                                                         </optgroup>
                                                     )}
-                                                    {formData.customerName && (customers.find((c: any) => c.name === formData.customerName)?.walletBalance || 0) > 0 && (
-                                                        <optgroup label="Customer Wallet">
-                                                            <option value="wallet">Wallet Balance</option>
-                                                        </optgroup>
-                                                    )}
                                                 </select>
-                                                {formData.paymentMethod === 'Wallet' && formData.customerName && (() => {
-                                                    const cust = customers.find((c: any) => c.name === formData.customerName);
-                                                    const bal = cust?.walletBalance || 0;
-                                                    return (
-                                                        <p className="text-[11px] text-amber-600 font-bold mt-1.5">
-                                                            Available: {currency}{bal.toFixed(2)}
-                                                        </p>
-                                                    );
-                                                })()}
                                             </div>
+                                            {formData.customerName && !editMode && (() => {
+                                                const cust = customers.find((c: any) => c.name === formData.customerName);
+                                                const bal = cust?.walletBalance || 0;
+                                                return bal > 0 ? (
+                                                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                                                        <label className="flex items-center gap-3 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="w-4 h-4 accent-emerald-600"
+                                                                checked={formData.paymentMethod === 'Wallet'}
+                                                                onChange={e => {
+                                                                    if (e.target.checked) {
+                                                                        setFormData({ ...formData, paymentMethod: 'Wallet', accountId: 'wallet' });
+                                                                    } else {
+                                                                        setFormData({ ...formData, paymentMethod: 'Cash', accountId: '1000' });
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-[11px] font-bold text-emerald-800">Pay from Wallet</p>
+                                                                <p className="text-[10px] text-emerald-600">{currency}{bal.toFixed(2)} available</p>
+                                                            </div>
+                                                            {formData.paymentMethod === 'Wallet' && (
+                                                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200 px-2 py-0.5 rounded-full">Active</span>
+                                                            )}
+                                                        </label>
+                                                    </div>
+                                                ) : null;
+                                            })()}
 
                                             <div className="pt-4 border-t border-slate-200">
                                                 <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-tight mb-1.5">Amount Received</label>

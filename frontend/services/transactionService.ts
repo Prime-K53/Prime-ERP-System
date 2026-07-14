@@ -2692,6 +2692,24 @@ export const transactionService = {
                     }
                 }
 
+                // 3b. Reverse Wallet Payment (if payment was made FROM wallet)
+                if (payment.paymentMethod === 'Wallet') {
+                    const walletPayAmount = toMoney(payment.amount || 0);
+                    if (walletPayAmount > 0 && customer) {
+                        customer.walletBalance = toMoney((customer.walletBalance || 0) + walletPayAmount);
+                        await customerStore.put(customer);
+                        const walletTx: WalletTransaction = {
+                            id: generateId('WLT-REV'),
+                            customerId: payment.customerId,
+                            amount: walletPayAmount,
+                            type: 'Credit',
+                            date: new Date().toISOString(),
+                            description: `REVERSAL: Wallet payment ${payment.id} voided`
+                        };
+                        await walletStore.put(walletTx);
+                    }
+                }
+
                 // 4. Create Reversal Ledger Entry
                 const gl = getGLConfig();
                     const retainedAmount = toMoney(
