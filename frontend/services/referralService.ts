@@ -105,7 +105,7 @@ export const referralService = {
     });
   },
 
-  async processInvoiceCommission(invoice: any): Promise<void> {
+  async processInvoiceCommission(invoice: any, paymentId?: string): Promise<void> {
     const settings = await this.getSettings();
     if (!settings.enableReferralSystem) return;
 
@@ -161,6 +161,7 @@ export const referralService = {
       paymentStatus: 'Unpaid',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      paymentId,
     };
 
     await dbService.put('referralCommissions', commission);
@@ -178,7 +179,9 @@ export const referralService = {
     await dbService.put('referralTransactions', tx);
 
     if (!settings.approvalRequired && settings.autoCreditWallet) {
-      await this.creditCustomerWallet(referral.referrerId, commissionAmount, `Referral commission from invoice ${invoice.id}`);
+      const walletTxId = await this.creditCustomerWallet(referral.referrerId, commissionAmount, `Referral commission from invoice ${invoice.id}`);
+      commission.walletTxId = walletTxId;
+      await dbService.put('referralCommissions', commission);
     }
 
     await this.logAudit({
@@ -202,7 +205,9 @@ export const referralService = {
 
     const settings = await this.getSettings();
     if (settings.autoCreditWallet) {
-      await this.creditCustomerWallet(commission.referrerId, commission.commissionAmount, `Referral commission approved from invoice ${commission.invoiceId}`);
+      const walletTxId = await this.creditCustomerWallet(commission.referrerId, commission.commissionAmount, `Referral commission approved from invoice ${commission.invoiceId}`);
+      commission.walletTxId = walletTxId;
+      await dbService.put('referralCommissions', commission);
     }
 
     await this.logAudit({
@@ -262,9 +267,9 @@ export const referralService = {
     });
   },
 
-  async creditCustomerWallet(customerId: string, amount: number, description: string): Promise<void> {
+  async creditCustomerWallet(customerId: string, amount: number, description: string): Promise<string | undefined> {
     const customer = await dbService.get<any>('customers', customerId);
-    if (!customer) return;
+    if (!customer) return undefined;
 
     customer.walletBalance = roundToCurrency((customer.walletBalance || 0) + amount);
     await dbService.put('customers', customer);
@@ -285,6 +290,7 @@ export const referralService = {
       entityId: customerId,
       newValue: JSON.stringify({ customerId, amount, newBalance: customer.walletBalance, description }),
     });
+    return walletTx.id;
   },
 
   async reverseWalletCredit(customerId: string, amount: number, description: string): Promise<void> {

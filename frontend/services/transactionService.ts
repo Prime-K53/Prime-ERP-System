@@ -2106,7 +2106,7 @@ export const transactionService = {
         try {
             if (invoice.status === 'Paid' && invoice.customerId) {
                 const { referralService } = await import('./referralService');
-                await referralService.processInvoiceCommission(invoice);
+                await referralService.processInvoiceCommission(invoice, paymentId);
             }
         } catch (e) {
             logger.error('Failed to process referral commission', e);
@@ -2687,7 +2687,7 @@ export const transactionService = {
                 const invoice = await dbService.get<any>('invoices', invoiceId);
                 if (invoice && invoice.status === 'Paid') {
                     const { referralService } = await import('./referralService');
-                    await referralService.processInvoiceCommission(invoice);
+                    await referralService.processInvoiceCommission(invoice, payment.id);
                 }
             }
         } catch (e) {

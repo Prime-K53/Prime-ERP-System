@@ -26,6 +26,8 @@ export interface ReferralCommission {
   updatedAt: string;
   createdBy?: string;
   notes?: string;
+  paymentId?: string;
+  walletTxId?: string;
   company_id?: string;
 }
 

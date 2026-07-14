@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Award, Users, DollarSign, TrendingUp, Search, ExternalLink, CheckCircle, Clock, XCircle, Filter, RefreshCw, Download } from 'lucide-react';
+import { Award, Users, DollarSign, TrendingUp, Search, ExternalLink, CheckCircle, Clock, XCircle, Filter, RefreshCw, Download, FileText, CreditCard, Wallet, Shield } from 'lucide-react';
 import { referralService } from '../../services/referralService';
 import { dbService } from '../../services/db';
 import { format, parseISO } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import type { Referral, ReferralCommission } from '../../types/referral';
 
 export default function ReferralsPage() {
+  const navigate = useNavigate();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [commissions, setCommissions] = useState<ReferralCommission[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -14,6 +16,7 @@ export default function ReferralsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'overview' | 'commissions' | 'referrals'>('overview');
+  const [expandedAudit, setExpandedAudit] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -198,29 +201,81 @@ export default function ReferralsPage() {
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rate</th>
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Commission</th>
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                    <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Audit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredCommissions.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 text-slate-500 text-sm">{format(parseISO(c.createdAt), 'MMM dd, yyyy')}</td>
-                      <td className="px-6 py-4 font-medium text-slate-800">{getCustomerName(c.referrerId)}</td>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-600">{c.invoiceId.slice(0, 12)}...</td>
-                      <td className="px-6 py-4 text-slate-700">${c.invoiceAmount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-slate-700">{c.commissionRate}%</td>
-                      <td className="px-6 py-4 font-bold text-emerald-600">${c.commissionAmount.toLocaleString()}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                          c.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          c.status === 'Approved' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                          c.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                          'bg-rose-50 text-rose-700 border-rose-100'
-                        }`}>{c.status}</span>
-                      </td>
-                    </tr>
+                    <React.Fragment key={c.id}>
+                      <tr className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-slate-500 text-sm">{format(parseISO(c.createdAt), 'MMM dd, yyyy')}</td>
+                        <td className="px-6 py-4 font-medium text-slate-800">{getCustomerName(c.referrerId)}</td>
+                        <td className="px-6 py-4">
+                          <button onClick={() => navigate('/sales-flow/invoices', { state: { invoiceId: c.invoiceId } })}
+                            className="font-mono text-xs text-blue-600 hover:text-blue-800 underline underline-offset-2 hover:no-underline transition-all">
+                            {c.invoiceId.slice(0, 12)}...
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 text-slate-700">${c.invoiceAmount.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-slate-700">{c.commissionRate}%</td>
+                        <td className="px-6 py-4 font-bold text-emerald-600">${c.commissionAmount.toLocaleString()}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                            c.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            c.status === 'Approved' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                            c.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                            'bg-rose-50 text-rose-700 border-rose-100'
+                          }`}>{c.status}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button onClick={() => setExpandedAudit(expandedAudit === c.id ? null : c.id)}
+                            className={`p-1.5 rounded-lg transition-all ${expandedAudit === c.id ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                            title="View audit trail">
+                            <ExternalLink size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                      {expandedAudit === c.id && (
+                        <tr className="bg-slate-50/80">
+                          <td colSpan={8} className="px-6 py-4">
+                            <div className="flex items-center gap-6 flex-wrap">
+                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Audit Chain:</span>
+                              <AuditLink
+                                icon={FileText}
+                                label="Invoice"
+                                id={c.invoiceId}
+                                onClick={() => navigate('/sales-flow/invoices', { state: { invoiceId: c.invoiceId } })}
+                              />
+                              {c.paymentId && (
+                                <AuditLink
+                                  icon={CreditCard}
+                                  label="Payment"
+                                  id={c.paymentId}
+                                  onClick={() => navigate('/sales-flow/payments', { state: { paymentId: c.paymentId } })}
+                                />
+                              )}
+                              {c.walletTxId && (
+                                <AuditLink
+                                  icon={Wallet}
+                                  label="Wallet Tx"
+                                  id={c.walletTxId}
+                                  onClick={() => navigate('/sales-flow/payments', { state: { action: 'create', customerId: c.referrerId } })}
+                                />
+                              )}
+                              <AuditLink
+                                icon={Shield}
+                                label="Audit Log"
+                                id={c.id}
+                                onClick={() => navigate('/audit')}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                   {filteredCommissions.length === 0 && (
-                    <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400 italic">No commissions found</td></tr>
+                    <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400 italic">No commissions found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -285,3 +340,12 @@ const StatCard: React.FC<{ icon: any; label: string; value: string; color: strin
     </div>
   );
 };
+
+const AuditLink: React.FC<{ icon: any; label: string; id: string; onClick: () => void }> = ({ icon: Icon, label, id, onClick }) => (
+  <button onClick={onClick}
+    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50 transition-all shadow-sm">
+    <Icon size={12} className="shrink-0" />
+    <span className="font-bold">{label}</span>
+    <span className="font-mono text-[10px] text-slate-400">{id.slice(0, 12)}...</span>
+  </button>
+);
