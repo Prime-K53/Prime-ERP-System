@@ -1914,8 +1914,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
                     <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Invoice Status</label>
-                        <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors">
+                        <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type} readOnly
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none transition-colors">
                             <option className="text-[#23282A]">{type === 'Invoice' ? 'Sales Invoice' : type === 'Quotation' ? 'Quotation' : type}</option>
                             <option className="text-[#23282A]">Proforma</option>
                             <option className="text-[#23282A]">Credit Note</option>
