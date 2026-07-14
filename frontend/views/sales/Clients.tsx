@@ -17,6 +17,7 @@ import { CustomerWorkspace } from './components/CustomerWorkspace';
 import { isAfter, parseISO, subDays, format } from 'date-fns';
 import { exportToCSV } from '../../utils/helpers';
 import { currencyService } from '../../services/currencyService';
+import { CustomerSearch } from '../../components/CustomerSearch';
 
 export const Clients: React.FC = () => {
   const { customers, addCustomer, updateCustomer, deleteCustomer, isLoading, customerPayments } = useSales();
@@ -40,6 +41,10 @@ export const Clients: React.FC = () => {
   const [balanceRange, setBalanceRange] = useState<string>('Any Balance');
   const [customerSegment, setCustomerSegment] = useState<string>('All Segments');
   const [pipelineStageFilter, setPipelineStageFilter] = useState<string>('All Stages');
+  const [referrerFilter, setReferrerFilter] = useState<string>('all');
+  const [referrerFilterId, setReferrerFilterId] = useState<string>('');
+  const [referrerFilterName, setReferrerFilterName] = useState<string>('');
+  const [showReferrerFilterSearch, setShowReferrerFilterSearch] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuId(null);
@@ -105,9 +110,19 @@ export const Clients: React.FC = () => {
         matchesMetric = hasRecentPayment;
       }
 
-      return matchesSearch && matchesStatus && matchesMetric && matchesSegment && matchesBalance && matchesPipelineStage;
+      let matchesReferrer = true;
+      if (referrerFilter !== 'all') {
+        const hasRef = !!((c as any).referredBy);
+        matchesReferrer = referrerFilter === 'yes' ? hasRef : !hasRef;
+      }
+      if (referrerFilterId) {
+        const cRef = (c as any).referredBy;
+        matchesReferrer = matchesReferrer && cRef === referrerFilterId;
+      }
+
+      return matchesSearch && matchesStatus && matchesMetric && matchesSegment && matchesBalance && matchesPipelineStage && matchesReferrer;
     });
-  }, [customers, searchQuery, filterStatus, selectedMetric, invoices, customerPayments, balanceRange, customerSegment, pipelineStageFilter]);
+  }, [customers, searchQuery, filterStatus, selectedMetric, invoices, customerPayments, balanceRange, customerSegment, pipelineStageFilter, referrerFilter, referrerFilterId]);
 
   const { currentItems, currentPage, maxPage, totalItems, next, prev, first, last, setItemsPerPage, itemsPerPage } = usePagination(filteredCustomers, 25);
 
@@ -396,6 +411,15 @@ export const Clients: React.FC = () => {
               <option value="Won">Won</option>
               <option value="Lost">Lost</option>
             </select>
+            <select
+              value={referrerFilter}
+              onChange={(e) => { setReferrerFilter(e.target.value); if (e.target.value === 'all') setReferrerFilterId(''); }}
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[13px] font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            >
+              <option value="all">All Referrals</option>
+              <option value="yes">Has Referrer</option>
+              <option value="no">No Referrer</option>
+            </select>
             <div className="relative group">
               <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                 <Filter size={18} />
@@ -431,12 +455,20 @@ export const Clients: React.FC = () => {
                       <option value="Government">Government</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Referrer</label>
+                    <button onClick={() => setShowReferrerFilterSearch(true)}
+                      className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[12px] text-left text-slate-600 hover:bg-white transition-colors truncate">
+                      {referrerFilterName || (referrerFilterId ? customers.find(c => c.id === referrerFilterId)?.name : 'Any Referrer')}
+                    </button>
+                  </div>
                   <button
                     onClick={() => {
-                      // Filters are applied automatically due to useMemo
-                      // We can add a "Clear Filters" button instead or just let it be
                       setBalanceRange('Any Balance');
                       setCustomerSegment('All Segments');
+                      setReferrerFilter('all');
+                      setReferrerFilterId('');
+                      setReferrerFilterName('');
                     }}
                     className="w-full py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-[11px] mt-2 hover:bg-slate-200 transition-colors"
                   >
@@ -730,6 +762,13 @@ export const Clients: React.FC = () => {
         onSave={selectedCustomer ? updateCustomer : addCustomer}
         customer={selectedCustomer}
       />
+
+      <CustomerSearch open={showReferrerFilterSearch}
+        onSelect={(sel) => { setReferrerFilterId(sel?.id || ''); setReferrerFilterName(sel?.name || ''); setShowReferrerFilterSearch(false); }}
+        onClose={() => setShowReferrerFilterSearch(false)}
+        title="Filter by Referrer"
+        excludeIds={[]}
+        showQuickAdd={false} />
     </div>
   );
 };

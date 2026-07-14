@@ -32,6 +32,7 @@ import InventoryTransactionHistory from '../../inventory/components/InventoryTra
 import { OfflineImage } from '../../../components/OfflineImage';
 import { currencyService } from '../../../services/currencyService';
 import { AIGeneratorCard } from '../../../components/AIGeneratorCard';
+import { CustomerSearch } from '../../../components/CustomerSearch';
 
 interface OrderFormProps {
     type: string;
@@ -255,9 +256,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
     const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // Search States
-    const [customerSearch, setCustomerSearch] = useState('');
-    const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
     const [itemSearch, setItemSearch] = useState('');
     const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
     const [serviceSearch, setServiceSearch] = useState('');
@@ -267,26 +265,12 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [itemHistoryItemId, setItemHistoryItemId] = useState<string | undefined>();
     const [photoViewItem, setPhotoViewItem] = useState<Item | null>(null);
 
-    const customerDropdownRef = useRef<HTMLDivElement>(null);
     const itemDropdownRef = useRef<HTMLDivElement>(null);
     const serviceDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [referrerSearch, setReferrerSearch] = useState('');
-    const [isReferrerDropdownOpen, setIsReferrerDropdownOpen] = useState(false);
+    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+    const [showReferrerSearch, setShowReferrerSearch] = useState(false);
     const [selectedReferrerId, setSelectedReferrerId] = useState<string>('');
-    const referrerDropdownRef = useRef<HTMLDivElement>(null);
-
-    const filteredReferrers = useMemo(() => {
-        const q = referrerSearch.toLowerCase();
-        return (customers || []).filter((c: any) => {
-            if (c.id === formData.customerId) return false;
-            return c.name?.toLowerCase().includes(q)
-                || c.phone?.toLowerCase().includes(q)
-                || c.email?.toLowerCase().includes(q)
-                || c.customerCode?.toLowerCase().includes(q)
-                || c.company?.toLowerCase().includes(q);
-        });
-    }, [customers, referrerSearch, formData.customerId]);
 
     // Load existing referrer when customer is selected
     useEffect(() => {
@@ -295,41 +279,17 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 const { referralService } = await import('../../../services/referralService');
                 const ref = await referralService.getReferrerForCustomer(formData.customerId);
                 setSelectedReferrerId(ref?.referrerId || '');
-                if (ref?.referrerId) {
-                    const referrer = customers.find((c: any) => c.id === ref.referrerId);
-                    setReferrerSearch(referrer?.name || '');
-                } else {
-                    setReferrerSearch('');
-                }
             })();
         } else {
             setSelectedReferrerId('');
-            setReferrerSearch('');
         }
-    }, [formData.customerId, customers]);
-
-    // Close referrer dropdown on outside click
-    useEffect(() => {
-        const handleClick = (e: MouseEvent) => {
-            if (referrerDropdownRef.current && !referrerDropdownRef.current.contains(e.target as Node)) {
-                setIsReferrerDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, []);
+    }, [formData.customerId]);
 
     const getCustomerOutstanding = (name: string) => {
         return (invoices as Invoice[])
             .filter(i => i.customerName === name && i.status !== 'Paid' && i.status !== 'Draft' && i.status !== 'Cancelled')
             .reduce((sum, i) => sum + (i.totalAmount - (i.paidAmount || 0)), 0);
     };
-
-    const filteredCustomers = useMemo(() => {
-        return customerNames.filter((name: string) =>
-            name.toLowerCase().includes(customerSearch.toLowerCase())
-        );
-    }, [customerNames, customerSearch]);
 
     const filteredInventory = useMemo(() => {
         const base = inventory.filter((i: Item) => i.type !== 'Raw Material' && i.type !== 'Material' && i.type !== 'Service');
@@ -866,9 +826,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             }
         };
         const handleClickOutside = (event: MouseEvent) => {
-            if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
-                setIsCustomerDropdownOpen(false);
-            }
             if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target as Node)) {
                 setIsItemDropdownOpen(false);
             }
@@ -1661,10 +1618,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
         });
     };
 
-    const selectCustomer = async (name: string) => {
+    const selectCustomer = async (name: string, customerId?: string) => {
         const normalizedName = name.trim();
         if (!normalizedName) return;
-        const customer = findCustomerByName(normalizedName);
+        const customer = customerId ? customers.find((c: any) => c.id === customerId) : findCustomerByName(normalizedName);
         const selectedName = customer?.name || normalizedName;
         const segment = customer?.segment || '';
         const tier = customer ? await getCustomerPricingTier(customer.id).catch(() => null) : null;
@@ -1684,8 +1641,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
             customerPricingSegment: segment,
             items: updatedItems
         });
-        setCustomerSearch(selectedName);
-        setIsCustomerDropdownOpen(false);
         setCustomerPanelOpen(false);
 
         if (customer && customer.creditLimit) {
@@ -1696,19 +1651,18 @@ const handleVariantSelect = async (variant: ProductVariant) => {
         }
     };
 
-    const handleQuickAddCustomer = async () => {
-        const name = customerSearch.trim();
-        if (!name) return;
-
-        try {
-            const customer = await ensureCustomerExists(name);
-            if (!customer) {
-                notify("Could not create client record. Please try again.", "error");
-                return;
+    const handleCustomerSearchSelect = async (sel: { id: string; name: string } | null) => {
+        if (!sel) return;
+        const existing = findCustomerByName(sel.name);
+        if (existing) {
+            await selectCustomer(sel.name, sel.id);
+        } else {
+            try {
+                const customer = await ensureCustomerExists(sel.name);
+                if (customer) await selectCustomer(customer.name, customer.id);
+            } catch (err: any) {
+                notify(`Failed to add client: ${err.message || 'Unknown error'}`, "error");
             }
-            selectCustomer(customer.name);
-        } catch (err: any) {
-            notify(`Failed to add client: ${err.message || 'Unknown error'}`, "error");
         }
     };
 
@@ -1922,66 +1876,18 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
                     <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Customer</label>
-                        <div className="relative" ref={customerDropdownRef}>
-                            <input type="text" placeholder="Search customer..."
-                                value={customerSearch}
-                                onChange={e => { setCustomerSearch(e.target.value); setIsCustomerDropdownOpen(true); }}
-                                onFocus={() => setIsCustomerDropdownOpen(true)}
-                                className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
-                            {isCustomerDropdownOpen && (
-                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                    {filteredCustomers.length === 0 ? (
-                                        <div className="p-3 text-center">
-                                            <p className="text-xs text-slate-400 mb-2">No customers found</p>
-                                            {customerSearch.length > 1 && (
-                                                <button onClick={handleQuickAddCustomer}
-                                                    className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 mx-auto">
-                                                    <UserPlus size={12} /> Add &quot;{customerSearch}&quot;
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        filteredCustomers.map(name => (
-                                            <button key={name} onClick={() => { selectCustomer(name); setIsCustomerDropdownOpen(false); }}
-                                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex justify-between items-center border-b border-gray-100 last:border-0">
-                                                <span className="font-medium text-slate-700">{name}</span>
-                                                <span className="text-xs font-medium text-red-500">{currency}{getCustomerOutstanding(name).toLocaleString()}</span>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                        <button onClick={() => setShowCustomerSearch(true)}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
+                            {formData.customerName || 'Search customer...'}
+                        </button>
                     </div>
 
-                    <div className="docket-field mb-[10px]" ref={referrerDropdownRef}>
+                    <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Referrer</label>
-                        <div className="relative">
-                            <input type="text" placeholder="Search referrer..."
-                                value={referrerSearch}
-                                onChange={e => { setReferrerSearch(e.target.value); setIsReferrerDropdownOpen(true); }}
-                                onFocus={() => setIsReferrerDropdownOpen(true)}
-                                className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
-                            {isReferrerDropdownOpen && (
-                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                    <button onClick={() => { setSelectedReferrerId(''); setReferrerSearch(''); setIsReferrerDropdownOpen(false); }}
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-gray-100 font-medium text-slate-500 italic">
-                                        No Referrer
-                                    </button>
-                                    {filteredReferrers.length === 0 ? (
-                                        <div className="p-3 text-center text-xs text-slate-400">No customers found</div>
-                                    ) : (
-                                        filteredReferrers.map((c: any) => (
-                                            <button key={c.id} onClick={() => { setSelectedReferrerId(c.id); setReferrerSearch(c.name); setIsReferrerDropdownOpen(false); }}
-                                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-gray-100 last:border-0">
-                                                <span className="font-medium text-slate-700">{c.name}</span>
-                                                <span className="text-xs text-slate-400 ml-2">{c.phone || c.email || ''}</span>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                        <button onClick={() => setShowReferrerSearch(true)}
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
+                            {selectedReferrerId ? (customers.find((c: any) => c.id === selectedReferrerId)?.name || 'Search referrer...') : 'No Referrer'}
+                        </button>
                     </div>
 
                     <div className="docket-field mb-[10px]">
@@ -2730,6 +2636,23 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {showCustomerSearch && (
+                    <CustomerSearch open={showCustomerSearch}
+                        onSelect={handleCustomerSearchSelect}
+                        onClose={() => setShowCustomerSearch(false)}
+                        title="Select Customer"
+                        excludeIds={[]} />
+                )}
+                {showReferrerSearch && (
+                    <CustomerSearch open={showReferrerSearch}
+                        onSelect={(sel) => { setSelectedReferrerId(sel?.id || ''); }}
+                        onClose={() => setShowReferrerSearch(false)}
+                        title="Select Referrer"
+                        excludeIds={formData.customerId ? [formData.customerId] : []}
+                        showQuickAdd={false}
+                        mode="referrer" />
                 )}
             </div>
         </div>
