@@ -1,5 +1,6 @@
 import { dbService } from './db';
-import { generateId, generateNextId, roundToCurrency } from '../utils/helpers';
+import { generateNextId, roundToCurrency } from '../utils/helpers';
+import { generateId } from './transactions/_internal';
 import { logger } from './logger';
 import type {
   Referral, ReferralCommission,

@@ -1863,10 +1863,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
             <div className="w-full max-w-[1040px] bg-[#FEFDFB] rounded-[14px] shadow-[0_30px_60px_-20px_rgba(16,43,40,0.35),0_0_0_1px_rgba(16,43,40,0.06)] grid grid-cols-[266px_1fr] h-[88vh] max-h-[88vh]">
 
                 {/* DOCKET SIDEBAR */}
-                <aside className="bg-[#111C44] p-[20px_20px_14px] flex flex-col relative overflow-y-visible rounded-l-[14px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-[repeating-linear-gradient(#FEFDFB_50%,transparent_0%)] after:bg-[length:1px_14px] after:opacity-50">
-                    <div className="text-[10.5px] font-bold tracking-[1.6px] uppercase text-[#60A5FA] mb-[4px]">Sales Flow</div>
-                    <div className="font-['DM_Serif_Display',serif] text-[27px] leading-[1.15] text-white mb-[2px]">{type}</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#93C5FD] tracking-[0.5px] mb-[12px]">#{formData.id}</div>
+                <aside className="bg-[#FBF8F2] p-[20px_20px_14px] flex flex-col relative overflow-y-visible rounded-l-[14px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-[repeating-linear-gradient(#FEFDFB_50%,transparent_0%)] after:bg-[length:1px_14px] after:opacity-50">
+                    <div className="text-[10.5px] font-bold tracking-[1.6px] uppercase text-[#666F6C] mb-[4px]">Sales Flow</div>
+                    <div className="font-['DM_Serif_Display',serif] text-[27px] leading-[1.15] text-[#23282A] mb-[2px]">{type}</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#666F6C] tracking-[0.5px] mb-[12px]">#{formData.id}</div>
 
                     {formData.status && (
                         <div className="self-start border-[2.5px] border-[#B8863B] text-[#B8863B] font-['JetBrains_Mono',monospace] text-[12.5px] font-bold tracking-[2px] uppercase px-[14px] py-[6px] rounded-[6px] -rotate-6 mb-[12px] bg-[rgba(184,134,59,0.08)]">
@@ -1875,47 +1875,47 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     )}
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Customer</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Customer</label>
                         <button onClick={() => setShowCustomerSearch(true)}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-[#23282A] outline-none hover:bg-[#EFF6FF] transition-colors cursor-pointer truncate">
                             {formData.customerName || 'Search customer...'}
                         </button>
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Referrer</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Referrer</label>
                         <button onClick={() => setShowReferrerSearch(true)}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-[#23282A] outline-none hover:bg-[#EFF6FF] transition-colors cursor-pointer truncate">
                             {selectedReferrerId ? (customers.find((c: any) => c.id === selectedReferrerId)?.name || 'Search referrer...') : 'No Referrer'}
                         </button>
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Voucher Date</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Voucher Date</label>
                         <input type="date" value={formData.date}
                             onChange={e => handleVoucherDateChange(e.target.value)}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Due Date</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Due Date</label>
                         <input type="date" value={formData.dueDate}
                             onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Reference</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Reference</label>
                         <input type="text" placeholder="Reference..."
                             value={formData.referenceDoc || ''}
                             onChange={e => setFormData({ ...formData, referenceDoc: e.target.value })}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none placeholder:text-[#666F6C] focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Invoice Status</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Invoice Status</label>
                         <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors">
                             <option className="text-[#23282A]">{type === 'Invoice' ? 'Sales Invoice' : type === 'Quotation' ? 'Quotation' : type}</option>
                             <option className="text-[#23282A]">Proforma</option>
                             <option className="text-[#23282A]">Credit Note</option>
@@ -1923,21 +1923,21 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Sales Account</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Sales Account</label>
                         <div className="flex gap-[6px]">
                             <select value={formData.salesAccountId}
                                 onChange={e => setFormData({ ...formData, salesAccountId: e.target.value })}
-                                className="flex-1 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                                className="flex-1 bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors">
                                 {revenueAccounts.map(acc => (
                                     <option key={acc.id} value={acc.id} className="text-[#23282A]">{acc.name}</option>
                                 ))}
                             </select>
-                            <button className="text-[11px] font-bold font-['Inter',sans-serif] bg-[rgba(255,255,255,0.1)] text-[#DBEBE9] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] cursor-pointer whitespace-nowrap hover:bg-[rgba(255,255,255,0.16)]">Balance</button>
+                            <button className="text-[11px] font-bold font-['Inter',sans-serif] bg-[#2563EB] text-white border border-[#2563EB] rounded-[7px] px-[10px] cursor-pointer whitespace-nowrap hover:bg-[#1D4ED8] transition-colors">Balance</button>
                         </div>
                     </div>
 
                     <div className="flex-1"></div>
-                    <div className="text-[10.5px] text-[#60A5FA] leading-[1.5] pt-[16px] border-t border-dashed border-[rgba(255,255,255,0.15)]">
+                    <div className="text-[10.5px] text-[#666F6C] leading-[1.5] pt-[16px] border-t border-dashed border-[#E4DFD1]">
                         Doc #{formData.id} &middot; issued from Sales Flow
                     </div>
                 </aside>
@@ -1956,12 +1956,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 </button>
                             )}
                             {onPreview && (
-                                <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-[#E2DED3] hover:border-[#93C5FD] hover:text-[#2563EB] flex items-center gap-1.5 transition-colors">
+                                <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-[#E4DFD1] hover:border-[#93C5FD] hover:text-[#2563EB] flex items-center gap-1.5 transition-colors">
                                     <Eye size={13} /> Preview
                                 </button>
                             )}
                             <button onClick={handleCancelForm}
-                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E2DED3] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
+                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E4DFD1] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
                                 ✕
                             </button>
                             <span className="inline-flex items-center gap-1 px-[7px] py-[3px] text-[10px] font-['JetBrains_Mono',monospace] tracking-[0.3px] font-semibold text-[#B8863B] bg-[rgba(184,134,59,0.08)] border border-[rgba(184,134,59,0.2)] rounded-[4px] uppercase">
@@ -2039,7 +2039,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             <div className="search-box" style={{position:"relative"}} ref={itemDropdownRef}>
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Item</span>
                                 <input type="text" placeholder="Search inventory..."
-                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
+                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
                                     className="focus:border-[#60A5FA]"
                                     value={itemSearch}
                                     onFocus={() => setIsItemDropdownOpen(true)}
@@ -2096,7 +2096,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             <div className="search-box" style={{position:"relative"}} ref={serviceDropdownRef}>
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Services</span>
                                 <input type="text" placeholder="Search services..."
-                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
+                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
                                     className="focus:border-[#60A5FA]"
                                     value={serviceSearch}
                                     onFocus={() => setIsServiceDropdownOpen(true)}
@@ -2284,7 +2284,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         )}
 
-                        <div className="bg-[#FEFDFB] border border-[#E2DED3] rounded-[12px] overflow-hidden">
+                        <div className="bg-[#FEFDFB] border border-[#E4DFD1] rounded-[12px] overflow-hidden">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <colgroup>
@@ -2296,14 +2296,14 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </colgroup>
                                     <thead>
                                         <tr className="text-[10.5px] font-bold text-[#1E40AF] uppercase tracking-[0.7px] bg-[#EFF6FF]">
-                                            <th className="px-[16px] py-[8px] text-left border-b border-[#E2DED3]">Item</th>
-                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E2DED3]">Qty</th>
-                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E2DED3]">Price</th>
-                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E2DED3]">Amount</th>
-                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E2DED3]"></th>
+                                            <th className="px-[16px] py-[8px] text-left border-b border-[#E4DFD1]">Item</th>
+                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E4DFD1]">Qty</th>
+                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E4DFD1]">Price</th>
+                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E4DFD1]">Amount</th>
+                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E4DFD1]"></th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[#E2DED3]">
+                                    <tbody className="divide-y divide-[#E4DFD1]">
                                         {analysis.processedItems.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-[16px] py-[48px] text-center text-[#B0AB9E] text-[13px]">
@@ -2317,7 +2317,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 const stock = invItem?.stock ?? 0;
                                                 const qty = Number(item.quantity) || 0;
                                                 return (
-                                                    <tr key={idx} className="hover:bg-[#EFF6FF] transition-colors border-b border-[#E2DED3] last:border-b-0">
+                                                    <tr key={idx} className="hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1] last:border-b-0">
                                                         <td className="px-[16px] py-[8px] text-[13px] text-[#23282A] font-medium flex items-center gap-[6px]">
                                                             {invItem?.image ? (
                                                                 <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-slate-200 overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all" title="View Photo">
@@ -2377,7 +2377,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E2DED3] font-medium text-[#172554]">
+                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E4DFD1] font-medium text-[#172554]">
                                 <span className="text-[12px]">{analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty</span>
                                 <span className="text-[15px]">Subtotal: {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
@@ -2386,12 +2386,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         {/* PERFORATION DIVIDER */}
                         <div style={{display:"flex",alignItems:"center",gap:"8px",margin:"26px -26px",padding:"0 26px"}}>
                             <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#E9E5DC",flex:"none"}}></span>
-                            <span style={{flex:"1",height:"0",borderTop:"2px dashed #E2DED3"}}></span>
+                            <span style={{flex:"1",height:"0",borderTop:"2px dashed #E4DFD1"}}></span>
                             <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#E9E5DC",flex:"none"}}></span>
                         </div>
 
                         <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:"22px",paddingBottom:"24px"}}>
-                            <div className="pr-[14px] border-r border-[#E2DED3]">
+                            <div className="pr-[14px] border-r border-[#E4DFD1]">
                                 <div className="flex items-center gap-[6px] mb-[6px]">
                                     <input type="checkbox" className="rounded accent-[#3B82F6]"
                                         checked={formData.otherChargesEnabled}
@@ -2454,7 +2454,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <input type="number" min="0" step="0.01" placeholder="0.00"
                                             value={formData.discount || ''}
                                             onChange={e => setFormData({ ...formData, discount: Math.max(0, Number(e.target.value) || 0) })}
-                                            style={{width:"100%",fontFamily:"JetBrains Mono,monospace",fontSize:"13px",padding:"9px 34px 9px 12px",border:"1px solid #E2DED3",borderRadius:"8px",background:"#FEFDFB",outline:"none"}}
+                                            style={{width:"100%",fontFamily:"JetBrains Mono,monospace",fontSize:"13px",padding:"9px 34px 9px 12px",border:"1px solid #E4DFD1",borderRadius:"8px",background:"#FEFDFB",outline:"none"}}
                                             className="focus:border-[#60A5FA]"
                                         />
                                         <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#3B82F6"}}>{currency}</span>
@@ -2462,7 +2462,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 </div>
                                 <div className="notes-box">
                                     <textarea
-                                        style={{width:"100%",minHeight:"82px",resize:"vertical",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",padding:"12px 14px",fontFamily:"Inter,sans-serif",fontSize:"13px",color:"#23282A",outline:"none"}}
+                                        style={{width:"100%",minHeight:"82px",resize:"vertical",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",padding:"12px 14px",fontFamily:"Inter,sans-serif",fontSize:"13px",color:"#23282A",outline:"none"}}
                                         className="focus:border-[#60A5FA]"
                                         placeholder="Narration / notes..."
                                         value={formData.notes}
@@ -2478,7 +2478,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <span style={{fontSize:"10px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB"}}>Round Up</span>
                                         <div className="flex items-center gap-[4px]">
                                             <select
-                                                style={{fontFamily:"Inter,sans-serif",fontSize:"11px",padding:"4px 8px",border:"1px solid #E2DED3",borderRadius:"7px",background:"#FEFDFB",color:"#23282A"}}
+                                                style={{fontFamily:"Inter,sans-serif",fontSize:"11px",padding:"4px 8px",border:"1px solid #E4DFD1",borderRadius:"7px",background:"#FEFDFB",color:"#23282A"}}
                                                 value={formData.roundingMethod || 'Nearest'}
                                                 onChange={e => setFormData({ ...formData, roundingMethod: e.target.value })}
                                             >
@@ -2492,11 +2492,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             />
                                         </div>
                                     </div>
-                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E2DED3",fontSize:"12px"}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
                                         <span style={{color:"#5C574D",fontWeight:"500"}}>Discount</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E2DED3",fontSize:"12px"}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
                                         <span style={{color:"#5C574D",fontWeight:"500"}}>Other Charges</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",background:"#F7EFDF",padding:"2px 8px",borderRadius:"5px",color:"#B8863B"}}>{currency}{(Number(formData.otherCharges || 0) + calculatedOtherCharges).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -2512,9 +2512,9 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
                     </div>
-                    <div className="border-t border-[#E2DED3] bg-[#FEFDFB] px-[26px] py-[16px] flex items-center justify-end gap-[10px] shrink-0">
+                    <div className="border-t border-[#E4DFD1] bg-[#FEFDFB] px-[26px] py-[16px] flex items-center justify-end gap-[10px] shrink-0">
                         <button onClick={handleCancelForm}
-                            className="px-[14px] py-[7px] text-[13px] font-semibold text-[#23282A] bg-[#FEFDFB] border border-[#E2DED3] rounded-[9px] hover:border-[#93C5FD] flex items-center gap-[7px] transition-colors">
+                            className="px-[14px] py-[7px] text-[13px] font-semibold text-[#23282A] bg-[#FEFDFB] border border-[#E4DFD1] rounded-[9px] hover:border-[#93C5FD] flex items-center gap-[7px] transition-colors">
                             <X size={14} /> Close
                         </button>
                         {isEditing && (
