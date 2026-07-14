@@ -1863,10 +1863,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
             <div className="w-full max-w-[1040px] bg-[#FEFDFB] rounded-[14px] shadow-[0_30px_60px_-20px_rgba(16,43,40,0.35),0_0_0_1px_rgba(16,43,40,0.06)] grid grid-cols-[266px_1fr] h-[88vh] max-h-[88vh]">
 
                 {/* DOCKET SIDEBAR */}
-                <aside className="bg-[#102B28] p-[20px_20px_14px] flex flex-col relative overflow-y-visible rounded-l-[14px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-[repeating-linear-gradient(#FEFDFB_50%,transparent_0%)] after:bg-[length:1px_14px] after:opacity-50">
-                    <div className="text-[10.5px] font-bold tracking-[1.6px] uppercase text-[#5FA8A0] mb-[4px]">Sales Flow</div>
+                <aside className="bg-[#111C44] p-[20px_20px_14px] flex flex-col relative overflow-y-visible rounded-l-[14px] after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-[repeating-linear-gradient(#FEFDFB_50%,transparent_0%)] after:bg-[length:1px_14px] after:opacity-50">
+                    <div className="text-[10.5px] font-bold tracking-[1.6px] uppercase text-[#60A5FA] mb-[4px]">Sales Flow</div>
                     <div className="font-['DM_Serif_Display',serif] text-[27px] leading-[1.15] text-white mb-[2px]">{type}</div>
-                    <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#87C1BB] tracking-[0.5px] mb-[12px]">#{formData.id}</div>
+                    <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#93C5FD] tracking-[0.5px] mb-[12px]">#{formData.id}</div>
 
                     {formData.status && (
                         <div className="self-start border-[2.5px] border-[#B8863B] text-[#B8863B] font-['JetBrains_Mono',monospace] text-[12.5px] font-bold tracking-[2px] uppercase px-[14px] py-[6px] rounded-[6px] -rotate-6 mb-[12px] bg-[rgba(184,134,59,0.08)]">
@@ -1875,7 +1875,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     )}
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Customer</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Customer</label>
                         <button onClick={() => setShowCustomerSearch(true)}
                             className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
                             {formData.customerName || 'Search customer...'}
@@ -1883,7 +1883,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Referrer</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Referrer</label>
                         <button onClick={() => setShowReferrerSearch(true)}
                             className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-white outline-none hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer truncate">
                             {selectedReferrerId ? (customers.find((c: any) => c.id === selectedReferrerId)?.name || 'Search referrer...') : 'No Referrer'}
@@ -1891,31 +1891,31 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Voucher Date</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Voucher Date</label>
                         <input type="date" value={formData.date}
                             onChange={e => handleVoucherDateChange(e.target.value)}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Due Date</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Due Date</label>
                         <input type="date" value={formData.dueDate}
                             onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Reference</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Reference</label>
                         <input type="text" placeholder="Reference..."
                             value={formData.referenceDoc || ''}
                             onChange={e => setFormData({ ...formData, referenceDoc: e.target.value })}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Invoice Status</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Invoice Status</label>
                         <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type}
-                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                            className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
                             <option className="text-[#23282A]">{type === 'Invoice' ? 'Sales Invoice' : type === 'Quotation' ? 'Quotation' : type}</option>
                             <option className="text-[#23282A]">Proforma</option>
                             <option className="text-[#23282A]">Credit Note</option>
@@ -1923,11 +1923,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Sales Account</label>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#60A5FA] mb-[3px]">Sales Account</label>
                         <div className="flex gap-[6px]">
                             <select value={formData.salesAccountId}
                                 onChange={e => setFormData({ ...formData, salesAccountId: e.target.value })}
-                                className="flex-1 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
+                                className="flex-1 bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none focus:border-[#60A5FA] focus:bg-[rgba(255,255,255,0.1)] transition-colors">
                                 {revenueAccounts.map(acc => (
                                     <option key={acc.id} value={acc.id} className="text-[#23282A]">{acc.name}</option>
                                 ))}
@@ -1937,7 +1937,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="flex-1"></div>
-                    <div className="text-[10.5px] text-[#5FA8A0] leading-[1.5] pt-[16px] border-t border-dashed border-[rgba(255,255,255,0.15)]">
+                    <div className="text-[10.5px] text-[#60A5FA] leading-[1.5] pt-[16px] border-t border-dashed border-[rgba(255,255,255,0.15)]">
                         Doc #{formData.id} &middot; issued from Sales Flow
                     </div>
                 </aside>
@@ -1956,12 +1956,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 </button>
                             )}
                             {onPreview && (
-                                <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-[#E2DED3] hover:border-[#87C1BB] hover:text-[#2C6F67] flex items-center gap-1.5 transition-colors">
+                                <button onClick={onPreview} className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border border-[#E2DED3] hover:border-[#93C5FD] hover:text-[#2563EB] flex items-center gap-1.5 transition-colors">
                                     <Eye size={13} /> Preview
                                 </button>
                             )}
                             <button onClick={handleCancelForm}
-                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E2DED3] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#87C1BB] hover:text-[#2C6F67] transition-colors">
+                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E2DED3] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
                                 ✕
                             </button>
                             <span className="inline-flex items-center gap-1 px-[7px] py-[3px] text-[10px] font-['JetBrains_Mono',monospace] tracking-[0.3px] font-semibold text-[#B8863B] bg-[rgba(184,134,59,0.08)] border border-[rgba(184,134,59,0.2)] rounded-[4px] uppercase">
@@ -1976,7 +1976,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         </div>
                     )}
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-[26px] pt-[6px] [scrollbar-width:thin] [scrollbar-color:#87C1BB_#FBFAF7]">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-[26px] pt-[6px] [scrollbar-width:thin] [scrollbar-color:#93C5FD_#FBFAF7]">
 
                         {formData.customerName && customerPanelOpen && (() => {
                             const cust = selectedCustomerObj;
@@ -2026,21 +2026,21 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
                         <div className="flex items-center gap-[6px] px-[2px] mb-[11px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
-                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
-                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F10</kbd> Photocopy
+                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2563EB] bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.2)] rounded-[4px] hover:bg-[rgba(37,99,235,0.14)] transition-colors">
+                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(37,99,235,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F10</kbd> Photocopy
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
-                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2C6F67] bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.2)] rounded-[4px] hover:bg-[rgba(61,139,130,0.14)] transition-colors">
-                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(61,139,130,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F11</kbd> Type &amp; Print
+                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2563EB] bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.2)] rounded-[4px] hover:bg-[rgba(37,99,235,0.14)] transition-colors">
+                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(37,99,235,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F11</kbd> Type &amp; Print
                             </button>
                         </div>
 
                         <div className="search-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"8px"}}>
                             <div className="search-box" style={{position:"relative"}} ref={itemDropdownRef}>
-                                <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2C6F67",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Item</span>
+                                <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Item</span>
                                 <input type="text" placeholder="Search inventory..."
                                     style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
-                                    className="focus:border-[#5FA8A0]"
+                                    className="focus:border-[#60A5FA]"
                                     value={itemSearch}
                                     onFocus={() => setIsItemDropdownOpen(true)}
                                     onChange={e => { setItemSearch(e.target.value); setIsItemDropdownOpen(true); }}
@@ -2070,11 +2070,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                         className="w-full px-[10px] py-[7px] text-left hover:bg-[#F8F7F2] flex justify-between items-center border-b border-[#F0EFE8] last:border-b-0 transition-colors"
                                                     >
                                                         <div>
-                                                            <div className="text-[12px] font-medium text-[#0E2926]">{item.name}</div>
+                                                            <div className="text-[12px] font-medium text-[#172554]">{item.name}</div>
                                                             <div className="text-[9px] text-[#B8B2A2] font-['JetBrains_Mono',monospace]">{item.sku || 'NO-SKU'}</div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[12px] font-semibold text-[#0E2926]">
+                                                            <div className="text-[12px] font-semibold text-[#172554]">
                                                                 {isPriceRange
                                                                     ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}`
                                                                     : `${currency}${Number((hasVariants ? minPrice : item.price) || 0).toLocaleString()}`
@@ -2094,10 +2094,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 )}
                             </div>
                             <div className="search-box" style={{position:"relative"}} ref={serviceDropdownRef}>
-                                <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2C6F67",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Services</span>
+                                <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Services</span>
                                 <input type="text" placeholder="Search services..."
                                     style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
-                                    className="focus:border-[#5FA8A0]"
+                                    className="focus:border-[#60A5FA]"
                                     value={serviceSearch}
                                     onFocus={() => setIsServiceDropdownOpen(true)}
                                     onChange={e => { setServiceSearch(e.target.value); setIsServiceDropdownOpen(true); }}
@@ -2134,15 +2134,15 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-[8px] px-[2px] mb-[8px] text-[12px] font-medium text-[#0E2926]">
-                            <span className="text-[#8A8578]">Units left: <span className="font-medium text-[#0E2926]">
+                        <div className="flex items-center gap-[8px] px-[2px] mb-[8px] text-[12px] font-medium text-[#172554]">
+                            <span className="text-[#8A8578]">Units left: <span className="font-medium text-[#172554]">
                                 {formData.items.length > 0 ? `${Math.min(...formData.items.map((i: any) => {
                                     const inv = inventory.find((inv: Item) => inv.id === (i.parentId || i.id));
                                     return inv?.stock ?? 0;
                                 }))}` : '—'}
                             </span></span>
                             <span className="text-[#D4CFC2]">|</span>
-                            <a href="#" className="text-[#2C6F67] hover:text-[#0E2926] hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
+                            <a href="#" className="text-[#2563EB] hover:text-[#172554] hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
                                 Alt+F2: Item History
                             </a>
                         </div>
@@ -2295,7 +2295,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <col style={{width: '6%'}} />
                                     </colgroup>
                                     <thead>
-                                        <tr className="text-[10.5px] font-bold text-[#215650] uppercase tracking-[0.7px] bg-[#F0F7F6]">
+                                        <tr className="text-[10.5px] font-bold text-[#1E40AF] uppercase tracking-[0.7px] bg-[#EFF6FF]">
                                             <th className="px-[16px] py-[8px] text-left border-b border-[#E2DED3]">Item</th>
                                             <th className="px-[16px] py-[8px] text-center border-b border-[#E2DED3]">Qty</th>
                                             <th className="px-[16px] py-[8px] text-right border-b border-[#E2DED3]">Price</th>
@@ -2317,7 +2317,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 const stock = invItem?.stock ?? 0;
                                                 const qty = Number(item.quantity) || 0;
                                                 return (
-                                                    <tr key={idx} className="hover:bg-[#F0F7F6] transition-colors border-b border-[#E2DED3] last:border-b-0">
+                                                    <tr key={idx} className="hover:bg-[#EFF6FF] transition-colors border-b border-[#E2DED3] last:border-b-0">
                                                         <td className="px-[16px] py-[8px] text-[13px] text-[#23282A] font-medium flex items-center gap-[6px]">
                                                             {invItem?.image ? (
                                                                 <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-slate-200 overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all" title="View Photo">
@@ -2377,7 +2377,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E2DED3] font-medium text-[#0E2926]">
+                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E2DED3] font-medium text-[#172554]">
                                 <span className="text-[12px]">{analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty</span>
                                 <span className="text-[15px]">Subtotal: {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
@@ -2393,7 +2393,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:"22px",paddingBottom:"24px"}}>
                             <div className="pr-[14px] border-r border-[#E2DED3]">
                                 <div className="flex items-center gap-[6px] mb-[6px]">
-                                    <input type="checkbox" className="rounded accent-[#3D8B82]"
+                                    <input type="checkbox" className="rounded accent-[#3B82F6]"
                                         checked={formData.otherChargesEnabled}
                                         onChange={e => {
                                             setFormData((prev: any) => ({
@@ -2408,10 +2408,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             }));
                                         }}
                                     />
-                                    <span className="text-[11px] font-medium text-[#0E2926]">Other Charges</span>
+                                    <span className="text-[11px] font-medium text-[#172554]">Other Charges</span>
                                     {formData.otherChargesEnabled && (
                                         <>
-                                            <select className="text-[11px] border border-[#D4CFC2] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] flex-1 focus:border-[#87C1BB] outline-none transition-colors"
+                                            <select className="text-[11px] border border-[#D4CFC2] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] flex-1 focus:border-[#93C5FD] outline-none transition-colors"
                                                 value={formData.otherChargesAdjustment}
                                                 onChange={e => {
                                                     const adj = activeMarketAdjustments.find((a: any) => a.id === e.target.value);
@@ -2434,36 +2434,36 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 })}
                                             </select>
                                             {selectedAdjustment && formData.otherChargesPercent > 0 && (
-                                                <span className="text-[11px] font-semibold text-[#2C6F67] whitespace-nowrap">{formData.otherChargesPercent}%</span>
+                                                <span className="text-[11px] font-semibold text-[#2563EB] whitespace-nowrap">{formData.otherChargesPercent}%</span>
                                             )}
                                             <button onClick={handleCalculateCharges} disabled={!formData.otherChargesAdjustment}
-                                                className="px-[8px] py-[3px] text-[11px] font-medium text-white bg-[#3D8B82] rounded-[4px] hover:bg-[#2C6F67] disabled:opacity-40 flex items-center gap-[3px] transition-colors">
+                                                className="px-[8px] py-[3px] text-[11px] font-medium text-white bg-[#3B82F6] rounded-[4px] hover:bg-[#2563EB] disabled:opacity-40 flex items-center gap-[3px] transition-colors">
                                                 <Calculator size={12} /> Calculate
                                             </button>
                                         </>
                                     )}
                                 </div>
                                 {formData.otherChargesEnabled && calculatedOtherCharges > 0 && (
-                                    <div className="mb-[6px] text-[11px] text-[#2C6F67] font-medium bg-[rgba(61,139,130,0.08)] border border-[rgba(61,139,130,0.18)] rounded-[4px] px-[8px] py-[3px]">
+                                    <div className="mb-[6px] text-[11px] text-[#2563EB] font-medium bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.18)] rounded-[4px] px-[8px] py-[3px]">
                                         Adjustment applied: {currency}{calculatedOtherCharges.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 )}
                                 <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}}>
-                                    <span style={{fontSize:"11px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2C6F67",whiteSpace:"nowrap"}}>Discount</span>
+                                    <span style={{fontSize:"11px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",whiteSpace:"nowrap"}}>Discount</span>
                                     <div style={{position:"relative",flex:"1"}}>
                                         <input type="number" min="0" step="0.01" placeholder="0.00"
                                             value={formData.discount || ''}
                                             onChange={e => setFormData({ ...formData, discount: Math.max(0, Number(e.target.value) || 0) })}
                                             style={{width:"100%",fontFamily:"JetBrains Mono,monospace",fontSize:"13px",padding:"9px 34px 9px 12px",border:"1px solid #E2DED3",borderRadius:"8px",background:"#FEFDFB",outline:"none"}}
-                                            className="focus:border-[#5FA8A0]"
+                                            className="focus:border-[#60A5FA]"
                                         />
-                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#3D8B82"}}>{currency}</span>
+                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#3B82F6"}}>{currency}</span>
                                     </div>
                                 </div>
                                 <div className="notes-box">
                                     <textarea
                                         style={{width:"100%",minHeight:"82px",resize:"vertical",border:"1px solid #E2DED3",borderRadius:"9px",background:"#FEFDFB",padding:"12px 14px",fontFamily:"Inter,sans-serif",fontSize:"13px",color:"#23282A",outline:"none"}}
-                                        className="focus:border-[#5FA8A0]"
+                                        className="focus:border-[#60A5FA]"
                                         placeholder="Narration / notes..."
                                         value={formData.notes}
                                         onChange={e => setFormData({ ...formData, notes: e.target.value })}
@@ -2472,10 +2472,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 </div>
                             </div>
                             <div>
-                                <div className="summary-card" style={{background:"#FBFAF7",border:"1.5px solid #215650",borderRadius:"10px",padding:"12px 14px",position:"relative"}}>
-                                    <span style={{position:"absolute",top:"8px",right:"10px",fontFamily:"JetBrains Mono,monospace",fontSize:"9px",fontWeight:"700",letterSpacing:"2px",color:"#87C1BB"}}>COPY</span>
+                                <div className="summary-card" style={{background:"#FBFAF7",border:"1.5px solid #1E40AF",borderRadius:"10px",padding:"12px 14px",position:"relative"}}>
+                                    <span style={{position:"absolute",top:"8px",right:"10px",fontFamily:"JetBrains Mono,monospace",fontSize:"9px",fontWeight:"700",letterSpacing:"2px",color:"#93C5FD"}}>COPY</span>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-                                        <span style={{fontSize:"10px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2C6F67"}}>Round Up</span>
+                                        <span style={{fontSize:"10px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB"}}>Round Up</span>
                                         <div className="flex items-center gap-[4px]">
                                             <select
                                                 style={{fontFamily:"Inter,sans-serif",fontSize:"11px",padding:"4px 8px",border:"1px solid #E2DED3",borderRadius:"7px",background:"#FEFDFB",color:"#23282A"}}
@@ -2486,7 +2486,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                     <option key={m.value} value={m.value}>{m.label}</option>
                                                 ))}
                                             </select>
-                                            <input type="checkbox" className="rounded accent-[#3D8B82]"
+                                            <input type="checkbox" className="rounded accent-[#3B82F6]"
                                                 checked={formData.roundingEnabled}
                                                 onChange={e => setFormData({ ...formData, roundingEnabled: e.target.checked })}
                                             />
@@ -2494,7 +2494,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E2DED3",fontSize:"12px"}}>
                                         <span style={{color:"#5C574D",fontWeight:"500"}}>Discount</span>
-                                        <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2C6F67"}}>-{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E2DED3",fontSize:"12px"}}>
                                         <span style={{color:"#5C574D",fontWeight:"500"}}>Other Charges</span>
@@ -2504,9 +2504,9 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <span style={{color:"#5C574D",fontWeight:"500"}}>Round Off</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#23282A"}}>{roundOff.toFixed(2)}</span>
                                     </div>
-                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:"8px",paddingTop:"8px",borderTop:"2px solid #215650"}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:"8px",paddingTop:"8px",borderTop:"2px solid #1E40AF"}}>
                                         <span style={{fontFamily:"DM Serif Display,serif",fontSize:"15px",color:"#23282A"}}>Total Amount</span>
-                                        <span style={{fontFamily:"DM Serif Display,serif",fontSize:"25px",color:"#215650"}}>{currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span style={{fontFamily:"DM Serif Display,serif",fontSize:"25px",color:"#1E40AF"}}>{currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2514,7 +2514,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
                     <div className="border-t border-[#E2DED3] bg-[#FEFDFB] px-[26px] py-[16px] flex items-center justify-end gap-[10px] shrink-0">
                         <button onClick={handleCancelForm}
-                            className="px-[14px] py-[7px] text-[13px] font-semibold text-[#23282A] bg-[#FEFDFB] border border-[#E2DED3] rounded-[9px] hover:border-[#87C1BB] flex items-center gap-[7px] transition-colors">
+                            className="px-[14px] py-[7px] text-[13px] font-semibold text-[#23282A] bg-[#FEFDFB] border border-[#E2DED3] rounded-[9px] hover:border-[#93C5FD] flex items-center gap-[7px] transition-colors">
                             <X size={14} /> Close
                         </button>
                         {isEditing && (
@@ -2526,7 +2526,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <button
                             onClick={() => handleSubmission(false, false)}
                             disabled={formData.items.length === 0 || (isEditing && !auditReason.trim()) || saving}
-                            className="px-[16px] py-[7px] text-[13px] font-semibold text-white bg-gradient-to-br from-[#2C6F67] to-[#183F3B] rounded-[9px] shadow-[0_4px_14px_rgba(44,111,103,0.35)] hover:shadow-[0_6px_18px_rgba(44,111,103,0.45)] hover:-translate-y-[0.5px] flex items-center gap-[7px] disabled:opacity-40 transition-all">
+                            className="px-[16px] py-[7px] text-[13px] font-semibold text-white bg-gradient-to-br from-[#2563EB] to-[#1E3A8A] rounded-[9px] shadow-[0_4px_14px_rgba(37,99,235,0.35)] hover:shadow-[0_6px_18px_rgba(37,99,235,0.45)] hover:-translate-y-[0.5px] flex items-center gap-[7px] disabled:opacity-40 transition-all">
                             <Check size={14} /> Save &amp; Finalise
                         </button>
                     </div>
