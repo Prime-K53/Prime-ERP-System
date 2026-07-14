@@ -652,14 +652,14 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     const fromConfig = companyConfig?.productionSettings?.finishingOptions;
     if (fromConfig && fromConfig.length > 0) return fromConfig.filter(o => !TURNAROUND_IDS.has(o.id));
     return [
-      { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
-      { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 20, description: 'Front and back cover pages per copy', items: [] },
+      { id: 'binding', name: 'Binding', enabled: false, price: Math.round(bomRates.tape * 100) / 100 || 1.20, description: 'Book binding - comb or spiral', items: [] },
+      { id: 'coverPages', name: 'Cover Pages', enabled: false, price: Math.round(bomRates.cover * 100) / 100 || 15.00, description: 'Front and back cover pages per copy', items: [] },
       { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
       { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
       { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
-      { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
+      { id: 'stapling', name: 'Stapling', enabled: false, price: Math.round(bomRates.staple * 100) / 100 || 0.50, description: 'Corner or saddle stapling', items: [] },
     ];
-  }, [companyConfig]);
+  }, [companyConfig, bomRates]);
 
   useEffect(() => {
     if (!open) return;
