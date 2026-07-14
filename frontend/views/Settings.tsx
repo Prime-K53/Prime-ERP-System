@@ -196,12 +196,12 @@ const Settings: React.FC = () => {
             allowOverproduction: false,
             showKioskSummary: false,
             finishingOptions: [
-                { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
-                { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 20, description: 'Front and back cover pages per copy', items: [] },
+                { id: 'binding', name: 'Binding', enabled: false, price: 1.20, description: 'Book binding - comb or spiral', items: [], quantity: 1 },
+                { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 15.00, description: 'Front and back cover pages per copy', items: [], quantity: 1 },
+                { id: 'stapling', name: 'Stapling', enabled: false, price: 0.50, description: 'Corner or saddle stapling', items: [], quantity: 1 },
                 { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
                 { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
                 { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
-                { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
                 { id: 'standardTurnaround', name: 'Standard Turnaround', enabled: false, price: 0, description: 'Standard delivery turnaround', items: [] },
                 { id: 'rushSurcharge', name: 'Rush Surcharge', enabled: false, price: 0, description: 'Express/rush order surcharge', items: [] },
             ]
@@ -3193,7 +3193,7 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
 
                         {
                             activeTab === 'Finishing' && (
-                                <FinishingOptionsTab config={config} setConfig={setConfig} notify={notify} />
+                                <FinishingOptionsTab config={config} setConfig={setConfig} notify={notify} items={inventory} />
                             )
                         }
 

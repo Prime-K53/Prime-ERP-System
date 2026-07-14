@@ -213,7 +213,6 @@ const s: Record<string, React.CSSProperties> = {
   chipPrice: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, color: VAR_STYLES.ink700 },
   chipCheck: { width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${VAR_STYLES.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chipCheckActive: { background: '#2563EB', border: '1.5px solid #2563EB' },
-  qtyInput: { width: 40, fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, textAlign: 'center', border: `1px solid ${VAR_STYLES.line}`, borderRadius: 5, padding: '2px 0', outline: 'none', background: '#fff', color: VAR_STYLES.ink700 },
   costStrip: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
     background: VAR_STYLES.paper, border: `1px solid ${VAR_STYLES.line}`, borderRadius: 11, padding: '14px 16px',
@@ -357,7 +356,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [rawLocation, setRawLocation] = useState('');
 
   // Product
-  const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number }[]>([]);
+  const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number; finishingOptions?: { name: string; price: number; active: boolean; quantity?: number }[] }[]>([]);
   const [productPaperCost, setProductPaperCost] = useState(0);
   const [productTonerCost, setProductTonerCost] = useState(0);
   const [productFinishCost, setProductFinishCost] = useState(0);
@@ -394,6 +393,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [bomCovers, setBomCovers] = useState(2);
   const [bomStaples, setBomStaples] = useState(2);
   const [bomTape, setBomTape] = useState(0);
+  const [bomFinishing, setBomFinishing] = useState<{ name: string; price: number; active: boolean; quantity?: number }[]>([]);
 
   // Product-level BOM (used when no variants exist)
   const [productBomPages, setProductBomPages] = useState(96);
@@ -1096,7 +1096,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                 <input type="text" style={s.variantInput} value={v.name} onChange={e => {
                   const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next);
                 }} placeholder="e.g. 96 Page" />
-                <button style={s.bomEditBtn} onClick={() => { setBomVariantIdx(i); setBomPages(v.bomPages ?? 96); setBomCovers(v.bomCovers ?? 2); setBomStaples(v.bomStaples ?? 2); setBomTape(v.bomTape ?? 0); setBomOpen(true); }}>
+                <button style={s.bomEditBtn} onClick={() => { setBomVariantIdx(i); setBomPages(v.bomPages ?? 96); setBomCovers(v.bomCovers ?? 2); setBomStaples(v.bomStaples ?? 2); setBomTape(v.bomTape ?? 0); setBomFinishing(globalFinishingOptions.map(o => ({ name: o.name, price: o.price, active: false, quantity: o.quantity || 1 }))); setBomOpen(true); }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M16 3l5 5L8 21H3v-5L16 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
                   Edit BOM
                 </button>
@@ -1190,38 +1190,21 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       <div style={s.section}>
         <p style={s.sectionTitle}>Finishing Options Offered <span style={s.badge}>Per job</span></p>
         <div style={s.chipGrid}>
-          {serviceFinishing.map((f, i) => {
-            const isQtyItem = f.name === 'Binding' || f.name === 'Cover Pages';
-            return (
+          {serviceFinishing.map((f, i) => (
             <div key={f.name} style={{ ...s.chip, ...(f.active ? s.chipActive : {}) }} onClick={() => {
-              if (!isQtyItem) { const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next); }
+              const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next);
             }}>
               <div style={s.chipTop}>
                 <span style={s.chipName}>{f.name}</span>
-                <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }} onClick={e => { e.stopPropagation(); const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next); }}>
+                <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ opacity: f.active ? 1 : 0 }}>
                     <path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                {isQtyItem ? (
-                  <>
-                    <input type="number" min="1" step="1" value={f.quantity ?? 1}
-                      style={s.qtyInput}
-                      onClick={e => { e.stopPropagation(); if (!f.active) { const next = [...serviceFinishing]; next[i] = { ...next[i], active: true }; setServiceFinishing(next); } }}
-                      onChange={e => { const q = Math.max(1, Number(e.target.value) || 1); const next = [...serviceFinishing]; next[i] = { ...next[i], quantity: q, active: true }; setServiceFinishing(next); }}
-                    />
-                    <span style={s.chipPrice}>&times; {currencySymbol}{f.price.toFixed(2)}</span>
-                    <span style={{ ...s.chipPrice, color: '#2563EB' }}>= {currencySymbol}{(f.price * (f.quantity ?? 1)).toFixed(2)}</span>
-                  </>
-                ) : (
-                  <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}</span>
-                )}
-              </div>
+              <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}{f.quantity && f.quantity > 1 ? ` × ${f.quantity}` : ''}</span>
             </div>
-            );
-          })}
+          ))}
         </div>
       </div>
       <div style={s.section}>
@@ -1560,6 +1543,26 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                 </div>
               </div>
               <div style={s.section}>
+                <p style={s.sectionTitle}>Finishing Options <span style={s.badge}>From settings</span></p>
+                <div style={s.chipGrid}>
+                  {bomFinishing.map((f, i) => (
+                    <div key={f.name} style={{ ...s.chip, ...(f.active ? s.chipActive : {}) }} onClick={() => {
+                      const next = [...bomFinishing]; next[i] = { ...next[i], active: !next[i].active }; setBomFinishing(next);
+                    }}>
+                      <div style={s.chipTop}>
+                        <span style={s.chipName}>{f.name}</span>
+                        <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ opacity: f.active ? 1 : 0 }}>
+                            <path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      </div>
+                      <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}{f.quantity && f.quantity > 1 ? ` × ${f.quantity}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={s.section}>
                 <p style={s.sectionTitle}>Generated BOM</p>
                 <div style={s.bomList}>
                   <div style={s.bomRow}><span>Paper ({Math.ceil(bomPages / PAGES_PER_SHEET)} sheets × {formatCurrency(bomRates.paper, currencySymbol)})</span><span style={s.variantAmt}>{formatCurrency(Math.ceil(bomPages / PAGES_PER_SHEET) * bomRates.paper, currencySymbol)}</span></div>
@@ -1567,9 +1570,12 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                   <div style={s.bomRow}><span>Cover Pages ({bomCovers} × {formatCurrency(bomRates.cover, currencySymbol)})</span><span style={s.variantAmt}>{formatCurrency(bomCovers * bomRates.cover, currencySymbol)}</span></div>
                   <div style={s.bomRow}><span>Staples ({bomStaples} × {formatCurrency(bomRates.staple, currencySymbol)})</span><span style={s.variantAmt}>{formatCurrency(bomStaples * bomRates.staple, currencySymbol)}</span></div>
                   <div style={s.bomRow}><span>Binding Tape ({bomTape} cm × {formatCurrency(bomRates.tape, currencySymbol)})</span><span style={s.variantAmt}>{formatCurrency(bomTape * bomRates.tape, currencySymbol)}</span></div>
+                  {bomFinishing.filter(f => f.active).map(f => (
+                    <div key={f.name} style={s.bomRow}><span>{f.name}{f.quantity && f.quantity > 1 ? ` × ${f.quantity}` : ''}</span><span style={s.variantAmt}>{formatCurrency(f.price * (f.quantity || 1), currencySymbol)}</span></div>
+                  ))}
                   <div style={s.bomTotalRow}>
                     <span>Total BOM Cost</span>
-                    <span style={s.bomTotalAmt}>{formatCurrency(Math.ceil(bomPages / PAGES_PER_SHEET) * bomRates.paper + bomPages * bomRates.toner + bomCovers * bomRates.cover + bomStaples * bomRates.staple + bomTape * bomRates.tape, currencySymbol)}</span>
+                    <span style={s.bomTotalAmt}>{formatCurrency(Math.ceil(bomPages / PAGES_PER_SHEET) * bomRates.paper + bomPages * bomRates.toner + bomCovers * bomRates.cover + bomStaples * bomRates.staple + bomTape * bomRates.tape + bomFinishing.filter(f => f.active).reduce((s, f) => s + f.price * (f.quantity || 1), 0), currencySymbol)}</span>
                   </div>
                 </div>
                 <p style={s.bomRateNote}>Rates — Paper {formatCurrency(bomRates.paper, currencySymbol)}/sheet · Toner {formatCurrency(bomRates.toner, currencySymbol)}/page · Cover {formatCurrency(bomRates.cover, currencySymbol)}/ea · Staple {formatCurrency(bomRates.staple, currencySymbol)}/ea · Binding Tape {formatCurrency(bomRates.tape, currencySymbol)}/cm</p>
@@ -1580,9 +1586,10 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
               <div style={s.footerActions}>
                 <button style={s.btn} onClick={() => setBomOpen(false)}>Cancel</button>
                 <button style={{ ...s.btn, ...s.btnPrimary }} onClick={() => {
-                  const cost = Math.ceil(bomPages / PAGES_PER_SHEET) * bomRates.paper + bomPages * bomRates.toner + bomCovers * bomRates.cover + bomStaples * bomRates.staple + bomTape * bomRates.tape;
+                  const finishingCost = bomFinishing.filter(f => f.active).reduce((s, f) => s + f.price * (f.quantity || 1), 0);
+                  const cost = Math.ceil(bomPages / PAGES_PER_SHEET) * bomRates.paper + bomPages * bomRates.toner + bomCovers * bomRates.cover + bomStaples * bomRates.staple + bomTape * bomRates.tape + finishingCost;
                   const next = [...variants];
-                  next[bomVariantIdx] = { ...next[bomVariantIdx], bomCost: cost, cost, bomPages, bomCovers, bomStaples, bomTape };
+                  next[bomVariantIdx] = { ...next[bomVariantIdx], bomCost: cost, cost, bomPages, bomCovers, bomStaples, bomTape, finishingOptions: bomFinishing.filter(f => f.active) };
                   setVariants(next);
                   setBomOpen(false);
                 }}>Apply to Variant</button>

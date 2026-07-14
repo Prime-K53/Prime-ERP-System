@@ -1,37 +1,64 @@
-import React from 'react';
-import { CompanyConfig, FinishingOption } from '../../../types';
+import React, { useMemo } from 'react';
+import { CompanyConfig, FinishingOption, Item } from '../../../types';
 import { currencyService } from '../../../services/currencyService';
-import { Scissors, Triangle, PanelTop, Clock, Zap } from 'lucide-react';
+import { BookOpen, Image, Paperclip, Scissors, Triangle, PanelTop } from 'lucide-react';
 
-const OPTION_ICONS: Record<string, React.ReactNode> = {
-  cutting: <Scissors size={20} />,
-  holePunch: <Triangle size={20} />,
-  folding: <PanelTop size={20} />,
-  standardTurnaround: <Clock size={20} />,
-  rushSurcharge: <Zap size={20} />,
+const BOM_DEFAULT_RATES = {
+  cover: 15.00,
+  staple: 0.50,
+  tape: 1.20,
 };
 
+function computeBomRates(items: Item[]) {
+  const rawItems = items?.filter(i => i.type === 'Raw Material' || (i as any).classification === 'raw') || [];
+  const coverItem = rawItems.find(i => /card|cover|board/i.test(i.name));
+  const stapleItem = rawItems.find(i => /staple/i.test(i.name));
+  const tapeItem = rawItems.find(i => /tape|binding tape/i.test(i.name));
+  return {
+    cover: coverItem ? ((coverItem.cost_price || coverItem.cost || 0) / ((coverItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.cover,
+    staple: stapleItem ? ((stapleItem.cost_price || stapleItem.cost || 0) / ((stapleItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.staple,
+    tape: tapeItem ? ((tapeItem.cost_price || tapeItem.cost || 0) / ((tapeItem as any).conversionRate || 1)) : BOM_DEFAULT_RATES.tape,
+  };
+}
+
+const OPTION_META: Record<string, { icon: React.ReactNode; bomSource?: 'tape' | 'cover' | 'staple'; desc: string }> = {
+  binding: { icon: <BookOpen size={20} />, bomSource: 'tape', desc: 'Per cm of binding tape' },
+  coverPages: { icon: <Image size={20} />, bomSource: 'cover', desc: 'Per cover page' },
+  stapling: { icon: <Paperclip size={20} />, bomSource: 'staple', desc: 'Per staple' },
+  cutting: { icon: <Scissors size={20} />, desc: 'Per batch of sheets' },
+  holePunch: { icon: <Triangle size={20} />, desc: 'Per batch of sheets' },
+  folding: { icon: <PanelTop size={20} />, desc: 'Per batch of sheets' },
+};
+
+const BOM_OPTION_IDS = new Set(['binding', 'coverPages', 'stapling']);
+
 const DEFAULT_FINISHING_OPTIONS: FinishingOption[] = [
+  { id: 'binding', name: 'Binding', enabled: false, price: 1.20, description: 'Book binding - comb or spiral', items: [], quantity: 1 },
+  { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 15.00, description: 'Front and back cover pages per copy', items: [], quantity: 1 },
+  { id: 'stapling', name: 'Stapling', enabled: false, price: 0.50, description: 'Corner or saddle stapling', items: [], quantity: 1 },
   { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
   { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
   { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
-  { id: 'standardTurnaround', name: 'Standard Turnaround', enabled: false, price: 0, description: 'Standard delivery turnaround time', items: [] },
-  { id: 'rushSurcharge', name: 'Rush Surcharge', enabled: false, price: 0, description: 'Express/rush order surcharge', items: [] },
 ];
 
+const ALL_OPTION_IDS = new Set(DEFAULT_FINISHING_OPTIONS.map(o => o.id));
+
 function getOptions(config: CompanyConfig): FinishingOption[] {
-  if (config.productionSettings?.finishingOptions?.length > 0) {
-    return config.productionSettings.finishingOptions;
+  const stored = config.productionSettings?.finishingOptions;
+  if (stored && stored.length > 0) {
+    return stored.filter(o => ALL_OPTION_IDS.has(o.id));
   }
-  return DEFAULT_FINISHING_OPTIONS;
+  return DEFAULT_FINISHING_OPTIONS.map(o => ({ ...o }));
 }
 
 function setOptions(config: CompanyConfig, options: FinishingOption[]): CompanyConfig {
+  const existing = config.productionSettings?.finishingOptions || [];
+  const nonFinishing = existing.filter(o => !ALL_OPTION_IDS.has(o.id));
   return {
     ...config,
     productionSettings: {
       ...config.productionSettings,
-      finishingOptions: options,
+      finishingOptions: [...nonFinishing, ...options],
     },
   };
 }
@@ -40,10 +67,17 @@ interface FinishingOptionsTabProps {
   config: CompanyConfig;
   setConfig: React.Dispatch<React.SetStateAction<CompanyConfig>>;
   notify: (msg: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  items: Item[];
 }
 
-export const FinishingOptionsTab: React.FC<FinishingOptionsTabProps> = ({ config, setConfig, notify }) => {
+export const FinishingOptionsTab: React.FC<FinishingOptionsTabProps> = ({ config, setConfig, notify, items }) => {
   const options = getOptions(config);
+  const bomRates = useMemo(() => computeBomRates(items), [items]);
+
+  const resolveBomPrice = (bomSource?: 'tape' | 'cover' | 'staple') => {
+    if (!bomSource) return 0;
+    return Math.round(bomRates[bomSource] * 100) / 100;
+  };
 
   const updateOption = (id: string, field: keyof FinishingOption, value: any) => {
     const updated = options.map(opt =>
@@ -76,54 +110,107 @@ export const FinishingOptionsTab: React.FC<FinishingOptionsTabProps> = ({ config
         </div>
 
         <p className="text-sm text-slate-500 mb-6">
-          Set the default price for each finishing option. These prices are used as defaults
-          across all pricing tools and product configurations.
+          Set the default price and quantity for each finishing option. Binding, Cover Pages, and Stapling prices
+          are auto-calculated from inventory raw material costs. Cutting, Hole Punching, and Folding use manual
+          prices with a batch size (per how many sheets).
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {options.map(option => (
-            <div
-              key={option.id}
-              className="flex items-center justify-between p-4 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-indigo-300 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-2.5 bg-white rounded-lg shadow-sm text-indigo-600 border border-slate-100">
-                  {OPTION_ICONS[option.id] || <Scissors size={20} />}
+          {options.map(option => {
+            const meta = OPTION_META[option.id];
+            const isBom = BOM_OPTION_IDS.has(option.id);
+
+            return (
+              <div
+                key={option.id}
+                className="flex flex-col p-4 bg-[#F4F5F8] rounded-lg border border-[#D4D7DC] group hover:border-indigo-300 transition-all"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 bg-white rounded-lg shadow-sm text-indigo-600 border border-slate-100">
+                      {meta?.icon}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm">{option.name}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{meta?.desc || option.description}</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-2">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={option.enabled}
+                      onChange={e => updateOption(option.id, 'enabled', e.target.checked)}
+                    />
+                    <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
                 </div>
-                <div>
-                  <p className="font-bold text-slate-800 text-sm">{option.name}</p>
-                  {option.description && (
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {option.description}
-                      {option.batchSize ? ` · per ${option.batchSize} copies` : ' · per copy'}
-                    </p>
+                <div className="flex items-center gap-4">
+                  {isBom ? (
+                    <>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-slate-400 font-medium mb-1">Unit Price (from inventory)</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400 font-medium">{currency}</span>
+                          <input
+                            type="number"
+                            value={resolveBomPrice(meta?.bomSource)}
+                            readOnly
+                            className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-right text-sm font-bold text-slate-500 bg-slate-100"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-slate-400 font-medium mb-1">Qty per Copy</p>
+                        <input
+                          type="number"
+                          value={option.quantity ?? 1}
+                          onChange={e => updateOption(option.id, 'quantity', Math.max(1, Number(e.target.value) || 1))}
+                          className="w-16 px-2.5 py-1.5 border border-slate-200 rounded-lg text-center text-sm font-bold text-slate-700 bg-white"
+                          min={1}
+                          step={1}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-medium mb-1">Cost per Copy</p>
+                        <p className="text-sm font-bold text-indigo-600">
+                          {currency}{(resolveBomPrice(meta?.bomSource) * (option.quantity ?? 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-slate-400 font-medium mb-1">Price</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400 font-medium">{currency}</span>
+                          <input
+                            type="number"
+                            value={option.price}
+                            onChange={e => updateOption(option.id, 'price', parseFloat(e.target.value) || 0)}
+                            className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-right text-sm font-bold text-slate-700 bg-white"
+                            min={0}
+                            step={0.5}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-slate-400 font-medium mb-1">Per How Many Sheets</p>
+                        <input
+                          type="number"
+                          value={option.batchSize ?? 10}
+                          onChange={e => updateOption(option.id, 'batchSize', Math.max(1, Number(e.target.value) || 1))}
+                          className="w-16 px-2.5 py-1.5 border border-slate-200 rounded-lg text-center text-sm font-bold text-slate-700 bg-white"
+                          min={1}
+                          step={1}
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-400 font-medium">{currency}</span>
-                  <input
-                    type="number"
-                    value={option.price}
-                    onChange={e => updateOption(option.id, 'price', parseFloat(e.target.value) || 0)}
-                    className="w-20 px-2.5 py-1.5 border border-slate-200 rounded-lg text-right text-sm font-bold text-slate-700 bg-white"
-                    min={0}
-                    step={0.5}
-                  />
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer ml-2">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={option.enabled}
-                    onChange={e => updateOption(option.id, 'enabled', e.target.checked)}
-                  />
-                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
