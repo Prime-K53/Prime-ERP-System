@@ -919,6 +919,16 @@ const Payments: React.FC = () => {
 
         setIsSubmitting(true);
         try {
+            if (formData.paymentMethod === 'Wallet') {
+                const cust = customers.find((c: any) => c.name === formData.customerName);
+                const walletBal = cust?.walletBalance || 0;
+                if (Number(formData.amount) > walletBal) {
+                    notify(`Insufficient wallet balance. Available: ${currency}${walletBal.toFixed(2)}`, "error");
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             let finalAllocations = [...allocations];
             const paymentAmount = Number(formData.amount);
 
@@ -981,6 +991,11 @@ const Payments: React.FC = () => {
             if (!editMode && formData.customerId) {
                 const postedPayment = await dbService.get<CustomerPayment>('customerPayments', newPayment.id);
                 await handlePreviewReceipt(postedPayment || newPayment);
+            }
+
+            // Deduct from wallet if paying via wallet
+            if (formData.paymentMethod === 'Wallet' && formData.customerId && paymentAmount > 0) {
+                await paymentService.updateCustomerWallet(formData.customerId, -paymentAmount);
             }
 
             // Handle Examination Invoice payment sync
@@ -1226,6 +1241,15 @@ const Payments: React.FC = () => {
                                                     <option value="">-- Choose Client --</option>
                                                     {customerNames.map(name => <option key={name} value={name}>{name}</option>)}
                                                 </select>
+                                                {formData.customerName && (() => {
+                                                    const cust = customers.find((c: any) => c.name === formData.customerName);
+                                                    const bal = cust?.walletBalance || 0;
+                                                    return bal > 0 ? (
+                                                        <p className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                                            <Wallet size={12} /> Wallet Balance: {currency}{bal.toFixed(2)}
+                                                        </p>
+                                                    ) : null;
+                                                })()}
                                             </div>
 
                                             {formData.customerName && customers.find(c => c.name === formData.customerName)?.subAccounts?.length > 0 && (
@@ -1267,7 +1291,8 @@ const Payments: React.FC = () => {
                                                         const bankAcc = bankAccounts.find(a => a.id === accId);
                                                         
                                                         let method = 'Bank';
-                                                        if (defAcc?.name.includes('Cash')) method = 'Cash';
+                                                        if (accId === 'wallet') method = 'Wallet';
+                                                        else if (defAcc?.name.includes('Cash')) method = 'Cash';
                                                         else if (defAcc?.name.includes('Mobile') || bankAcc?.name.toLowerCase().includes('mobile')) method = 'Mobile Money';
                                                         
                                                         setFormData({
@@ -1289,7 +1314,21 @@ const Payments: React.FC = () => {
                                                             ))}
                                                         </optgroup>
                                                     )}
+                                                    {formData.customerName && (customers.find((c: any) => c.name === formData.customerName)?.walletBalance || 0) > 0 && (
+                                                        <optgroup label="Customer Wallet">
+                                                            <option value="wallet">Wallet Balance</option>
+                                                        </optgroup>
+                                                    )}
                                                 </select>
+                                                {formData.paymentMethod === 'Wallet' && formData.customerName && (() => {
+                                                    const cust = customers.find((c: any) => c.name === formData.customerName);
+                                                    const bal = cust?.walletBalance || 0;
+                                                    return (
+                                                        <p className="text-[11px] text-amber-600 font-bold mt-1.5">
+                                                            Available: {currency}{bal.toFixed(2)}
+                                                        </p>
+                                                    );
+                                                })()}
                                             </div>
 
                                             <div className="pt-4 border-t border-slate-200">
