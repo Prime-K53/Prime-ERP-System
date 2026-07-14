@@ -663,13 +663,24 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
 
   useEffect(() => {
     if (!open) return;
+    const defCovers = globalFinishingOptions.find(o => o.id === 'coverPages')?.quantity ?? 2;
+    const defStaples = globalFinishingOptions.find(o => o.id === 'stapling')?.quantity ?? 2;
+    const defTape = globalFinishingOptions.find(o => o.id === 'binding')?.quantity ?? 0;
     if (item) {
+      const saved = item as any;
+      setProductBomCovers(saved.bomCovers ?? saved.productBomCovers ?? defCovers);
+      setProductBomStaples(saved.bomStaples ?? saved.productBomStaples ?? defStaples);
+      setProductBomTape(saved.bomTape ?? saved.productBomTape ?? defTape);
       const TURNAROUND_IDS = new Set(['standardTurnaround', 'rushSurcharge', 'standard_turnaround', 'rush_surcharge']);
-      const savedFinishing = (item as any).pricingConfig?.finishingOptions || (item as any).smartPricing?.finishingOptions;
+      const savedFinishing = saved.pricingConfig?.finishingOptions || saved.smartPricing?.finishingOptions;
       if (savedFinishing && savedFinishing.length > 0) {
         setServiceFinishing(savedFinishing.filter((o: any) => !TURNAROUND_IDS.has(o.id)).map((o: any) => ({ name: o.name || o.id || '', price: Number(o.price) || 0, active: o.enabled ?? true, quantity: Number(o.quantity) || 1 })));
         return;
       }
+    } else {
+      setProductBomCovers(defCovers);
+      setProductBomStaples(defStaples);
+      setProductBomTape(defTape);
     }
     setServiceFinishing(globalFinishingOptions.map(o => ({ name: o.name, price: o.price, active: false, quantity: o.quantity || 1 })));
   }, [open, item, globalFinishingOptions]);
@@ -1095,7 +1106,13 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                 <input type="text" style={s.variantInput} value={v.name} onChange={e => {
                   const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next);
                 }} placeholder="e.g. 96 Page" />
-                <button style={s.bomEditBtn} onClick={() => { setBomVariantIdx(i); setBomPages(v.bomPages ?? 96); setBomCovers(v.bomCovers ?? 2); setBomStaples(v.bomStaples ?? 2); setBomTape(v.bomTape ?? 0); setBomOpen(true); }}>
+                <button style={s.bomEditBtn} onClick={() => {
+                  const defCovers = globalFinishingOptions.find(o => o.id === 'coverPages')?.quantity ?? 2;
+                  const defStaples = globalFinishingOptions.find(o => o.id === 'stapling')?.quantity ?? 2;
+                  const defTape = globalFinishingOptions.find(o => o.id === 'binding')?.quantity ?? 0;
+                  setBomVariantIdx(i); setBomPages(v.bomPages ?? 96);
+                  setBomCovers(v.bomCovers ?? defCovers); setBomStaples(v.bomStaples ?? defStaples); setBomTape(v.bomTape ?? defTape); setBomOpen(true);
+                }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M16 3l5 5L8 21H3v-5L16 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>
                   Edit BOM
                 </button>
