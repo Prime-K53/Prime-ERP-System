@@ -648,8 +648,9 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const serviceMarkup = useMemo(() => serviceBase > 0 ? (serviceProfit / serviceBase) * 100 : 0, [serviceProfit, serviceBase]);
 
   const globalFinishingOptions = useMemo<FinishingOption[]>(() => {
+    const TURNAROUND_IDS = new Set(['standardTurnaround', 'rushSurcharge', 'standard_turnaround', 'rush_surcharge']);
     const fromConfig = companyConfig?.productionSettings?.finishingOptions;
-    if (fromConfig && fromConfig.length > 0) return fromConfig;
+    if (fromConfig && fromConfig.length > 0) return fromConfig.filter(o => !TURNAROUND_IDS.has(o.id));
     return [
       { id: 'binding', name: 'Binding', enabled: false, price: 150, description: 'Book binding - comb or spiral', items: [] },
       { id: 'coverPages', name: 'Cover Pages', enabled: false, price: 20, description: 'Front and back cover pages per copy', items: [] },
@@ -657,17 +658,16 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
       { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
       { id: 'stapling', name: 'Stapling', enabled: false, price: 10, description: 'Corner or saddle stapling', items: [] },
-      { id: 'standardTurnaround', name: 'Standard Turnaround', enabled: false, price: 0, description: 'Standard delivery turnaround', items: [] },
-      { id: 'rushSurcharge', name: 'Rush Surcharge', enabled: false, price: 0, description: 'Express/rush order surcharge', items: [] },
     ];
   }, [companyConfig]);
 
   useEffect(() => {
     if (!open) return;
     if (item) {
+      const TURNAROUND_IDS = new Set(['standardTurnaround', 'rushSurcharge', 'standard_turnaround', 'rush_surcharge']);
       const savedFinishing = (item as any).pricingConfig?.finishingOptions || (item as any).smartPricing?.finishingOptions;
       if (savedFinishing && savedFinishing.length > 0) {
-        setServiceFinishing(savedFinishing.map((o: any) => ({ name: o.name || o.id || '', price: Number(o.price) || 0, active: o.enabled ?? true })));
+        setServiceFinishing(savedFinishing.filter((o: any) => !TURNAROUND_IDS.has(o.id)).map((o: any) => ({ name: o.name || o.id || '', price: Number(o.price) || 0, active: o.enabled ?? true })));
         return;
       }
     }
