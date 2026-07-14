@@ -272,16 +272,16 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [showReferrerSearch, setShowReferrerSearch] = useState(false);
     const [selectedReferrerId, setSelectedReferrerId] = useState<string>('');
 
-    // Load existing referrer when customer is selected
+    // Load existing referrer when customer is selected (only for existing customers)
     useEffect(() => {
         if (formData.customerId) {
             (async () => {
                 const { referralService } = await import('../../../services/referralService');
                 const ref = await referralService.getReferrerForCustomer(formData.customerId);
-                setSelectedReferrerId(ref?.referrerId || '');
+                if (ref?.referrerId) {
+                    setSelectedReferrerId(ref.referrerId);
+                }
             })();
-        } else {
-            setSelectedReferrerId('');
         }
     }, [formData.customerId]);
 
@@ -1859,7 +1859,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-[#E9E5DC] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[rgba(15,40,40,0.45)] backdrop-blur-[2px] flex items-center justify-center p-4">
             <div className="w-full max-w-[1040px] bg-[#FEFDFB] rounded-[14px] shadow-[0_30px_60px_-20px_rgba(16,43,40,0.35),0_0_0_1px_rgba(16,43,40,0.06)] grid grid-cols-[266px_1fr] h-[88vh] max-h-[88vh]">
 
                 {/* DOCKET SIDEBAR */}
@@ -1961,7 +1961,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 </button>
                             )}
                             <button onClick={handleCancelForm}
-                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E4DFD1] bg-[#FEFDFB] text-[#8A8578] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
+                                className="w-[30px] h-[30px] rounded-[8px] border border-[#E4DFD1] bg-[#FEFDFB] text-[#666F6C] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
                                 ✕
                             </button>
                             <span className="inline-flex items-center gap-1 px-[7px] py-[3px] text-[10px] font-['JetBrains_Mono',monospace] tracking-[0.3px] font-semibold text-[#B8863B] bg-[rgba(184,134,59,0.08)] border border-[rgba(184,134,59,0.2)] rounded-[4px] uppercase">
@@ -1976,7 +1976,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         </div>
                     )}
 
-                    <div className="flex-1 min-h-0 overflow-y-auto px-[26px] pt-[6px] [scrollbar-width:thin] [scrollbar-color:#93C5FD_#FBFAF7]">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-[26px] pt-[6px] [scrollbar-width:thin] [scrollbar-color:#93C5FD_#FBF8F2]">
 
                         {formData.customerName && customerPanelOpen && (() => {
                             const cust = selectedCustomerObj;
@@ -2020,7 +2020,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             );
                         })()}
 
-                        <div className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#8A8578] uppercase tracking-[0.6px] px-[2px] py-[4px]">
+                        <div className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#666F6C] uppercase tracking-[0.6px] px-[2px] py-[4px]">
                             Line Items
                         </div>
 
@@ -2040,16 +2040,16 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Item</span>
                                 <input type="text" placeholder="Search inventory..."
                                     style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
-                                    className="focus:border-[#60A5FA]"
+                                    className="focus:border-[#2563EB]"
                                     value={itemSearch}
                                     onFocus={() => setIsItemDropdownOpen(true)}
                                     onChange={e => { setItemSearch(e.target.value); setIsItemDropdownOpen(true); }}
                                     onKeyDown={e => handleKeyDown(e, filteredInventory, inventory)}
                                 />
                                 {isItemDropdownOpen && (
-                                    <div className="absolute z-50 mt-[4px] w-full bg-[#FEFDFB] border border-[#D4CFC2] rounded-[6px] shadow-[0_8px_24px_-6px_rgba(16,43,40,0.15)] max-h-60 overflow-y-auto">
+                                    <div className="absolute z-50 mt-[4px] w-full bg-[#FEFDFB] border border-[#E4DFD1] rounded-[6px] shadow-[0_8px_24px_-6px_rgba(16,43,40,0.15)] max-h-60 overflow-y-auto">
                                         {filteredInventory.length === 0 ? (
-                                            <div className="p-[12px] text-center text-[11px] text-[#B8B2A2] font-['JetBrains_Mono',monospace]">No matching items</div>
+                                            <div className="p-[12px] text-center text-[11px] text-[#666F6C] font-['JetBrains_Mono',monospace]">No matching items</div>
                                         ) : (
                                             filteredInventory.map(item => {
                                                 const hasVariants = item.variants && item.variants.length > 0;
@@ -2070,18 +2070,18 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                         className="w-full px-[10px] py-[7px] text-left hover:bg-[#F8F7F2] flex justify-between items-center border-b border-[#F0EFE8] last:border-b-0 transition-colors"
                                                     >
                                                         <div>
-                                                            <div className="text-[12px] font-medium text-[#172554]">{item.name}</div>
-                                                            <div className="text-[9px] text-[#B8B2A2] font-['JetBrains_Mono',monospace]">{item.sku || 'NO-SKU'}</div>
+                                                            <div className="text-[12px] font-medium text-[#23282A]">{item.name}</div>
+                                                            <div className="text-[9px] text-[#666F6C] font-['JetBrains_Mono',monospace]">{item.sku || 'NO-SKU'}</div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[12px] font-semibold text-[#172554]">
+                                                            <div className="text-[12px] font-semibold text-[#23282A]">
                                                                 {isPriceRange
                                                                     ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}`
                                                                     : `${currency}${Number((hasVariants ? minPrice : item.price) || 0).toLocaleString()}`
                                                                 }
                                                             </div>
                                                             {isStockTracked && (
-                                                                <div className={`text-[9px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-[#B8B2A2]'} font-['JetBrains_Mono',monospace]`}>
+                                                                <div className={`text-[9px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-[#666F6C]'} font-['JetBrains_Mono',monospace]`}>
                                                                     {stock} left
                                                                 </div>
                                                             )}
@@ -2097,7 +2097,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Services</span>
                                 <input type="text" placeholder="Search services..."
                                     style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
-                                    className="focus:border-[#60A5FA]"
+                                    className="focus:border-[#2563EB]"
                                     value={serviceSearch}
                                     onFocus={() => setIsServiceDropdownOpen(true)}
                                     onChange={e => { setServiceSearch(e.target.value); setIsServiceDropdownOpen(true); }}
@@ -2134,15 +2134,15 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-[8px] px-[2px] mb-[8px] text-[12px] font-medium text-[#172554]">
-                            <span className="text-[#8A8578]">Units left: <span className="font-medium text-[#172554]">
+                        <div className="flex items-center gap-[8px] px-[2px] mb-[8px] text-[12px] font-medium text-[#23282A]">
+                            <span className="text-[#666F6C]">Units left: <span className="font-medium text-[#23282A]">
                                 {formData.items.length > 0 ? `${Math.min(...formData.items.map((i: any) => {
                                     const inv = inventory.find((inv: Item) => inv.id === (i.parentId || i.id));
                                     return inv?.stock ?? 0;
                                 }))}` : '—'}
                             </span></span>
-                            <span className="text-[#D4CFC2]">|</span>
-                            <a href="#" className="text-[#2563EB] hover:text-[#172554] hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
+                            <span className="text-[#E4DFD1]">|</span>
+                            <a href="#" className="text-[#2563EB] hover:text-[#23282A] hover:underline" onClick={e => { e.preventDefault(); const match = itemSearch.trim() ? inventory.find((i: Item) => i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase())) : null; setItemHistoryItemId(match?.id); setShowItemHistory(true); }}>
                                 Alt+F2: Item History
                             </a>
                         </div>
@@ -2295,7 +2295,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         <col style={{width: '6%'}} />
                                     </colgroup>
                                     <thead>
-                                        <tr className="text-[10.5px] font-bold text-[#1E40AF] uppercase tracking-[0.7px] bg-[#EFF6FF]">
+                                        <tr className="text-[10.5px] font-bold text-[#0F3D3E] uppercase tracking-[0.7px] bg-[#EFF6FF]">
                                             <th className="px-[16px] py-[8px] text-left border-b border-[#E4DFD1]">Item</th>
                                             <th className="px-[16px] py-[8px] text-center border-b border-[#E4DFD1]">Qty</th>
                                             <th className="px-[16px] py-[8px] text-right border-b border-[#E4DFD1]">Price</th>
@@ -2306,7 +2306,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     <tbody className="divide-y divide-[#E4DFD1]">
                                         {analysis.processedItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-[16px] py-[48px] text-center text-[#B0AB9E] text-[13px]">
+                                                <td colSpan={5} className="px-[16px] py-[48px] text-center text-[#666F6C] text-[13px]">
                                                     <FileText size={20} className="mx-auto mb-[10px] opacity-40" />
                                                     Press Enter to add the first item
                                                 </td>
@@ -2377,7 +2377,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E4DFD1] font-medium text-[#172554]">
+                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E4DFD1] font-medium text-[#23282A]">
                                 <span className="text-[12px]">{analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty</span>
                                 <span className="text-[15px]">Subtotal: {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
@@ -2385,15 +2385,15 @@ const handleVariantSelect = async (variant: ProductVariant) => {
 
                         {/* PERFORATION DIVIDER */}
                         <div style={{display:"flex",alignItems:"center",gap:"8px",margin:"26px -26px",padding:"0 26px"}}>
-                            <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#E9E5DC",flex:"none"}}></span>
+                            <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#FEFDFB",flex:"none"}}></span>
                             <span style={{flex:"1",height:"0",borderTop:"2px dashed #E4DFD1"}}></span>
-                            <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#E9E5DC",flex:"none"}}></span>
+                            <span style={{width:"16px",height:"16px",borderRadius:"50%",background:"#FEFDFB",flex:"none"}}></span>
                         </div>
 
                         <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:"22px",paddingBottom:"24px"}}>
                             <div className="pr-[14px] border-r border-[#E4DFD1]">
                                 <div className="flex items-center gap-[6px] mb-[6px]">
-                                    <input type="checkbox" className="rounded accent-[#3B82F6]"
+                                    <input type="checkbox" className="rounded accent-[#2563EB]"
                                         checked={formData.otherChargesEnabled}
                                         onChange={e => {
                                             setFormData((prev: any) => ({
@@ -2408,10 +2408,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             }));
                                         }}
                                     />
-                                    <span className="text-[11px] font-medium text-[#172554]">Other Charges</span>
+                                    <span className="text-[11px] font-medium text-[#23282A]">Other Charges</span>
                                     {formData.otherChargesEnabled && (
                                         <>
-                                            <select className="text-[11px] border border-[#D4CFC2] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] flex-1 focus:border-[#93C5FD] outline-none transition-colors"
+                                            <select className="text-[11px] border border-[#E4DFD1] rounded-[4px] px-[6px] py-[3px] bg-[#FEFDFB] flex-1 focus:border-[#93C5FD] outline-none transition-colors"
                                                 value={formData.otherChargesAdjustment}
                                                 onChange={e => {
                                                     const adj = activeMarketAdjustments.find((a: any) => a.id === e.target.value);
@@ -2437,7 +2437,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 <span className="text-[11px] font-semibold text-[#2563EB] whitespace-nowrap">{formData.otherChargesPercent}%</span>
                                             )}
                                             <button onClick={handleCalculateCharges} disabled={!formData.otherChargesAdjustment}
-                                                className="px-[8px] py-[3px] text-[11px] font-medium text-white bg-[#3B82F6] rounded-[4px] hover:bg-[#2563EB] disabled:opacity-40 flex items-center gap-[3px] transition-colors">
+                                                className="px-[8px] py-[3px] text-[11px] font-medium text-white bg-[#2563EB] rounded-[4px] hover:bg-[#2563EB] disabled:opacity-40 flex items-center gap-[3px] transition-colors">
                                                 <Calculator size={12} /> Calculate
                                             </button>
                                         </>
@@ -2455,24 +2455,24 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             value={formData.discount || ''}
                                             onChange={e => setFormData({ ...formData, discount: Math.max(0, Number(e.target.value) || 0) })}
                                             style={{width:"100%",fontFamily:"JetBrains Mono,monospace",fontSize:"13px",padding:"9px 34px 9px 12px",border:"1px solid #E4DFD1",borderRadius:"8px",background:"#FEFDFB",outline:"none"}}
-                                            className="focus:border-[#60A5FA]"
+                                            className="focus:border-[#2563EB]"
                                         />
-                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#3B82F6"}}>{currency}</span>
+                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#2563EB"}}>{currency}</span>
                                     </div>
                                 </div>
                                 <div className="notes-box">
                                     <textarea
                                         style={{width:"100%",minHeight:"82px",resize:"vertical",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",padding:"12px 14px",fontFamily:"Inter,sans-serif",fontSize:"13px",color:"#23282A",outline:"none"}}
-                                        className="focus:border-[#60A5FA]"
+                                        className="focus:border-[#2563EB]"
                                         placeholder="Narration / notes..."
                                         value={formData.notes}
                                         onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                     />
-                                    <p style={{fontSize:"11px",color:"#A6A196",margin:"6px 0 0"}}>Ctrl+Enter for new line</p>
+                                    <p style={{fontSize:"11px",color:"#666F6C",margin:"6px 0 0"}}>Ctrl+Enter for new line</p>
                                 </div>
                             </div>
                             <div>
-                                <div className="summary-card" style={{background:"#FBFAF7",border:"1.5px solid #1E40AF",borderRadius:"10px",padding:"12px 14px",position:"relative"}}>
+                                <div className="summary-card" style={{background:"#FBF8F2",border:"1.5px solid #0F3D3E",borderRadius:"10px",padding:"12px 14px",position:"relative"}}>
                                     <span style={{position:"absolute",top:"8px",right:"10px",fontFamily:"JetBrains Mono,monospace",fontSize:"9px",fontWeight:"700",letterSpacing:"2px",color:"#93C5FD"}}>COPY</span>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
                                         <span style={{fontSize:"10px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB"}}>Round Up</span>
@@ -2486,27 +2486,27 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                     <option key={m.value} value={m.value}>{m.label}</option>
                                                 ))}
                                             </select>
-                                            <input type="checkbox" className="rounded accent-[#3B82F6]"
+                                            <input type="checkbox" className="rounded accent-[#2563EB]"
                                                 checked={formData.roundingEnabled}
                                                 onChange={e => setFormData({ ...formData, roundingEnabled: e.target.checked })}
                                             />
                                         </div>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
-                                        <span style={{color:"#5C574D",fontWeight:"500"}}>Discount</span>
+                                        <span style={{color:"#666F6C",fontWeight:"500"}}>Discount</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
-                                        <span style={{color:"#5C574D",fontWeight:"500"}}>Other Charges</span>
+                                        <span style={{color:"#666F6C",fontWeight:"500"}}>Other Charges</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",background:"#F7EFDF",padding:"2px 8px",borderRadius:"5px",color:"#B8863B"}}>{currency}{(Number(formData.otherCharges || 0) + calculatedOtherCharges).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"none",fontSize:"12px"}}>
-                                        <span style={{color:"#5C574D",fontWeight:"500"}}>Round Off</span>
+                                        <span style={{color:"#666F6C",fontWeight:"500"}}>Round Off</span>
                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#23282A"}}>{roundOff.toFixed(2)}</span>
                                     </div>
-                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:"8px",paddingTop:"8px",borderTop:"2px solid #1E40AF"}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:"8px",paddingTop:"8px",borderTop:"2px solid #0F3D3E"}}>
                                         <span style={{fontFamily:"DM Serif Display,serif",fontSize:"15px",color:"#23282A"}}>Total Amount</span>
-                                        <span style={{fontFamily:"DM Serif Display,serif",fontSize:"25px",color:"#1E40AF"}}>{currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span style={{fontFamily:"DM Serif Display,serif",fontSize:"25px",color:"#0F3D3E"}}>{currency}{(finalDisplayTotal + roundOff).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2520,7 +2520,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         {isEditing && (
                             <input type="text" value={auditReason} onChange={e => setAuditReason(e.target.value)}
                                 placeholder="Audit reason required (price unlock, quote override, etc.)"
-                                className="w-[180px] text-[11px] border border-[#D4CFC2] rounded-[6px] px-[8px] py-[5px] bg-[#FEFDFB] placeholder:text-[#B8B2A2] font-['JetBrains_Mono',monospace] focus:border-[#B8863B] outline-none transition-colors"
+                                className="w-[180px] text-[11px] border border-[#E4DFD1] rounded-[6px] px-[8px] py-[5px] bg-[#FEFDFB] placeholder:text-[#666F6C] font-['JetBrains_Mono',monospace] focus:border-[#B8863B] outline-none transition-colors"
                             />
                         )}
                         <button

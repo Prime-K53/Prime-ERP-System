@@ -108,27 +108,54 @@ export const referralService = {
 
   async processInvoiceCommission(invoice: any, paymentId?: string): Promise<void> {
     const settings = await this.getSettings();
-    if (!settings.enableReferralSystem) return;
+    if (!settings.enableReferralSystem) {
+      logger.warn('[Referral] System disabled, skipping commission');
+      return;
+    }
 
     const customerId = invoice.customerId;
-    if (!customerId) return;
+    if (!customerId) {
+      logger.warn('[Referral] No customerId on invoice', invoice.id);
+      return;
+    }
 
-    if (invoice.status !== 'Paid') return;
-    if (invoice.totalAmount <= 0) return;
-    if ((invoice.paidAmount || 0) < invoice.totalAmount) return;
+    if (invoice.status !== 'Paid') {
+      logger.warn('[Referral] Invoice not paid', invoice.id, invoice.status);
+      return;
+    }
+    if (invoice.totalAmount <= 0) {
+      logger.warn('[Referral] Invoice amount <= 0', invoice.id, invoice.totalAmount);
+      return;
+    }
+    if ((invoice.paidAmount || 0) < invoice.totalAmount) {
+      logger.warn('[Referral] Invoice not fully paid', invoice.id, invoice.paidAmount, invoice.totalAmount);
+      return;
+    }
 
     const referral = await this.getReferrerForCustomer(customerId);
-    if (!referral) return;
-    if (referral.status !== 'Active') return;
+    if (!referral) {
+      logger.warn('[Referral] No active referral found for customer', customerId, invoice.id);
+      return;
+    }
+    if (referral.status !== 'Active') {
+      logger.warn('[Referral] Referral not active', referral.id, referral.status);
+      return;
+    }
 
     const existingCommissions = await dbService.getAll<ReferralCommission>('referralCommissions');
     const alreadyExists = existingCommissions.find(
       c => c.invoiceId === invoice.id && c.status !== 'Reversed'
     );
-    if (alreadyExists) return;
+    if (alreadyExists) {
+      logger.warn('[Referral] Commission already exists for invoice', invoice.id);
+      return;
+    }
 
     const invoiceAmount = invoice.totalAmount;
-    if (settings.minInvoiceAmount > 0 && invoiceAmount < settings.minInvoiceAmount) return;
+    if (settings.minInvoiceAmount > 0 && invoiceAmount < settings.minInvoiceAmount) {
+      logger.warn('[Referral] Invoice below min amount', invoice.id, invoiceAmount, settings.minInvoiceAmount);
+      return;
+    }
 
     const rate = settings.defaultCommissionPercent / 100;
     let commissionAmount = invoiceAmount * rate;
@@ -145,7 +172,10 @@ export const referralService = {
     }
 
     commissionAmount = roundToCurrency(commissionAmount);
-    if (commissionAmount <= 0) return;
+    if (commissionAmount <= 0) {
+      logger.warn('[Referral] Commission amount <= 0 after calculation', invoice.id);
+      return;
+    }
 
     const commission: ReferralCommission = {
       id: generateId('RFC'),
