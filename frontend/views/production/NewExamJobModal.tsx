@@ -44,7 +44,6 @@ import { useFinance } from '../../context/FinanceContext';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { PreviewModal } from '../shared/components/PDF/PreviewModal';
 import { FinancialDoc } from '../shared/components/PDF/schemas';
 import { MarketAdjustment, BOMTemplate, ExamPricingResult, SubjectJob, ProductionSettingsConfig,
   ExamSchoolLocal as School, ExamClassLocal as Class, ExamSubjectLocal as Subject, ExamPaper as Examination } from '../../types';

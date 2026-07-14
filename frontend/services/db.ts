@@ -1096,7 +1096,7 @@ export const dbService = {
     },
 
     async get<T>(storeName: keyof NexusDB, id: string): Promise<T | undefined> {
-        if (isCloudOnlyMode() && String(storeName) !== 'syncOutbox') {
+        if (isCloudOnlyMode() && String(storeName) !== 'syncOutbox' && !LOCAL_ONLY_STORES.has(String(storeName))) {
             const cloudValue = await cloudDb.get<T>(String(storeName), id);
             return cloudValue ?? undefined;
         }

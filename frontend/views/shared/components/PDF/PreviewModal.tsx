@@ -25,9 +25,11 @@ interface PreviewModalProps {
   type?: DocType;
   data?: PrimeDocData | null;
   file?: FilePreviewDescriptor | null;
+  title?: string;
+  content?: React.ReactNode;
 }
 
-export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }: PreviewModalProps) => {
+export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null, title: titleProp, content }: PreviewModalProps) => {
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfSource, setPdfSource] = useState<PDFPreviewSource | null>(null);
@@ -290,7 +292,10 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
 
   if (!isOpen) return null;
 
+  const isContentMode = !!content;
   const hasContent = !!blobUrl;
+
+  const title = content && titleProp ? titleProp : previewTitle;
 
   return createPortal(
     <div className="fixed inset-0 flex flex-col bg-[#f3f0ea] dark:bg-slate-900 animate-in fade-in duration-200" style={{ zIndex: Z_LAYERS.GLOBAL_PREVIEW }}>
@@ -311,78 +316,88 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
             </div>
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{previewTitle}</h2>
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
-              {invoiceNumber && <span className="truncate">{invoiceNumber}</span>}
-              {customerName && (
-                <>
-                  <span className="text-slate-300">|</span>
-                  <span className="truncate">{customerName}</span>
-                </>
-              )}
-            </div>
+            <h2 className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{title}</h2>
+            {!isContentMode && (
+              <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500">
+                {invoiceNumber && <span className="truncate">{invoiceNumber}</span>}
+                {customerName && (
+                  <>
+                    <span className="text-slate-300">|</span>
+                    <span className="truncate">{customerName}</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          {status && (
+          {!isContentMode && status && (
             <span className={`hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border ${statusColor}`}>
               {status}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {(genInfo || preparing) && !hasContent && (
+          {!isContentMode && (genInfo || preparing) && !hasContent && (
             <span className="hidden sm:inline text-[10px] text-slate-400">{genInfo || 'Initializing...'}</span>
           )}
         </div>
       </header>
 
       {/* Sticky Action Bar */}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#d7d1c7] dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur px-3 sm:px-5 py-2 shadow-sm z-10">
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      {!isContentMode && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#d7d1c7] dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur px-3 sm:px-5 py-2 shadow-sm z-10">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {hasContent && (
+              <>
+                <button
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white transition-all hover:bg-blue-700 active:scale-95 shadow-sm"
+                  title="Download PDF (Ctrl+S)"
+                >
+                  <FileDown className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
+                  title="Print (Ctrl+P)"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Print</span>
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
+                  title="Share"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Share</span>
+                </button>
+              </>
+            )}
+          </div>
           {hasContent && (
-            <>
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
-                onClick={handleDownload}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white transition-all hover:bg-blue-700 active:scale-95 shadow-sm"
-                title="Download PDF (Ctrl+S)"
+                onClick={onClose}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
               >
-                <FileDown className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Download</span>
+                <X className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Close</span>
               </button>
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
-                title="Print (Ctrl+P)"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Print</span>
-              </button>
-              <button
-                onClick={handleShare}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
-                title="Share"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Share</span>
-              </button>
-            </>
+            </div>
           )}
         </div>
-        {hasContent && (
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-all hover:bg-slate-50 dark:hover:bg-slate-600 active:scale-95"
-            >
-              <X className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Close</span>
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Body */}
       <div ref={containerRef} className="flex flex-1 flex-col overflow-hidden bg-[#e8e4de] dark:bg-slate-950">
-        {preparing && !hasContent ? (
+        {isContentMode ? (
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-4xl mx-auto">
+              {content}
+            </div>
+          </div>
+        ) : preparing && !hasContent ? (
           /* Loading skeleton */
           <div className="flex h-full items-center justify-center p-4 sm:p-8">
             <div className="w-full max-w-lg text-center">
@@ -470,7 +485,7 @@ export const PreviewModal = ({ isOpen, onClose, type, data = null, file = null }
       </div>
 
       {/* Footer - Zoom Controls */}
-      {hasContent && (
+      {!isContentMode && hasContent && (
         <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-[#d7d1c7] dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-5 py-2 shadow-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <button

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, addDays, addMonths, addYears, subDays, parseISO } from 'date-fns';
 import BankingReports from '../../components/BankingReports';
-import DocumentPreviewModal from '../../components/DocumentPreviewModal';
+import { PreviewModal } from '../shared/components/PDF/PreviewModal';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
 import { currencyService } from '../../services/currencyService';
 
@@ -1879,7 +1879,7 @@ const Banking: React.FC = () => {
       )}
 
       {/* Document Preview Modal */}
-      <DocumentPreviewModal open={documentPreviewOpen} onClose={closeDocumentPreview} title={documentPreviewTitle} content={documentPreviewContent} />
+      <PreviewModal isOpen={documentPreviewOpen} onClose={closeDocumentPreview} title={documentPreviewTitle} content={documentPreviewContent} />
 
       {/* Scheduled Payment Modal */}
       {showModal === 'ScheduledPayment' && (

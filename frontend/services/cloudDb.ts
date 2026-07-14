@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { isSupabaseConfigured } from './cloudMode';
 import { logger } from './logger';
+import { stringToUuid5 } from '../utils/uuid';
 
 export const STORE_TO_TABLE: Record<string, string> = {
   warehouses: 'warehouses',
@@ -502,10 +503,11 @@ export const cloudDb = {
     if (!(await this._ensureIdempotencyTable())) return { alreadyProcessed: false };
     try {
       const companyId = await getCompanyId();
+      const uuidId = await stringToUuid5(operationId);
       let query = supabase
         .from('idempotency_keys')
         .select('result')
-        .eq('id', operationId);
+        .eq('id', uuidId);
       if (companyId) query = query.eq('company_id', companyId);
       const { data } = await query.maybeSingle();
       const result = data
@@ -532,8 +534,9 @@ export const cloudDb = {
     if (!(await this._ensureIdempotencyTable())) return;
     try {
       const companyId = await getCompanyId();
+      const uuidId = await stringToUuid5(operationId);
       const record: any = {
-        id: operationId,
+        id: uuidId,
         result,
         expires_at: new Date(Date.now() + ttlMs).toISOString(),
       };

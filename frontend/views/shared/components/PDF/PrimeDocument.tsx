@@ -1308,9 +1308,9 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
               </View>
             </View>
             {(isFullyPaid || isOverpaid) && (
-              <View style={[s.statusBox, { borderLeftColor: isOverpaid ? '#ef4444' : '#10b981' }]}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: isOverpaid ? '#dc2626' : '#059669' }}>
-                  {isOverpaid ? 'OVERPAID' : 'PAID'}
+              <View style={[s.statusBox, { borderLeftColor: '#10b981' }]}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#059669' }}>
+                  PAID
                 </Text>
               </View>
             )}

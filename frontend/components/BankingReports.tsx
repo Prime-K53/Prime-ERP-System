@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBankingStore } from '../context/BankingContext';
 import { bankingService } from '../services/bankingService';
 import { BankTransaction, BankAccount } from '../types/banking';
-import DocumentPreviewModal from './DocumentPreviewModal';
+import { PreviewModal } from '../views/shared/components/PDF/PreviewModal';
 import { currencyService } from '../services/currencyService';
 
 type ReportType = 
@@ -738,8 +738,8 @@ const BankingReports: React.FC<{ selectedAccountId?: string }> = ({ selectedAcco
       </div>
 
       {/* Document Preview Modal */}
-      <DocumentPreviewModal 
-        open={reportDocPreviewOpen} 
+      <PreviewModal 
+        isOpen={reportDocPreviewOpen} 
         onClose={() => setReportDocPreviewOpen(false)} 
         title={getReportTitle()}
         content={reportDocPreviewContent}
