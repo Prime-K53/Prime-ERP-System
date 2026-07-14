@@ -632,7 +632,15 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     }
     return productPaperCost + productTonerCost + productFinishCost;
   }, [productPaperCost, productTonerCost, productFinishCost, variants, productBomTotal]);
-  const productProfit = useMemo(() => productSP - productBase, [productSP, productBase]);
+  const effectiveProductSP = useMemo(() => {
+    if (productSP > 0) return productSP;
+    const variantsWithSell = variants.filter(v => v.selling > 0);
+    if (variantsWithSell.length > 0) {
+      return variantsWithSell.reduce((sum, v) => sum + v.selling, 0) / variantsWithSell.length;
+    }
+    return productSP;
+  }, [productSP, variants]);
+  const productProfit = useMemo(() => effectiveProductSP - productBase, [effectiveProductSP, productBase]);
   const productMarkup = useMemo(() => productBase > 0 ? (productProfit / productBase) * 100 : 0, [productProfit, productBase]);
 
   const serviceBase = useMemo(() => servicePaperCost + serviceTonerCost + serviceFinishingTotal, [servicePaperCost, serviceTonerCost, serviceFinishingTotal]);
@@ -728,9 +736,9 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
               <div style={{ ...s.briefItem, borderBottom: 'none', marginTop: 4 }}><span style={s.briefLabel}>Total Base Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.ink700, fontSize: 13 }}>{formatCurrency(productBase, currencySymbol)}</span></div>
             </>
           )}
-          <div style={s.briefItem}><span style={s.briefLabel}>Sell Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.teal500 }}>{formatCurrency(productSP, currencySymbol)}</span></div>
+          <div style={s.briefItem}><span style={s.briefLabel}>Avg Sell Price</span><span style={{ ...s.briefValue, color: VAR_STYLES.teal500 }}>{formatCurrency(effectiveProductSP, currencySymbol)}</span></div>
           <div style={{ ...s.briefItem, borderBottom: 'none' }}>
-            <span style={s.briefLabel}>Profit</span>
+            <span style={s.briefLabel}>Avg Profit</span>
             <span style={{ ...s.briefValue, color: productProfit < 0 ? VAR_STYLES.danger : VAR_STYLES.teal600 }}>{formatCurrency(productProfit, currencySymbol)}</span>
           </div>
         </>
@@ -764,7 +772,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     try {
       const categoryLabel = titleMap[category];
       const priceInfo = category === 'raw' ? `Cost per unit: ${formatCurrency(rawUnitCost, currencySymbol)}` :
-        category === 'product' ? `Base cost: ${formatCurrency(productBase, currencySymbol)}, Selling: ${formatCurrency(productSP, currencySymbol)}` :
+        category === 'product' ? `Base cost: ${formatCurrency(productBase, currencySymbol)}, Selling: ${formatCurrency(effectiveProductSP, currencySymbol)}` :
         category === 'service' ? `Base cost: ${formatCurrency(serviceBase, currencySymbol)}, Selling: ${formatCurrency(serviceSP, currencySymbol)}` :
         `Selling: ${formatCurrency(statBlend.avgSell, currencySymbol)}`;
       const prompt = `Generate a concise 2-3 sentence professional product description for the following item:\n\nName: ${name}\nCategory: ${categoryLabel}\nSKU: ${sku || 'Auto-generated'}\n${priceInfo}\n\nDescription should be factual, highlight typical use cases, and suitable for a printing business catalog.`;
@@ -1128,6 +1136,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
           </Field>
           <Field label="Selling Price">
             <div style={s.prefixInput}><span style={s.prefixSpan}>{currencySymbol}</span><input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={productSP} onChange={e => setProductSP(Number(e.target.value) || 0)} /></div>
+            {productSP === 0 && effectiveProductSP > 0 && <span style={{ fontSize: 10, color: VAR_STYLES.teal500, marginTop: 2, display: 'block' }}>Avg from variants: {formatCurrency(effectiveProductSP, currencySymbol)}</span>}
           </Field>
         </div>
         {productBase > 0 && (
