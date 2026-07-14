@@ -334,7 +334,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             return { priority: 3, Icon: Tag, iconClass: 'text-purple-500', textClass: normalized.includes('-') ? 'text-rose-600' : 'text-purple-600' };
         }
         if (normalized.includes('profit') || normalized.includes('margin')) {
-            return { priority: 4, Icon: TrendingUp, iconClass: 'text-emerald-500', textClass: 'text-emerald-600' };
+            return { priority: 4, Icon: TrendingUp, iconClass: 'text-blue-500', textClass: 'text-blue-600' };
         }
         return { priority: 2, Icon: Tag, iconClass: 'text-indigo-500', textClass: 'text-indigo-600' };
     };
@@ -1993,7 +1993,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                                         <div className="flex justify-between py-0.5 border-b border-gray-100">
                                             <span className="text-slate-500">Balance</span>
-                                            <span className={`font-medium ${bal > 0 ? 'text-red-600' : bal < 0 ? 'text-green-600' : 'text-slate-600'}`}>
+                                            <span className={`font-medium ${bal > 0 ? 'text-red-600' : bal < 0 ? 'text-blue-600' : 'text-slate-600'}`}>
                                                 {bal > 0 ? `${currency}${bal.toLocaleString()} overdue` : bal < 0 ? `${currency}${Math.abs(bal).toLocaleString()} credit` : 'Settled'}
                                             </span>
                                         </div>
