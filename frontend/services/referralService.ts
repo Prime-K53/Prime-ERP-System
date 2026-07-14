@@ -1,30 +1,21 @@
 import { dbService } from './db';
-import { generateId, roundToCurrency } from '../utils/helpers';
+import { generateId, generateNextId, roundToCurrency } from '../utils/helpers';
 import { logger } from './logger';
 import type {
-  Referral, ReferralCommission, ReferralWallet,
+  Referral, ReferralCommission,
   ReferralTransaction, ReferralSettings, ReferralLog
 } from '../types/referral';
+import type { WalletTransaction } from '../types';
 
 const DEFAULT_SETTINGS: ReferralSettings = {
   enableReferralSystem: true,
-  enableWallet: true,
-  enableReferralCode: true,
   defaultCommissionPercent: 5,
   defaultCommissionFixed: 0,
   approvalRequired: false,
   autoCreditWallet: true,
-  minimumWithdrawal: 10,
-  commissionExpiryDays: 365,
-  maximumReferralDepth: 1,
-  allowSelfReferral: false,
-  allowEmployeeReferral: false,
-  allowDuplicatePhone: false,
   minInvoiceAmount: 0,
   maxCommission: 0,
   commissionValidityDays: 365,
-  productSpecificCommission: 0,
-  serviceSpecificCommission: 0,
 };
 
 export const referralService = {
@@ -41,44 +32,15 @@ export const referralService = {
     localStorage.setItem('nexus_referral_settings', JSON.stringify(settings));
   },
 
-  async generateReferralCode(customerName: string, customerId: string): Promise<string> {
-    const prefix = customerName.slice(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
-    const suffix = customerId.slice(-6).toUpperCase();
-    return `REF-${prefix}-${suffix}`;
-  },
-
-  async getOrCreateReferral(customerId: string): Promise<Referral | null> {
+  async getReferrerForCustomer(customerId: string): Promise<Referral | null> {
     if (!customerId) return null;
     const all = await dbService.getAll<Referral>('referrals');
     return all.find(r => r.referredCustomerId === customerId && r.status === 'Active') || null;
   },
 
-  async getReferrerForCustomer(customerId: string): Promise<Referral | null> {
-    return this.getOrCreateReferral(customerId);
-  },
-
   async getReferredCustomers(referrerId: string): Promise<Referral[]> {
     const all = await dbService.getAll<Referral>('referrals');
     return all.filter(r => r.referrerId === referrerId && r.status === 'Active');
-  },
-
-  async getOrCreateWallet(customerId: string): Promise<ReferralWallet> {
-    const all = await dbService.getAll<ReferralWallet>('referralWallets');
-    let wallet = all.find(w => w.customerId === customerId);
-    if (!wallet) {
-      wallet = {
-        id: generateId('RFW'),
-        customerId,
-        currentBalance: 0,
-        pendingCommission: 0,
-        approvedCommission: 0,
-        withdrawnAmount: 0,
-        lifetimeEarnings: 0,
-        updatedAt: new Date().toISOString(),
-      };
-      await dbService.put('referralWallets', wallet);
-    }
-    return wallet;
   },
 
   async assignReferral(
@@ -93,11 +55,6 @@ export const referralService = {
       return { success: false, error: 'A customer cannot refer themselves' };
     }
 
-    const settings = await this.getSettings();
-    if (!settings.allowSelfReferral && referrerId === referredCustomerId) {
-      return { success: false, error: 'Self-referral is not allowed' };
-    }
-
     const existing = await this.getReferrerForCustomer(referredCustomerId);
     if (existing) {
       return { success: false, error: 'This customer already has a referrer' };
@@ -109,13 +66,10 @@ export const referralService = {
     const referred = await dbService.get('customers', referredCustomerId);
     if (!referred) return { success: false, error: 'Referred customer not found' };
 
-    const referralCode = await this.generateReferralCode(referred.name, referredCustomerId);
-
     const referral: Referral = {
       id: generateId('REF'),
       referrerId,
       referredCustomerId,
-      referralCode,
       status: 'Active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -128,7 +82,7 @@ export const referralService = {
       entityType: 'referral',
       entityId: referral.id,
       actorId,
-      newValue: JSON.stringify({ referrerId, referredCustomerId, referralCode }),
+      newValue: JSON.stringify({ referrerId, referredCustomerId }),
     });
 
     return { success: true };
@@ -211,8 +165,20 @@ export const referralService = {
 
     await dbService.put('referralCommissions', commission);
 
+    const tx: ReferralTransaction = {
+      id: generateId('RFT'),
+      referralId: referral.id,
+      customerId: referral.referrerId,
+      type: 'Commission',
+      amount: commissionAmount,
+      description: `Commission earned from invoice ${invoice.id}`,
+      invoiceId: invoice.id,
+      createdAt: new Date().toISOString(),
+    };
+    await dbService.put('referralTransactions', tx);
+
     if (!settings.approvalRequired && settings.autoCreditWallet) {
-      await this.creditWallet(commission.id, commission.referrerId, commission.commissionAmount);
+      await this.creditCustomerWallet(referral.referrerId, commissionAmount, `Referral commission from invoice ${invoice.id}`);
     }
 
     await this.logAudit({
@@ -236,7 +202,7 @@ export const referralService = {
 
     const settings = await this.getSettings();
     if (settings.autoCreditWallet) {
-      await this.creditWallet(commissionId, commission.referrerId, commission.commissionAmount);
+      await this.creditCustomerWallet(commission.referrerId, commission.commissionAmount, `Referral commission approved from invoice ${commission.invoiceId}`);
     }
 
     await this.logAudit({
@@ -283,7 +249,7 @@ export const referralService = {
     await dbService.put('referralCommissions', commission);
 
     if (oldValue.status === 'Approved' || oldValue.status === 'Paid') {
-      await this.reverseWalletCredit(commission.referrerId, commission.commissionAmount, commissionId);
+      await this.reverseWalletCredit(commission.referrerId, commission.commissionAmount, `Commission reversed: ${reason}`);
     }
 
     await this.logAudit({
@@ -296,68 +262,54 @@ export const referralService = {
     });
   },
 
-  async creditWallet(customerId: string, amount: number, referenceId?: string): Promise<void> {
-    const wallet = await this.getOrCreateWallet(customerId);
-    const balanceBefore = wallet.currentBalance;
+  async creditCustomerWallet(customerId: string, amount: number, description: string): Promise<void> {
+    const customer = await dbService.get<any>('customers', customerId);
+    if (!customer) return;
 
-    wallet.pendingCommission = Math.max(0, wallet.pendingCommission - amount);
-    wallet.approvedCommission = Math.max(0, wallet.approvedCommission + amount);
-    wallet.currentBalance = roundToCurrency(wallet.currentBalance + amount);
-    wallet.lifetimeEarnings = roundToCurrency(wallet.lifetimeEarnings + amount);
-    wallet.updatedAt = new Date().toISOString();
+    customer.walletBalance = roundToCurrency((customer.walletBalance || 0) + amount);
+    await dbService.put('customers', customer);
 
-    await dbService.put('referralWallets', wallet);
-
-    const tx: ReferralTransaction = {
-      id: generateId('RFT'),
-      walletId: wallet.id,
+    const walletTx: WalletTransaction = {
+      id: generateId('WLT-CRD'),
       customerId,
-      type: 'Commission',
       amount,
-      balanceBefore,
-      balanceAfter: wallet.currentBalance,
-      referenceId,
-      referenceType: 'commission',
-      description: `Commission credited`,
-      status: 'Completed',
-      createdAt: new Date().toISOString(),
+      type: 'Credit',
+      date: new Date().toISOString(),
+      description,
     };
-    await dbService.put('referralTransactions', tx);
+    await dbService.put('walletTransactions', walletTx);
 
     await this.logAudit({
       action: 'WALLET_CREDITED',
-      entityType: 'referralWallet',
-      entityId: wallet.id,
-      newValue: JSON.stringify({ customerId, amount, balanceBefore, balanceAfter: wallet.currentBalance }),
+      entityType: 'customer',
+      entityId: customerId,
+      newValue: JSON.stringify({ customerId, amount, newBalance: customer.walletBalance, description }),
     });
   },
 
-  async reverseWalletCredit(customerId: string, amount: number, referenceId?: string): Promise<void> {
-    const wallet = await this.getOrCreateWallet(customerId);
-    const balanceBefore = wallet.currentBalance;
+  async reverseWalletCredit(customerId: string, amount: number, description: string): Promise<void> {
+    const customer = await dbService.get<any>('customers', customerId);
+    if (!customer) return;
 
-    wallet.currentBalance = roundToCurrency(Math.max(0, wallet.currentBalance - amount));
-    wallet.approvedCommission = Math.max(0, wallet.approvedCommission - amount);
-    wallet.lifetimeEarnings = roundToCurrency(Math.max(0, wallet.lifetimeEarnings - amount));
-    wallet.updatedAt = new Date().toISOString();
+    customer.walletBalance = roundToCurrency(Math.max(0, (customer.walletBalance || 0) - amount));
+    await dbService.put('customers', customer);
 
-    await dbService.put('referralWallets', wallet);
-
-    const tx: ReferralTransaction = {
-      id: generateId('RFT'),
-      walletId: wallet.id,
+    const walletTx: WalletTransaction = {
+      id: generateId('WLT-DBT'),
       customerId,
-      type: 'Reversal',
-      amount,
-      balanceBefore,
-      balanceAfter: wallet.currentBalance,
-      referenceId,
-      referenceType: 'commission_reversal',
-      description: `Commission reversed`,
-      status: 'Completed',
-      createdAt: new Date().toISOString(),
+      amount: -amount,
+      type: 'Debit',
+      date: new Date().toISOString(),
+      description,
     };
-    await dbService.put('referralTransactions', tx);
+    await dbService.put('walletTransactions', walletTx);
+
+    await this.logAudit({
+      action: 'WALLET_DEBITED',
+      entityType: 'customer',
+      entityId: customerId,
+      newValue: JSON.stringify({ customerId, amount, newBalance: customer.walletBalance, description }),
+    });
   },
 
   async reverseCommissionForInvoice(invoiceId: string, reason: string, actorId?: string): Promise<void> {
@@ -366,48 +318,6 @@ export const referralService = {
     for (const commission of invoiceCommissions) {
       await this.reverseCommission(commission.id, reason, actorId);
     }
-  },
-
-  async withdrawFromWallet(customerId: string, amount: number, actorId?: string): Promise<{ success: boolean; error?: string }> {
-    const settings = await this.getSettings();
-    if (settings.minimumWithdrawal > 0 && amount < settings.minimumWithdrawal) {
-      return { success: false, error: `Minimum withdrawal is ${settings.minimumWithdrawal}` };
-    }
-
-    const wallet = await this.getOrCreateWallet(customerId);
-    if (wallet.currentBalance < amount) {
-      return { success: false, error: 'Insufficient wallet balance' };
-    }
-
-    const balanceBefore = wallet.currentBalance;
-    wallet.currentBalance = roundToCurrency(wallet.currentBalance - amount);
-    wallet.withdrawnAmount = roundToCurrency(wallet.withdrawnAmount + amount);
-    wallet.updatedAt = new Date().toISOString();
-    await dbService.put('referralWallets', wallet);
-
-    const tx: ReferralTransaction = {
-      id: generateId('RFT'),
-      walletId: wallet.id,
-      customerId,
-      type: 'Withdrawal',
-      amount,
-      balanceBefore,
-      balanceAfter: wallet.currentBalance,
-      description: 'Withdrawal request',
-      status: 'Completed',
-      createdAt: new Date().toISOString(),
-    };
-    await dbService.put('referralTransactions', tx);
-
-    await this.logAudit({
-      action: 'WALLET_WITHDRAWAL',
-      entityType: 'referralWallet',
-      entityId: wallet.id,
-      actorId,
-      newValue: JSON.stringify({ customerId, amount, balanceBefore, balanceAfter: wallet.currentBalance }),
-    });
-
-    return { success: true };
   },
 
   async getDashboardStats(): Promise<{
@@ -470,17 +380,17 @@ export const referralService = {
     };
   },
 
-  async getReferralTransactions(customerId: string): Promise<ReferralTransaction[]> {
-    const all = await dbService.getAll<ReferralTransaction>('referralTransactions');
-    return all
-      .filter(t => t.customerId === customerId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  },
-
   async getCommissionHistory(customerId: string): Promise<ReferralCommission[]> {
     const all = await dbService.getAll<ReferralCommission>('referralCommissions');
     return all
       .filter(c => c.referrerId === customerId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getReferralTransactions(customerId: string): Promise<ReferralTransaction[]> {
+    const all = await dbService.getAll<ReferralTransaction>('referralTransactions');
+    return all
+      .filter(t => t.customerId === customerId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
@@ -519,6 +429,27 @@ export const referralService = {
       totalSales: b.totalSales,
       totalCommission: b.totalCommission,
     }));
+  },
+
+  async getReferralStatsByCustomer(customerId: string): Promise<{
+    totalReferred: number;
+    totalCommission: number;
+    totalSales: number;
+  }> {
+    const referrals = await dbService.getAll<Referral>('referrals');
+    const commissions = await dbService.getAll<ReferralCommission>('referralCommissions');
+    const invoices = await dbService.getAll<any>('invoices');
+
+    const referred = referrals.filter(r => r.referrerId === customerId && r.status === 'Active');
+    const custCommissions = commissions.filter(c => c.referrerId === customerId && c.status !== 'Reversed');
+
+    const totalCommission = custCommissions.reduce((s, c) => s + c.commissionAmount, 0);
+    const referralInvoiceIds = [...new Set(custCommissions.map(c => c.invoiceId))];
+    const totalSales = invoices
+      .filter(inv => referralInvoiceIds.includes(inv.id))
+      .reduce((s, inv) => s + (inv.totalAmount || 0), 0);
+
+    return { totalReferred: referred.length, totalCommission, totalSales };
   },
 
   async logAudit(entry: Omit<ReferralLog, 'id' | 'createdAt'>): Promise<void> {

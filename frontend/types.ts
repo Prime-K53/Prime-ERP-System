@@ -12,7 +12,7 @@ export type {
   UnitConversionFactor, PurchaseLot
 } from './types/inventory';
 export type {
-  Referral, ReferralCommission, ReferralWallet,
+  Referral, ReferralCommission,
   ReferralTransaction, ReferralSettings, ReferralLog
 } from './types/referral';
 

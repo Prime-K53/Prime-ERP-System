@@ -190,7 +190,14 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         if (!normalizedName) return null;
 
         const existing = findCustomerByName(normalizedName);
-        if (existing) return existing;
+        if (existing) {
+            if (selectedReferrerId && !existing.referredBy) {
+                const { referralService } = await import('../../../services/referralService');
+                await referralService.assignReferral(selectedReferrerId, existing.id);
+                (existing as any).referredBy = selectedReferrerId;
+            }
+            return existing;
+        }
 
         if (typeof addCustomer !== 'function') return null;
 
@@ -204,10 +211,17 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             creditLimit: 0,
             status: 'Active',
             segment: 'Individual',
-            paymentTerms: getDefaultPaymentTermsForSegment('Individual')
+            paymentTerms: getDefaultPaymentTermsForSegment('Individual'),
+            referredBy: selectedReferrerId || ''
         };
 
         await addCustomer(newCustomer);
+
+        if (selectedReferrerId) {
+            const { referralService } = await import('../../../services/referralService');
+            await referralService.assignReferral(selectedReferrerId, newCustomer.id);
+        }
+
         return newCustomer;
     };
 
@@ -256,6 +270,54 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const customerDropdownRef = useRef<HTMLDivElement>(null);
     const itemDropdownRef = useRef<HTMLDivElement>(null);
     const serviceDropdownRef = useRef<HTMLDivElement>(null);
+
+    const [referrerSearch, setReferrerSearch] = useState('');
+    const [isReferrerDropdownOpen, setIsReferrerDropdownOpen] = useState(false);
+    const [selectedReferrerId, setSelectedReferrerId] = useState<string>('');
+    const referrerDropdownRef = useRef<HTMLDivElement>(null);
+
+    const filteredReferrers = useMemo(() => {
+        const q = referrerSearch.toLowerCase();
+        return (customers || []).filter((c: any) => {
+            if (c.id === formData.customerId) return false;
+            return c.name?.toLowerCase().includes(q)
+                || c.phone?.toLowerCase().includes(q)
+                || c.email?.toLowerCase().includes(q)
+                || c.customerCode?.toLowerCase().includes(q)
+                || c.company?.toLowerCase().includes(q);
+        });
+    }, [customers, referrerSearch, formData.customerId]);
+
+    // Load existing referrer when customer is selected
+    useEffect(() => {
+        if (formData.customerId) {
+            (async () => {
+                const { referralService } = await import('../../../services/referralService');
+                const ref = await referralService.getReferrerForCustomer(formData.customerId);
+                setSelectedReferrerId(ref?.referrerId || '');
+                if (ref?.referrerId) {
+                    const referrer = customers.find((c: any) => c.id === ref.referrerId);
+                    setReferrerSearch(referrer?.name || '');
+                } else {
+                    setReferrerSearch('');
+                }
+            })();
+        } else {
+            setSelectedReferrerId('');
+            setReferrerSearch('');
+        }
+    }, [formData.customerId, customers]);
+
+    // Close referrer dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (referrerDropdownRef.current && !referrerDropdownRef.current.contains(e.target as Node)) {
+                setIsReferrerDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     const getCustomerOutstanding = (name: string) => {
         return (invoices as Invoice[])
@@ -1884,6 +1946,36 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex justify-between items-center border-b border-gray-100 last:border-0">
                                                 <span className="font-medium text-slate-700">{name}</span>
                                                 <span className="text-xs font-medium text-red-500">{currency}{getCustomerOutstanding(name).toLocaleString()}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="docket-field mb-[10px]" ref={referrerDropdownRef}>
+                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#5FA8A0] mb-[3px]">Referrer</label>
+                        <div className="relative">
+                            <input type="text" placeholder="Search referrer..."
+                                value={referrerSearch}
+                                onChange={e => { setReferrerSearch(e.target.value); setIsReferrerDropdownOpen(true); }}
+                                onFocus={() => setIsReferrerDropdownOpen(true)}
+                                className="w-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.14)] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-white outline-none placeholder:text-[rgba(255,255,255,0.35)] focus:border-[#5FA8A0] focus:bg-[rgba(255,255,255,0.1)] transition-colors" />
+                            {isReferrerDropdownOpen && (
+                                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                    <button onClick={() => { setSelectedReferrerId(''); setReferrerSearch(''); setIsReferrerDropdownOpen(false); }}
+                                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-gray-100 font-medium text-slate-500 italic">
+                                        No Referrer
+                                    </button>
+                                    {filteredReferrers.length === 0 ? (
+                                        <div className="p-3 text-center text-xs text-slate-400">No customers found</div>
+                                    ) : (
+                                        filteredReferrers.map((c: any) => (
+                                            <button key={c.id} onClick={() => { setSelectedReferrerId(c.id); setReferrerSearch(c.name); setIsReferrerDropdownOpen(false); }}
+                                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-gray-100 last:border-0">
+                                                <span className="font-medium text-slate-700">{c.name}</span>
+                                                <span className="text-xs text-slate-400 ml-2">{c.phone || c.email || ''}</span>
                                             </button>
                                         ))
                                     )}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Award, Users, DollarSign, TrendingUp, History, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { Award, Users, DollarSign, TrendingUp, History, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import { referralService } from '../../../services/referralService';
+import { dbService } from '../../../services/db';
 import { format, parseISO } from 'date-fns';
 import type { Referral, ReferralCommission, ReferralTransaction } from '../../../types/referral';
+import type { WalletTransaction } from '../../../types';
 
 interface Props {
   customer: any;
@@ -12,9 +14,9 @@ interface Props {
 export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => {
   const [referral, setReferral] = useState<Referral | null>(null);
   const [referredCount, setReferredCount] = useState(0);
-  const [wallet, setWallet] = useState<any>(null);
   const [commissions, setCommissions] = useState<ReferralCommission[]>([]);
   const [transactions, setTransactions] = useState<ReferralTransaction[]>([]);
+  const [walletTxns, setWalletTxns] = useState<WalletTransaction[]>([]);
   const [salesBreakdown, setSalesBreakdown] = useState<any[]>([]);
   const [referrer, setReferrer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,24 +28,24 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ref, refList, w, cm, tx, breakdown] = await Promise.all([
+      const [ref, refList, cm, tx, breakdown, allWalletTxns] = await Promise.all([
         referralService.getReferrerForCustomer(customer.id),
         referralService.getReferredCustomers(customer.id),
-        referralService.getOrCreateWallet(customer.id),
         referralService.getCommissionHistory(customer.id),
         referralService.getReferralTransactions(customer.id),
         referralService.getReferralSalesBreakdown(customer.id),
+        dbService.getAll<WalletTransaction>('walletTransactions'),
       ]);
       setReferral(ref);
       setReferredCount(refList.length);
-      setWallet(w);
       setCommissions(cm);
       setTransactions(tx);
       setSalesBreakdown(breakdown);
+      setWalletTxns(allWalletTxns.filter(w => w.customerId === customer.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
       if (ref) {
-        const customers = await (await import('../../../services/db')).dbService.getAll<any>('customers');
-        const referrerCust = customers.find((c: any) => c.id === ref.referrerId);
+        const allCustomers = await dbService.getAll<any>('customers');
+        const referrerCust = allCustomers.find((c: any) => c.id === ref.referrerId);
         setReferrer(referrerCust);
       }
     } catch (err) {
@@ -63,6 +65,10 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
     ? `${((commissions.filter(c => c.status === 'Paid' || c.status === 'Approved').length / Math.max(commissions.length, 1)) * 100).toFixed(1)}%`
     : '0%';
 
+  const referralWalletTxns = useMemo(() => {
+    return walletTxns.filter(w => w.description?.toLowerCase().includes('referral'));
+  }, [walletTxns]);
+
   if (loading) return <div className="p-8 text-slate-400 italic">Loading referral data...</div>;
 
   return (
@@ -75,7 +81,7 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
             <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Referred By</span>
           </div>
           <div className="text-xl font-bold">{referrer.name}</div>
-          <p className="text-sm opacity-80 mt-1">Referral Code: <span className="font-mono font-bold">{referral.referralCode}</span></p>
+          <p className="text-sm opacity-80 mt-1">Phone: {referrer.phone || 'N/A'} | Email: {referrer.email || 'N/A'}</p>
         </div>
       )}
 
@@ -99,9 +105,7 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard icon={TrendingUp} label="Referral Sales" value={`${currency}${stats.totalSales.toLocaleString()}`} color="indigo" />
         <StatCard icon={Award} label="Conversion Rate" value={conversionRate} color="purple" />
-        {wallet && (
-          <StatCard icon={DollarSign} label="Wallet Balance" value={`${currency}${wallet.currentBalance.toLocaleString()}`} color="blue" />
-        )}
+        <StatCard icon={DollarSign} label="Wallet Balance" value={`${currency}${(customer.walletBalance || 0).toLocaleString()}`} color="blue" />
       </div>
 
       {/* Commission History */}
@@ -178,11 +182,11 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
         </div>
       )}
 
-      {/* Wallet Transactions */}
-      {transactions.length > 0 && (
+      {/* Wallet Transactions Related to Referrals */}
+      {referralWalletTxns.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2"><History size={18} className="text-blue-600" /> Wallet Activity</h3>
+            <h3 className="font-bold text-slate-900 flex items-center gap-2"><History size={18} className="text-blue-600" /> Referral Wallet Activity</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -192,7 +196,44 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
                   <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Type</th>
                   <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Description</th>
                   <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Amount</th>
-                  <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {referralWalletTxns.map(t => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 text-slate-500 font-medium text-sm">{format(parseISO(t.date), 'MMM dd, yyyy')}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                        t.type === 'Credit' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                        'bg-rose-50 text-rose-700 border-rose-100'
+                      }`}>{t.type}</span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-700">{t.description}</td>
+                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === 'Credit' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {t.type === 'Credit' ? '+' : ''}{currency}{Math.abs(t.amount || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Referral Transaction Audit */}
+      {transactions.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2"><History size={18} className="text-blue-600" /> Referral Activity Log</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                  <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Type</th>
+                  <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Description</th>
+                  <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -202,16 +243,14 @@ export const ReferralPanel: React.FC<Props> = ({ customer, currency = '$' }) => 
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                         t.type === 'Commission' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        t.type === 'Withdrawal' ? 'bg-rose-50 text-rose-700 border-rose-100' :
                         t.type === 'Reversal' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                         'bg-blue-50 text-blue-700 border-blue-100'
                       }`}>{t.type}</span>
                     </td>
                     <td className="px-6 py-4 text-slate-700">{t.description}</td>
-                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {t.amount > 0 ? '+' : ''}{currency}{t.amount.toLocaleString()}
+                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === 'Commission' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {t.type === 'Commission' ? '+' : '-'}{currency}{t.amount.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-slate-700 text-sm">{currency}{t.balanceAfter.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

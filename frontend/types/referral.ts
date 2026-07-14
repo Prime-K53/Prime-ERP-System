@@ -2,7 +2,6 @@ export interface Referral {
   id: string;
   referrerId: string;
   referredCustomerId: string;
-  referralCode: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
   updatedAt: string;
@@ -30,54 +29,27 @@ export interface ReferralCommission {
   company_id?: string;
 }
 
-export interface ReferralWallet {
-  id: string;
-  customerId: string;
-  currentBalance: number;
-  pendingCommission: number;
-  approvedCommission: number;
-  withdrawnAmount: number;
-  lifetimeEarnings: number;
-  updatedAt: string;
-  company_id?: string;
-}
-
 export interface ReferralTransaction {
   id: string;
-  walletId: string;
+  referralId: string;
   customerId: string;
-  type: 'Commission' | 'Withdrawal' | 'Adjustment' | 'Reversal';
+  type: 'Commission' | 'Reversal' | 'Adjustment';
   amount: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  referenceId?: string;
-  referenceType?: string;
   description: string;
-  status: 'Pending' | 'Completed' | 'Reversed';
+  invoiceId?: string;
   createdAt: string;
-  createdBy?: string;
   company_id?: string;
 }
 
 export interface ReferralSettings {
   enableReferralSystem: boolean;
-  enableWallet: boolean;
-  enableReferralCode: boolean;
   defaultCommissionPercent: number;
   defaultCommissionFixed: number;
   approvalRequired: boolean;
   autoCreditWallet: boolean;
-  minimumWithdrawal: number;
-  commissionExpiryDays: number;
-  maximumReferralDepth: number;
-  allowSelfReferral: boolean;
-  allowEmployeeReferral: boolean;
-  allowDuplicatePhone: boolean;
   minInvoiceAmount: number;
   maxCommission: number;
   commissionValidityDays: number;
-  productSpecificCommission: number;
-  serviceSpecificCommission: number;
 }
 
 export interface ReferralLog {

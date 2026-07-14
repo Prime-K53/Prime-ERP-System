@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw, Award, DollarSign, Users, Shield, Settings } from 'lucide-react';
+import { Save, RefreshCw, Award, DollarSign, Settings } from 'lucide-react';
 import { referralService } from '../../../services/referralService';
 import type { ReferralSettings } from '../../../types/referral';
 
@@ -10,23 +10,13 @@ interface Props {
 export const ReferralSettingsTab: React.FC<Props> = ({ notify }) => {
   const [settings, setSettings] = useState<ReferralSettings>({
     enableReferralSystem: true,
-    enableWallet: true,
-    enableReferralCode: true,
     defaultCommissionPercent: 5,
     defaultCommissionFixed: 0,
     approvalRequired: false,
     autoCreditWallet: true,
-    minimumWithdrawal: 10,
-    commissionExpiryDays: 365,
-    maximumReferralDepth: 1,
-    allowSelfReferral: false,
-    allowEmployeeReferral: false,
-    allowDuplicatePhone: false,
     minInvoiceAmount: 0,
     maxCommission: 0,
     commissionValidityDays: 365,
-    productSpecificCommission: 0,
-    serviceSpecificCommission: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +42,7 @@ export const ReferralSettingsTab: React.FC<Props> = ({ notify }) => {
         </div>
         <div>
           <h2 className="text-lg font-black text-slate-900">Referral Program Settings</h2>
-          <p className="text-xs text-slate-500">Configure commission rules, wallet, and referral behavior</p>
+          <p className="text-xs text-slate-500">Configure commission rules and behavior</p>
         </div>
       </div>
 
@@ -63,10 +53,6 @@ export const ReferralSettingsTab: React.FC<Props> = ({ notify }) => {
           </h3>
           <ToggleRow label="Enable Referral System" value={settings.enableReferralSystem}
             onChange={v => setSettings({ ...settings, enableReferralSystem: v })} />
-          <ToggleRow label="Enable Referral Wallet" value={settings.enableWallet}
-            onChange={v => setSettings({ ...settings, enableWallet: v })} />
-          <ToggleRow label="Enable Referral Code" value={settings.enableReferralCode}
-            onChange={v => setSettings({ ...settings, enableReferralCode: v })} />
           <ToggleRow label="Approval Required" value={settings.approvalRequired}
             onChange={v => setSettings({ ...settings, approvalRequired: v })} />
           <ToggleRow label="Auto-Credit Wallet" value={settings.autoCreditWallet}
@@ -87,34 +73,6 @@ export const ReferralSettingsTab: React.FC<Props> = ({ notify }) => {
             onChange={v => setSettings({ ...settings, maxCommission: v })} prefix="$" />
           <NumberRow label="Commission Validity (days)" value={settings.commissionValidityDays}
             onChange={v => setSettings({ ...settings, commissionValidityDays: v })} suffix="days" />
-        </section>
-
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Shield size={14} /> Restrictions
-          </h3>
-          <ToggleRow label="Allow Self-Referral" value={settings.allowSelfReferral}
-            onChange={v => setSettings({ ...settings, allowSelfReferral: v })} />
-          <ToggleRow label="Allow Employee Referral" value={settings.allowEmployeeReferral}
-            onChange={v => setSettings({ ...settings, allowEmployeeReferral: v })} />
-          <ToggleRow label="Allow Duplicate Phone" value={settings.allowDuplicatePhone}
-            onChange={v => setSettings({ ...settings, allowDuplicatePhone: v })} />
-          <NumberRow label="Max Referral Depth" value={settings.maximumReferralDepth}
-            onChange={v => setSettings({ ...settings, maximumReferralDepth: v })} suffix="levels" />
-        </section>
-
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Users size={14} /> Wallet & Payout
-          </h3>
-          <NumberRow label="Minimum Withdrawal" value={settings.minimumWithdrawal}
-            onChange={v => setSettings({ ...settings, minimumWithdrawal: v })} prefix="$" />
-          <NumberRow label="Commission Expiry (days)" value={settings.commissionExpiryDays}
-            onChange={v => setSettings({ ...settings, commissionExpiryDays: v })} suffix="days" />
-          <NumberRow label="Product-Specific %" value={settings.productSpecificCommission}
-            onChange={v => setSettings({ ...settings, productSpecificCommission: v })} suffix="%" />
-          <NumberRow label="Service-Specific %" value={settings.serviceSpecificCommission}
-            onChange={v => setSettings({ ...settings, serviceSpecificCommission: v })} suffix="%" />
         </section>
       </div>
 

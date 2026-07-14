@@ -3,12 +3,11 @@ import { Award, Users, DollarSign, TrendingUp, Search, ExternalLink, CheckCircle
 import { referralService } from '../../services/referralService';
 import { dbService } from '../../services/db';
 import { format, parseISO } from 'date-fns';
-import type { Referral, ReferralCommission, ReferralWallet } from '../../types/referral';
+import type { Referral, ReferralCommission } from '../../types/referral';
 
 export default function ReferralsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [commissions, setCommissions] = useState<ReferralCommission[]>([]);
-  const [wallets, setWallets] = useState<ReferralWallet[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,16 +18,14 @@ export default function ReferralsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [refs, cm, w, cust, inv] = await Promise.all([
+      const [refs, cm, cust, inv] = await Promise.all([
         dbService.getAll<Referral>('referrals'),
         dbService.getAll<ReferralCommission>('referralCommissions'),
-        dbService.getAll<ReferralWallet>('referralWallets'),
         dbService.getAll<any>('customers'),
         dbService.getAll<any>('invoices'),
       ]);
       setReferrals(refs);
       setCommissions(cm);
-      setWallets(w);
       setCustomers(cust);
       setInvoices(inv);
     } catch (err) {
@@ -45,11 +42,10 @@ export default function ReferralsPage() {
     const pendingAmount = commissions.filter(c => c.status === 'Pending').reduce((s, c) => s + c.commissionAmount, 0);
     const approvedAmount = commissions.filter(c => c.status === 'Approved').reduce((s, c) => s + c.commissionAmount, 0);
     const paidAmount = commissions.filter(c => c.status === 'Paid').reduce((s, c) => s + c.commissionAmount, 0);
-    const totalWallet = wallets.reduce((s, w) => s + w.currentBalance, 0);
     const referralInvoiceIds = [...new Set(commissions.map(c => c.invoiceId))];
     const referralSales = invoices.filter(inv => referralInvoiceIds.includes(inv.id)).reduce((s, inv) => s + (inv.totalAmount || 0), 0);
-    return { totalReferrals: referrals.length, active, totalCommissionAmount, pendingAmount, approvedAmount, paidAmount, totalWallet, referralSales };
-  }, [referrals, commissions, wallets, invoices]);
+    return { totalReferrals: referrals.length, active, totalCommissionAmount, pendingAmount, approvedAmount, paidAmount, referralSales };
+  }, [referrals, commissions, invoices]);
 
   const filteredCommissions = useMemo(() => {
     let list = [...commissions];
@@ -243,7 +239,6 @@ export default function ReferralsPage() {
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrer</th>
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred Customer</th>
-                    <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Code</th>
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
                     <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
                   </tr>
@@ -253,7 +248,6 @@ export default function ReferralsPage() {
                     <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-slate-800">{getCustomerName(r.referrerId)}</td>
                       <td className="px-6 py-4 text-slate-700">{getCustomerName(r.referredCustomerId)}</td>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-600">{r.referralCode}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">{format(parseISO(r.createdAt), 'MMM dd, yyyy')}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${r.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>{r.status}</span>
@@ -261,7 +255,7 @@ export default function ReferralsPage() {
                     </tr>
                   ))}
                   {referrals.length === 0 && (
-                    <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No referrals recorded</td></tr>
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No referrals recorded</td></tr>
                   )}
                 </tbody>
               </table>

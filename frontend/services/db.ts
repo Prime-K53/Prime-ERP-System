@@ -133,16 +133,12 @@ interface NexusDB extends DBSchema {
     discountRules: { key: string; value: any; };
     referrals: { key: string; value: import('../types/referral').Referral; };
     referralCommissions: { key: string; value: import('../types/referral').ReferralCommission; };
-    referralWallets: { key: string; value: import('../types/referral').ReferralWallet; };
     referralTransactions: { key: string; value: import('../types/referral').ReferralTransaction; };
     referralLogs: { key: string; value: import('../types/referral').ReferralLog; };
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
-// Version bump required so existing IndexedDB instances run upgrade()
-// and create newly-added stores such as examinationBatchNotifications
-// and notificationAuditLogs, and taxRates.
-const DB_VERSION = 44;
+const DB_VERSION = 45;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
@@ -551,7 +547,6 @@ const CLOUD_TABLE_MAP: Record<string, string> = {
   boms: 'boms',
   referrals: 'referrals',
   referralCommissions: 'referral_commissions',
-  referralWallets: 'referral_wallets',
   referralTransactions: 'referral_transactions',
   referralLogs: 'referral_logs',
 };
@@ -605,7 +600,6 @@ const STORE_NAMES: (keyof NexusDB)[] = [
     'discountRules',
     'referrals',
     'referralCommissions',
-    'referralWallets',
     'referralTransactions',
     'referralLogs'
 ];
