@@ -213,6 +213,7 @@ const s: Record<string, React.CSSProperties> = {
   chipPrice: { fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, color: VAR_STYLES.ink700 },
   chipCheck: { width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${VAR_STYLES.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   chipCheckActive: { background: '#2563EB', border: '1.5px solid #2563EB' },
+  qtyInput: { width: 40, fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 700, textAlign: 'center', border: `1px solid ${VAR_STYLES.line}`, borderRadius: 5, padding: '2px 0', outline: 'none', background: '#fff', color: VAR_STYLES.ink700 },
   costStrip: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
     background: VAR_STYLES.paper, border: `1px solid ${VAR_STYLES.line}`, borderRadius: 11, padding: '14px 16px',
@@ -368,7 +369,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [pricingMethod, setPricingMethod] = useState<'per_page' | 'per_job' | 'per_sheet'>('per_page');
   const [servicePaperCost, setServicePaperCost] = useState(0);
   const [serviceTonerCost, setServiceTonerCost] = useState(0);
-  const [serviceFinishing, setServiceFinishing] = useState<{ name: string; price: number; active: boolean }[]>([]);
+  const [serviceFinishing, setServiceFinishing] = useState<{ name: string; price: number; active: boolean; quantity?: number }[]>([]);
   const [serviceSP, setServiceSP] = useState(0);
   const [turnaround, setTurnaround] = useState('');
   const [rushSurcharge, setRushSurcharge] = useState(0);
@@ -597,7 +598,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   }, [rawBuyCost, rawConvRate]);
 
   const serviceFinishingTotal = useMemo(() =>
-    serviceFinishing.filter(f => f.active).reduce((s, f) => s + f.price, 0),
+    serviceFinishing.filter(f => f.active).reduce((s, f) => s + f.price * (f.quantity || 1), 0),
     [serviceFinishing]
   );
 
@@ -652,8 +653,8 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     const fromConfig = companyConfig?.productionSettings?.finishingOptions;
     if (fromConfig && fromConfig.length > 0) return fromConfig.filter(o => !TURNAROUND_IDS.has(o.id));
     return [
-      { id: 'binding', name: 'Binding', enabled: false, price: Math.round(bomRates.tape * 100) / 100 || 1.20, description: 'Book binding - comb or spiral', items: [] },
-      { id: 'coverPages', name: 'Cover Pages', enabled: false, price: Math.round(bomRates.cover * 100) / 100 || 15.00, description: 'Front and back cover pages per copy', items: [] },
+      { id: 'binding', name: 'Binding', enabled: false, price: Math.round(bomRates.tape * 100) / 100 || 1.20, description: 'Book binding - comb or spiral', items: [], quantity: 1 },
+      { id: 'coverPages', name: 'Cover Pages', enabled: false, price: Math.round(bomRates.cover * 100) / 100 || 15.00, description: 'Front and back cover pages per copy', items: [], quantity: 1 },
       { id: 'cutting', name: 'Cutting & Trimming', enabled: false, price: 30, description: 'Trim edges to clean finish', items: [], batchSize: 10 },
       { id: 'holePunch', name: 'Hole Punching', enabled: false, price: 20, description: 'Punch holes for folder binding', items: [], batchSize: 10 },
       { id: 'folding', name: 'Folding', enabled: false, price: 15, description: 'Fold pages for insertion', items: [], batchSize: 10 },
@@ -667,11 +668,11 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       const TURNAROUND_IDS = new Set(['standardTurnaround', 'rushSurcharge', 'standard_turnaround', 'rush_surcharge']);
       const savedFinishing = (item as any).pricingConfig?.finishingOptions || (item as any).smartPricing?.finishingOptions;
       if (savedFinishing && savedFinishing.length > 0) {
-        setServiceFinishing(savedFinishing.filter((o: any) => !TURNAROUND_IDS.has(o.id)).map((o: any) => ({ name: o.name || o.id || '', price: Number(o.price) || 0, active: o.enabled ?? true })));
+        setServiceFinishing(savedFinishing.filter((o: any) => !TURNAROUND_IDS.has(o.id)).map((o: any) => ({ name: o.name || o.id || '', price: Number(o.price) || 0, active: o.enabled ?? true, quantity: Number(o.quantity) || 1 })));
         return;
       }
     }
-    setServiceFinishing(globalFinishingOptions.map(o => ({ name: o.name, price: o.price, active: false })));
+    setServiceFinishing(globalFinishingOptions.map(o => ({ name: o.name, price: o.price, active: false, quantity: o.quantity || 1 })));
   }, [open, item, globalFinishingOptions]);
 
   const statBlend = useMemo(() => {
@@ -1189,21 +1190,38 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       <div style={s.section}>
         <p style={s.sectionTitle}>Finishing Options Offered <span style={s.badge}>Per job</span></p>
         <div style={s.chipGrid}>
-          {serviceFinishing.map((f, i) => (
+          {serviceFinishing.map((f, i) => {
+            const isQtyItem = f.name === 'Binding' || f.name === 'Cover Pages';
+            return (
             <div key={f.name} style={{ ...s.chip, ...(f.active ? s.chipActive : {}) }} onClick={() => {
-              const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next);
+              if (!isQtyItem) { const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next); }
             }}>
               <div style={s.chipTop}>
                 <span style={s.chipName}>{f.name}</span>
-                <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }}>
+                <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }} onClick={e => { e.stopPropagation(); const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next); }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ opacity: f.active ? 1 : 0 }}>
                     <path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
               </div>
-              <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                {isQtyItem ? (
+                  <>
+                    <input type="number" min="1" step="1" value={f.quantity ?? 1}
+                      style={s.qtyInput}
+                      onClick={e => { e.stopPropagation(); if (!f.active) { const next = [...serviceFinishing]; next[i] = { ...next[i], active: true }; setServiceFinishing(next); } }}
+                      onChange={e => { const q = Math.max(1, Number(e.target.value) || 1); const next = [...serviceFinishing]; next[i] = { ...next[i], quantity: q, active: true }; setServiceFinishing(next); }}
+                    />
+                    <span style={s.chipPrice}>&times; {currencySymbol}{f.price.toFixed(2)}</span>
+                    <span style={{ ...s.chipPrice, color: '#2563EB' }}>= {currencySymbol}{(f.price * (f.quantity ?? 1)).toFixed(2)}</span>
+                  </>
+                ) : (
+                  <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}</span>
+                )}
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       <div style={s.section}>
