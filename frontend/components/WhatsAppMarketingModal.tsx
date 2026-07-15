@@ -32,12 +32,6 @@ const AI_TEMPLATES = [
         content: "Your confidence in our printing team means a lot to us. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise."
     },
     {
-        id: 'ai-msg-005',
-        name: 'Referral Encouragement',
-        description: 'Referral - Referral Encouragement',
-        content: "Your success motivates our work every day. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs."
-    },
-    {
         id: 'ai-msg-006',
         name: 'Corporate Client Engagement',
         description: 'Corporate - Corporate Client Engagement',
@@ -90,12 +84,6 @@ const AI_TEMPLATES = [
         name: 'Repeat Customer Encouragement',
         description: 'Retention - Repeat Customer Encouragement',
         content: "We treasure the long-standing relationship we share with you. Every successful brand begins with a strong first impression. We are ready to help with business cards, flyers, banners, stickers, labels, and branded merchandise."
-    },
-    {
-        id: 'ai-msg-015',
-        name: 'Referral Encouragement',
-        description: 'Referral - Referral Encouragement',
-        content: "We are inspired by the amazing work you do in your industry. The right print materials can open new doors for growth. Our printing solutions can support your promotions, launches, events, and everyday business needs."
     },
     {
         id: 'ai-msg-016',

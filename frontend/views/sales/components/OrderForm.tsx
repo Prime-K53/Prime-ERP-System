@@ -192,11 +192,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
         const existing = findCustomerByName(normalizedName);
         if (existing) {
-            if (selectedReferrerId && !existing.referredBy) {
-                const { referralService } = await import('../../../services/referralService');
-                await referralService.assignReferral(selectedReferrerId, existing.id);
-                (existing as any).referredBy = selectedReferrerId;
-            }
             return existing;
         }
 
@@ -213,15 +208,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             status: 'Active',
             segment: 'Individual',
             paymentTerms: getDefaultPaymentTermsForSegment('Individual'),
-            referredBy: selectedReferrerId || ''
         };
 
         await addCustomer(newCustomer);
-
-        if (selectedReferrerId) {
-            const { referralService } = await import('../../../services/referralService');
-            await referralService.assignReferral(selectedReferrerId, newCustomer.id);
-        }
 
         return newCustomer;
     };
@@ -269,21 +258,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const serviceDropdownRef = useRef<HTMLDivElement>(null);
 
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
-    const [showReferrerSearch, setShowReferrerSearch] = useState(false);
-    const [selectedReferrerId, setSelectedReferrerId] = useState<string>('');
 
-    // Load existing referrer when customer is selected (only for existing customers)
-    useEffect(() => {
-        if (formData.customerId) {
-            (async () => {
-                const { referralService } = await import('../../../services/referralService');
-                const ref = await referralService.getReferrerForCustomer(formData.customerId);
-                if (ref?.referrerId) {
-                    setSelectedReferrerId(ref.referrerId);
-                }
-            })();
-        }
-    }, [formData.customerId]);
+
 
     const getCustomerOutstanding = (name: string) => {
         return (invoices as Invoice[])
@@ -1119,7 +1095,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 ? normalizeDateInputValue(formData.nextRunDate || getDefaultRecurringNextRunDate(formData.frequency || 'Monthly', formData.startDate || formData.date))
                 : formData.nextRunDate,
             createdBy: user?.name || user?.username || 'System User',
-            referenceDoc: formData.referenceDoc || ''
+            referenceDoc: formData.referenceDoc || '',
+
         };
 
         const allAppliedDiscounts = processedItems.flatMap((i: any) => i.discountDetails || []);
@@ -1883,14 +1860,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     </div>
 
                     <div className="docket-field mb-[10px]">
-                        <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Referrer</label>
-                        <button onClick={() => setShowReferrerSearch(true)}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-[#23282A] outline-none hover:bg-[#EFF6FF] transition-colors cursor-pointer truncate">
-                            {selectedReferrerId ? (customers.find((c: any) => c.id === selectedReferrerId)?.name || 'Search referrer...') : 'No Referrer'}
-                        </button>
-                    </div>
-
-                    <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Voucher Date</label>
                         <input type="date" value={formData.date}
                             onChange={e => handleVoucherDateChange(e.target.value)}
@@ -2645,15 +2614,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         title="Select Customer"
                         excludeIds={[]} />
                 )}
-                {showReferrerSearch && (
-                    <CustomerSearch open={showReferrerSearch}
-                        onSelect={(sel) => { setSelectedReferrerId(sel?.id || ''); }}
-                        onClose={() => setShowReferrerSearch(false)}
-                        title="Select Referrer"
-                        excludeIds={formData.customerId ? [formData.customerId] : []}
-                        showQuickAdd={false}
-                        mode="referrer" />
-                )}
+
             </div>
         </div>
     );

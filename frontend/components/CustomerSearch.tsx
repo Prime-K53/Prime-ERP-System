@@ -3,7 +3,6 @@ import { Search, X, UserPlus, Save, Users } from 'lucide-react';
 import { useSales } from '../context/SalesContext';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
-import { referralService } from '../services/referralService';
 
 interface CustomerSearchProps {
   open: boolean;

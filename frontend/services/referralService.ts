@@ -1,504 +1,518 @@
-import { dbService } from './db';
-import { generateNextId, roundToCurrency } from '../utils/helpers';
-import { generateId } from './transactions/_internal';
-import { logger } from './logger';
-import type {
-  Referral, ReferralCommission,
-  ReferralTransaction, ReferralSettings, ReferralLog
-} from '../types/referral';
-import type { WalletTransaction } from '../types';
+import { dbService } from './db'
+import { Referral, ReferralReward, ReferralSettings, DEFAULT_REFERRAL_SETTINGS } from '../types/referral'
+import { generateId } from './transactions/_internal'
+import { logger } from './logger'
+import { referralRuleEngine } from './referralRuleEngine'
+import { referralEventBus } from './referralEventBus'
+import { referralTimelineService } from './referralTimelineService'
+import { referralAuditService } from './referralAuditService'
+import { referralCampaignService } from './referralCampaignService'
 
-const DEFAULT_SETTINGS: ReferralSettings = {
-  enableReferralSystem: true,
-  defaultCommissionPercent: 5,
-  defaultCommissionFixed: 0,
-  approvalRequired: false,
-  autoCreditWallet: true,
-  minInvoiceAmount: 0,
-  maxCommission: 0,
-  commissionValidityDays: 365,
-};
+const getCompanyConfig = () => {
+  const saved = localStorage.getItem('nexus_company_config')
+  if (saved) {
+    try { return JSON.parse(saved) } catch { }
+  }
+  return null
+}
+
+const getReferralSettings = (): ReferralSettings => {
+  const config = getCompanyConfig()
+  return { ...DEFAULT_REFERRAL_SETTINGS, ...(config?.referralSettings || {}) }
+}
+
+const getGLConfig = () => {
+  const saved = localStorage.getItem('nexus_company_config')
+  const defaultConfig = {
+    defaultSalesAccount: '4000',
+    defaultInventoryAccount: '1200',
+    defaultCOGSAccount: '5000',
+    cashDrawerAccount: '1000',
+    customerDepositAccount: '2100',
+    marketingExpenseAccount: '6100',
+  }
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      return { ...defaultConfig, ...(parsed.glMapping || {}) }
+    } catch { }
+  }
+  return defaultConfig
+}
+
+const toMoney = (v: number): number => Math.round(v * 100) / 100
+
+function generateReferralCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let code = ''
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
 
 export const referralService = {
-  async getSettings(): Promise<ReferralSettings> {
-    const saved = localStorage.getItem('nexus_referral_settings');
-    if (saved) {
-      try { return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }; }
-      catch { /* fall through */ }
+  async registerReferral(customerId: string, referredById: string, referredByName?: string, actorId?: string): Promise<Referral> {
+    const settings = getReferralSettings()
+    const all = await dbService.getAll<Referral>('referrals')
+
+    const eligibility = await referralRuleEngine.evaluateEligibility({
+      customerId,
+      referredById,
+      paidAmount: 0,
+      existingReferrals: all,
+    })
+    if (!eligibility.allowed) {
+      throw new Error(eligibility.reason || 'Referral not allowed')
     }
-    return { ...DEFAULT_SETTINGS };
-  },
-
-  async saveSettings(settings: ReferralSettings): Promise<void> {
-    localStorage.setItem('nexus_referral_settings', JSON.stringify(settings));
-  },
-
-  async getReferrerForCustomer(customerId: string): Promise<Referral | null> {
-    if (!customerId) return null;
-    const all = await dbService.getAll<Referral>('referrals');
-    return all.find(r => r.referredCustomerId === customerId && r.status === 'Active') || null;
-  },
-
-  async getReferredCustomers(referrerId: string): Promise<Referral[]> {
-    const all = await dbService.getAll<Referral>('referrals');
-    return all.filter(r => r.referrerId === referrerId && r.status === 'Active');
-  },
-
-  async assignReferral(
-    referrerId: string,
-    referredCustomerId: string,
-    actorId?: string
-  ): Promise<{ success: boolean; error?: string }> {
-    if (!referrerId || !referredCustomerId) {
-      return { success: false, error: 'Referrer and referred customer are required' };
-    }
-    if (referrerId === referredCustomerId) {
-      return { success: false, error: 'A customer cannot refer themselves' };
-    }
-
-    const existing = await this.getReferrerForCustomer(referredCustomerId);
-    if (existing) {
-      return { success: false, error: 'This customer already has a referrer' };
-    }
-
-    const referrer = await dbService.get('customers', referrerId);
-    if (!referrer) return { success: false, error: 'Referrer not found' };
-
-    const referred = await dbService.get('customers', referredCustomerId);
-    if (!referred) return { success: false, error: 'Referred customer not found' };
 
     const referral: Referral = {
       id: generateId('REF'),
-      referrerId,
-      referredCustomerId,
-      status: 'Active',
+      customerId,
+      referredById,
+      referredByName,
+      referralCode: generateReferralCode(),
+      status: 'active',
+      date: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    }
+    await dbService.put('referrals', referral)
 
-    await dbService.put('referrals', referral);
+    await referralTimelineService.addEntry({
+      referralId: referral.id,
+      eventType: 'created',
+      title: 'Referral registered',
+      description: `${referredByName || 'A customer'} was referred`,
+      actorId: actorId || referredById,
+      actorName: referredByName,
+    })
 
-    await this.logAudit({
-      action: 'REFERRAL_CREATED',
+    await referralAuditService.log({
       entityType: 'referral',
       entityId: referral.id,
-      actorId,
-      newValue: JSON.stringify({ referrerId, referredCustomerId }),
-    });
+      action: 'created',
+      actorId: actorId || 'system',
+      newValue: referral,
+    })
 
-    return { success: true };
-  },
-
-  async deactivateReferral(referralId: string, actorId?: string): Promise<void> {
-    const referral = await dbService.get<Referral>('referrals', referralId);
-    if (!referral) throw new Error('Referral not found');
-    const oldValue = { ...referral };
-    referral.status = 'Inactive';
-    referral.updatedAt = new Date().toISOString();
-    await dbService.put('referrals', referral);
-    await this.logAudit({
-      action: 'REFERRAL_DEACTIVATED',
+    await referralEventBus.emit('referral.created', {
+      source: 'referralService',
       entityType: 'referral',
-      entityId: referralId,
-      actorId,
-      oldValue: JSON.stringify(oldValue),
-      newValue: JSON.stringify(referral),
-    });
+      entityId: referral.id,
+      data: { customerId, referredById, referredByName, referralCode: referral.referralCode },
+      actorId: actorId || referredById,
+    })
+
+    return referral
   },
 
-  async processInvoiceCommission(invoice: any, paymentId?: string): Promise<void> {
-    const settings = await this.getSettings();
-    if (!settings.enableReferralSystem) {
-      logger.warn('[Referral] System disabled, skipping commission');
-      return;
-    }
+  async getReferralsByCustomer(customerId: string): Promise<Referral[]> {
+    const all = await dbService.getAll<Referral>('referrals')
+    return all.filter(r => r.customerId === customerId)
+  },
 
-    const customerId = invoice.customerId;
-    if (!customerId) {
-      logger.warn('[Referral] No customerId on invoice', invoice.id);
-      return;
-    }
+  async getReferralsByReferrer(referredById: string): Promise<Referral[]> {
+    const all = await dbService.getAll<Referral>('referrals')
+    return all.filter(r => r.referredById === referredById)
+  },
 
-    if (invoice.status !== 'Paid') {
-      logger.warn('[Referral] Invoice not paid', invoice.id, invoice.status);
-      return;
-    }
-    if (invoice.totalAmount <= 0) {
-      logger.warn('[Referral] Invoice amount <= 0', invoice.id, invoice.totalAmount);
-      return;
-    }
-    if ((invoice.paidAmount || 0) < invoice.totalAmount) {
-      logger.warn('[Referral] Invoice not fully paid', invoice.id, invoice.paidAmount, invoice.totalAmount);
-      return;
-    }
+  async getReferralByCode(code: string): Promise<Referral | undefined> {
+    const all = await dbService.getAll<Referral>('referrals')
+    return all.find(r => r.referralCode === code && r.status === 'active')
+  },
 
-    const referral = await this.getReferrerForCustomer(customerId);
+  async getAllReferrals(): Promise<Referral[]> {
+    return dbService.getAll<Referral>('referrals')
+  },
+
+  async getPendingRewards(): Promise<ReferralReward[]> {
+    const all = await dbService.getAll<ReferralReward>('referralRewards')
+    return all.filter(r => r.status === 'pending')
+  },
+
+  async getRewardsByCustomer(customerId: string): Promise<ReferralReward[]> {
+    const all = await dbService.getAll<ReferralReward>('referralRewards')
+    return all.filter(r => r.customerId === customerId)
+  },
+
+  async getRewardsByReferral(referralId: string): Promise<ReferralReward[]> {
+    const all = await dbService.getAll<ReferralReward>('referralRewards')
+    return all.filter(r => r.referralId === referralId)
+  },
+
+  async approveReward(rewardId: string, approvedBy: string): Promise<ReferralReward> {
+    const all = await dbService.getAll<ReferralReward>('referralRewards')
+    const reward = all.find(r => r.id === rewardId)
+    if (!reward) throw new Error('Reward not found')
+    if (reward.status !== 'pending') throw new Error('Reward is not in pending status')
+
+    const creditResult = await this.creditWalletForReward(reward)
+    reward.status = 'approved'
+    reward.approvedAt = new Date().toISOString()
+    reward.approvedBy = approvedBy
+    reward.walletTransactionId = creditResult.walletTransactionId
+    reward.updatedAt = new Date().toISOString()
+    await dbService.put('referralRewards', reward)
+
+    await referralTimelineService.addEntry({
+      referralId: reward.referralId,
+      eventType: 'reward_approved',
+      title: 'Reward approved',
+      description: `Reward of ${reward.amount} approved by ${approvedBy}`,
+      amount: reward.amount,
+      actorId: approvedBy,
+    })
+
+    await referralAuditService.log({
+      entityType: 'reward',
+      entityId: reward.id,
+      action: 'approved',
+      actorId: approvedBy,
+      fieldName: 'status',
+      oldValue: 'pending',
+      newValue: 'approved',
+    })
+
+    await referralEventBus.emit('reward.approved', {
+      source: 'referralService',
+      entityType: 'reward',
+      entityId: reward.id,
+      data: { amount: reward.amount, invoiceId: reward.invoiceId, walletTransactionId: creditResult.walletTransactionId },
+      actorId: approvedBy,
+    })
+
+    return reward
+  },
+
+  async rejectReward(rewardId: string, reason: string, rejectedBy?: string): Promise<ReferralReward> {
+    const all = await dbService.getAll<ReferralReward>('referralRewards')
+    const reward = all.find(r => r.id === rewardId)
+    if (!reward) throw new Error('Reward not found')
+    if (reward.status !== 'pending') throw new Error('Reward is not in pending status')
+
+    reward.status = 'cancelled'
+    reward.cancelledAt = new Date().toISOString()
+    reward.cancelReason = reason
+    reward.cancelledBy = rejectedBy
+    reward.updatedAt = new Date().toISOString()
+    await dbService.put('referralRewards', reward)
+
+    await referralTimelineService.addEntry({
+      referralId: reward.referralId,
+      eventType: 'reward_rejected',
+      title: 'Reward rejected',
+      description: `Reward rejected: ${reason}`,
+      amount: reward.amount,
+      actorId: rejectedBy,
+    })
+
+    await referralAuditService.log({
+      entityType: 'reward',
+      entityId: reward.id,
+      action: 'rejected',
+      actorId: rejectedBy || 'system',
+      fieldName: 'status',
+      oldValue: 'pending',
+      newValue: 'cancelled',
+      reason,
+    })
+
+    await referralEventBus.emit('reward.rejected', {
+      source: 'referralService',
+      entityType: 'reward',
+      entityId: reward.id,
+      data: { amount: reward.amount, reason },
+      actorId: rejectedBy,
+    })
+
+    return reward
+  },
+
+  async creditWalletForReward(reward: ReferralReward): Promise<{ walletTransactionId: string }> {
+    const allReferrals = await dbService.getAll<Referral>('referrals')
+    const referral = allReferrals.find(r => r.id === reward.referralId)
+    const referrerCustomerId = referral?.referredById
+    if (!referrerCustomerId) throw new Error('Referrer customer not found for this reward')
+
+    const customers = await dbService.getAll<any>('customers')
+    const referrer = customers.find((c: any) => c.id === referrerCustomerId)
+    if (!referrer) throw new Error('Referrer customer record not found')
+
+    const gl = getGLConfig()
+    const walletTxId = generateId('WLT-REF')
+
+    await dbService.executeAtomicOperation(
+      ['walletTransactions', 'customers', 'ledger', 'referralRewards', 'idempotencyKeys'],
+      async (tx) => {
+        const walletStore = tx.objectStore('walletTransactions')
+        const customerStore = tx.objectStore('customers')
+        const ledgerStore = tx.objectStore('ledger')
+
+        const walletTx = {
+          id: walletTxId,
+          customerId: referrerCustomerId,
+          amount: reward.amount,
+          type: 'Deposit',
+          date: new Date().toISOString(),
+          reference: `Referral reward for invoice #${reward.invoiceId}`,
+          description: `Referral reward credit - ${referral?.referredByName || 'Referral'}`,
+        }
+        await walletStore.put(walletTx)
+
+        referrer.walletBalance = toMoney((referrer.walletBalance || 0) + reward.amount)
+        await customerStore.put(referrer)
+
+        const ledgerEntry = {
+          id: generateId('LG-REF'),
+          date: new Date().toISOString(),
+          description: `Referral reward credit - ${referral?.referredByName || 'Referral'}`,
+          debitAccountId: gl.marketingExpenseAccount || gl.cashDrawerAccount,
+          creditAccountId: gl.customerDepositAccount,
+          amount: reward.amount,
+          referenceId: reward.invoiceId,
+          customerId: referrerCustomerId,
+          customerName: referrer.name || '',
+        }
+        await ledgerStore.put(ledgerEntry)
+
+        const idempotencyKey = {
+          id: `referral-reward-credit:${reward.id}`,
+          scope: 'referral-reward-credit',
+          sourceId: reward.id,
+          createdAt: new Date().toISOString(),
+        }
+        await tx.objectStore('idempotencyKeys').put(idempotencyKey)
+      }
+    )
+
+    return { walletTransactionId: walletTxId }
+  },
+
+  async processInvoiceReward(invoice: {
+    id: string
+    customerId: string
+    totalAmount: number
+    paidAmount: number
+    referredBy?: string
+    referredByName?: string
+    status?: string
+  }): Promise<ReferralReward | null> {
+    if (!invoice.referredBy) return null
+    if (invoice.customerId === invoice.referredBy) return null
+
+    const settings = getReferralSettings()
+    if (!settings.enabled) return null
+
+    const allKeys = await dbService.getAll<any>('idempotencyKeys')
+    const idempotencyKeyId = `referral-reward:${invoice.id}`
+    if (allKeys.find((k: any) => k.id === idempotencyKeyId)) return null
+
+    const allReferrals = await dbService.getAll<Referral>('referrals')
+
+    const eligibility = await referralRuleEngine.evaluateEligibility({
+      customerId: invoice.customerId,
+      referredById: invoice.referredBy,
+      paidAmount: invoice.paidAmount,
+      existingReferrals: allReferrals,
+    })
+    if (!eligibility.allowed) return null
+
+    const activeCampaign = await referralCampaignService.getApplicableCampaign(
+      invoice.customerId,
+      invoice.paidAmount
+    )
+
+    const rewardCalc = await referralRuleEngine.calculateReward({
+      paidAmount: invoice.paidAmount,
+      campaign: activeCampaign,
+    })
+    if (!rewardCalc.allowed || !rewardCalc.rewardAmount) return null
+
+    const rewardAmount = rewardCalc.rewardAmount
+
+    let referral = allReferrals.find(
+      r => r.customerId === invoice.customerId && r.referredById === invoice.referredBy && r.status === 'active'
+    )
     if (!referral) {
-      logger.warn('[Referral] No active referral found for customer', customerId, invoice.id);
-      return;
-    }
-    if (referral.status !== 'Active') {
-      logger.warn('[Referral] Referral not active', referral.id, referral.status);
-      return;
+      referral = await this.registerReferral(invoice.customerId, invoice.referredBy, invoice.referredByName)
     }
 
-    const existingCommissions = await dbService.getAll<ReferralCommission>('referralCommissions');
-    const alreadyExists = existingCommissions.find(
-      c => c.invoiceId === invoice.id && c.status !== 'Reversed'
-    );
-    if (alreadyExists) {
-      logger.warn('[Referral] Commission already exists for invoice', invoice.id);
-      return;
-    }
+    const needsApproval = (await referralRuleEngine.evaluateApprovalRequirement({
+      rewardAmount,
+      campaign: activeCampaign,
+    })).needsApproval
 
-    const invoiceAmount = invoice.totalAmount;
-    if (settings.minInvoiceAmount > 0 && invoiceAmount < settings.minInvoiceAmount) {
-      logger.warn('[Referral] Invoice below min amount', invoice.id, invoiceAmount, settings.minInvoiceAmount);
-      return;
-    }
-
-    const rate = settings.defaultCommissionPercent / 100;
-    let commissionAmount = invoiceAmount * rate;
-
-    const fixedAmount = settings.defaultCommissionFixed;
-    if (fixedAmount > 0 && settings.defaultCommissionPercent > 0) {
-      commissionAmount = Math.max(commissionAmount, fixedAmount);
-    } else if (fixedAmount > 0) {
-      commissionAmount = fixedAmount;
-    }
-
-    if (settings.maxCommission > 0 && commissionAmount > settings.maxCommission) {
-      commissionAmount = settings.maxCommission;
-    }
-
-    commissionAmount = roundToCurrency(commissionAmount);
-    if (commissionAmount <= 0) {
-      logger.warn('[Referral] Commission amount <= 0 after calculation', invoice.id);
-      return;
-    }
-
-    const commission: ReferralCommission = {
-      id: generateId('RFC'),
+    const reward: ReferralReward = {
+      id: generateId('REW'),
       referralId: referral.id,
-      referrerId: referral.referrerId,
-      referredCustomerId: customerId,
+      customerId: invoice.referredBy,
       invoiceId: invoice.id,
-      invoiceAmount,
-      commissionRate: settings.defaultCommissionPercent,
-      commissionAmount,
-      commissionType: settings.defaultCommissionFixed > 0 && settings.defaultCommissionPercent > 0
-        ? 'Mixed' : settings.defaultCommissionFixed > 0 ? 'Fixed' : 'Percentage',
-      status: settings.approvalRequired ? 'Pending' : 'Approved',
-      paymentStatus: 'Unpaid',
+      invoiceAmount: invoice.totalAmount,
+      amount: rewardAmount,
+      status: needsApproval ? 'pending' : 'approved',
+      date: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      paymentId,
-    };
+    }
 
-    await dbService.put('referralCommissions', commission);
+    await dbService.put('referralRewards', reward)
 
-    const tx: ReferralTransaction = {
-      id: generateId('RFT'),
+    await dbService.executeAtomicOperation(
+      ['idempotencyKeys'],
+      async (tx) => {
+        const key = {
+          id: idempotencyKeyId,
+          scope: 'referral-reward',
+          sourceId: invoice.id,
+          createdAt: new Date().toISOString(),
+          metadata: { rewardId: reward.id, amount: rewardAmount, campaignId: activeCampaign?.id },
+        }
+        await tx.objectStore('idempotencyKeys').put(key)
+      }
+    )
+
+    await referralTimelineService.addEntry({
       referralId: referral.id,
-      customerId: referral.referrerId,
-      type: 'Commission',
-      amount: commissionAmount,
-      description: `Commission earned from invoice ${invoice.id}`,
-      invoiceId: invoice.id,
-      createdAt: new Date().toISOString(),
-    };
-    await dbService.put('referralTransactions', tx);
+      eventType: 'reward_earned',
+      title: needsApproval ? 'Reward earned (pending approval)' : 'Reward earned',
+      description: `Reward of ${rewardAmount} earned from invoice #${invoice.id}`,
+      amount: rewardAmount,
+      metadata: { invoiceId: invoice.id, campaignId: activeCampaign?.id, needsApproval },
+    })
 
-    if (!settings.approvalRequired && settings.autoCreditWallet) {
-      const walletTxId = await this.creditCustomerWallet(referral.referrerId, commissionAmount, `Referral commission from invoice ${invoice.id}`);
-      commission.walletTxId = walletTxId;
-      await dbService.put('referralCommissions', commission);
-    }
+    await referralAuditService.log({
+      entityType: 'reward',
+      entityId: reward.id,
+      action: 'created',
+      actorId: 'system',
+      newValue: reward,
+      correlationId: `invoice-${invoice.id}`,
+    })
 
-    await this.logAudit({
-      action: 'COMMISSION_GENERATED',
-      entityType: 'referralCommission',
-      entityId: commission.id,
-      newValue: JSON.stringify(commission),
-    });
-  },
+    await referralEventBus.emit('reward.earned', {
+      source: 'referralService',
+      entityType: 'reward',
+      entityId: reward.id,
+      data: { amount: rewardAmount, invoiceId: invoice.id, needsApproval, campaignId: activeCampaign?.id },
+      correlationId: `invoice-${invoice.id}`,
+    })
 
-  async approveCommission(commissionId: string, actorId?: string): Promise<void> {
-    const commission = await dbService.get<ReferralCommission>('referralCommissions', commissionId);
-    if (!commission) throw new Error('Commission not found');
-    if (commission.status !== 'Pending') throw new Error('Commission is not in Pending status');
+    if (!needsApproval) {
+      referral.status = 'converted'
+      referral.convertedAt = new Date().toISOString()
+      referral.convertedInvoiceId = invoice.id
+      await dbService.put('referrals', referral)
 
-    const oldValue = { ...commission };
-    commission.status = 'Approved';
-    commission.approvedAt = new Date().toISOString();
-    commission.updatedAt = new Date().toISOString();
-    await dbService.put('referralCommissions', commission);
+      await this.creditWalletForReward(reward)
+      reward.status = 'paid'
+      reward.approvedAt = new Date().toISOString()
+      reward.updatedAt = new Date().toISOString()
+      await dbService.put('referralRewards', reward)
 
-    const settings = await this.getSettings();
-    if (settings.autoCreditWallet) {
-      const walletTxId = await this.creditCustomerWallet(commission.referrerId, commission.commissionAmount, `Referral commission approved from invoice ${commission.invoiceId}`);
-      commission.walletTxId = walletTxId;
-      await dbService.put('referralCommissions', commission);
-    }
-
-    await this.logAudit({
-      action: 'COMMISSION_APPROVED',
-      entityType: 'referralCommission',
-      entityId: commissionId,
-      actorId,
-      oldValue: JSON.stringify(oldValue),
-      newValue: JSON.stringify(commission),
-    });
-  },
-
-  async payCommission(commissionId: string, actorId?: string): Promise<void> {
-    const commission = await dbService.get<ReferralCommission>('referralCommissions', commissionId);
-    if (!commission) throw new Error('Commission not found');
-    if (commission.status !== 'Approved') throw new Error('Commission must be Approved first');
-
-    const oldValue = { ...commission };
-    commission.status = 'Paid';
-    commission.paymentStatus = 'Paid';
-    commission.paidAt = new Date().toISOString();
-    commission.updatedAt = new Date().toISOString();
-    await dbService.put('referralCommissions', commission);
-
-    await this.logAudit({
-      action: 'COMMISSION_PAID',
-      entityType: 'referralCommission',
-      entityId: commissionId,
-      actorId,
-      oldValue: JSON.stringify(oldValue),
-      newValue: JSON.stringify(commission),
-    });
-  },
-
-  async reverseCommission(commissionId: string, reason: string, actorId?: string): Promise<void> {
-    const commission = await dbService.get<ReferralCommission>('referralCommissions', commissionId);
-    if (!commission) throw new Error('Commission not found');
-    if (commission.status === 'Reversed') throw new Error('Commission is already reversed');
-
-    const oldValue = { ...commission };
-    commission.status = 'Reversed';
-    commission.updatedAt = new Date().toISOString();
-    commission.notes = reason;
-    await dbService.put('referralCommissions', commission);
-
-    if (oldValue.status === 'Approved' || oldValue.status === 'Paid') {
-      await this.reverseWalletCredit(commission.referrerId, commission.commissionAmount, `Commission reversed: ${reason}`);
-    }
-
-    await this.logAudit({
-      action: 'COMMISSION_REVERSED',
-      entityType: 'referralCommission',
-      entityId: commissionId,
-      actorId,
-      oldValue: JSON.stringify(oldValue),
-      newValue: JSON.stringify(commission),
-    });
-  },
-
-  async creditCustomerWallet(customerId: string, amount: number, description: string): Promise<string | undefined> {
-    const customer = await dbService.get<any>('customers', customerId);
-    if (!customer) return undefined;
-
-    customer.walletBalance = roundToCurrency((customer.walletBalance || 0) + amount);
-    await dbService.put('customers', customer);
-
-    const walletTx: WalletTransaction = {
-      id: generateId('WLT-CRD'),
-      customerId,
-      amount,
-      type: 'Credit',
-      date: new Date().toISOString(),
-      description,
-    };
-    await dbService.put('walletTransactions', walletTx);
-
-    await this.logAudit({
-      action: 'WALLET_CREDITED',
-      entityType: 'customer',
-      entityId: customerId,
-      newValue: JSON.stringify({ customerId, amount, newBalance: customer.walletBalance, description }),
-    });
-    return walletTx.id;
-  },
-
-  async reverseWalletCredit(customerId: string, amount: number, description: string): Promise<void> {
-    const customer = await dbService.get<any>('customers', customerId);
-    if (!customer) return;
-
-    customer.walletBalance = roundToCurrency(Math.max(0, (customer.walletBalance || 0) - amount));
-    await dbService.put('customers', customer);
-
-    const walletTx: WalletTransaction = {
-      id: generateId('WLT-DBT'),
-      customerId,
-      amount: -amount,
-      type: 'Debit',
-      date: new Date().toISOString(),
-      description,
-    };
-    await dbService.put('walletTransactions', walletTx);
-
-    await this.logAudit({
-      action: 'WALLET_DEBITED',
-      entityType: 'customer',
-      entityId: customerId,
-      newValue: JSON.stringify({ customerId, amount, newBalance: customer.walletBalance, description }),
-    });
-  },
-
-  async reverseCommissionForInvoice(invoiceId: string, reason: string, actorId?: string): Promise<void> {
-    const commissions = await dbService.getAll<ReferralCommission>('referralCommissions');
-    const invoiceCommissions = commissions.filter(c => c.invoiceId === invoiceId && c.status !== 'Reversed');
-    for (const commission of invoiceCommissions) {
-      await this.reverseCommission(commission.id, reason, actorId);
-    }
-  },
-
-  async getDashboardStats(): Promise<{
-    totalReferrals: number;
-    activeReferrals: number;
-    totalCommissions: number;
-    pendingCommission: number;
-    paidCommission: number;
-    totalCommissionAmount: number;
-    totalReferralSales: number;
-    topReferrers: { customerId: string; customerName: string; count: number; sales: number }[];
-  }> {
-    const referrals = await dbService.getAll<Referral>('referrals');
-    const commissions = await dbService.getAll<ReferralCommission>('referralCommissions');
-    const customers = await dbService.getAll<any>('customers');
-    const invoices = await dbService.getAll<any>('invoices');
-
-    const totalReferrals = referrals.length;
-    const activeReferrals = referrals.filter(r => r.status === 'Active').length;
-    const totalCommissions = commissions.length;
-    const pendingCommission = commissions.filter(c => c.status === 'Pending').reduce((s, c) => s + c.commissionAmount, 0);
-    const paidCommission = commissions.filter(c => c.status === 'Paid').reduce((s, c) => s + c.commissionAmount, 0);
-    const totalCommissionAmount = commissions.reduce((s, c) => s + c.commissionAmount, 0);
-
-    const referralInvoiceIds = [...new Set(commissions.map(c => c.invoiceId))];
-    const totalReferralSales = invoices
-      .filter(inv => referralInvoiceIds.includes(inv.id))
-      .reduce((s, inv) => s + (inv.totalAmount || 0), 0);
-
-    const referrerCounts: Record<string, { count: number; sales: number }> = {};
-    for (const ref of referrals) {
-      if (!referrerCounts[ref.referrerId]) {
-        referrerCounts[ref.referrerId] = { count: 0, sales: 0 };
-      }
-      referrerCounts[ref.referrerId].count++;
-      const refCommissions = commissions.filter(c => c.referredCustomerId === ref.referredCustomerId);
-      for (const c of refCommissions) {
-        const inv = invoices.find(i => i.id === c.invoiceId);
-        referrerCounts[ref.referrerId].sales += inv?.totalAmount || 0;
-      }
-    }
-
-    const topReferrers = Object.entries(referrerCounts)
-      .map(([customerId, data]) => {
-        const customer = customers.find(c => c.id === customerId);
-        return {
-          customerId,
-          customerName: customer?.name || 'Unknown',
-          count: data.count,
-          sales: data.sales,
-        };
+      await referralTimelineService.addEntry({
+        referralId: referral.id,
+        eventType: 'reward_paid',
+        title: 'Reward paid',
+        description: `Reward of ${rewardAmount} credited to wallet`,
+        amount: rewardAmount,
       })
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
 
-    return {
-      totalReferrals, activeReferrals,
-      totalCommissions, pendingCommission, paidCommission,
-      totalCommissionAmount, totalReferralSales, topReferrers,
-    };
+      await referralEventBus.emit('reward.paid', {
+        source: 'referralService',
+        entityType: 'reward',
+        entityId: reward.id,
+        data: { amount: rewardAmount, invoiceId: invoice.id },
+      })
+    }
+
+    if (activeCampaign) {
+      activeCampaign.totalRewardsGiven += 1
+      await dbService.put('referralCampaigns', activeCampaign)
+    }
+
+    return reward
   },
 
-  async getCommissionHistory(customerId: string): Promise<ReferralCommission[]> {
-    const all = await dbService.getAll<ReferralCommission>('referralCommissions');
-    return all
-      .filter(c => c.referrerId === customerId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  async expireReferral(referralId: string): Promise<Referral> {
+    const all = await dbService.getAll<Referral>('referrals')
+    const referral = all.find(r => r.id === referralId)
+    if (!referral) throw new Error('Referral not found')
+    if (referral.status !== 'active') throw new Error('Referral is not active')
+
+    referral.status = 'expired'
+    referral.updatedAt = new Date().toISOString()
+    await dbService.put('referrals', referral)
+
+    await referralTimelineService.addEntry({
+      referralId: referral.id,
+      eventType: 'referral_expired',
+      title: 'Referral expired',
+      description: 'Referral link has expired',
+    })
+
+    await referralEventBus.emit('referral.expired', {
+      source: 'referralService',
+      entityType: 'referral',
+      entityId: referral.id,
+    })
+
+    return referral
   },
 
-  async getReferralTransactions(customerId: string): Promise<ReferralTransaction[]> {
-    const all = await dbService.getAll<ReferralTransaction>('referralTransactions');
-    return all
-      .filter(t => t.customerId === customerId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  async cancelReferral(referralId: string, cancelledBy?: string, reason?: string): Promise<Referral> {
+    const all = await dbService.getAll<Referral>('referrals')
+    const referral = all.find(r => r.id === referralId)
+    if (!referral) throw new Error('Referral not found')
+    if (referral.status !== 'active') throw new Error('Referral is not active')
+
+    referral.status = 'cancelled'
+    referral.updatedAt = new Date().toISOString()
+    await dbService.put('referrals', referral)
+
+    await referralTimelineService.addEntry({
+      referralId: referral.id,
+      eventType: 'referral_cancelled',
+      title: 'Referral cancelled',
+      description: reason || 'Referral was cancelled',
+      actorId: cancelledBy,
+    })
+
+    await referralAuditService.log({
+      entityType: 'referral',
+      entityId: referral.id,
+      action: 'cancelled',
+      actorId: cancelledBy || 'system',
+      fieldName: 'status',
+      oldValue: 'active',
+      newValue: 'cancelled',
+      reason,
+    })
+
+    await referralEventBus.emit('referral.cancelled', {
+      source: 'referralService',
+      entityType: 'referral',
+      entityId: referral.id,
+      data: { reason },
+      actorId: cancelledBy,
+    })
+
+    return referral
   },
 
-  async getReferralSalesBreakdown(referrerId: string): Promise<{
-    customerName: string;
-    invoiceCount: number;
-    totalSales: number;
-    totalCommission: number;
-  }[]> {
-    const commissions = await dbService.getAll<ReferralCommission>('referralCommissions');
-    const customers = await dbService.getAll<any>('customers');
-    const invoices = await dbService.getAll<any>('invoices');
+  async checkAndExpireReferrals(): Promise<number> {
+    const all = await dbService.getAll<Referral>('referrals')
+    const active = all.filter(r => r.status === 'active')
+    let expiredCount = 0
 
-    const refCommissions = commissions.filter(c => c.referrerId === referrerId);
-    const breakdown: Record<string, { customerName: string; invoiceIds: Set<string>; totalSales: number; totalCommission: number }> = {};
-
-    for (const c of refCommissions) {
-      if (!breakdown[c.referredCustomerId]) {
-        const referred = customers.find(cust => cust.id === c.referredCustomerId);
-        breakdown[c.referredCustomerId] = {
-          customerName: referred?.name || 'Unknown',
-          invoiceIds: new Set(),
-          totalSales: 0,
-          totalCommission: 0,
-        };
+    for (const referral of active) {
+      const expired = await referralRuleEngine.evaluateExpiry(referral.date)
+      if (expired.expired) {
+        await this.expireReferral(referral.id)
+        expiredCount++
       }
-      breakdown[c.referredCustomerId].invoiceIds.add(c.invoiceId);
-      breakdown[c.referredCustomerId].totalCommission += c.commissionAmount;
-      const inv = invoices.find(i => i.id === c.invoiceId);
-      if (inv) breakdown[c.referredCustomerId].totalSales += inv.totalAmount || 0;
     }
 
-    return Object.entries(breakdown).map(([_, b]) => ({
-      customerName: b.customerName,
-      invoiceCount: b.invoiceIds.size,
-      totalSales: b.totalSales,
-      totalCommission: b.totalCommission,
-    }));
+    return expiredCount
   },
-
-  async getReferralStatsByCustomer(customerId: string): Promise<{
-    totalReferred: number;
-    totalCommission: number;
-    totalSales: number;
-  }> {
-    const referrals = await dbService.getAll<Referral>('referrals');
-    const commissions = await dbService.getAll<ReferralCommission>('referralCommissions');
-    const invoices = await dbService.getAll<any>('invoices');
-
-    const referred = referrals.filter(r => r.referrerId === customerId && r.status === 'Active');
-    const custCommissions = commissions.filter(c => c.referrerId === customerId && c.status !== 'Reversed');
-
-    const totalCommission = custCommissions.reduce((s, c) => s + c.commissionAmount, 0);
-    const referralInvoiceIds = [...new Set(custCommissions.map(c => c.invoiceId))];
-    const totalSales = invoices
-      .filter(inv => referralInvoiceIds.includes(inv.id))
-      .reduce((s, inv) => s + (inv.totalAmount || 0), 0);
-
-    return { totalReferred: referred.length, totalCommission, totalSales };
-  },
-
-  async logAudit(entry: Omit<ReferralLog, 'id' | 'createdAt'>): Promise<void> {
-    try {
-      const log: ReferralLog = {
-        id: generateId('RFL'),
-        ...entry,
-        createdAt: new Date().toISOString(),
-      };
-      await dbService.put('referralLogs', log);
-    } catch (err) {
-      logger.error('Failed to write referral audit log', err);
-    }
-  },
-};
+}

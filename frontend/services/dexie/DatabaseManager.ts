@@ -32,6 +32,8 @@ export interface EnterpriseDatabaseTables {
   analyticsCache: Table<BaseEntity & Record<string, unknown>, string>;
   kpiCache: Table<BaseEntity & Record<string, unknown>, string>;
   dashboardSnapshots: Table<BaseEntity & Record<string, unknown>, string>;
+  referrals: Table<BaseEntity & Record<string, unknown>, string>;
+  referralRewards: Table<BaseEntity & Record<string, unknown>, string>;
 }
 
 export class EnterpriseDexieDatabase extends Dexie {
@@ -61,6 +63,8 @@ export class EnterpriseDexieDatabase extends Dexie {
   declare analyticsCache: Table<BaseEntity & Record<string, unknown>, string>;
   declare kpiCache: Table<BaseEntity & Record<string, unknown>, string>;
   declare dashboardSnapshots: Table<BaseEntity & Record<string, unknown>, string>;
+  declare referrals: Table<BaseEntity & Record<string, unknown>, string>;
+  declare referralRewards: Table<BaseEntity & Record<string, unknown>, string>;
 
   constructor() {
     super(DB_NAME);
@@ -92,6 +96,8 @@ export class EnterpriseDexieDatabase extends Dexie {
       analyticsCache: 'id, cacheKey, category, updatedAt, *tags',
       kpiCache: 'id, kpiKey, period, updatedAt, *tags',
       dashboardSnapshots: 'id, snapshotKey, generatedAt, *tags',
+      referrals: 'id, customerId, referredById, status, referralCode, *tags',
+      referralRewards: 'id, referralId, customerId, invoiceId, status, *tags',
     });
   }
 }

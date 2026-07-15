@@ -1,69 +1,66 @@
 export interface Referral {
-  id: string;
-  referrerId: string;
-  referredCustomerId: string;
-  status: 'Active' | 'Inactive';
-  createdAt: string;
-  updatedAt: string;
-  company_id?: string;
+  id: string
+  customerId: string
+  referredById?: string
+  referredByName?: string
+  referralCode: string
+  status: 'active' | 'converted' | 'expired' | 'cancelled'
+  date: string
+  convertedAt?: string
+  convertedInvoiceId?: string
+  notes?: string
+  companyId?: string
+  createdAt?: string
+  updatedAt?: string
+  [key: string]: any
 }
 
-export interface ReferralCommission {
-  id: string;
-  referralId: string;
-  referrerId: string;
-  referredCustomerId: string;
-  invoiceId: string;
-  invoiceAmount: number;
-  commissionRate: number;
-  commissionAmount: number;
-  commissionType: 'Percentage' | 'Fixed' | 'Mixed';
-  status: 'Pending' | 'Approved' | 'Paid' | 'Reversed';
-  paymentStatus: 'Unpaid' | 'Paid';
-  approvedAt?: string;
-  paidAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  notes?: string;
-  paymentId?: string;
-  walletTxId?: string;
-  company_id?: string;
-}
-
-export interface ReferralTransaction {
-  id: string;
-  referralId: string;
-  customerId: string;
-  type: 'Commission' | 'Reversal' | 'Adjustment';
-  amount: number;
-  description: string;
-  invoiceId?: string;
-  createdAt: string;
-  company_id?: string;
+export interface ReferralReward {
+  id: string
+  referralId: string
+  customerId: string
+  invoiceId: string
+  invoiceAmount: number
+  amount: number
+  status: 'pending' | 'approved' | 'paid' | 'cancelled'
+  date: string
+  approvedAt?: string
+  approvedBy?: string
+  cancelledAt?: string
+  cancelledBy?: string
+  cancelReason?: string
+  walletTransactionId?: string
+  notes?: string
+  companyId?: string
+  createdAt?: string
+  updatedAt?: string
+  [key: string]: any
 }
 
 export interface ReferralSettings {
-  enableReferralSystem: boolean;
-  defaultCommissionPercent: number;
-  defaultCommissionFixed: number;
-  approvalRequired: boolean;
-  autoCreditWallet: boolean;
-  minInvoiceAmount: number;
-  maxCommission: number;
-  commissionValidityDays: number;
+  enabled: boolean
+  rewardType: 'fixed' | 'percentage' | 'hybrid'
+  rewardValue: number
+  rewardPercentage: number
+  minPurchaseAmount: number
+  maxRewardAmount: number
+  requireApproval: boolean
+  autoApproveThreshold: number
+  selfReferralPrevention: boolean
+  expiryDays: number
+  allowMultipleRewards: boolean
 }
 
-export interface ReferralLog {
-  id: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  actorId?: string;
-  actorName?: string;
-  oldValue?: string;
-  newValue?: string;
-  ipAddress?: string;
-  createdAt: string;
-  company_id?: string;
+export const DEFAULT_REFERRAL_SETTINGS: ReferralSettings = {
+  enabled: false,
+  rewardType: 'percentage',
+  rewardValue: 0,
+  rewardPercentage: 5,
+  minPurchaseAmount: 0,
+  maxRewardAmount: 0,
+  requireApproval: true,
+  autoApproveThreshold: 100,
+  selfReferralPrevention: true,
+  expiryDays: 365,
+  allowMultipleRewards: true,
 }

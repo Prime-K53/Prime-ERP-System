@@ -119,6 +119,7 @@ const SalesFlowHub = lazyWithRetry('./views/SalesFlowHub', () => import('./views
 const SalesExchanges = lazyWithRetry('./views/sales/SalesExchanges', () => import('./views/sales/SalesExchanges'));
 const LeadBoard = lazyWithRetry('./views/sales/LeadBoard', () => import('./views/sales/LeadBoard'));
 const SalesOrdersView = lazyWithRetry('./views/sales/SalesOrders', () => import('./views/sales/SalesOrders'));
+const Referrals = lazyWithRetry('./views/sales/Referrals', () => import('./views/sales/Referrals'));
 const ProcurementHub = lazyWithRetry('./views/ProcurementHub', () => import('./views/ProcurementHub'));
 const CustomersHub = lazyWithRetry('./views/CustomersHub', () => import('./views/CustomersHub'));
 const FiscalReportsHub = lazyWithRetry('./views/FiscalReportsHub', () => import('./views/FiscalReportsHub'));
@@ -126,8 +127,6 @@ const InternalToolsHub = lazyWithRetry('./views/InternalToolsHub', () => import(
 const Payments = lazyWithRetry('./views/sales/Payments', () => import('./views/sales/Payments'));
 const Orders = lazyWithRetry('./views/sales/Orders', () => import('./views/sales/Orders'));
 const JobTickets = lazyWithRetry('./views/sales/JobTickets', () => import('./views/sales/JobTickets'));
-const Commissions = lazyWithRetry('./views/sales/Commissions', () => import('./views/sales/Commissions'));
-const Referrals = lazyWithRetry('./views/sales/Referrals', () => import('./views/sales/Referrals'));
 const Clients = lazyWithRetry('./views/sales/Clients', () => import('./views/sales/Clients'));
 const ShippingManager = lazyWithRetry('./views/sales/ShippingManager', () => import('./views/sales/ShippingManager'));
 const Tasks = lazyWithRetry('./views/Tasks', () => import('./views/Tasks'));
@@ -492,7 +491,6 @@ const AppLayout: React.FC = () => {
                 <Route path="/sales/subscriptions" element={<Navigate to="/sales-flow/subscriptions" replace />} />
                 <Route path="/sales/receipts" element={<Navigate to="/sales-flow/payments" replace />} />
                 <Route path="/sales-flow/receipts" element={<Navigate to="/sales-flow/payments" replace />} />
-                {/* /sales-flow/commissions moved to Sales Flow section below */}
                 <Route path="/sales-flow/sms" element={<Navigate to="/internal-tools/chat" replace />} />
                 <Route path="/reports/statements" element={<Navigate to="/revenue/contacts" replace />} />
                 <Route path="/accounts/chart" element={<Navigate to="/accounts/chart-of-accounts" replace />} />
@@ -575,8 +573,7 @@ const AppLayout: React.FC = () => {
                   <Route path="/sales-flow/customers" element={<Navigate to="/sales-flow/clients" replace />} />
                   <Route path="/sales-flow/clients" element={<ProtectedRoute permission="sales.view"><Clients /></ProtectedRoute>} />
                   <Route path="/sales-flow/payments" element={<ProtectedRoute permission="sales.view"><Payments /></ProtectedRoute>} />
-                  <Route path="/sales-flow/commissions" element={<ProtectedRoute permission="sales.view"><Commissions /></ProtectedRoute>} />
-                  <Route path="/sales-flow/referrals" element={<ProtectedRoute permission="sales.view"><Referrals /></ProtectedRoute>} />
+                  <Route path="/sales-flow/referrals" element={<ProtectedRoute permission="referrals.view"><Referrals /></ProtectedRoute>} />
                 </Route>
 
                 {/* Procurement */}

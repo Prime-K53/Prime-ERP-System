@@ -1,110 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw, Award, DollarSign, Settings } from 'lucide-react';
-import { referralService } from '../../../services/referralService';
-import type { ReferralSettings } from '../../../types/referral';
+import React, { useState, useEffect } from 'react'
+import { Award, DollarSign, Percent, Shield, Clock, Filter, RotateCw, Megaphone } from 'lucide-react'
+import type { CompanyConfig } from '../../../types'
+import { DEFAULT_REFERRAL_SETTINGS } from '../../../types/referral'
+import type { ReferralSettings } from '../../../types/referral'
+import { referralCampaignService } from '../../../services/referralCampaignService'
+import type { ReferralCampaign } from '../../../types/referral-extended'
 
-interface Props {
-  notify: (msg: string, type?: string) => void;
+interface ReferralSettingsTabProps {
+  config: CompanyConfig
+  setConfig: React.Dispatch<React.SetStateAction<CompanyConfig>>
 }
 
-export const ReferralSettingsTab: React.FC<Props> = ({ notify }) => {
-  const [settings, setSettings] = useState<ReferralSettings>({
-    enableReferralSystem: true,
-    defaultCommissionPercent: 5,
-    defaultCommissionFixed: 0,
-    approvalRequired: false,
-    autoCreditWallet: true,
-    minInvoiceAmount: 0,
-    maxCommission: 0,
-    commissionValidityDays: 365,
-  });
-  const [loading, setLoading] = useState(true);
+export const ReferralSettingsTab: React.FC<ReferralSettingsTabProps> = ({ config, setConfig }) => {
+  const settings: ReferralSettings = { ...DEFAULT_REFERRAL_SETTINGS, ...config.referralSettings }
+  const [campaigns, setCampaigns] = useState<ReferralCampaign[]>([])
 
   useEffect(() => {
-    referralService.getSettings().then(s => {
-      setSettings(s);
-      setLoading(false);
-    });
-  }, []);
+    referralCampaignService.getAllCampaigns().then(setCampaigns).catch(() => {})
+  }, [])
 
-  const handleSave = async () => {
-    await referralService.saveSettings(settings);
-    notify('Referral settings saved successfully', 'success');
-  };
-
-  if (loading) return <div className="p-8 text-slate-400 italic">Loading settings...</div>;
+  const update = (patch: Partial<ReferralSettings>) => {
+    setConfig({
+      ...config,
+      referralSettings: { ...settings, ...patch },
+    })
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-          <Award size={20} className="text-white" />
-        </div>
-        <div>
-          <h2 className="text-lg font-black text-slate-900">Referral Program Settings</h2>
-          <p className="text-xs text-slate-500">Configure commission rules and behavior</p>
-        </div>
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
+      <div className="flex items-center gap-3">
+        <Award size={18} className="text-amber-500" />
+        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Referral Program</h3>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Settings size={14} /> General
-          </h3>
-          <ToggleRow label="Enable Referral System" value={settings.enableReferralSystem}
-            onChange={v => setSettings({ ...settings, enableReferralSystem: v })} />
-          <ToggleRow label="Approval Required" value={settings.approvalRequired}
-            onChange={v => setSettings({ ...settings, approvalRequired: v })} />
-          <ToggleRow label="Auto-Credit Wallet" value={settings.autoCreditWallet}
-            onChange={v => setSettings({ ...settings, autoCreditWallet: v })} />
-        </section>
+      <div className="grid grid-cols-2 gap-10">
+        {/* Enable/Disable */}
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-10 group hover:border-amber-500/50 transition-all col-span-2">
+          <div className="flex justify-between items-center group/header">
+            <div>
+              <p className="font-black text-slate-900 uppercase text-lg group-hover/header:text-amber-500 transition-colors">Referral Rewards System</p>
+              <p className="text-[10px] text-slate-500 mt-1 italic font-medium">Enable or disable the customer referral and wallet rewards program</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={settings.enabled}
+                onChange={e => update({ enabled: e.target.checked })}
+              />
+              <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+        </div>
 
-        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <DollarSign size={14} /> Commission Rules
-          </h3>
-          <NumberRow label="Default Commission %" value={settings.defaultCommissionPercent}
-            onChange={v => setSettings({ ...settings, defaultCommissionPercent: v })} suffix="%" />
-          <NumberRow label="Default Fixed Amount" value={settings.defaultCommissionFixed}
-            onChange={v => setSettings({ ...settings, defaultCommissionFixed: v })} prefix="$" />
-          <NumberRow label="Min Invoice Amount" value={settings.minInvoiceAmount}
-            onChange={v => setSettings({ ...settings, minInvoiceAmount: v })} prefix="$" />
-          <NumberRow label="Max Commission (0 = unlimited)" value={settings.maxCommission}
-            onChange={v => setSettings({ ...settings, maxCommission: v })} prefix="$" />
-          <NumberRow label="Commission Validity (days)" value={settings.commissionValidityDays}
-            onChange={v => setSettings({ ...settings, commissionValidityDays: v })} suffix="days" />
-        </section>
-      </div>
+        {/* Reward Configuration */}
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-8 group hover:border-amber-500/50 transition-all">
+          <div className="flex items-center gap-2">
+            <DollarSign size={16} className="text-emerald-500" />
+            <p className="font-black text-slate-900 text-sm">Reward Configuration</p>
+          </div>
 
-      <div className="flex justify-end pt-4 border-t border-slate-200">
-        <button onClick={handleSave}
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-[11px] uppercase tracking-tight hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20">
-          <Save size={16} /> Save Settings
-        </button>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Reward Type</label>
+              <select
+                value={settings.rewardType}
+                onChange={e => update({ rewardType: e.target.value as 'fixed' | 'percentage' | 'hybrid' })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+              >
+                <option value="fixed">Fixed Amount</option>
+                <option value="percentage">Percentage of Invoice</option>
+                <option value="hybrid">Fixed + Percentage (Hybrid)</option>
+              </select>
+            </div>
+
+            {settings.rewardType !== 'percentage' && (
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Fixed Reward Amount</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={settings.rewardValue}
+                    onChange={e => update({ rewardValue: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
+            {settings.rewardType !== 'fixed' && (
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Reward Percentage (%)</label>
+                <div className="relative">
+                  <Percent size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={settings.rewardPercentage}
+                    onChange={e => update({ rewardPercentage: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Limits */}
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-8 group hover:border-amber-500/50 transition-all">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-blue-500" />
+            <p className="font-black text-slate-900 text-sm">Limits & Thresholds</p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Min Purchase Amount</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={settings.minPurchaseAmount}
+                  onChange={e => update({ minPurchaseAmount: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Max Reward Amount</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={settings.maxRewardAmount}
+                  onChange={e => update({ maxRewardAmount: parseFloat(e.target.value) || 0 })}
+                  placeholder="0 = no limit"
+                  className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Auto-Approve Threshold</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={settings.autoApproveThreshold}
+                  onChange={e => update({ autoApproveThreshold: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Safety Controls */}
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-8 group hover:border-amber-500/50 transition-all col-span-2">
+          <div className="flex items-center gap-2">
+            <Shield size={16} className="text-amber-500" />
+            <p className="font-black text-slate-900 text-sm">Safety Controls</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Require Approval</p>
+                <p className="text-[10px] text-slate-500 italic">Manual approval for rewards above threshold</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.requireApproval}
+                  onChange={e => update({ requireApproval: e.target.checked })}
+                />
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Prevent Self-Referral</p>
+                <p className="text-[10px] text-slate-500 italic">Block customers from referring themselves</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.selfReferralPrevention}
+                  onChange={e => update({ selfReferralPrevention: e.target.checked })}
+                />
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Allow Multiple Rewards</p>
+                <p className="text-[10px] text-slate-500 italic">Allow multiple rewards per referral</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.allowMultipleRewards}
+                  onChange={e => update({ allowMultipleRewards: e.target.checked })}
+                />
+                <div className="w-12 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Expiry */}
+        <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-8 group hover:border-amber-500/50 transition-all col-span-2">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-blue-500" />
+            <p className="font-black text-slate-900 text-sm">Referral Expiry</p>
+          </div>
+          <div className="grid grid-cols-1 max-w-xs">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Expiry Period (days)</label>
+              <input
+                type="number"
+                min={0}
+                value={settings.expiryDays}
+                onChange={e => update({ expiryDays: parseInt(e.target.value) || 0 })}
+                placeholder="0 = never expires"
+                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+              />
+              <p className="text-[10px] text-slate-500 italic mt-1">Referrals expire after this many days (0 = no expiry)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Active Campaigns Summary */}
+        {campaigns.filter(c => c.status === 'active').length > 0 && (
+          <div className="bg-white rounded-lg border border-[#D4D7DC] p-6 shadow-sm space-y-8 group hover:border-amber-500/50 transition-all col-span-2">
+            <div className="flex items-center gap-2">
+              <Megaphone size={16} className="text-amber-500" />
+              <p className="font-black text-slate-900 text-sm">Active Campaigns</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              {campaigns.filter(c => c.status === 'active').map(c => (
+                <div key={c.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+                  <div>
+                    <p className="font-bold text-slate-900">{c.name}</p>
+                    <p className="text-[10px] text-slate-500">{c.rewardType === 'fixed' ? `${c.rewardValue} fixed` : c.rewardType === 'percentage' ? `${c.rewardPercentage}%` : `${c.rewardValue} + ${c.rewardPercentage}%`} bonus{c.bonusMultiplier && c.bonusMultiplier > 1 ? ` x${c.bonusMultiplier}` : ''}</p>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700">{c.totalRewardsGiven} / {c.maxTotalRewards || '∞'} used</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
-};
-
-const ToggleRow: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void }> = ({ label, value, onChange }) => (
-  <div className="flex items-center justify-between py-1">
-    <span className="text-sm font-medium text-slate-700">{label}</span>
-    <button onClick={() => onChange(!value)}
-      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-blue-600' : 'bg-slate-300'}`}>
-      <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-    </button>
-  </div>
-);
-
-const NumberRow: React.FC<{ label: string; value: number; onChange: (v: number) => void; prefix?: string; suffix?: string }> = ({ label, value, onChange, prefix, suffix }) => (
-  <div className="flex items-center justify-between py-1">
-    <span className="text-sm font-medium text-slate-700">{label}</span>
-    <div className="flex items-center gap-1">
-      {prefix && <span className="text-sm text-slate-500">{prefix}</span>}
-      <input type="number" value={value}
-        onChange={e => onChange(parseFloat(e.target.value) || 0)}
-        className="w-24 text-right border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20" />
-      {suffix && <span className="text-sm text-slate-500">{suffix}</span>}
-    </div>
-  </div>
-);
+  )
+}

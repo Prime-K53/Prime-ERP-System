@@ -30,7 +30,14 @@ import { AuditTimeline } from '../../shared/components/AuditTimeline';
 import AICustomerInsights from '../../../components/ai/AICustomerInsights';
 import CRMSegmentation from '../../../components/CRM/CRMSegmentation';
 import { currencyService } from '../../../services/currencyService';
-import { ReferralPanel } from './ReferralPanel';
+import { referralService } from '../../../services/referralService';
+import { referralTimelineService } from '../../../services/referralTimelineService';
+import { referralAuditService } from '../../../services/referralAuditService';
+import type { Referral, ReferralReward } from '../../../types/referral';
+import type { ReferralTimelineEntry, ReferralAuditEntry } from '../../../types/referral-extended';
+import { EngagementDashboard } from './EngagementDashboard';
+import { EngagementTimeline } from './EngagementTimeline';
+
 
 interface CustomerWorkspaceProps {
   customer: Customer;
@@ -49,9 +56,29 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
   const { addAuditLog, companyConfig, auditLogs, notify } = useAuth();
   const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit' | 'Referrals'>('Overview');
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Timeline' | 'Invoices' | 'Payments' | 'Ledger' | 'Accounting' | 'Wallet' | 'Referrals' | 'Engagement' | 'Documents' | 'Segmentation' | 'Settings' | 'Security Audit'>('Overview');
   const [accountMenu, setAccountMenu] = useState<{ id: string, type: 'debit' | 'credit', x: number, y: number } | null>(null);
   const [viewingAccountId, setViewingAccountId] = useState<string | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [referralRewards, setReferralRewards] = useState<ReferralReward[]>([]);
+  const [referralTimeline, setReferralTimeline] = useState<ReferralTimelineEntry[]>([]);
+  const [referralAuditEntries, setReferralAuditEntries] = useState<ReferralAuditEntry[]>([]);
+
+  useEffect(() => {
+    if (!customer?.id) return
+    referralService.getReferralsByReferrer(customer.id).then(setReferrals).catch(() => {})
+    referralService.getRewardsByCustomer(customer.id).then(setReferralRewards).catch(() => {})
+    Promise.all(
+      (async () => {
+        const timeline = await referralTimelineService.getAllTimeline(50)
+        setReferralTimeline(timeline.filter(t => {
+          const ref = referrals.find(r => r.id === t.referralId)
+          return ref?.referredById === customer.id
+        }))
+      })()
+    ).catch(() => {})
+    referralAuditService.getAll(50).then(all => setReferralAuditEntries(all)).catch(() => {})
+  }, [customer?.id])
 
   // Memoized transactions for viewingAccountId
   const accountTransactions = useMemo(() => {
@@ -493,7 +520,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
         {/* Tab Navigation */}
         <div className="px-6 border-b border-slate-200 bg-white sticky top-[65px] z-10">
           <div className="flex items-center gap-8">
-            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Documents', 'Segmentation', 'Settings', 'Security Audit', 'Referrals'] as const).map(tab => (
+            {(['Overview', 'Timeline', 'Invoices', 'Payments', 'Ledger', 'Accounting', 'Wallet', 'Referrals', 'Engagement', 'Documents', 'Segmentation', 'Settings', 'Security Audit'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -516,6 +543,11 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
                 {tab === 'Wallet' && customerWalletTransactions.length > 0 && (
                   <span className="ml-2 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px]">
                     {customerWalletTransactions.length}
+                  </span>
+                )}
+                {tab === 'Referrals' && referrals.length > 0 && (
+                  <span className="ml-2 px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-full text-[10px]">
+                    {referrals.length}
                   </span>
                 )}
               </button>
@@ -1226,6 +1258,171 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           )}
 
+          {activeTab === 'Referrals' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Timeline Section */}
+              {referralTimeline.length > 0 && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                      <History size={18} className="text-amber-600" />
+                      Referral Timeline
+                    </h3>
+                  </div>
+                  <div className="p-6 max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="relative pl-8 space-y-4">
+                      <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-slate-100"></div>
+                      {referralTimeline.slice(0, 20).map((entry) => (
+                        <div key={entry.id} className="relative">
+                          <div className="absolute -left-6 top-1 w-3 h-3 rounded-full border-2 border-amber-500 bg-white"></div>
+                          <p className="font-bold text-slate-900 text-sm">{entry.title}</p>
+                          {entry.description && <p className="text-[11px] text-slate-500">{entry.description}</p>}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                            {entry.amount !== undefined && <span className="text-[10px] font-bold text-emerald-600">{currency}{entry.amount.toLocaleString()}</span>}
+                            {entry.actorName && <span className="text-[10px] text-slate-400">by {entry.actorName}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-2xl shadow-lg shadow-amber-100 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <TrendingUp size={24} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Referrals Made</span>
+                  </div>
+                  <div className="text-3xl font-black">{referrals.length}</div>
+                  <p className="text-[11px] font-bold mt-2 opacity-80 uppercase tracking-tight">Total referrals</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Rewards Earned</span>
+                    <DollarSign size={16} className="text-emerald-500" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 finance-nums">
+                    {currency}{referralRewards.filter(r => r.status === 'paid' || r.status === 'approved').reduce((sum, r) => sum + r.amount, 0).toLocaleString()}
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1">Total rewards paid</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Pending</span>
+                    <Clock size={16} className="text-amber-500" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 finance-nums">
+                    {referralRewards.filter(r => r.status === 'pending').length}
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1">Awaiting approval</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                    <TrendingUp size={18} className="text-amber-600" />
+                    Referrals Made
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred Customer</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Code</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {referrals.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No referrals made by this customer.</td>
+                        </tr>
+                      ) : (
+                        referrals.map((ref) => (
+                          <tr key={ref.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-slate-900">{ref.referredByName || ref.customerId}</td>
+                            <td className="px-6 py-4 text-slate-500 font-medium">{ref.referralCode}</td>
+                            <td className="px-6 py-4 text-slate-500 font-medium">{format(parseISO(ref.date), 'MMM dd, yyyy')}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${ref.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : ref.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                {ref.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                    <DollarSign size={18} className="text-emerald-600" />
+                    Reward History
+                  </h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {referralRewards.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No rewards yet.</td>
+                        </tr>
+                      ) : (
+                        referralRewards.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((r) => (
+                          <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-slate-500 font-medium">{format(parseISO(r.date), 'MMM dd, yyyy')}</td>
+                            <td className="px-6 py-4 font-bold text-slate-900">#{r.invoiceId.slice(-8)}</td>
+                            <td className="px-6 py-4 font-black text-emerald-600 finance-nums">{currency}{r.amount.toLocaleString()}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${r.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : r.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : r.status === 'approved' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                                {r.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'Engagement' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <EngagementDashboard customerId={customer.id} customer={customer} />
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                    <History size={18} className="text-purple-600" />
+                    Engagement Timeline
+                  </h3>
+                </div>
+                <div className="p-6 max-h-80 overflow-y-auto custom-scrollbar">
+                  <EngagementTimeline customerId={customer.id} limit={30} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'Wallet' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Wallet Header */}
@@ -1315,12 +1512,6 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
           )}
         </div>
       </div>
-
-      {activeTab === 'Referrals' && (
-        <div className="animate-in fade-in duration-300">
-          <ReferralPanel customer={customer} currency={companyConfig?.currencySymbol || '$'} />
-        </div>
-      )}
 
       {/* Account Activity Modal */}
       {viewingAccountId && (

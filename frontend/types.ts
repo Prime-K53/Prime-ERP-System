@@ -323,6 +323,8 @@ export interface CompanyConfig {
     }>;
     [key: string]: any;
   };
+  referralSettings?: import('./types/referral').ReferralSettings;
+  engagementSettings?: import('./types/engagement').EngagementSettings;
 }
 
 export interface SalesOrderItem {
@@ -643,6 +645,8 @@ export interface Customer {
   city?: string;
   balance?: number;
   walletBalance?: number;
+  referredById?: string
+  referredByName?: string
   creditLimit?: number;
   creditHold?: boolean;
   outstandingBalance?: number;

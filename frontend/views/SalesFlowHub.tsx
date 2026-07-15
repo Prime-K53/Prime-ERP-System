@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Coins, FileText, FileCheck, Banknote as PaymentIcon, RefreshCw, MessageSquare, UserPlus, CheckSquare, Award, Target, Printer, Users } from 'lucide-react';
+import { Coins, FileText, FileCheck, Banknote as PaymentIcon, RefreshCw, MessageSquare, UserPlus, CheckSquare, Award, Target, Printer, Users, Gift } from 'lucide-react';
 import GenericHub from './GenericHub';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,21 +69,13 @@ const SalesFlowHub: React.FC = () => {
       path: '/sales-flow/leads',
       icon: <Target />,
       color: 'bg-cyan-50 text-cyan-600'
-    }
-    ,
-    {
-      label: 'Commissions',
-      description: 'Track and approve sales commissions for your sales team.',
-      path: '/sales-flow/commissions',
-      icon: <Award />,
-      color: 'bg-amber-50 text-amber-600'
     },
     {
       label: 'Referrals',
-      description: 'Manage customer referrals, commissions, and payout tracking.',
+      description: 'Manage customer referrals, rewards, and approval queue.',
       path: '/sales-flow/referrals',
-      icon: <Users />,
-      color: 'bg-sky-50 text-sky-600'
+      icon: <Gift />,
+      color: 'bg-amber-50 text-amber-500'
     }
   ];
 

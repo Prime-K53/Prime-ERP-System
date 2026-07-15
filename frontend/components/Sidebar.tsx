@@ -13,7 +13,8 @@ import {
   Wallet, Target, Truck, ShieldCheck, Database, WifiOff, HardDrive,
   CheckCircle, MonitorPlay, Maximize, Share2, Cpu as Processor, Sparkles,
   Smartphone, FileSpreadsheet, BookOpen, FileCheck, History,
-  Calculator, Search, GitFork
+  Calculator, Search, GitFork,
+  Gift
 } from 'lucide-react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -255,8 +256,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
             { label: 'Billing / Invoices', path: '/sales-flow/invoices', icon: <FileSpreadsheet size={14} /> },
             { label: 'Subscriptions', path: '/sales-flow/subscriptions', icon: <RefreshCw size={14} /> },
             { label: 'Lead Board', path: '/sales-flow/leads', icon: <Target size={14} /> },
-            { label: 'Commissions', path: '/sales-flow/commissions', icon: <Award size={14} /> },
-            { label: 'Referrals', path: '/sales-flow/referrals', icon: <GitFork size={14} /> },
+            { label: 'Referrals', path: '/sales-flow/referrals', icon: <Gift size={14} /> },
+
           ]
         },
         {

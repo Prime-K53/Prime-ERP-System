@@ -96,6 +96,11 @@ export const AVAILABLE_PERMISSIONS: PermissionNode[] = [
   { id: 'banking.manage', label: 'Manage Bank Accounts', module: 'Finance' },
   { id: 'payroll.manage', label: 'Process Payroll', module: 'Finance' },
 
+  // Referral Program
+  { id: 'referrals.view', label: 'View Referrals & Rewards', module: 'Sales' },
+  { id: 'referrals.approve', label: 'Approve Referral Rewards', module: 'Sales' },
+  { id: 'referrals.manage', label: 'Manage Referral Settings', module: 'System' },
+
   // System
   { id: 'admin.settings', label: 'Manage System Settings', module: 'System' },
   { id: 'admin.users', label: 'Manage Users & Groups', module: 'System' },
@@ -130,7 +135,7 @@ export const INITIAL_USER_GROUPS: UserGroup[] = [
     id: 'GRP-MANAGER',
     name: 'Managers',
     description: 'Operational managers with sales, inventory, and report visibility',
-    permissions: ['dashboard.view', 'reports.view', 'sales.view', 'sale.process', 'inventory.view', 'inventory.adjust', 'procurement.view']
+    permissions: ['dashboard.view', 'reports.view', 'sales.view', 'sale.process', 'inventory.view', 'inventory.adjust', 'procurement.view', 'referrals.view', 'referrals.approve']
   },
   {
     id: 'GRP-SALES',

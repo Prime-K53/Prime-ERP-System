@@ -52,7 +52,6 @@ export type ReportType =
   | 'sales_trends'
   | 'customer_analysis'
   | 'quotation_conversion'
-  | 'sales_commission'
   
   // Purchasing Reports
   | 'purchase_summary'

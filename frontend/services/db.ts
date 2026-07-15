@@ -4,6 +4,9 @@ import {
     Item, Warehouse, Purchase, Sale, Quotation, JobOrder, CustomerPayment, BillOfMaterial, ProductionBatch, WorkOrder, WorkCenter, ProductionResource, Account, LedgerEntry, Invoice, RecurringInvoice, Expense, Income, ScheduledPayment, WalletTransaction, DeliveryNote, Budget, Transfer, Employee, PayrollRun, Payslip, User, ResourceAllocation, GoodsReceipt, UserRole, SMSCampaign, Subscriber, SMSTemplate, Cheque, Shipment, SubcontractOrder, MaintenanceLog, AuditLogEntry, SystemAlert, Reminder, ExamJob, ExamPaper, ExamPrintingBatch, School, Customer, Supplier, SupplierPayment, Order, PurchaseAllocation, VatTransaction, VatReturn, BOMTemplate, MarketAdjustment, MarketAdjustmentTransaction, UserGroup, MaterialCategory, WarehouseInventory, MaterialBatch, InventoryTransaction, MaterialReservation, RoundingLog, ExaminationJob, ExaminationJobSubject, ExaminationInvoiceGroup, ExaminationRecurringProfile, ExaminationInventoryDeduction, CustomerReceiptSnapshot, ExaminationBatchNotification, NotificationAuditLog,     SalesOrder, JobTicket, JobTicketSettings,
     TaxRate
 } from '../types';
+import type { Referral, ReferralReward } from '../types/referral';
+import type { ReferralTimelineEntry, ReferralAuditEntry, ReferralCampaign, ReferralAnalytics, ReversalRequest, ReferralEvent } from '../types/referral-extended';
+import type { EngagementTimelineEntry, EngagementAuditEntry, PointEntry, PointBalance, CashbackEntry, MembershipTier, CustomerTier, GiftCard, GiftCardTransaction, AffiliateAccount, AffiliateCommission, Promotion, CustomerReward, EngagementAnalytics } from '../types/engagement';
 import type { ProductAttribute } from '../types/attributes';
 import { calculateCustomerPaymentSnapshot } from './receiptCalculationService';
 import { resetEnterpriseDatabase } from './dexie/database';
@@ -131,14 +134,33 @@ interface NexusDB extends DBSchema {
     taxRates: { key: string; value: TaxRate; };
     customerPricingTiers: { key: string; value: any; };
     discountRules: { key: string; value: any; };
-    referrals: { key: string; value: import('../types/referral').Referral; };
-    referralCommissions: { key: string; value: import('../types/referral').ReferralCommission; };
-    referralTransactions: { key: string; value: import('../types/referral').ReferralTransaction; };
-    referralLogs: { key: string; value: import('../types/referral').ReferralLog; };
+    referrals: { key: string; value: Referral; };
+    referralRewards: { key: string; value: ReferralReward; };
+    referralTimeline: { key: string; value: ReferralTimelineEntry; };
+    referralAuditLogs: { key: string; value: ReferralAuditEntry; };
+    referralCampaigns: { key: string; value: ReferralCampaign; };
+    referralAnalytics: { key: string; value: ReferralAnalytics; };
+    referralReversals: { key: string; value: ReversalRequest; };
+    referralEventHistory: { key: string; value: ReferralEvent; };
+    engagementTimeline: { key: string; value: EngagementTimelineEntry; };
+    engagementAudit: { key: string; value: EngagementAuditEntry; };
+    engagementPoints: { key: string; value: PointEntry; };
+    engagementPointBalances: { key: string; value: PointBalance; };
+    engagementCashback: { key: string; value: CashbackEntry; };
+    engagementMembershipTiers: { key: string; value: MembershipTier; };
+    engagementCustomerTiers: { key: string; value: CustomerTier; };
+    engagementGiftCards: { key: string; value: GiftCard; };
+    engagementGiftCardTransactions: { key: string; value: GiftCardTransaction; };
+    engagementAffiliates: { key: string; value: AffiliateAccount; };
+    engagementAffiliateCommissions: { key: string; value: AffiliateCommission; };
+    engagementPromotions: { key: string; value: Promotion; };
+    engagementCustomerRewards: { key: string; value: CustomerReward; };
+    engagementAnalytics: { key: string; value: EngagementAnalytics; };
+
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
-const DB_VERSION = 45;
+const DB_VERSION = 47;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
@@ -545,10 +567,29 @@ const CLOUD_TABLE_MAP: Record<string, string> = {
   quotations: 'quotations',
   orders: 'orders',
   boms: 'boms',
-  referrals: 'referrals',
-  referralCommissions: 'referral_commissions',
-  referralTransactions: 'referral_transactions',
-  referralLogs: 'referral_logs',
+  referrals: 'customer_referrals',
+  referralRewards: 'referral_rewards',
+  referralTimeline: 'referral_timeline',
+  referralAuditLogs: 'referral_audit_logs',
+  referralCampaigns: 'referral_campaigns',
+  referralAnalytics: 'referral_analytics',
+  referralReversals: 'referral_reversals',
+  referralEventHistory: 'referral_event_history',
+  engagementTimeline: 'engagement_timeline',
+  engagementAudit: 'engagement_audit',
+  engagementPoints: 'engagement_points',
+  engagementPointBalances: 'engagement_point_balances',
+  engagementCashback: 'engagement_cashback',
+  engagementMembershipTiers: 'engagement_membership_tiers',
+  engagementCustomerTiers: 'engagement_customer_tiers',
+  engagementGiftCards: 'engagement_gift_cards',
+  engagementGiftCardTransactions: 'engagement_gift_card_transactions',
+  engagementAffiliates: 'engagement_affiliates',
+  engagementAffiliateCommissions: 'engagement_affiliate_commissions',
+  engagementPromotions: 'engagement_promotions',
+  engagementCustomerRewards: 'engagement_customer_rewards',
+  engagementAnalytics: 'engagement_analytics',
+
 };
 
 function getCloudTable(storeName: string): string {
@@ -599,9 +640,28 @@ const STORE_NAMES: (keyof NexusDB)[] = [
     'customerPricingTiers',
     'discountRules',
     'referrals',
-    'referralCommissions',
-    'referralTransactions',
-    'referralLogs'
+    'referralRewards',
+    'referralTimeline',
+    'referralAuditLogs',
+    'referralCampaigns',
+    'referralAnalytics',
+    'referralReversals',
+    'referralEventHistory',
+    'engagementTimeline',
+    'engagementAudit',
+    'engagementPoints',
+    'engagementPointBalances',
+    'engagementCashback',
+    'engagementMembershipTiers',
+    'engagementCustomerTiers',
+    'engagementGiftCards',
+    'engagementGiftCardTransactions',
+    'engagementAffiliates',
+    'engagementAffiliateCommissions',
+    'engagementPromotions',
+    'engagementCustomerRewards',
+    'engagementAnalytics',
+
 ];
 
 export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {

@@ -480,7 +480,7 @@ export const transactionService = {
     async processSale(sale: Sale, excessHandling?: 'Change' | 'Wallet', performedBy?: string) {
         const stores: any[] = ['sales', 'inventory', 'ledger', 'accounts', 'customers', 'walletTransactions', 'customerPayments', 'vatTransactions', 'bomTemplates', 'marketAdjustments', 'marketAdjustmentTransactions', 'bankAccounts', 'bankTransactions', 'invoices', 'inventoryTransactions', 'idempotencyKeys'];
 
-        return dbService.executeAtomicOperation(
+        const saleResult = await dbService.executeAtomicOperation(
             stores,
             async (tx) => {
                 await reserveIdempotencyKey(tx, 'sale', sale.id, sale.idempotencyKey);
@@ -1170,13 +1170,39 @@ export const transactionService = {
                     consumptionSnapshots: sale.consumptionSnapshots,
                     isPriceLocked: sale.isPriceLocked,
                     transactionAdjustments: sale.transactionAdjustments,
-                    adjustmentSummary: sale.adjustmentSummary
+                    adjustmentSummary: sale.adjustmentSummary,
+                    referredBy: sale.referredBy,
+                    referredByName: sale.referredByName,
                 };
                 await invoicesStore.put(invoice);
 
-                return { success: true, id: sale.id };
+                return { success: true, id: sale.id, _paidInvoice: invoiceStatus === 'Paid' && sale.customerId ? { id: invoiceId, status: invoiceStatus, customerId: sale.customerId, totalAmount: sale.totalAmount, paidAmount: invoicePaid, referredBy: sale.referredBy, referredByName: sale.referredByName } : null };
             }
         );
+        if (saleResult?._paidInvoice) {
+            import('./referralService').then(({ referralService }) =>
+                referralService.processInvoiceReward(saleResult._paidInvoice).catch(err =>
+                    logger.error('Referral reward processing failed:', err)
+                )
+            );
+            import('./engagementEngine').then(({ engagementEngine }) =>
+                engagementEngine.emit('invoice.paid', {
+                    source: 'transactionService',
+                    entityType: 'invoice',
+                    entityId: saleResult._paidInvoice.id,
+                    data: {
+                        customerId: saleResult._paidInvoice.customerId,
+                        totalAmount: saleResult._paidInvoice.totalAmount,
+                        paidAmount: saleResult._paidInvoice.paidAmount,
+                        referredBy: saleResult._paidInvoice.referredBy,
+                    },
+                    correlationId: `invoice-${saleResult._paidInvoice.id}`,
+                }).catch(err =>
+                    logger.error('Engagement processing failed:', err)
+                )
+            );
+        }
+        return saleResult;
     },
 
     async deleteSalesExchange(id: string) {
@@ -2103,13 +2129,23 @@ export const transactionService = {
                 return { success: true, id: invoice.id };
             }
         );
-        try {
-            if (invoice.status === 'Paid' && invoice.customerId) {
-                const { referralService } = await import('./referralService');
-                await referralService.processInvoiceCommission(invoice, paymentId);
-            }
-        } catch (e) {
-            logger.error('Failed to process referral commission', e);
+        if (invoice.status === 'Paid' && invoice.customerId) {
+            import('./engagementEngine').then(({ engagementEngine }) =>
+                engagementEngine.emit('invoice.paid', {
+                    source: 'transactionService',
+                    entityType: 'invoice',
+                    entityId: invoice.id,
+                    data: {
+                        customerId: invoice.customerId,
+                        totalAmount: invoice.totalAmount,
+                        paidAmount: invoice.paidAmount,
+                        referredBy: invoice.referredBy,
+                    },
+                    correlationId: `invoice-${invoice.id}`,
+                }).catch(err =>
+                    logger.error('Engagement processing failed:', err)
+                )
+            );
         }
     },
 
@@ -2422,7 +2458,8 @@ export const transactionService = {
     },
 
     async addCustomerPayment(payment: CustomerPayment) {
-        return dbService.executeAtomicOperation(
+        const paidInvoices: any[] = [];
+        const payResult = await dbService.executeAtomicOperation(
             ['customerPayments', 'invoices', 'customers', 'ledger', 'walletTransactions', 'bankAccounts', 'bankTransactions', 'idempotencyKeys'],
             async (tx) => {
                 await reserveIdempotencyKey(tx, 'customer_payment', payment.id, payment.idempotencyKey);
@@ -2523,6 +2560,7 @@ export const transactionService = {
 
                     if (invoice.paidAmount >= invoice.totalAmount) {
                         invoice.status = 'Paid';
+                        paidInvoices.push({ id: invoice.id, status: invoice.status, customerId: invoice.customerId, totalAmount: invoice.totalAmount, paidAmount: invoice.paidAmount, referredBy: invoice.referredBy, referredByName: invoice.referredByName });
                     } else if (invoice.paidAmount > 0) {
                         invoice.status = 'Partial';
                     }
@@ -2680,18 +2718,28 @@ export const transactionService = {
                 return { success: true };
             }
         );
-        // Process referral commissions for paid invoices after atomic commit
-        try {
-            const invoiceIds = [...new Set((payment.allocations || []).map((a: any) => a.invoiceId).filter(Boolean))];
-            for (const invoiceId of invoiceIds) {
-                const invoice = await dbService.get<any>('invoices', invoiceId);
-                if (invoice && invoice.status === 'Paid') {
-                    const { referralService } = await import('./referralService');
-                    await referralService.processInvoiceCommission(invoice, payment.id);
-                }
-            }
-        } catch (e) {
-            logger.error('Failed to process referral commissions', e);
+        for (const pi of paidInvoices) {
+            import('./referralService').then(({ referralService }) =>
+                referralService.processInvoiceReward(pi).catch(err =>
+                    logger.error('Referral reward processing failed for payment:', err)
+                )
+            );
+            import('./engagementEngine').then(({ engagementEngine }) =>
+                engagementEngine.emit('invoice.paid', {
+                    source: 'transactionService',
+                    entityType: 'invoice',
+                    entityId: pi.id,
+                    data: {
+                        customerId: pi.customerId,
+                        totalAmount: pi.totalAmount,
+                        paidAmount: pi.paidAmount,
+                        referredBy: pi.referredBy,
+                    },
+                    correlationId: `invoice-${pi.id}`,
+                }).catch(err =>
+                    logger.error('Engagement processing failed:', err)
+                )
+            );
         }
     },
 
@@ -2866,16 +2914,6 @@ export const transactionService = {
                 return { success: true };
             }
         );
-        // Reverse referral commissions for voided payments
-        try {
-            const invoiceIds = [...new Set((payment.allocations || []).map((a: any) => a.invoiceId).filter(Boolean))];
-            for (const invoiceId of invoiceIds) {
-                const { referralService } = await import('./referralService');
-                await referralService.reverseCommissionForInvoice(invoiceId, `Payment ${paymentId} voided: ${reason}`);
-            }
-        } catch (e) {
-            logger.error('Failed to reverse referral commissions on void', e);
-        }
     },
 
     async saveCustomer(customer: Customer, oldCustomer?: Customer) {
@@ -3084,12 +3122,6 @@ export const transactionService = {
                 return { success: true };
             }
         );
-        try {
-            const { referralService } = await import('./referralService');
-            await referralService.reverseCommissionForInvoice(id, `Invoice ${id} voided: ${reason}`);
-        } catch (e) {
-            logger.error('Failed to reverse referral commissions on invoice void', e);
-        }
     },
 
     async voidSale(id: string, reason: string) {
@@ -3316,15 +3348,6 @@ export const transactionService = {
                 return { success: true };
             }
         );
-        try {
-            const { referralService } = await import('./referralService');
-            const saleData = await dbService.get<any>('sales', id);
-            if (saleData?.invoiceId) {
-                await referralService.reverseCommissionForInvoice(saleData.invoiceId, `Sale ${id} voided: ${reason}`);
-            }
-        } catch (e) {
-            logger.error('Failed to reverse referral commissions on sale void', e);
-        }
     },
 
     async syncInventoryValuation(accountId: string, physicalValue: number, currentLedgerBalance: number) {

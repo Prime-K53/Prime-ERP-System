@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useFinance } from '../../../context/FinanceContext';
 import { getPlaceholder } from '../../../constants/placeholders';
 import { currencyService } from '../../../services/currencyService';
-import { referralService } from '../../../services/referralService';
+import { CustomerSearch } from '../../../components/CustomerSearch';
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -39,7 +39,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
     leadScore: 0,
     nextFollowUpDate: '',
     estimatedDealValue: 0,
-    referredBy: ''
+    referredById: '',
+    referredByName: ''
   });
 
   const [useBillingForShipping, setUseBillingForShipping] = useState(true);
@@ -47,44 +48,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
 
   const { invoices } = useFinance(); const { companyConfig } = useAuth();
   const { customers: allCustomers } = useFinance();
-
-  const [referrerSearch, setReferrerSearch] = useState('');
-  const [isReferrerOpen, setIsReferrerOpen] = useState(false);
-  const referrerRef = useRef<HTMLDivElement>(null);
-
-  const hasPaidTransactions = useMemo(() => {
-    if (!customer?.id) return false;
-    return (invoices || []).some((inv: any) => inv.customerId === customer.id && inv.status === 'Paid');
-  }, [invoices, customer]);
-
-  const referrerLocked = hasPaidTransactions;
-
-  useEffect(() => {
-    if (formData.referredBy) {
-      const refCust = (allCustomers || []).find((c: any) => c.id === formData.referredBy);
-      setReferrerSearch(refCust?.name || '');
-    }
-  }, [formData.referredBy, allCustomers]);
-
-  const referrerFiltered = useMemo(() => {
-    const q = referrerSearch.toLowerCase();
-    return (allCustomers || []).filter((c: any) => {
-      if (c.id === customer?.id) return false;
-      return c.name?.toLowerCase().includes(q)
-        || c.phone?.toLowerCase().includes(q)
-        || c.email?.toLowerCase().includes(q);
-    });
-  }, [allCustomers, referrerSearch, customer]);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (referrerRef.current && !referrerRef.current.contains(e.target as Node)) {
-        setIsReferrerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   useEffect(() => {
     if (customer) {
@@ -112,7 +75,8 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
         leadScore: (customer as Customer & Record<string, unknown>).leadScore ?? 0,
         nextFollowUpDate: (customer as Customer & Record<string, unknown>).nextFollowUpDate || '',
         estimatedDealValue: (customer as Customer & Record<string, unknown>).estimatedDealValue ?? 0,
-        referredBy: (customer as Customer & Record<string, unknown>).referredBy || ''
+        referredById: (customer as Customer & Record<string, unknown>).referredById || '',
+        referredByName: (customer as Customer & Record<string, unknown>).referredByName || '',
       });
       setUseBillingForShipping(customer.billingAddress === customer.shippingAddress);
     } else {
@@ -120,7 +84,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
         name: '', phone: '', address: '', city: '', billingAddress: '', shippingAddress: '',
         balance: 0, walletBalance: 0, creditLimit: 0, notes: '',
         paymentTerms: getDefaultPaymentTermsForSegment('Individual'), subAccounts: [], segment: 'Individual', assignedSalesperson: '',
-        creditHold: false, tags: [], avgPaymentDays: 0, leadSource: '', pipelineStage: 'New', leadScore: 0, nextFollowUpDate: '', estimatedDealValue: 0, referredBy: ''
+        creditHold: false, tags: [], avgPaymentDays: 0, leadSource: '', pipelineStage: 'New', leadScore: 0, nextFollowUpDate: '', estimatedDealValue: 0, referredById: '', referredByName: ''
       });
       setUseBillingForShipping(true);
     }
@@ -148,17 +112,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
       dataToSave.paymentTerms = getDefaultPaymentTermsForSegment(dataToSave.segment || 'Individual');
     }
     
-    const isNew = !customer?.id;
     await onSave(dataToSave as Customer);
-
-    // Create/update referral when referredBy is set
-    if (dataToSave.referredBy) {
-      const custId = customer?.id || dataToSave.id;
-      const existingRef = await referralService.getReferrerForCustomer(custId);
-      if (!existingRef && custId) {
-        await referralService.assignReferral(dataToSave.referredBy, custId);
-      }
-    }
 
     onClose();
   };
@@ -421,7 +375,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                         <select name="leadSource" value={formData.leadSource || ''} onChange={handleChange}
                           className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer">
                           <option value="">Not Set</option>
-                          <option value="Referral">Referral</option>
                           <option value="Website">Website</option>
                           <option value="Walk-in">Walk-in</option>
                           <option value="Social Media">Social Media</option>
@@ -429,35 +382,20 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                           <option value="Email Campaign">Email Campaign</option>
                         </select>
                       </div>
-                      <div ref={referrerRef}>
+                      <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Referred By</label>
-                        <div className="relative">
-                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                          <input type="text" value={referrerSearch}
-                            onChange={e => { setReferrerSearch(e.target.value); setIsReferrerOpen(true); }}
-                            onFocus={() => setIsReferrerOpen(true)}
-                            disabled={referrerLocked}
-                            className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
-                            placeholder="Search customer..." />
-                          {isReferrerOpen && !referrerLocked && (
-                            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                              <button onClick={() => { setFormData(p => ({ ...p, referredBy: '' })); setReferrerSearch(''); setIsReferrerOpen(false); }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-slate-100 font-medium text-slate-500 italic">
-                                No Referrer
-                              </button>
-                              {referrerFiltered.map((c: any) => (
-                                <button key={c.id} onClick={() => { setFormData(p => ({ ...p, referredBy: c.id })); setReferrerSearch(c.name); setIsReferrerOpen(false); }}
-                                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center">
-                                  <span className="font-medium text-slate-700">{c.name}</span>
-                                  <span className="text-xs text-slate-400">{c.phone || c.email || ''}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        {referrerLocked && (
-                          <p className="text-[10px] text-amber-600 mt-1 font-medium">Referrer is locked after first paid transaction.</p>
-                        )}
+                        <CustomerSearch
+                          mode="referrer"
+                          value={formData.referredById}
+                          onChange={(customer) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              referredById: customer?.id || '',
+                              referredByName: customer?.name || ''
+                            }))
+                          }}
+                          placeholder="Search referrer customer..."
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Pipeline Stage</label>
