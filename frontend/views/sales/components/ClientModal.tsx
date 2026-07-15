@@ -45,6 +45,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
 
   const [useBillingForShipping, setUseBillingForShipping] = useState(true);
   const [activeTab, setActiveTab] = useState<'Address' | 'Payment' | 'Additional' | 'Branches'>('Address');
+  const [referrerSearchOpen, setReferrerSearchOpen] = useState(false);
 
   const { invoices } = useFinance(); const { companyConfig } = useAuth();
   const { customers: allCustomers } = useFinance();
@@ -384,18 +385,32 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Referred By</label>
-                        <CustomerSearch
-                          mode="referrer"
-                          value={formData.referredById}
-                          onChange={(customer) => {
-                            setFormData(prev => ({
-                              ...prev,
-                              referredById: customer?.id || '',
-                              referredByName: customer?.name || ''
-                            }))
-                          }}
-                          placeholder="Search referrer customer..."
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            value={formData.referredByName || formData.referredById || ''}
+                            onChange={() => {}}
+                            placeholder="Search referrer customer..."
+                            onClick={() => setReferrerSearchOpen(true)}
+                            readOnly
+                            className="flex-1 w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setReferrerSearchOpen(true)}
+                            className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all"
+                          >
+                            <Search size={16} />
+                          </button>
+                          {formData.referredById && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, referredById: '', referredByName: '' }))}
+                              className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-all"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Pipeline Stage</label>
@@ -494,6 +509,20 @@ export const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, onSav
           </div>
         </div>
       </div>
+
+      <CustomerSearch
+        open={referrerSearchOpen}
+        mode="referrer"
+        onSelect={(customer) => {
+          setFormData(prev => ({
+            ...prev,
+            referredById: customer?.id || '',
+            referredByName: customer?.name || ''
+          }))
+          setReferrerSearchOpen(false)
+        }}
+        onClose={() => setReferrerSearchOpen(false)}
+      />
     </div>
   );
 };
