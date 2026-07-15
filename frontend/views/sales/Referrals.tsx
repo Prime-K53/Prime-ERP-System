@@ -2,12 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Award, Users, DollarSign, TrendingUp, Search, ExternalLink, CheckCircle, Clock, XCircle, Filter, RefreshCw, Download, FileText, CreditCard, Wallet, Shield } from 'lucide-react';
 import { referralService } from '../../services/referralService';
 import { dbService } from '../../services/db';
+import { currencyService } from '../../services/currencyService';
+import { useAuth } from '../../context/AuthContext';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import type { Referral, ReferralCommission } from '../../types/referral';
 
 export default function ReferralsPage() {
   const navigate = useNavigate();
+  const { companyConfig } = useAuth();
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [commissions, setCommissions] = useState<ReferralCommission[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -109,11 +113,11 @@ export default function ReferralsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 px-8 py-4">
         <StatCard icon={Users} label="Total Referrals" value={stats.totalReferrals.toString()} color="blue" />
         <StatCard icon={CheckCircle} label="Active" value={stats.active.toString()} color="emerald" />
-        <StatCard icon={DollarSign} label="Total Commission" value={`$${stats.totalCommissionAmount.toLocaleString()}`} color="indigo" />
-        <StatCard icon={Clock} label="Pending" value={`$${stats.pendingAmount.toLocaleString()}`} color="amber" />
-        <StatCard icon={CheckCircle} label="Approved" value={`$${stats.approvedAmount.toLocaleString()}`} color="blue" />
-        <StatCard icon={Award} label="Paid" value={`$${stats.paidAmount.toLocaleString()}`} color="emerald" />
-        <StatCard icon={TrendingUp} label="Sales" value={`$${stats.referralSales.toLocaleString()}`} color="purple" />
+        <StatCard icon={DollarSign} label="Total Commission" value={`${currency}${stats.totalCommissionAmount.toLocaleString()}`} color="indigo" />
+        <StatCard icon={Clock} label="Pending" value={`${currency}${stats.pendingAmount.toLocaleString()}`} color="amber" />
+        <StatCard icon={CheckCircle} label="Approved" value={`${currency}${stats.approvedAmount.toLocaleString()}`} color="blue" />
+        <StatCard icon={Award} label="Paid" value={`${currency}${stats.paidAmount.toLocaleString()}`} color="emerald" />
+        <StatCard icon={TrendingUp} label="Sales" value={`${currency}${stats.referralSales.toLocaleString()}`} color="purple" />
       </div>
 
       {/* Tabs */}
@@ -156,8 +160,8 @@ export default function ReferralsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 font-medium text-slate-700">{r.count}</td>
-                        <td className="px-6 py-4 font-medium text-slate-700">${r.sales.toLocaleString()}</td>
-                        <td className="px-6 py-4 font-bold text-emerald-600">${r.commission.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-medium text-slate-700">{currency}{r.sales.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-bold text-emerald-600">{currency}{r.commission.toLocaleString()}</td>
                       </tr>
                     ))}
                     {topReferrers.length === 0 && (
@@ -216,9 +220,9 @@ export default function ReferralsPage() {
                             {c.invoiceId.slice(0, 12)}...
                           </button>
                         </td>
-                        <td className="px-6 py-4 text-slate-700">${c.invoiceAmount.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-slate-700">{currency}{c.invoiceAmount.toLocaleString()}</td>
                         <td className="px-6 py-4 text-slate-700">{c.commissionRate}%</td>
-                        <td className="px-6 py-4 font-bold text-emerald-600">${c.commissionAmount.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-bold text-emerald-600">{currency}{c.commissionAmount.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                             c.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
