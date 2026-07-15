@@ -440,7 +440,8 @@ const LOCAL_ONLY_STORES = new Set([
   'syncOutbox', 'files', 'idempotencyKeys',
   'customerNotificationLogs',
   'alerts', 'auditLogs',
-  'productAttributes'
+  'productAttributes',
+  'referrals', 'referralCommissions', 'referralTransactions', 'referralLogs'
 ]);
 
 const shouldUseCloud = () => {

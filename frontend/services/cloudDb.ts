@@ -82,6 +82,10 @@ export const STORE_TO_TABLE: Record<string, string> = {
   shipments: 'shipments',
   schools: 'schools',
   tasks: 'tasks',
+  referrals: 'referrals',
+  referralCommissions: 'referral_commissions',
+  referralTransactions: 'referral_transactions',
+  referralLogs: 'referral_logs',
 };
 
 const SUPABASE_ENABLED = isSupabaseConfigured();
