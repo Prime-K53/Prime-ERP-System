@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd frontend && npx vite build",
+  "rootDirectory": "frontend",
+  "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "outputDirectory": "frontend/dist",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
