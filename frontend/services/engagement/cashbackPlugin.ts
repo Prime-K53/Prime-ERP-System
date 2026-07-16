@@ -4,6 +4,7 @@ import { generateId } from '../transactions/_internal'
 import { dbService } from '../db'
 import { logger } from '../logger'
 import { referralEventBus } from '../referralEventBus'
+import { WalletTransaction } from '../../types'
 
 export const cashbackPlugin: IEngagementPlugin = {
   id: 'cashback',
@@ -136,23 +137,63 @@ export async function approveCashback(cashbackId: string, approvedBy: string): P
       data: { amount: entry.amount },
       actorId: approvedBy,
     })
+
+    // Auto-pay if no further delay is configured
+    if (!entry.scheduledAt) {
+      await payCashback(cashbackId)
+    }
   } catch (err) {
     logger.error('CashbackPlugin: approveCashback failed:', err)
     throw err
   }
 }
 
-export async function payCashback(cashbackId: string, walletTxId: string): Promise<void> {
+export async function payCashback(cashbackId: string, walletTxId?: string): Promise<string> {
   try {
     const all = await dbService.getAll<CashbackEntry>('engagementCashback')
     const entry = all.find((c: any) => c.id === cashbackId)
     if (!entry) throw new Error('Cashback entry not found')
 
-    entry.status = 'paid'
-    entry.walletTxId = walletTxId
-    entry.updatedAt = new Date().toISOString()
+    const customers = await dbService.getAll<any>('customers')
+    const customer = customers.find((c: any) => c.id === entry.customerId)
+    if (!customer) throw new Error('Customer not found')
 
-    await dbService.put('engagementCashback', entry as any)
+    const txId = walletTxId || generateId('WLT-CBK')
+
+    const walletTx: WalletTransaction = {
+      id: txId,
+      customerId: entry.customerId,
+      amount: entry.amount,
+      type: 'Credit',
+      date: new Date().toISOString(),
+      reference: `Cashback for invoice #${entry.invoiceId}`,
+      description: `Cashback credit (${entry.rate?.toFixed(2)}%)`,
+    }
+
+    await dbService.executeAtomicOperation(
+      ['engagementCashback', 'customers', 'walletTransactions'],
+      async (tx) => {
+        entry.status = 'paid'
+        entry.walletTxId = txId
+        entry.updatedAt = new Date().toISOString()
+        await tx.objectStore('engagementCashback').put(entry)
+
+        customer.walletBalance = (customer.walletBalance || 0) + entry.amount
+        await tx.objectStore('customers').put(customer)
+
+        await tx.objectStore('walletTransactions').put(walletTx)
+      }
+    )
+
+    referralEventBus.emit(ENGAGEMENT_EVENT_TYPES.CASHBACK_ISSUED, {
+      source: 'cashbackPlugin',
+      entityType: 'cashback',
+      entityId: cashbackId,
+      data: { amount: entry.amount, walletTxId: txId, status: 'paid' },
+      actorId: 'system',
+    })
+
+    return txId
   } catch (err) {
     logger.error('CashbackPlugin: payCashback failed:', err)
     throw err

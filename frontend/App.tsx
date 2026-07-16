@@ -142,6 +142,9 @@ const UserManagement = lazyWithRetry('./views/admin/UserManagement', () => impor
 const ProfileActivity = lazyWithRetry('./views/admin/ProfileActivity', () => import('./views/admin/ProfileActivity'));
 const Profile = lazyWithRetry('./views/Profile', () => import('./views/Profile'));
 const MigrationHealth = lazyWithRetry('./views/admin/MigrationHealth', () => import('./views/admin/MigrationHealth'));
+const MembershipTiersAdmin = lazyWithRetry('./views/admin/MembershipTiersAdmin', () => import('./views/admin/MembershipTiersAdmin'));
+const PromotionsAdmin = lazyWithRetry('./views/admin/PromotionsAdmin', () => import('./views/admin/PromotionsAdmin'));
+const GiftCardsAdmin = lazyWithRetry('./views/admin/GiftCardsAdmin', () => import('./views/admin/GiftCardsAdmin'));
 const BOMRecipes = lazyWithRetry('./views/production/BOMRecipes', () => import('./views/production/BOMRecipes'));
 const DataImport = lazyWithRetry('./views/admin/DataImport', () => import('./views/admin/DataImport'));
 const LegacyMigrationPage = lazyWithRetry('./views/tools/LegacyMigrationPage', () => import('./views/tools/LegacyMigrationPage'));
@@ -649,6 +652,9 @@ const AppLayout: React.FC = () => {
                 <Route path="/admin/users" element={<ErrorBoundary name="Admin"><ProtectedRoute permission="admin.users"><UserManagement /></ProtectedRoute></ErrorBoundary>} />
                 <Route path="/admin/profile" element={<ErrorBoundary name="Admin"><ProfileActivity /></ErrorBoundary>} />
                 <Route path="/admin/migration-health" element={<ErrorBoundary name="Admin"><MigrationHealth /></ErrorBoundary>} />
+                <Route path="/admin/membership-tiers" element={<ErrorBoundary name="Admin"><ProtectedRoute permission="admin.settings"><MembershipTiersAdmin /></ProtectedRoute></ErrorBoundary>} />
+                <Route path="/admin/promotions" element={<ErrorBoundary name="Admin"><ProtectedRoute permission="admin.settings"><PromotionsAdmin /></ProtectedRoute></ErrorBoundary>} />
+                <Route path="/admin/gift-cards" element={<ErrorBoundary name="Admin"><ProtectedRoute permission="admin.settings"><GiftCardsAdmin /></ProtectedRoute></ErrorBoundary>} />
                 <Route path="/profile" element={<ErrorBoundary name="Profile"><Profile /></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary name="Settings"><ProtectedRoute permission="admin.settings"><Settings /></ProtectedRoute></ErrorBoundary>} />
 

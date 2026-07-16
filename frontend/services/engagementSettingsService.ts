@@ -1,5 +1,8 @@
 import { EngagementSettings, DEFAULT_ENGAGEMENT_SETTINGS } from '../types/engagement'
 import { logger } from './logger'
+import { dbService } from './db'
+
+const SETTINGS_KEY = 'engagementSettings'
 
 function getCompanyConfig(): any {
   try {
@@ -18,18 +21,42 @@ function saveCompanyConfig(config: any): void {
   }
 }
 
+async function persistSettingsToDb(settings: EngagementSettings): Promise<void> {
+  try {
+    await dbService.put('settings', { id: SETTINGS_KEY, value: settings, updatedAt: new Date().toISOString() })
+  } catch (err) {
+    logger.error('Failed to persist engagement settings to DB:', err)
+  }
+}
+
+async function loadSettingsFromDb(): Promise<EngagementSettings | null> {
+  try {
+    const record = await dbService.get<any>('settings', SETTINGS_KEY)
+    if (record?.value) return record.value as EngagementSettings
+  } catch { /* ignore */ }
+  return null
+}
+
 export const engagementSettingsService = {
   getSettings(): EngagementSettings {
     const config = getCompanyConfig()
     return { ...DEFAULT_ENGAGEMENT_SETTINGS, ...config.engagementSettings }
   },
 
-  updateSettings(updates: Partial<EngagementSettings>): EngagementSettings {
+  async getSettingsAsync(): Promise<EngagementSettings> {
+    const dbSettings = await loadSettingsFromDb()
+    if (dbSettings) return { ...DEFAULT_ENGAGEMENT_SETTINGS, ...dbSettings }
+    return this.getSettings()
+  },
+
+  async updateSettings(updates: Partial<EngagementSettings>): Promise<EngagementSettings> {
     const config = getCompanyConfig()
     const current = config.engagementSettings || {}
-    config.engagementSettings = { ...current, ...updates }
+    const merged = { ...current, ...updates }
+    config.engagementSettings = merged
     saveCompanyConfig(config)
-    return config.engagementSettings
+    await persistSettingsToDb(merged)
+    return merged
   },
 
   isEnabled(): boolean {
@@ -51,10 +78,11 @@ export const engagementSettingsService = {
     }
   },
 
-  resetSettings(): EngagementSettings {
+  async resetSettings(): Promise<EngagementSettings> {
     const config = getCompanyConfig()
     config.engagementSettings = { ...DEFAULT_ENGAGEMENT_SETTINGS }
     saveCompanyConfig(config)
+    await persistSettingsToDb(DEFAULT_ENGAGEMENT_SETTINGS)
     return config.engagementSettings
   },
 }

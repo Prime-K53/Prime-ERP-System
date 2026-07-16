@@ -12,14 +12,14 @@ export const EngagementSettingsTab: React.FC = () => {
     setSettings((prev) => ({ ...prev, ...partial }))
   }
 
-  const handleSave = () => {
-    engagementSettingsService.updateSettings(settings)
+  const handleSave = async () => {
+    await engagementSettingsService.updateSettings(settings)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const handleReset = () => {
-    const defaults = engagementSettingsService.resetSettings()
+  const handleReset = async () => {
+    const defaults = await engagementSettingsService.resetSettings()
     setSettings(defaults)
   }
 

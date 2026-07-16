@@ -662,6 +662,9 @@ const Settings: React.FC = () => {
             title: 'Engagement',
             items: [
                 { id: 'Engagement', icon: Award, label: 'Engagement', desc: 'Loyalty, cashback, membership, gift cards, affiliate, promotions, rewards' },
+                { id: 'MembershipTiers', icon: Award, label: 'Membership Tiers', desc: 'Manage loyalty tiers and benefits' },
+                { id: 'Promotions', icon: Tag, label: 'Promotions', desc: 'Manage discounts and promotional campaigns' },
+                { id: 'GiftCards', icon: CreditCard, label: 'Gift Cards', desc: 'Issue and manage gift cards' },
             ]
         },
         {
@@ -744,7 +747,12 @@ const Settings: React.FC = () => {
                                     {group.items.map(item => (
                                         <button
                                             key={item.id}
-                                            onClick={() => setActiveTab(item.id)}
+                                            onClick={() => {
+                                              if (item.id === 'MembershipTiers') return navigate('/admin/membership-tiers')
+                                              if (item.id === 'Promotions') return navigate('/admin/promotions')
+                                              if (item.id === 'GiftCards') return navigate('/admin/gift-cards')
+                                              setActiveTab(item.id)
+                                            }}
                                             className={`w-full flex items-center justify-between px-4 py-3 border-l-4 transition-all text-left ${activeTab === item.id
                                                 ? 'bg-blue-50 border-blue-600 text-blue-600'
                                                 : 'border-transparent text-[#6B6C6F] hover:bg-[#F4F5F8]'

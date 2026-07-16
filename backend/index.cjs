@@ -925,6 +925,10 @@ async function startServer() {
   const whatsappRoutes = require('./routes/whatsapp.cjs');
   app.use('/api/whatsapp', verifyToken, whatsappRoutes);
 
+  // --- Engagement (Loyalty, Cashback, Gift Cards, Promotions, etc.) ---
+  const engagementRoutes = require('./routes/engagement.cjs');
+  app.use('/api/engagement', verifyToken, engagementRoutes);
+
   const notificationsRoute = require('./routes/notifications.cjs');
   app.use('/api/notifications', verifyToken, notificationsRoute);
 

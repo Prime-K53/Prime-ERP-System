@@ -43,6 +43,10 @@ class CustomerEngagementEngine {
     return Array.from(this.plugins.values())
   }
 
+  emit(eventType: string, data: { source: string; entityType: string; entityId: string; data?: any; actorId?: string; correlationId?: string }): Promise<string> {
+    return referralEventBus.emit(eventType, data)
+  }
+
   destroy(): void {
     for (const unsub of this.unsubscribers) {
       try { unsub() } catch { }
@@ -157,7 +161,7 @@ class CustomerEngagementEngine {
     try {
       await referralEventBus.emit(`engagement.${plugin.id}.applied`, {
         source: 'engagementEngine',
-        entityType: plugin.id as any,
+        entityType: plugin.id,
         entityId: context.event.entityId || customerId,
         data: { result, customerId },
         actorId: context.event.actorId,

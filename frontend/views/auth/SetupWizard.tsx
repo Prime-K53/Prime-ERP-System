@@ -207,8 +207,7 @@ const SetupWizard: React.FC = () => {
           role: 'Admin',
           is_super_admin: true,
           group_ids: ['GRP-ADMIN'],
-          company_id: companyConfig?.companyId || '',
-          company_name: companyConfig?.companyName || '',
+          company_name: admin.fullName.trim(),
         });
 
         if (!signUpResult.success) {

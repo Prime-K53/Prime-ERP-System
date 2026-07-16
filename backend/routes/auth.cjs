@@ -7,18 +7,11 @@ const { validateBody, userSchemas } = require('../middleware/validation.cjs');
 router.post('/register', validateBody(userSchemas.createUser), async (req, res) => {
   try {
     const { username, email, password, role, permissions } = req.body;
-    const companyId = req.companyId || req.body.companyId || '';
-    const user = await authService.registerUser({ username, email, password, role, permissions, companyId });
-    if (companyId) {
-      const { db } = require('../db.cjs');
-      const membershipId = `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      db.run(
-        'INSERT OR IGNORE INTO user_companies (id, user_id, company_id, role) VALUES (?, ?, ?, ?)',
-        [membershipId, user.id, companyId, role || 'member']
-      );
-    }
-    const token = generateToken({ ...user, company_id: companyId });
-    res.status(201).json({ message: 'User registered successfully', user: { ...user, company_id: companyId }, token });
+    // Do NOT accept companyId from request body — it must be set by an admin
+    // after registration. This prevents attackers from joining arbitrary companies.
+    const user = await authService.registerUser({ username, email, password, role, permissions, companyId: '' });
+    const token = generateToken({ ...user, company_id: '' });
+    res.status(201).json({ message: 'User registered successfully', user: { ...user, company_id: '' }, token });
   } catch (err) {
     if (err.message === 'Username already exists') {
       return res.status(409).json({ error: err.message });

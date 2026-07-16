@@ -12,20 +12,21 @@ class ReferralEventBus {
 
   async emit(eventType: string, params: {
     source: string
-    entityType: 'referral' | 'reward' | 'campaign' | 'setting'
+    entityType: string
     entityId: string
     data?: Record<string, any>
     actorId?: string
     correlationId?: string
   }): Promise<string> {
+    const eventId = generateId('EVT')
     const event: ReferralEvent = {
-      id: generateId('EVT'),
-      eventType: eventType as ReferralEvent['eventType'],
+      id: eventId,
+      eventType: eventType,
       source: params.source,
       entityType: params.entityType,
       entityId: params.entityId,
       data: params.data,
-      correlationId: params.correlationId || event.id,
+      correlationId: params.correlationId || eventId,
       actorId: params.actorId,
       timestamp: new Date().toISOString(),
       processed: false,

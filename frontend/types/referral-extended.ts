@@ -83,9 +83,9 @@ export interface ReferralAnalytics {
 
 export interface ReferralEvent {
   id: string
-  eventType: 'referral.created' | 'reward.earned' | 'reward.approved' | 'reward.rejected' | 'reward.paid' | 'reward.reversed' | 'referral.converted' | 'referral.expired' | 'referral.cancelled' | 'campaign.started' | 'campaign.ended' | 'campaign.paused' | 'rule.evaluated'
+  eventType: string
   source: string
-  entityType: 'referral' | 'reward' | 'campaign' | 'setting'
+  entityType: string
   entityId: string
   data?: Record<string, any>
   correlationId?: string

@@ -1055,7 +1055,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (SUPABASE_ENABLED && u.password) {
-      const email = getEmailForUser(u.email || u.username);
+      if (!u.email) {
+        throw new Error('Email is required to create a cloud user account.');
+      }
+      const email = getEmailForUser(u.email);
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: u.password,
@@ -1265,11 +1268,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCompanyConfig(normalizedConfig);
 
       const savedCompanyId = await cloudDb.upsertCompany(normalizedConfig as CompanyConfig);
+      const finalCompanyId = savedCompanyId || cloudCompanyId;
+
+      // Sync the correct company_id into the user's Supabase metadata
+      // so that JWT claims and get_user_company_id() fallback resolve correctly.
+      try {
+        await supabase.auth.updateUser({
+          data: { company_id: finalCompanyId }
+        });
+      } catch (metaErr) {
+        logger.warn('[Auth] Could not update user metadata with company_id:', metaErr);
+      }
 
       await cloudDb.upsertProfile({
         ...adminUser,
         user_id: session.user.id,
-        company_id: savedCompanyId || cloudCompanyId,
+        company_id: finalCompanyId,
         role: 'Admin',
         status: 'Active',
         is_super_admin: true,

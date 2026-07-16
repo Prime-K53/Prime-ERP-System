@@ -1232,6 +1232,295 @@ const initDb = () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
 
+      // ==================== ENGAGEMENT MODULE ====================
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_membership_tiers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        level INTEGER NOT NULL DEFAULT 0,
+        description TEXT,
+        color TEXT,
+        icon TEXT,
+        min_spend REAL DEFAULT 0,
+        entry_spend REAL DEFAULT 0,
+        min_frequency INTEGER DEFAULT 0,
+        min_clv REAL DEFAULT 0,
+        point_multiplier REAL DEFAULT 1,
+        cashback_rate REAL DEFAULT 0,
+        priority_support INTEGER DEFAULT 0,
+        exclusive_pricing INTEGER DEFAULT 0,
+        exclusive_campaigns INTEGER DEFAULT 0,
+        free_shipping INTEGER DEFAULT 0,
+        birthday_reward REAL DEFAULT 0,
+        annual_reward REAL DEFAULT 0,
+        benefits_json TEXT,
+        status TEXT DEFAULT 'active',
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_customer_tiers (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        tier_id TEXT NOT NULL,
+        assigned_at DATETIME,
+        period_start DATETIME,
+        period_spend REAL DEFAULT 0,
+        period_count INTEGER DEFAULT 0,
+        upgraded_at DATETIME,
+        downgraded_at DATETIME,
+        last_evaluated DATETIME,
+        expires_at DATETIME,
+        status TEXT DEFAULT 'active',
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_gift_cards (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        pin TEXT,
+        customer_id TEXT,
+        issuer_id TEXT,
+        initial_balance REAL DEFAULT 0,
+        current_balance REAL DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        type TEXT DEFAULT 'digital',
+        expires_at DATETIME,
+        activated_at DATETIME,
+        cancelled_at DATETIME,
+        cancel_reason TEXT,
+        rechargeable INTEGER DEFAULT 0,
+        transferable INTEGER DEFAULT 0,
+        barcode_data TEXT,
+        design_color TEXT,
+        gift_message TEXT,
+        purchased_with TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_gift_card_transactions (
+        id TEXT PRIMARY KEY,
+        gift_card_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        balance_after REAL NOT NULL,
+        reference_type TEXT,
+        reference_id TEXT,
+        customer_id TEXT,
+        description TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_promotions (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT NOT NULL,
+        value REAL NOT NULL DEFAULT 0,
+        category_id TEXT,
+        brand TEXT,
+        bundle_items_json TEXT,
+        buy_x_qty INTEGER DEFAULT 0,
+        get_y_qty INTEGER DEFAULT 0,
+        get_y_discount REAL DEFAULT 0,
+        min_purchase REAL DEFAULT 0,
+        max_discount REAL DEFAULT 0,
+        max_uses INTEGER DEFAULT 0,
+        current_uses INTEGER DEFAULT 0,
+        customer_ids_json TEXT,
+        tier_ids_json TEXT,
+        campaign_id TEXT,
+        stacking_rule TEXT DEFAULT 'best_only',
+        priority INTEGER DEFAULT 0,
+        starts_at DATETIME,
+        expires_at DATETIME,
+        status TEXT DEFAULT 'draft',
+        created_by TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_cashback (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        invoice_id TEXT,
+        amount REAL NOT NULL,
+        rate REAL DEFAULT 0,
+        type TEXT DEFAULT 'percentage',
+        status TEXT DEFAULT 'pending',
+        category TEXT,
+        campaign_id TEXT,
+        wallet_tx_id TEXT,
+        scheduled_at DATETIME,
+        approved_at DATETIME,
+        approved_by TEXT,
+        reversed_at DATETIME,
+        reversed_by TEXT,
+        reverse_reason TEXT,
+        expires_at DATETIME,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_points (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        points INTEGER NOT NULL,
+        balance_after INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        reference_type TEXT,
+        reference_id TEXT,
+        description TEXT,
+        campaign_id TEXT,
+        tier_multiplier REAL DEFAULT 1,
+        expires_at DATETIME,
+        redeemed_at DATETIME,
+        created_by TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_point_balances (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        total_earned INTEGER DEFAULT 0,
+        total_redeemed INTEGER DEFAULT 0,
+        current_balance INTEGER DEFAULT 0,
+        pending_expiry INTEGER DEFAULT 0,
+        expires_at DATETIME,
+        last_updated DATETIME,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_affiliates (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        referral_code TEXT,
+        status TEXT DEFAULT 'active',
+        commission_rate REAL DEFAULT 0,
+        commission_type TEXT DEFAULT 'percentage',
+        fixed_commission REAL DEFAULT 0,
+        tier_id TEXT,
+        payment_method TEXT DEFAULT 'wallet',
+        payment_details_json TEXT,
+        total_earned REAL DEFAULT 0,
+        total_paid REAL DEFAULT 0,
+        approved_at DATETIME,
+        approved_by TEXT,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_affiliate_commissions (
+        id TEXT PRIMARY KEY,
+        affiliate_id TEXT NOT NULL,
+        referral_id TEXT,
+        invoice_id TEXT,
+        customer_id TEXT,
+        amount REAL NOT NULL,
+        rate REAL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        approved_at DATETIME,
+        approved_by TEXT,
+        paid_at DATETIME,
+        wallet_tx_id TEXT,
+        reversed_at DATETIME,
+        reverse_reason TEXT,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_customer_rewards (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        reward_type TEXT NOT NULL,
+        reward_value REAL NOT NULL,
+        reward_data_json TEXT,
+        description TEXT,
+        milestone_key TEXT,
+        tier_id TEXT,
+        campaign_id TEXT,
+        invoice_id TEXT,
+        points_tx_id TEXT,
+        wallet_tx_id TEXT,
+        gift_card_id TEXT,
+        granted_at DATETIME,
+        granted_by TEXT,
+        approved_at DATETIME,
+        approved_by TEXT,
+        rejected_at DATETIME,
+        reject_reason TEXT,
+        expires_at DATETIME,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_timeline (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        amount REAL,
+        points INTEGER,
+        tier_name TEXT,
+        reference_type TEXT,
+        reference_id TEXT,
+        metadata_json TEXT,
+        actor_id TEXT,
+        actor_name TEXT,
+        timestamp DATETIME NOT NULL,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_audit (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        actor_id TEXT NOT NULL,
+        actor_name TEXT,
+        field_name TEXT,
+        old_value TEXT,
+        new_value TEXT,
+        reason TEXT,
+        correlation_id TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        timestamp DATETIME NOT NULL,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS engagement_analytics (
+        id TEXT PRIMARY KEY,
+        period TEXT NOT NULL,
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        data_json TEXT NOT NULL,
+        company_id TEXT NOT NULL DEFAULT '',
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
       db.run(`CREATE TABLE IF NOT EXISTS chart_of_accounts (
         id TEXT PRIMARY KEY,
         code TEXT NOT NULL,
