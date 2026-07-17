@@ -411,9 +411,9 @@ CREATE OR REPLACE FUNCTION get_current_company_id()
 RETURNS TEXT
 LANGUAGE SQL
 STABLE
-AS 
+AS $$
   SELECT NULLIF(current_setting('app.company_id', TRUE), '')::TEXT;
-;
+$$;
 
 -- upsert_point_balance: atomically update or insert point balance
 CREATE OR REPLACE FUNCTION upsert_point_balance(
@@ -424,7 +424,7 @@ CREATE OR REPLACE FUNCTION upsert_point_balance(
 )
 RETURNS engagement_point_balances
 LANGUAGE plpgsql
-AS 
+AS $$
 DECLARE
   v_balance engagement_point_balances%ROWTYPE;
 BEGIN
@@ -460,7 +460,7 @@ BEGIN
 
   RETURN v_balance;
 END;
-;
+$$;
 
 -- redeem_gift_card: atomically redeem a gift card
 CREATE OR REPLACE FUNCTION redeem_gift_card(
@@ -471,7 +471,7 @@ CREATE OR REPLACE FUNCTION redeem_gift_card(
 )
 RETURNS engagement_gift_cards
 LANGUAGE plpgsql
-AS 
+AS $$
 DECLARE
   v_card engagement_gift_cards%ROWTYPE;
 BEGIN
@@ -513,7 +513,7 @@ BEGIN
 
   RETURN v_card;
 END;
-;
+$$;
 
 -- calculate_tier_for_customer: determine the correct tier based on points
 CREATE OR REPLACE FUNCTION calculate_tier_for_customer(
@@ -522,7 +522,7 @@ CREATE OR REPLACE FUNCTION calculate_tier_for_customer(
 )
 RETURNS engagement_customer_tiers
 LANGUAGE plpgsql
-AS 
+AS $$
 DECLARE
   v_points NUMERIC;
   v_tier engagement_membership_tiers%ROWTYPE;
@@ -570,4 +570,4 @@ BEGIN
 
   RETURN v_customer_tier;
 END;
-;
+$$;
