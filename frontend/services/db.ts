@@ -160,7 +160,7 @@ interface NexusDB extends DBSchema {
 }
 
 const DB_NAME = 'PrimeERP_Final_v3_Clean';
-const DB_VERSION = 47;
+const DB_VERSION = 48;
 
 let dbPromise: Promise<IDBPDatabase<NexusDB>> | null = null;
 
