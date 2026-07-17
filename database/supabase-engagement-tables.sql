@@ -2,7 +2,8 @@
 -- Run after supabase-referral-tables-v2.sql
 
 -- 1. Engagement Timeline (Unified)
-CREATE TABLE IF NOT EXISTS engagement_timeline (
+DROP TABLE IF EXISTS engagement_timeline CASCADE;
+CREATE TABLE engagement_timeline (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     event_type TEXT NOT NULL,
@@ -27,14 +28,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_timeline_ref ON engagement_timeline(re
 
 ALTER TABLE engagement_timeline ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_timeline_company ON engagement_timeline;
 CREATE POLICY engagement_timeline_company ON engagement_timeline
-    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE _company_id IS NOT NULL));
+    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE company_id IS NOT NULL));
 
+DROP POLICY IF EXISTS engagement_timeline_company_insert ON engagement_timeline;
 CREATE POLICY engagement_timeline_company_insert ON engagement_timeline
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 2. Engagement Audit (Unified)
-CREATE TABLE IF NOT EXISTS engagement_audit (
+DROP TABLE IF EXISTS engagement_audit CASCADE;
+CREATE TABLE engagement_audit (
     id TEXT PRIMARY KEY,
     entity_type TEXT NOT NULL,
     entity_id TEXT NOT NULL,
@@ -57,14 +61,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_audit_actor ON engagement_audit(actor_
 
 ALTER TABLE engagement_audit ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_audit_company ON engagement_audit;
 CREATE POLICY engagement_audit_company ON engagement_audit
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_audit_company_insert ON engagement_audit;
 CREATE POLICY engagement_audit_company_insert ON engagement_audit
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 3. Points & Point Balances
-CREATE TABLE IF NOT EXISTS engagement_points (
+DROP TABLE IF EXISTS engagement_points CASCADE;
+CREATE TABLE engagement_points (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     points NUMERIC(15,2) NOT NULL,
@@ -81,13 +88,16 @@ CREATE INDEX IF NOT EXISTS idx_engagement_points_customer ON engagement_points(c
 
 ALTER TABLE engagement_points ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_points_company ON engagement_points;
 CREATE POLICY engagement_points_company ON engagement_points
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_points_company_insert ON engagement_points;
 CREATE POLICY engagement_points_company_insert ON engagement_points
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
-CREATE TABLE IF NOT EXISTS engagement_point_balances (
+DROP TABLE IF EXISTS engagement_point_balances CASCADE;
+CREATE TABLE engagement_point_balances (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE UNIQUE,
     balance NUMERIC(15,2) NOT NULL DEFAULT 0,
@@ -103,14 +113,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_balances_customer ON engagement_point_
 
 ALTER TABLE engagement_point_balances ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_balances_company ON engagement_point_balances;
 CREATE POLICY engagement_balances_company ON engagement_point_balances
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_balances_company_insert ON engagement_point_balances;
 CREATE POLICY engagement_balances_company_insert ON engagement_point_balances
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 4. Cashback
-CREATE TABLE IF NOT EXISTS engagement_cashback (
+DROP TABLE IF EXISTS engagement_cashback CASCADE;
+CREATE TABLE engagement_cashback (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     amount NUMERIC(15,2) NOT NULL,
@@ -128,14 +141,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_cashback_status ON engagement_cashback
 
 ALTER TABLE engagement_cashback ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_cashback_company ON engagement_cashback;
 CREATE POLICY engagement_cashback_company ON engagement_cashback
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_cashback_company_insert ON engagement_cashback;
 CREATE POLICY engagement_cashback_company_insert ON engagement_cashback
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 5. Membership Tiers & Customer Tiers
-CREATE TABLE IF NOT EXISTS engagement_membership_tiers (
+DROP TABLE IF EXISTS engagement_membership_tiers CASCADE;
+CREATE TABLE engagement_membership_tiers (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL REFERENCES company_config(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -157,13 +173,16 @@ CREATE INDEX IF NOT EXISTS idx_engagement_tiers_level ON engagement_membership_t
 
 ALTER TABLE engagement_membership_tiers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_tiers_company ON engagement_membership_tiers;
 CREATE POLICY engagement_tiers_company ON engagement_membership_tiers
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_tiers_company_insert ON engagement_membership_tiers;
 CREATE POLICY engagement_tiers_company_insert ON engagement_membership_tiers
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
-CREATE TABLE IF NOT EXISTS engagement_customer_tiers (
+DROP TABLE IF EXISTS engagement_customer_tiers CASCADE;
+CREATE TABLE engagement_customer_tiers (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     tier_id TEXT NOT NULL REFERENCES engagement_membership_tiers(id) ON DELETE CASCADE,
@@ -181,14 +200,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_customer_tiers_tier ON engagement_cust
 
 ALTER TABLE engagement_customer_tiers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_customer_tiers_company ON engagement_customer_tiers;
 CREATE POLICY engagement_customer_tiers_company ON engagement_customer_tiers
-    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE _company_id IS NOT NULL));
+    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE company_id IS NOT NULL));
 
+DROP POLICY IF EXISTS engagement_customer_tiers_company_insert ON engagement_customer_tiers;
 CREATE POLICY engagement_customer_tiers_company_insert ON engagement_customer_tiers
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 6. Gift Cards & Gift Card Transactions
-CREATE TABLE IF NOT EXISTS engagement_gift_cards (
+DROP TABLE IF EXISTS engagement_gift_cards CASCADE;
+CREATE TABLE engagement_gift_cards (
     id TEXT PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
     original_balance NUMERIC(15,2) NOT NULL,
@@ -212,13 +234,16 @@ CREATE INDEX IF NOT EXISTS idx_engagement_gift_cards_recipient ON engagement_gif
 
 ALTER TABLE engagement_gift_cards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_gift_cards_company ON engagement_gift_cards;
 CREATE POLICY engagement_gift_cards_company ON engagement_gift_cards
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_gift_cards_company_insert ON engagement_gift_cards;
 CREATE POLICY engagement_gift_cards_company_insert ON engagement_gift_cards
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
-CREATE TABLE IF NOT EXISTS engagement_gift_card_transactions (
+DROP TABLE IF EXISTS engagement_gift_card_transactions CASCADE;
+CREATE TABLE engagement_gift_card_transactions (
     id TEXT PRIMARY KEY,
     gift_card_id TEXT NOT NULL REFERENCES engagement_gift_cards(id) ON DELETE CASCADE,
     customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
@@ -237,14 +262,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_gc_tx_customer ON engagement_gift_card
 
 ALTER TABLE engagement_gift_card_transactions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_gc_tx_company ON engagement_gift_card_transactions;
 CREATE POLICY engagement_gc_tx_company ON engagement_gift_card_transactions
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_gc_tx_company_insert ON engagement_gift_card_transactions;
 CREATE POLICY engagement_gc_tx_company_insert ON engagement_gift_card_transactions
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 7. Affiliate Accounts & Commissions
-CREATE TABLE IF NOT EXISTS engagement_affiliates (
+DROP TABLE IF EXISTS engagement_affiliates CASCADE;
+CREATE TABLE engagement_affiliates (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE UNIQUE,
     affiliate_code TEXT NOT NULL UNIQUE,
@@ -267,13 +295,16 @@ CREATE INDEX IF NOT EXISTS idx_engagement_affiliates_status ON engagement_affili
 
 ALTER TABLE engagement_affiliates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_affiliates_company ON engagement_affiliates;
 CREATE POLICY engagement_affiliates_company ON engagement_affiliates
-    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE _company_id IS NOT NULL));
+    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE company_id IS NOT NULL));
 
+DROP POLICY IF EXISTS engagement_affiliates_company_insert ON engagement_affiliates;
 CREATE POLICY engagement_affiliates_company_insert ON engagement_affiliates
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
-CREATE TABLE IF NOT EXISTS engagement_affiliate_commissions (
+DROP TABLE IF EXISTS engagement_affiliate_commissions CASCADE;
+CREATE TABLE engagement_affiliate_commissions (
     id TEXT PRIMARY KEY,
     affiliate_id TEXT NOT NULL REFERENCES engagement_affiliates(id) ON DELETE CASCADE,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -293,14 +324,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_aff_comm_status ON engagement_affiliat
 
 ALTER TABLE engagement_affiliate_commissions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_aff_comm_company ON engagement_affiliate_commissions;
 CREATE POLICY engagement_aff_comm_company ON engagement_affiliate_commissions
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_aff_comm_company_insert ON engagement_affiliate_commissions;
 CREATE POLICY engagement_aff_comm_company_insert ON engagement_affiliate_commissions
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 8. Promotions
-CREATE TABLE IF NOT EXISTS engagement_promotions (
+DROP TABLE IF EXISTS engagement_promotions CASCADE;
+CREATE TABLE engagement_promotions (
     id TEXT PRIMARY KEY,
     company_id TEXT NOT NULL REFERENCES company_config(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -331,14 +365,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_promotions_dates ON engagement_promoti
 
 ALTER TABLE engagement_promotions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_promotions_company ON engagement_promotions;
 CREATE POLICY engagement_promotions_company ON engagement_promotions
     USING (company_id = get_current_company_id());
 
+DROP POLICY IF EXISTS engagement_promotions_company_insert ON engagement_promotions;
 CREATE POLICY engagement_promotions_company_insert ON engagement_promotions
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 9. Customer Rewards
-CREATE TABLE IF NOT EXISTS engagement_customer_rewards (
+DROP TABLE IF EXISTS engagement_customer_rewards CASCADE;
+CREATE TABLE engagement_customer_rewards (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     reward_type TEXT NOT NULL,
@@ -361,14 +398,17 @@ CREATE INDEX IF NOT EXISTS idx_engagement_cust_rewards_status ON engagement_cust
 
 ALTER TABLE engagement_customer_rewards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_cust_rewards_company ON engagement_customer_rewards;
 CREATE POLICY engagement_cust_rewards_company ON engagement_customer_rewards
-    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE _company_id IS NOT NULL));
+    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE company_id IS NOT NULL));
 
+DROP POLICY IF EXISTS engagement_cust_rewards_company_insert ON engagement_customer_rewards;
 CREATE POLICY engagement_cust_rewards_company_insert ON engagement_customer_rewards
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 10. Engagement Analytics (Materialized / Aggregated)
-CREATE TABLE IF NOT EXISTS engagement_analytics (
+DROP TABLE IF EXISTS engagement_analytics CASCADE;
+CREATE TABLE engagement_analytics (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     period TEXT NOT NULL,
@@ -396,9 +436,11 @@ CREATE INDEX IF NOT EXISTS idx_engagement_analytics_period ON engagement_analyti
 
 ALTER TABLE engagement_analytics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS engagement_analytics_company ON engagement_analytics;
 CREATE POLICY engagement_analytics_company ON engagement_analytics
-    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE _company_id IS NOT NULL));
+    USING (company_id = get_current_company_id() OR customer_id IN (SELECT id FROM customers WHERE company_id IS NOT NULL));
 
+DROP POLICY IF EXISTS engagement_analytics_company_insert ON engagement_analytics;
 CREATE POLICY engagement_analytics_company_insert ON engagement_analytics
     FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
@@ -420,7 +462,7 @@ CREATE OR REPLACE FUNCTION upsert_point_balance(
   p_customer_id TEXT,
   p_points NUMERIC,
   p_reason TEXT,
-  p_company_id TEXT
+  pcompany_id TEXT
 )
 RETURNS engagement_point_balances
 LANGUAGE plpgsql
@@ -435,7 +477,7 @@ BEGIN
     CASE WHEN p_reason = 'redeem' THEN 0 ELSE p_points END,
     CASE WHEN p_reason = 'redeem' THEN 0 ELSE p_points END,
     NOW(),
-    p_company_id
+    pcompany_id
   )
   ON CONFLICT (customer_id) DO UPDATE SET
     balance = engagement_point_balances.balance + CASE
@@ -467,7 +509,7 @@ CREATE OR REPLACE FUNCTION redeem_gift_card(
   p_gift_card_id TEXT,
   p_amount NUMERIC,
   p_customer_id TEXT,
-  p_company_id TEXT
+  pcompany_id TEXT
 )
 RETURNS engagement_gift_cards
 LANGUAGE plpgsql
@@ -508,7 +550,7 @@ BEGIN
     p_amount,
     v_card.current_balance + p_amount,
     v_card.current_balance,
-    p_company_id
+    pcompany_id
   );
 
   RETURN v_card;
@@ -518,7 +560,7 @@ $$;
 -- calculate_tier_for_customer: determine the correct tier based on points
 CREATE OR REPLACE FUNCTION calculate_tier_for_customer(
   p_customer_id TEXT,
-  p_company_id TEXT
+  pcompany_id TEXT
 )
 RETURNS engagement_customer_tiers
 LANGUAGE plpgsql
@@ -537,7 +579,7 @@ BEGIN
   END IF;
 
   SELECT * INTO v_tier FROM engagement_membership_tiers
-  WHERE company_id = p_company_id
+  WHERE company_id = pcompany_id
     AND is_active = true
     AND min_points <= v_points
     AND (max_points IS NULL OR max_points >= v_points)
@@ -546,7 +588,7 @@ BEGIN
 
   IF v_tier.id IS NULL THEN
     SELECT * INTO v_tier FROM engagement_membership_tiers
-    WHERE company_id = p_company_id AND is_active = true
+    WHERE company_id = pcompany_id AND is_active = true
     ORDER BY level ASC
     LIMIT 1;
   END IF;
@@ -563,7 +605,7 @@ BEGIN
       v_tier.id,
       v_tier.name,
       v_tier.level,
-      p_company_id
+      pcompany_id
     )
     RETURNING * INTO v_customer_tier;
   END IF;
@@ -571,3 +613,5 @@ BEGIN
   RETURN v_customer_tier;
 END;
 $$;
+
+
