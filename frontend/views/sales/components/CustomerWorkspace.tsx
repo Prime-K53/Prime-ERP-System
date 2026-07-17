@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { logger } from '@/services/logger';
 import { useNavigate } from 'react-router-dom';
 import {
