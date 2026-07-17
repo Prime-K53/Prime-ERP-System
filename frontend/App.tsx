@@ -39,39 +39,43 @@ import { isResponsiveDebugEnabled } from './utils/debugFlags';
 
 
 // Helper for lazy loading with retry logic to handle "Failed to fetch dynamically imported module" errors
-// Includes a cooldown window to prevent infinite reload loops when IndexedDB initialization
-// blocks the main thread and causes Vite HMR chunk load timeouts.
 const lazyWithRetry = (name: string, componentImport: () => Promise<any>) =>
   lazy(async () => {
-    const pageHasBeenForceRefreshed = JSON.parse(
-      window.localStorage.getItem('page-has-been-force-refreshed') || 'false'
-    );
-    const lastRefreshAt = parseInt(window.localStorage.getItem('last-force-refresh-at') || '0', 10);
-    const cooldownMs = 10000;
+    const maxRetries = 3;
+    const retryDelay = 2000;
 
-    try {
-      const component = await componentImport();
-      window.localStorage.setItem('page-has-been-force-refreshed', 'false');
-      return component;
-    } catch (error) {
-      const err = error as { message?: string; stack?: string };
-      logger.error('Lazy loading error:', {
-        name,
-        message: err?.message,
-        stack: err?.stack,
-        error
-      });
-      if (!pageHasBeenForceRefreshed || Date.now() - lastRefreshAt > cooldownMs) {
-        // First failure or cooldown expired, try to refresh the page once
-        window.localStorage.setItem('page-has-been-force-refreshed', 'true');
-        window.localStorage.setItem('last-force-refresh-at', String(Date.now()));
-        window.location.reload();
-        throw error;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const component = await componentImport();
+        return component;
+      } catch (error) {
+        const err = error as { message?: string; stack?: string };
+        logger.error('Lazy loading error:', {
+          name,
+          attempt,
+          message: err?.message,
+          error
+        });
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, retryDelay));
+        }
       }
-
-      // If we already refreshed recently and it still fails, throw the error
-      throw error;
     }
+
+    return { default: () => (
+      <div className="h-full flex flex-col items-center justify-center text-slate-400">
+        <div className="p-8 rounded-3xl bg-white/50 backdrop-blur-md text-center max-w-md border border-white shadow-soft">
+          <h3 className="text-lg font-bold text-slate-700 mb-2">Failed to load module</h3>
+          <p className="text-sm text-slate-600 mb-4">The module "{name}" could not be loaded. Please check your connection and try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            Reload page
+          </button>
+        </div>
+      </div>
+    )};
   });
 
 // Lazy loaded views

@@ -222,7 +222,7 @@ async function ensureSession(signal?: AbortSignal) {
   return null;
 }
 
-const SESSION_TIMEOUT_MS = 20_000;
+const SESSION_TIMEOUT_MS = 8_000;
 
 async function withSession<T>(fn: () => Promise<T>): Promise<T> {
   const session = await ensureSession();
