@@ -1993,14 +1993,18 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             Line Items
                         </div>
 
-                        <div className="flex items-center gap-[6px] px-[2px] mb-[11px]">
+                        <div className="flex items-center gap-[10px] px-[2px] mb-[11px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
-                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2563EB] bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.2)] rounded-[4px] hover:bg-[rgba(37,99,235,0.14)] transition-colors">
-                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(37,99,235,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F10</kbd> Photocopy
+                                className="group inline-flex items-center gap-[8px] px-[12px] py-[6px] text-[11px] font-semibold text-white bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] border border-[rgba(37,99,235,0.3)] rounded-[8px] hover:from-[#1D4ED8] hover:to-[#1E40AF] hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.4)] transition-all duration-200">
+                                <Copy size={14} className="shrink-0 opacity-90 group-hover:scale-110 transition-transform" />
+                                <span>Photocopy</span>
+                                <kbd className="px-[4px] py-[1px] text-[9px] font-['JetBrains_Mono',monospace] font-medium text-[rgba(255,255,255,0.85)] bg-[rgba(255,255,255,0.15)] border border-[rgba(255,255,255,0.2)] rounded-[3px] leading-none">F10</kbd>
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
-                                className="inline-flex items-center gap-[3px] px-[6px] py-[2px] text-[10px] font-medium text-[#2563EB] bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.2)] rounded-[4px] hover:bg-[rgba(37,99,235,0.14)] transition-colors">
-                                <kbd className="px-[3px] py-[1px] bg-[#FEFDFB] border border-[rgba(37,99,235,0.2)] rounded-[2px] text-[10px] font-['JetBrains_Mono',monospace]">F11</kbd> Type &amp; Print
+                                className="group inline-flex items-center gap-[8px] px-[12px] py-[6px] text-[11px] font-semibold text-white bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] border border-[rgba(124,58,237,0.3)] rounded-[8px] hover:from-[#6D28D9] hover:to-[#5B21B6] hover:shadow-[0_4px_12px_-4px_rgba(124,58,237,0.4)] transition-all duration-200">
+                                <Printer size={14} className="shrink-0 opacity-90 group-hover:scale-110 transition-transform" />
+                                <span>Type &amp; Print</span>
+                                <kbd className="px-[4px] py-[1px] text-[9px] font-['JetBrains_Mono',monospace] font-medium text-[rgba(255,255,255,0.85)] bg-[rgba(255,255,255,0.15)] border border-[rgba(255,255,255,0.2)] rounded-[3px] leading-none">F11</kbd>
                             </button>
                         </div>
 
@@ -2346,9 +2350,33 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex items-center justify-between px-[16px] py-[8px] border-t border-[#E4DFD1] font-medium text-[#23282A]">
-                                <span className="text-[12px]">{analysis.totalItems} item{analysis.totalItems !== 1 ? 's' : ''} &middot; {analysis.totalQty} qty</span>
-                                <span className="text-[15px]">Subtotal: {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <div className="flex items-center justify-between px-[14px] py-[10px] border-t border-[#E4DFD1] bg-gradient-to-r from-[rgba(37,99,235,0.03)] to-transparent">
+                                <div className="flex items-center gap-[10px]">
+                                    <div className="flex items-center gap-[6px] px-[8px] py-[3px] bg-[rgba(37,99,235,0.08)] border border-[rgba(37,99,235,0.15)] rounded-[5px]">
+                                        <Package size={12} className="text-[#2563EB]" />
+                                        <span className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#2563EB]">
+                                            {analysis.totalItems}
+                                        </span>
+                                        <span className="text-[10px] text-[rgba(37,99,235,0.6)] font-['JetBrains_Mono',monospace]">
+                                            item{analysis.totalItems !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-[6px] px-[8px] py-[3px] bg-[rgba(15,61,62,0.06)] border border-[rgba(15,61,62,0.1)] rounded-[5px]">
+                                        <Layers size={12} className="text-[#0F3D3E]" />
+                                        <span className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#0F3D3E]">
+                                            {analysis.totalQty}
+                                        </span>
+                                        <span className="text-[10px] text-[rgba(15,61,62,0.5)] font-['JetBrains_Mono',monospace]">
+                                            qty
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-[8px]">
+                                    <span className="text-[10px] font-['JetBrains_Mono',monospace] font-medium text-[rgba(15,61,62,0.4)] uppercase tracking-[0.5px]">Subtotal</span>
+                                    <span className="text-[17px] font-semibold text-[#23282A] tracking-[-0.3px]">
+                                        {currency}{analysis.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
