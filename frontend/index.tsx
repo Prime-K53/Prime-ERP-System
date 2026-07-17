@@ -7,14 +7,6 @@ if (typeof window !== 'undefined') {
   window.Buffer = Buffer;
 }
 
-if (typeof window !== 'undefined' && typeof (window as Window & { module?: { exports: {} } }).module === 'undefined') {
-  try {
-    (window as Window & { module?: { exports: {} } }).module = { exports: {} };
-  } catch (e) {
-    // ignore - non-critical
-  }
-}
-
 import './index.css';
 import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
