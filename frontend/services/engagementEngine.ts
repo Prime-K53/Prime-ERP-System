@@ -7,6 +7,7 @@ import { dbService } from './db'
 import { logger } from './logger'
 import { engagementTimelineService } from './engagementTimelineService'
 import { engagementAuditService } from './engagementAuditService'
+import { initializeEngagementPlugins } from './engagement/registerPlugins'
 
 class CustomerEngagementEngine {
   private plugins: Map<string, IEngagementPlugin> = new Map()
@@ -176,4 +177,4 @@ class CustomerEngagementEngine {
 export const engagementEngine = new CustomerEngagementEngine()
 export default engagementEngine
 
-import './engagement/registerPlugins'
+initializeEngagementPlugins()

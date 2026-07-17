@@ -25,5 +25,3 @@ export function initializeEngagementPlugins(): void {
 
   logger.info(`Engagement plugins initialized: ${plugins.length} plugins registered`)
 }
-
-initializeEngagementPlugins()
