@@ -8,8 +8,9 @@ import { referralAnalyticsService } from '../../services/referralAnalyticsServic
 import { referralCampaignService } from '../../services/referralCampaignService'
 import { referralReversalService } from '../../services/referralReversalService'
 import type { Referral, ReferralReward } from '../../types/referral'
-import type { ReferralAnalytics, ReferralCampaign, ReversalRequest } from '../../types/referral-extended'
+import { cloudDb } from '../../services/cloudDb'
 
+import type { ReferralAnalytics, ReferralCampaign, ReversalRequest } from '../../types/referral-extended'
 const Referrals: React.FC = () => {
   const { companyConfig, user, notify } = useAuth()
   const navigate = useNavigate()
@@ -17,6 +18,7 @@ const Referrals: React.FC = () => {
 
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [rewards, setRewards] = useState<ReferralReward[]>([])
+  const [allRewards, setAllRewards] = useState<ReferralReward[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeView, setActiveView] = useState<'referrals' | 'approvals' | 'analytics' | 'campaigns' | 'reversals'>('referrals')
   const [isLoading, setIsLoading] = useState(true)
@@ -37,16 +39,18 @@ const Referrals: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [allReferrals, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals] = await Promise.all([
+      const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals] = await Promise.all([
         referralService.getAllReferrals(),
         referralService.getPendingRewards(),
+        cloudDb.getAll<ReferralReward>('referralRewards').then(r => r || []),
         referralCampaignService.getAllCampaigns(),
         referralAnalyticsService.getLatestAnalytics(),
         referralAnalyticsService.getAnalyticsHistory('monthly', 6),
         referralReversalService.getAllReversals(),
       ])
       setReferrals(allReferrals)
-      setRewards(allRewards)
+      setRewards(pendingRewards)
+      setAllRewards(allRewards)
       setCampaigns(allCampaigns)
       setAnalytics(latestAnalytics)
       setAnalyticsHistory(analyticsHist)
@@ -62,7 +66,9 @@ const Referrals: React.FC = () => {
 
   const stats = useMemo(() => ({
     total: referrals.length,
-    active: referrals.filter(r => r.status === 'active').length,
+    active: referrals.filter(r => r.status === 'active' && !r.pendingInvoiceId).length,
+    pendingInvoices: referrals.filter(r => r.status === 'active' && r.pendingInvoiceId).length,
+    pendingInvoiceTotal: referrals.filter(r => r.status === 'active' && r.pendingInvoiceId).reduce((s, r) => s + (r.pendingInvoiceAmount || 0), 0),
     converted: referrals.filter(r => r.status === 'converted').length,
     pendingRewards: rewards.filter(r => r.status === 'pending').length,
     totalPaid: rewards.filter(r => r.status === 'paid' || r.status === 'approved').reduce((s, r) => s + r.amount, 0),
@@ -202,7 +208,7 @@ const Referrals: React.FC = () => {
       <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-300">
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'total' ? 'All' : 'total')}
               className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'total' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
@@ -225,6 +231,19 @@ const Referrals: React.FC = () => {
               <div>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Active</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.active.toLocaleString()}</p>
+              </div>
+            </div>
+            <div
+              onClick={() => setSelectedMetric(selectedMetric === 'pendingInvoices' ? 'All' : 'pendingInvoices')}
+              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'pendingInvoices' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+            >
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+                <Clock size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pending Invoices</p>
+                <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.pendingInvoices.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">{currency}{stats.pendingInvoiceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
             <div
@@ -287,36 +306,45 @@ const Referrals: React.FC = () => {
                   <h3 className="font-bold text-slate-900">All Referrals</h3>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred By</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Code</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {filteredReferrals.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-6 py-16 text-center text-slate-400 italic">No referrals found.</td>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred Customer</th>
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrer</th>
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
                         </tr>
-                      ) : (
-                        filteredReferrals.map((ref) => (
-                          <tr key={ref.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-bold text-slate-900">{ref.referredByName || ref.customerId}</td>
-                            <td className="px-6 py-4 text-slate-500">{ref.referredByName || '-'}</td>
-                            <td className="px-6 py-4 text-slate-500 font-mono text-xs">{ref.referralCode}</td>
-                            <td className="px-6 py-4 text-slate-500">{new Date(ref.date).toLocaleDateString()}</td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${ref.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : ref.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>{ref.status}</span>
-                            </td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {filteredReferrals.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic">No referrals found.</td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredReferrals.map((ref) => {
+                            const rewardAmt = allRewards.filter(r => r.referralId === ref.id).reduce((s, r) => s + r.amount, 0)
+                            const invoiceLabel = ref.pendingInvoiceId ? `#${ref.pendingInvoiceId.slice(-8)}` : ref.convertedInvoiceId ? `#${ref.convertedInvoiceId.slice(-8)}` : '-'
+                            const amountLabel = ref.pendingInvoiceAmount ? `${currency}${ref.pendingInvoiceAmount.toLocaleString()}` : rewardAmt > 0 ? `${currency}${rewardAmt.toLocaleString()}` : '-'
+                            return (
+                              <tr key={ref.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4 font-bold text-slate-900">{ref.customerId}</td>
+                                <td className="px-6 py-4 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
+                                <td className="px-6 py-4 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
+                                <td className="px-6 py-4 font-black text-emerald-600">{amountLabel}</td>
+                                <td className="px-6 py-4 text-slate-500">{new Date(ref.date).toLocaleDateString()}</td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${ref.status === 'active' && ref.pendingInvoiceId ? 'bg-amber-50 text-amber-700 border-amber-100' : ref.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : ref.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                    {ref.status === 'active' && ref.pendingInvoiceId ? 'Pending' : ref.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
+                      </tbody>
+                    </table>
                 </div>
               </div>
             </>
