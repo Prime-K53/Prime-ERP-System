@@ -2230,9 +2230,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             billingAddress: data.customer.address || prev.billingAddress,
                                             shippingAddress: data.customer.address || prev.shippingAddress,
                                             items: matchedItems,
-                                            discount: data.discount.type === 'percentage'
-                                                ? (data.discount.value / 100) * data.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-                                                : data.discount.value,
+                                            discountType: data.discount.type === 'percentage' ? 'percentage' : 'fixed',
+                                            discount: data.discount.value,
                                             notes: data.notes,
                                             dueDate: data.dueDate || prev.dueDate,
                                             paymentTerms: data.paymentTerms || prev.paymentTerms,
