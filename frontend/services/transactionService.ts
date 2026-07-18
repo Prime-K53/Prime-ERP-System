@@ -2757,6 +2757,7 @@ export const transactionService = {
                 return { success: true };
             }
         );
+        console.log('[REFERRAL-PAYMENT] paidInvoices:', paidInvoices.length, paidInvoices.map((pi: any) => ({ id: pi.id, referredBy: pi.referredBy, paidAmount: pi.paidAmount })));
         for (const pi of paidInvoices) {
             import('./referralService').then(({ referralService }) =>
                 referralService.processInvoiceReward(pi).catch(err =>

@@ -363,16 +363,18 @@ export const referralService = {
     referredByName?: string
     status?: string
   }): Promise<ReferralReward | null> {
-    if (!invoice.referredBy) return null
-    if (invoice.customerId === invoice.referredBy) return null
+    console.log('[REFERRAL-REWARD] processInvoiceReward called:', { id: invoice.id, customerId: invoice.customerId, referredBy: invoice.referredBy, paidAmount: invoice.paidAmount, status: invoice.status });
+    if (!invoice.referredBy) { console.log('[REFERRAL-REWARD] referredBy empty'); return null }
+    if (invoice.customerId === invoice.referredBy) { console.log('[REFERRAL-REWARD] self-referral'); return null }
 
     const settings = getReferralSettings()
-    if (!settings.enabled) return null
+    if (!settings.enabled) { console.log('[REFERRAL-REWARD] settings disabled'); return null }
 
     const idempotencyKeyId = `referral-reward:${invoice.id}`
     const uuidKeyId = await stringToUuid5(idempotencyKeyId)
     const allKeys = (await cloudDb.getAll<any>('idempotencyKeys')) || []
-    if (allKeys.find((k: any) => k.id === uuidKeyId)) return null
+    console.log('[REFERRAL-REWARD] idempotencyKeys found:', allKeys.length, 'looking for:', uuidKeyId);
+    if (allKeys.find((k: any) => k.id === uuidKeyId)) { console.log('[REFERRAL-REWARD] already processed (idempotency)'); return null }
 
     const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
 
@@ -382,18 +384,21 @@ export const referralService = {
       paidAmount: invoice.paidAmount,
       existingReferrals: allReferrals as Array<{ customerId: string; referredById: string; status: string }>,
     })
-    if (!eligibility.allowed) return null
+    console.log('[REFERRAL-REWARD] eligibility:', eligibility);
+    if (!eligibility.allowed) { console.log('[REFERRAL-REWARD] not eligible'); return null }
 
     const activeCampaign = await referralCampaignService.getApplicableCampaign(
       invoice.customerId,
       invoice.paidAmount
     )
+    console.log('[REFERRAL-REWARD] campaign:', activeCampaign?.id, activeCampaign?.name);
 
     const rewardCalc = await referralRuleEngine.calculateReward({
       paidAmount: invoice.paidAmount,
       campaign: activeCampaign,
     })
-    if (!rewardCalc.allowed || !rewardCalc.rewardAmount) return null
+    console.log('[REFERRAL-REWARD] rewardCalc:', rewardCalc);
+    if (!rewardCalc.allowed || !rewardCalc.rewardAmount) { console.log('[REFERRAL-REWARD] no reward calculated'); return null }
 
     const rewardAmount = rewardCalc.rewardAmount
 
