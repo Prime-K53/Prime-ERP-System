@@ -2162,6 +2162,21 @@ export const transactionService = {
                 )
             );
         }
+
+        if (invoice.status === 'Paid' && invoice.referredBy) {
+            import('./referralService').then(({ referralService }) =>
+                referralService.processInvoiceReward({
+                    id: invoice.id,
+                    customerId: invoice.customerId || '',
+                    totalAmount: invoice.totalAmount,
+                    paidAmount: invoice.paidAmount,
+                    referredBy: invoice.referredBy,
+                    referredByName: invoice.referredByName,
+                }).catch(err =>
+                    logger.error('Referral reward processing from invoice failed:', err)
+                )
+            );
+        }
     },
 
     async convertQuotationToInvoice(quotationId: string, invoiceData: Invoice) {
