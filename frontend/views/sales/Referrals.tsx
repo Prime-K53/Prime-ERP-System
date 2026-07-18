@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle, Mail, Eye, MessageSquare, X, Phone } from 'lucide-react'
+import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle, Mail, Eye, MessageSquare, X, Phone, Gem, Trophy, Medal } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { currencyService } from '../../services/currencyService'
@@ -585,25 +585,29 @@ const Referrals: React.FC = () => {
                       <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="font-bold text-slate-900 flex items-center gap-2"><Users size={16} className="text-blue-500" /> Top Referrers</h3>
                       </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
-                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrals</th>
-                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rewards</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50">
-                            {analytics.topReferrers.map((t, i) => (
-                              <tr key={t.customerId || i} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-3 py-2 font-bold text-slate-900">{t.customerName || t.customerId}</td>
-                                <td className="px-3 py-2 text-slate-500">{t.referralCount}</td>
-                                <td className="px-3 py-2 font-black text-emerald-600">{currency}{(t.rewardsAmount || 0).toLocaleString()}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {analytics.topReferrers.map((t, i) => {
+                          const rank = i + 1
+                          const tier = rank === 1 ? 'diamond' : rank === 2 ? 'gold' : rank === 3 ? 'silver' : rank === 4 ? 'bronze' : null
+                          const colors = tier === 'diamond' ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-200' :
+                            tier === 'gold' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg shadow-amber-200' :
+                            tier === 'silver' ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-lg shadow-slate-200' :
+                            tier === 'bronze' ? 'bg-gradient-to-br from-orange-400 to-amber-600 text-white shadow-lg shadow-orange-200' :
+                            'bg-white border border-slate-200 text-slate-700'
+                          const Icon = tier === 'diamond' ? Gem : tier === 'gold' ? Trophy : tier === 'silver' ? Medal : tier === 'bronze' ? Medal : Users
+                          return (
+                            <div key={t.customerId || i} className={`${colors} rounded-xl p-4 flex flex-col items-center text-center transition-all hover:scale-[1.02]`}>
+                              <div className={`p-2 rounded-full mb-2 ${tier ? 'bg-white/20' : 'bg-blue-50'}`}>
+                                <Icon size={22} className={tier ? 'text-white' : 'text-blue-500'} />
+                              </div>
+                              <p className={`font-bold text-sm leading-tight ${tier ? 'text-white' : 'text-slate-900'}`}>{t.customerName || t.customerId}</p>
+                              <div className="flex items-center gap-3 mt-2">
+                                <span className={`text-xs font-medium ${tier ? 'text-white/80' : 'text-slate-500'}`}>{t.referralCount} referrals</span>
+                                <span className={`text-xs font-black ${tier ? 'text-white' : 'text-emerald-600'}`}>{currency}{(t.rewardsAmount || 0).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
