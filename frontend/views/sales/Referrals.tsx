@@ -27,6 +27,7 @@ const Referrals: React.FC = () => {
   const [analyticsHistory, setAnalyticsHistory] = useState<ReferralAnalytics[]>([])
   const [campaigns, setCampaigns] = useState<ReferralCampaign[]>([])
   const [reversals, setReversals] = useState<ReversalRequest[]>([])
+  const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string>('All')
@@ -161,6 +162,26 @@ const Referrals: React.FC = () => {
       loadData()
     } catch (err: any) {
       notify(err.message || 'Failed to process reversal', 'error')
+    }
+  }
+
+  const handleRequestReversal = async () => {
+    if (!selectedReferral) return
+    const reason = prompt('Reason for reversal:')
+    if (!reason) return
+    try {
+      const reward = allRewards.find(r => r.referralId === selectedReferral.id)
+      if (!reward) { notify('No reward found for this referral', 'error'); return }
+      await referralReversalService.requestReversal({
+        rewardId: reward.id,
+        reason,
+        requestedBy: user?.name || user?.id || 'system',
+      })
+      notify('Reversal request submitted', 'success')
+      setSelectedReferral(null)
+      loadData()
+    } catch (err: any) {
+      notify(err.message || 'Failed to request reversal', 'error')
     }
   }
 
@@ -322,6 +343,23 @@ const Referrals: React.FC = () => {
                 />
               </div>
 
+              {selectedReferral && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl px-6 py-4 flex items-center justify-between shadow-sm">
+                  <div>
+                    <span className="text-sm font-bold text-blue-900">Selected: {selectedReferral.customerId}</span>
+                    <span className="ml-4 text-xs text-blue-600">referred by {selectedReferral.referredByName || selectedReferral.referredById}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleRequestReversal} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors flex items-center gap-1.5">
+                      <RotateCw size={14} /> Request Reversal
+                    </button>
+                    <button onClick={() => setSelectedReferral(null)} className="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-300 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                   <h3 className="font-bold text-slate-900">All Referrals</h3>
@@ -348,8 +386,9 @@ const Referrals: React.FC = () => {
                             const rewardAmt = allRewards.filter(r => r.referralId === ref.id).reduce((s, r) => s + r.amount, 0)
                             const invoiceLabel = ref.pendingInvoiceId ? `#${ref.pendingInvoiceId.slice(-8)}` : ref.convertedInvoiceId ? `#${ref.convertedInvoiceId.slice(-8)}` : '-'
                             const amountLabel = ref.pendingInvoiceAmount ? `${currency}${ref.pendingInvoiceAmount.toLocaleString()}` : rewardAmt > 0 ? `${currency}${rewardAmt.toLocaleString()}` : '-'
+                            const isSelected = selectedReferral?.id === ref.id
                             return (
-                              <tr key={ref.id} className="hover:bg-slate-50/50 transition-colors">
+                              <tr key={ref.id} onClick={() => setSelectedReferral(isSelected ? null : ref)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
                                 <td className="px-6 py-4 font-bold text-slate-900">{ref.customerId}</td>
                                 <td className="px-6 py-4 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
                                 <td className="px-6 py-4 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
