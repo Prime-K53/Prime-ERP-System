@@ -8,7 +8,7 @@ import { referralAnalyticsService } from '../../services/referralAnalyticsServic
 import { referralCampaignService } from '../../services/referralCampaignService'
 import { referralReversalService } from '../../services/referralReversalService'
 import type { Referral, ReferralReward } from '../../types/referral'
-import { dbService } from '../../services/db'
+import { cloudDb } from '../../services/cloudDb'
 
 import type { ReferralAnalytics, ReferralCampaign, ReversalRequest } from '../../types/referral-extended'
 const Referrals: React.FC = () => {
@@ -42,7 +42,7 @@ const Referrals: React.FC = () => {
       const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals] = await Promise.all([
         referralService.getAllReferrals(),
         referralService.getPendingRewards(),
-        dbService.getAll<ReferralReward>('referralRewards'),
+        cloudDb.getAll<ReferralReward>('referralRewards').then(r => r || []),
         referralCampaignService.getAllCampaigns(),
         referralAnalyticsService.getLatestAnalytics(),
         referralAnalyticsService.getAnalyticsHistory('monthly', 6),

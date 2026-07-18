@@ -1,4 +1,4 @@
-import { dbService } from './db'
+import { cloudDb } from './cloudDb'
 import { Referral, ReferralReward, ReferralSettings, DEFAULT_REFERRAL_SETTINGS } from '../types/referral'
 import { generateId } from './transactions/_internal'
 import { logger } from './logger'
@@ -54,7 +54,7 @@ function generateReferralCode(): string {
 export const referralService = {
   async registerReferral(customerId: string, referredById: string, referredByName?: string, actorId?: string): Promise<Referral> {
     const settings = getReferralSettings()
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
 
     const eligibility = await referralRuleEngine.evaluateEligibility({
       customerId,
@@ -77,7 +77,7 @@ export const referralService = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    await dbService.put('referrals', referral)
+    await cloudDb.put('referrals', referral)
 
     await referralTimelineService.addEntry({
       referralId: referral.id,
@@ -121,7 +121,7 @@ export const referralService = {
     const settings = getReferralSettings()
     if (!settings.enabled) return null
 
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     const existing = all.find(
       r => r.customerId === invoice.customerId && r.referredById === invoice.referredById && r.status === 'active'
     )
@@ -130,7 +130,7 @@ export const referralService = {
         existing.pendingInvoiceId = invoice.id
         existing.pendingInvoiceAmount = invoice.totalAmount
         existing.updatedAt = new Date().toISOString()
-        await dbService.put('referrals', existing)
+        await cloudDb.put('referrals', existing)
       }
       return existing
     }
@@ -148,7 +148,7 @@ export const referralService = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    await dbService.put('referrals', referral)
+    await cloudDb.put('referrals', referral)
 
     await referralTimelineService.addEntry({
       referralId: referral.id,
@@ -164,48 +164,48 @@ export const referralService = {
   },
 
   async getReferralsByCustomer(customerId: string): Promise<Referral[]> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     return all.filter(r => r.customerId === customerId)
   },
 
   async getReferralsByReferrer(referredById: string): Promise<Referral[]> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     return all.filter(r => r.referredById === referredById)
   },
 
   async getReferralByCode(code: string): Promise<Referral | undefined> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     return all.find(r => r.referralCode === code && r.status === 'active')
   },
 
   async getAllReferrals(): Promise<Referral[]> {
-    return (await dbService.getAll<Referral>('referrals')) || []
+    return (await cloudDb.getAll<Referral>('referrals')) || []
   },
 
   async getPendingRewards(): Promise<ReferralReward[]> {
-    const all = (await dbService.getAll<ReferralReward>('referralRewards')) || []
+    const all = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
     return all.filter(r => r.status === 'pending')
   },
 
   async getRewardsByCustomer(customerId: string): Promise<ReferralReward[]> {
-    const all = (await dbService.getAll<ReferralReward>('referralRewards')) || []
+    const all = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
     return all.filter(r => r.customerId === customerId)
   },
 
   async getRewardsByReferral(referralId: string): Promise<ReferralReward[]> {
-    const all = (await dbService.getAll<ReferralReward>('referralRewards')) || []
+    const all = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
     return all.filter(r => r.referralId === referralId)
   },
 
   async approveReward(rewardId: string, approvedBy: string): Promise<ReferralReward> {
-    const all = (await dbService.getAll<ReferralReward>('referralRewards')) || []
+    const all = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
     const reward = all.find(r => r.id === rewardId)
     if (!reward) throw new Error('Reward not found')
     if (reward.status !== 'pending') throw new Error('Reward is not in pending status')
 
     const creditResult = await this.creditWalletForReward(reward)
 
-    const allReferrals = (await dbService.getAll<Referral>('referrals')) || []
+    const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
     const referral = allReferrals.find(r => r.id === reward.referralId)
     if (referral && referral.status === 'active') {
       referral.status = 'converted'
@@ -213,7 +213,7 @@ export const referralService = {
       referral.convertedInvoiceId = reward.invoiceId
       referral.pendingInvoiceId = undefined
       referral.pendingInvoiceAmount = undefined
-      await dbService.put('referrals', referral)
+      await cloudDb.put('referrals', referral)
     }
 
     reward.status = 'approved'
@@ -221,7 +221,7 @@ export const referralService = {
     reward.approvedBy = approvedBy
     reward.walletTransactionId = creditResult.walletTransactionId
     reward.updatedAt = new Date().toISOString()
-    await dbService.put('referralRewards', reward)
+    await cloudDb.put('referralRewards', reward)
 
     await referralTimelineService.addEntry({
       referralId: reward.referralId,
@@ -254,7 +254,7 @@ export const referralService = {
   },
 
   async rejectReward(rewardId: string, reason: string, rejectedBy?: string): Promise<ReferralReward> {
-    const all = (await dbService.getAll<ReferralReward>('referralRewards')) || []
+    const all = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
     const reward = all.find(r => r.id === rewardId)
     if (!reward) throw new Error('Reward not found')
     if (reward.status !== 'pending') throw new Error('Reward is not in pending status')
@@ -264,7 +264,7 @@ export const referralService = {
     reward.cancelReason = reason
     reward.cancelledBy = rejectedBy
     reward.updatedAt = new Date().toISOString()
-    await dbService.put('referralRewards', reward)
+    await cloudDb.put('referralRewards', reward)
 
     await referralTimelineService.addEntry({
       referralId: reward.referralId,
@@ -298,12 +298,12 @@ export const referralService = {
   },
 
   async creditWalletForReward(reward: ReferralReward): Promise<{ walletTransactionId: string }> {
-    const allReferrals = (await dbService.getAll<Referral>('referrals')) || []
+    const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
     const referral = allReferrals.find(r => r.id === reward.referralId)
     const referrerCustomerId = referral?.referredById
     if (!referrerCustomerId) throw new Error('Referrer customer not found for this reward')
 
-    const customers = (await dbService.getAll<any>('customers')) || []
+    const customers = (await cloudDb.getAll<any>('customers')) || []
     const referrer = customers.find((c: any) => c.id === referrerCustomerId)
     if (!referrer) throw new Error('Referrer customer record not found')
 
@@ -339,10 +339,10 @@ export const referralService = {
     }
 
     await Promise.all([
-      dbService.put('walletTransactions', walletTx),
-      dbService.put('customers', referrer),
-      dbService.put('ledger', ledgerEntry),
-      dbService.put('idempotencyKeys', idempotencyKey),
+      cloudDb.put('walletTransactions', walletTx),
+      cloudDb.put('customers', referrer),
+      cloudDb.put('ledger', ledgerEntry),
+      cloudDb.put('idempotencyKeys', idempotencyKey),
     ])
 
     return { walletTransactionId: walletTxId }
@@ -363,11 +363,11 @@ export const referralService = {
     const settings = getReferralSettings()
     if (!settings.enabled) return null
 
-    const allKeys = (await dbService.getAll<any>('idempotencyKeys')) || []
+    const allKeys = (await cloudDb.getAll<any>('idempotencyKeys')) || []
     const idempotencyKeyId = `referral-reward:${invoice.id}`
     if (allKeys.find((k: any) => k.id === idempotencyKeyId)) return null
 
-    const allReferrals = (await dbService.getAll<Referral>('referrals')) || []
+    const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
 
     const eligibility = await referralRuleEngine.evaluateEligibility({
       customerId: invoice.customerId,
@@ -415,9 +415,9 @@ export const referralService = {
       updatedAt: new Date().toISOString(),
     }
 
-    await dbService.put('referralRewards', reward)
+    await cloudDb.put('referralRewards', reward)
 
-    await dbService.put('idempotencyKeys', {
+    await cloudDb.put('idempotencyKeys', {
       id: idempotencyKeyId,
       scope: 'referral-reward',
       sourceId: invoice.id,
@@ -457,13 +457,13 @@ export const referralService = {
       referral.convertedInvoiceId = invoice.id
       referral.pendingInvoiceId = undefined
       referral.pendingInvoiceAmount = undefined
-      await dbService.put('referrals', referral)
+      await cloudDb.put('referrals', referral)
 
       await this.creditWalletForReward(reward)
       reward.status = 'paid'
       reward.approvedAt = new Date().toISOString()
       reward.updatedAt = new Date().toISOString()
-      await dbService.put('referralRewards', reward)
+      await cloudDb.put('referralRewards', reward)
 
       await referralTimelineService.addEntry({
         referralId: referral.id,
@@ -483,21 +483,21 @@ export const referralService = {
 
     if (activeCampaign) {
       activeCampaign.totalRewardsGiven += 1
-      await dbService.put('referralCampaigns', activeCampaign)
+      await cloudDb.put('referralCampaigns', activeCampaign)
     }
 
     return reward
   },
 
   async expireReferral(referralId: string): Promise<Referral> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     const referral = all.find(r => r.id === referralId)
     if (!referral) throw new Error('Referral not found')
     if (referral.status !== 'active') throw new Error('Referral is not active')
 
     referral.status = 'expired'
     referral.updatedAt = new Date().toISOString()
-    await dbService.put('referrals', referral)
+    await cloudDb.put('referrals', referral)
 
     await referralTimelineService.addEntry({
       referralId: referral.id,
@@ -516,14 +516,14 @@ export const referralService = {
   },
 
   async cancelReferral(referralId: string, cancelledBy?: string, reason?: string): Promise<Referral> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     const referral = all.find(r => r.id === referralId)
     if (!referral) throw new Error('Referral not found')
     if (referral.status !== 'active') throw new Error('Referral is not active')
 
     referral.status = 'cancelled'
     referral.updatedAt = new Date().toISOString()
-    await dbService.put('referrals', referral)
+    await cloudDb.put('referrals', referral)
 
     await referralTimelineService.addEntry({
       referralId: referral.id,
@@ -556,7 +556,7 @@ export const referralService = {
   },
 
   async checkAndExpireReferrals(): Promise<number> {
-    const all = (await dbService.getAll<Referral>('referrals')) || []
+    const all = (await cloudDb.getAll<Referral>('referrals')) || []
     const active = all.filter(r => r.status === 'active')
     let expiredCount = 0
 
