@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react'
-import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User } from 'lucide-react'
+import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { currencyService } from '../../services/currencyService'
@@ -26,6 +26,7 @@ const Referrals: React.FC = () => {
   const [analyticsHistory, setAnalyticsHistory] = useState<ReferralAnalytics[]>([])
   const [campaigns, setCampaigns] = useState<ReferralCampaign[]>([])
   const [reversals, setReversals] = useState<ReversalRequest[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string>('All')
   const [newCampaign, setNewCampaign] = useState({
@@ -55,8 +56,11 @@ const Referrals: React.FC = () => {
       setAnalytics(latestAnalytics)
       setAnalyticsHistory(analyticsHist)
       setReversals(allReversals)
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to load referral data'
       console.error('Failed to load referral data:', err)
+      setLoadError(msg)
+      notify?.(msg, 'error')
     } finally {
       setIsLoading(false)
     }
@@ -207,6 +211,20 @@ const Referrals: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-300">
+          {/* Error banner */}
+          {loadError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 text-sm text-red-700">
+              <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Referral data unavailable</p>
+                <p className="text-red-600 mt-1">{loadError}</p>
+                <p className="text-red-500 mt-1 text-xs">
+                  Check that the Supabase tables exist (run <code className="bg-red-100 px-1 rounded">database/supabase-referral-tables.sql</code> in your Supabase SQL editor).
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div
