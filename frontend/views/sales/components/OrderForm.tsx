@@ -247,6 +247,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
     const [itemSearch, setItemSearch] = useState('');
     const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const [serviceSearch, setServiceSearch] = useState('');
     const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
     const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
@@ -274,6 +275,28 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             (i.name.toLowerCase().includes(itemSearch.toLowerCase()) || i.sku.toLowerCase().includes(itemSearch.toLowerCase()))
         );
     }, [inventory, itemSearch]);
+
+    const handleItemKeyDown = (e: React.KeyboardEvent, items: Item[], allItems: Item[]) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(prev => Math.min(prev + 1, items.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter' && highlightedIndex >= 0 && highlightedIndex < items.length) {
+            e.preventDefault();
+            const item = items[highlightedIndex];
+            if (item) {
+                handleAddItem(item);
+                setIsItemDropdownOpen(false);
+                setItemSearch('');
+                setHighlightedIndex(-1);
+            }
+        } else if (e.key === 'Escape') {
+            setIsItemDropdownOpen(false);
+            setHighlightedIndex(-1);
+        }
+    };
 
     const filteredServices = useMemo(() => {
         const base = inventory.filter((i: Item) => i.type === 'Service');
@@ -2019,7 +2042,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     value={itemSearch}
                                     onFocus={() => setIsItemDropdownOpen(true)}
                                     onChange={e => { setItemSearch(e.target.value); setIsItemDropdownOpen(true); }}
-                                    onKeyDown={e => handleKeyDown(e, filteredInventory, inventory)}
+                                    onKeyDown={e => handleItemKeyDown(e, filteredInventory, inventory)}
                                 />
                                 {isItemDropdownOpen && (
                                     <div className="absolute z-50 mt-[4px] w-full bg-[#FEFDFB] border border-[#E4DFD1] rounded-[6px] shadow-[0_8px_24px_-6px_rgba(16,43,40,0.15)] max-h-60 overflow-y-auto">
