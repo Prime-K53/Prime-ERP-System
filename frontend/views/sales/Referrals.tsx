@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react'
-import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle } from 'lucide-react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
+import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle, Mail, Eye, MessageSquare, X, Phone } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { currencyService } from '../../services/currencyService'
@@ -7,6 +7,7 @@ import { referralService } from '../../services/referralService'
 import { referralAnalyticsService } from '../../services/referralAnalyticsService'
 import { referralCampaignService } from '../../services/referralCampaignService'
 import { referralReversalService } from '../../services/referralReversalService'
+import { whatsappClient } from '../../services/whatsappClientService'
 import type { Referral, ReferralReward } from '../../types/referral'
 import { cloudDb } from '../../services/cloudDb'
 
@@ -28,6 +29,9 @@ const Referrals: React.FC = () => {
   const [campaigns, setCampaigns] = useState<ReferralCampaign[]>([])
   const [reversals, setReversals] = useState<ReversalRequest[]>([])
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [detailReferral, setDetailReferral] = useState<Referral | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string>('All')
@@ -183,6 +187,63 @@ const Referrals: React.FC = () => {
     } catch (err: any) {
       notify(err.message || 'Failed to request reversal', 'error')
     }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    if (showMenu) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showMenu])
+
+  const handleViewDetails = () => {
+    if (!selectedReferral) return
+    setDetailReferral(selectedReferral)
+    setShowMenu(false)
+  }
+
+  const handleSendViaWhatsApp = async () => {
+    if (!selectedReferral) return
+    const referrer = customers.find(c => c.id === selectedReferral.referredById)
+    const phone = referrer?.phone
+    if (!phone) { notify('Referrer has no phone number on file', 'error'); setShowMenu(false); return }
+    const reward = allRewards.find(r => r.referralId === selectedReferral.id)
+    const amount = reward?.amount || selectedReferral.pendingInvoiceAmount || 0
+    const msg = `The customer you referred to us has made an order. Based on the order you will have a reward of ${currency}${amount.toLocaleString()} into your account when this invoice is paid.`
+
+    try {
+      const account = await whatsappClient.getAccount(user?.id || '')
+      if (!account?.phoneNumberId || !account?.accessToken) {
+        notify('WhatsApp not configured. Message: ' + msg, 'info')
+        setShowMenu(false)
+        return
+      }
+      await whatsappClient.sendMessage(account.phoneNumberId, account.accessToken, phone, msg)
+      notify('WhatsApp message sent', 'success')
+    } catch (err: any) {
+      notify(err.message || 'Failed to send WhatsApp message', 'error')
+    }
+    setShowMenu(false)
+  }
+
+  const handleSendViaEmail = async () => {
+    if (!selectedReferral) return
+    const referrer = customers.find(c => c.id === selectedReferral.referredById)
+    const email = referrer?.email
+    if (!email) { notify('Referrer has no email on file', 'error'); setShowMenu(false); return }
+    const reward = allRewards.find(r => r.referralId === selectedReferral.id)
+    const amount = reward?.amount || selectedReferral.pendingInvoiceAmount || 0
+    const subject = encodeURIComponent('Referral Reward Notification')
+    const body = encodeURIComponent(
+      `Dear ${selectedReferral.referredByName || selectedReferral.referredById},\n\n` +
+      `The customer you referred to us has made an order. Based on the order you will have a reward of ${currency}${amount.toLocaleString()} into your account when this invoice is paid.\n\n` +
+      `Thank you for your support!\n${companyConfig?.companyName || 'Printing ERP'}`
+    )
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
+    setShowMenu(false)
   }
 
   const handleRejectReversal = async (reversalId: string) => {
@@ -343,24 +404,31 @@ const Referrals: React.FC = () => {
                 />
               </div>
 
-              {selectedReferral && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl px-6 py-4 flex items-center justify-between shadow-sm">
-                  <div>
-                    <span className="text-sm font-bold text-blue-900">Selected: {selectedReferral.customerId}</span>
-                    <span className="ml-4 text-xs text-blue-600">referred by {selectedReferral.referredByName || selectedReferral.referredById}</span>
+              {/* Action Menu Popup */}
+              {showMenu && selectedReferral && (
+                <div ref={menuRef} className="bg-white border border-slate-200 rounded-xl shadow-xl p-2 absolute z-50 w-56" style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}>
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 mb-1">
+                    <span className="text-xs font-bold text-slate-500 truncate">{selectedReferral.customerId}</span>
+                    <button onClick={() => { setShowMenu(false); setSelectedReferral(null) }} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={handleRequestReversal} className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 transition-colors flex items-center gap-1.5">
-                      <RotateCw size={14} /> Request Reversal
-                    </button>
-                    <button onClick={() => setSelectedReferral(null)} className="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-300 transition-colors">
-                      Cancel
+                  <button onClick={handleViewDetails} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                    <Eye size={16} className="text-blue-500" /> View Details
+                  </button>
+                  <button onClick={handleSendViaWhatsApp} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                    <MessageSquare size={16} className="text-emerald-500" /> Send via WhatsApp
+                  </button>
+                  <button onClick={handleSendViaEmail} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                    <Mail size={16} className="text-amber-500" /> Send via Email
+                  </button>
+                  <div className="border-t border-slate-100 mt-1 pt-1">
+                    <button onClick={handleRequestReversal} className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                      <RotateCw size={16} /> Request Reversal
                     </button>
                   </div>
                 </div>
               )}
 
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                   <h3 className="font-bold text-slate-900">All Referrals</h3>
                 </div>
@@ -388,7 +456,7 @@ const Referrals: React.FC = () => {
                             const amountLabel = ref.pendingInvoiceAmount ? `${currency}${ref.pendingInvoiceAmount.toLocaleString()}` : rewardAmt > 0 ? `${currency}${rewardAmt.toLocaleString()}` : '-'
                             const isSelected = selectedReferral?.id === ref.id
                             return (
-                              <tr key={ref.id} onClick={() => setSelectedReferral(isSelected ? null : ref)} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
+                              <tr key={ref.id} onClick={() => { setSelectedReferral(ref); setShowMenu(true) }} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
                                 <td className="px-6 py-4 font-bold text-slate-900">{ref.customerId}</td>
                                 <td className="px-6 py-4 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
                                 <td className="px-6 py-4 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
@@ -721,6 +789,61 @@ const Referrals: React.FC = () => {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Detail Modal */}
+          {detailReferral && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setDetailReferral(null)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg text-slate-900">Referral Details</h3>
+                  <button onClick={() => setDetailReferral(null)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"><X size={18} /></button>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Referred Customer</span>
+                    <span className="font-bold text-slate-900">{detailReferral.customerId}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Referrer</span>
+                    <span className="font-bold text-slate-900">{detailReferral.referredByName || detailReferral.referredById || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Referral Code</span>
+                    <span className="font-mono text-xs text-slate-900">{detailReferral.referralCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${detailReferral.status === 'active' && detailReferral.pendingInvoiceId ? 'bg-amber-50 text-amber-700 border-amber-100' : detailReferral.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : detailReferral.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                      {detailReferral.status === 'active' && detailReferral.pendingInvoiceId ? 'Pending' : detailReferral.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Invoice</span>
+                    <span className="font-mono text-xs text-slate-900">#{detailReferral.pendingInvoiceId?.slice(-8) || detailReferral.convertedInvoiceId?.slice(-8) || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Amount</span>
+                    <span className="font-bold text-emerald-600">{currency}{(detailReferral.pendingInvoiceAmount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500 font-medium">Date</span>
+                    <span className="text-slate-900">{new Date(detailReferral.date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-slate-500 font-medium">Reward Amount</span>
+                    <span className="font-bold text-emerald-600">{currency}{allRewards.filter(r => r.referralId === detailReferral.id).reduce((s, r) => s + r.amount, 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <button onClick={() => setDetailReferral(null)} className="px-6 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
