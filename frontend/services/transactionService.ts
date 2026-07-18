@@ -1180,11 +1180,15 @@ export const transactionService = {
             }
         );
         if (saleResult?._paidInvoice) {
-            import('./referralService').then(({ referralService }) =>
-                referralService.processInvoiceReward(saleResult._paidInvoice).catch(err =>
+            console.log('[REFERRAL_SCAN STEP1] Payment event reached (POS sale)', saleResult._paidInvoice);
+            import('./referralService').then(({ referralService }) => {
+                console.log('[REFERRAL_SCAN STEP1] referralService dynamically loaded');
+                return referralService.processInvoiceReward(saleResult._paidInvoice).then(result => {
+                    console.log('[REFERRAL_SCAN STEP1] processInvoiceReward completed', saleResult._paidInvoice.id, 'result:', result ? 'reward_id=' + result.id : 'null');
+                }).catch(err =>
                     logger.error('Referral reward processing failed:', err)
                 )
-            );
+            });
             import('./engagementEngine').then(({ engagementEngine }) =>
                 engagementEngine.emit('invoice.paid', {
                     source: 'transactionService',
@@ -2147,6 +2151,26 @@ export const transactionService = {
                 )
             );
         }
+
+        if (invoice.referredBy) {
+            console.log('[REFERRAL_SCAN STEP1/2] registerReferralFromInvoice called', { id: invoice.id, customerId: invoice.customerId, referredBy: invoice.referredBy });
+            import('./referralService').then(({ referralService }) =>
+                referralService.registerReferralFromInvoice({
+                    id: invoice.id,
+                    customerId: invoice.customerId || '',
+                    customerName: invoice.customerName,
+                    totalAmount: invoice.totalAmount,
+                    referredById: invoice.referredBy,
+                    referredByName: invoice.referredByName,
+                }).then(result => {
+                    console.log('[REFERRAL_SCAN STEP1] registerReferralFromInvoice result', invoice.id, result ? 'referral_id=' + result.id : 'null');
+                }).catch(err =>
+                    logger.error('Referral registration from invoice failed:', err)
+                )
+            );
+        } else {
+            console.log('[REFERRAL_SCAN STEP2] registerReferralFromInvoice SKIPPED — invoice.referredBy is falsy', invoice.id);
+        }
     },
 
     async convertQuotationToInvoice(quotationId: string, invoiceData: Invoice) {
@@ -2719,11 +2743,15 @@ export const transactionService = {
             }
         );
         for (const pi of paidInvoices) {
-            import('./referralService').then(({ referralService }) =>
-                referralService.processInvoiceReward(pi).catch(err =>
+            console.log('[REFERRAL_SCAN STEP1] Payment event reached (payment allocation)', pi);
+            import('./referralService').then(({ referralService }) => {
+                console.log('[REFERRAL_SCAN STEP1] referralService dynamically loaded');
+                return referralService.processInvoiceReward(pi).then(result => {
+                    console.log('[REFERRAL_SCAN STEP1] processInvoiceReward completed', pi.id, 'result:', result ? 'reward_id=' + result.id : 'null');
+                }).catch(err =>
                     logger.error('Referral reward processing failed for payment:', err)
                 )
-            );
+            });
             import('./engagementEngine').then(({ engagementEngine }) =>
                 engagementEngine.emit('invoice.paid', {
                     source: 'transactionService',
