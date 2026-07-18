@@ -36,6 +36,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
 
     const isCancelled = order.status === 'Cancelled';
     const isCompleted = order.status === 'Completed';
+    const isPaid = order.status === 'Paid';
 
     return (
         <div className="fixed inset-0 z-[70] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
@@ -49,8 +50,10 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                             <div className="flex items-center gap-3 mb-1">
                                 <h1 className="text-[22px] font-semibold text-slate-800 tracking-tight">Order #{order.orderNumber}</h1>
                                 <span className={`px-2.5 py-0.5 rounded-lg text-[12.5px] font-semibold tracking-wide ${order.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                                    order.status === 'Cancelled' ? 'bg-rose-100 text-rose-700' :
-                                        order.status === 'Processing' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                                    order.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
+                                        order.status === 'Partially Paid' ? 'bg-amber-100 text-amber-700' :
+                                            order.status === 'Cancelled' ? 'bg-rose-100 text-rose-700' :
+                                                order.status === 'Processing' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
                                     }`}>
                                     {order.status}
                                 </span>
@@ -248,7 +251,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Workflow</h3>
                             <button
                                 onClick={() => onAction(order, 'record_payment')}
-                                disabled={isCompleted || isCancelled}
+                                disabled={isCompleted || isPaid || isCancelled}
                                 className="w-full px-4 py-3 bg-indigo-600 text-white rounded-2xl text-[13px] font-bold tracking-tight hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
                             >
                                 <DollarSign size={18} /> Record Payment

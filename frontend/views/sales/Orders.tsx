@@ -22,6 +22,7 @@ import { InvoiceDetails } from './components/InvoiceDetails';
 import { JobOrderDetails } from './components/JobOrderDetails';
 import { QuotationDetails } from './components/QuotationDetails';
 import { OrderDetails } from './components/OrderDetails';
+import { OrderPaymentModal } from './components/OrderPaymentModal';
 import SubscriptionView from './components/SubscriptionView';
 import { parseTemplate, downloadBlob, resolveCustomerPaymentPolicy } from '../../utils/helpers';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -170,6 +171,7 @@ const Orders: React.FC = () => {
     const [selectedJobOrderForDetail, setSelectedJobOrderForDetail] = useState<JobOrder | null>(null);
     const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
     const [selectedExchangeForDetail, setSelectedExchangeForDetail] = useState<any | null>(null);
+    const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
     const [showVisualDashboard, setShowVisualDashboard] = useState(false);
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
@@ -664,9 +666,9 @@ const Orders: React.FC = () => {
             else if (activeView === 'Exchanges') type = 'SALES_EXCHANGE';
             type = resolveDocumentType(item, type);
 
-            // If it's a completed order, try to find the linked invoice
+            // If it's a completed or paid order, try to find the linked invoice
             let dataToPreview = { ...item };
-            if (type === 'ORDER' && item.status === 'Completed') {
+            if (type === 'ORDER' && (item.status === 'Completed' || item.status === 'Paid' || item.status === 'Partially Paid')) {
                 const linkedInvoice = invoices.find(inv => inv.notes?.includes(`#[${item.orderNumber}]`));
                 if (linkedInvoice) {
                     dataToPreview.invoiceNumber = linkedInvoice.id;
@@ -688,7 +690,7 @@ const Orders: React.FC = () => {
             type = resolveDocumentType(item, type);
 
             let dataToPrint = { ...item };
-            if (type === 'ORDER' && item.status === 'Completed') {
+            if (type === 'ORDER' && (item.status === 'Completed' || item.status === 'Paid' || item.status === 'Partially Paid')) {
                 const linkedInvoice = invoices.find(inv => inv.notes?.includes(`#[${item.orderNumber}]`));
                 if (linkedInvoice) {
                     dataToPrint.invoiceNumber = linkedInvoice.id;
@@ -734,7 +736,7 @@ const Orders: React.FC = () => {
                 const blob = await pdf(<PrimeDocument type={type} data={securedPdfData as PrimeDocData} />).toBlob();
                 
                 const docNumber = item.invoiceNumber || item.orderNumber || item.quotationNumber || item.receiptNumber || item.number || item.id || '';
-                const typeLabel = type === 'WORK_ORDER' ? 'Sales Order' : type === 'ORDER' ? 'Order' : type === 'QUOTATION' ? 'Quotation' : type === 'SUBSCRIPTION' ? 'Recurring Invoice' : type === 'SALES_EXCHANGE' ? 'Exchange' : 'Document';
+                const typeLabel = type === 'WORK_ORDER' ? 'Sales Order' : type === 'ORDER' ? 'Sales Order' : type === 'QUOTATION' ? 'Quotation' : type === 'SUBSCRIPTION' ? 'Recurring Invoice' : type === 'SALES_EXCHANGE' ? 'Exchange' : 'Document';
                 const fileName = docNumber ? `${typeLabel} - ${docNumber}.pdf` : `${typeLabel}.pdf`;
                 
                 downloadBlob(blob, fileName);
@@ -924,21 +926,12 @@ const Orders: React.FC = () => {
         }
         else if (activeView === 'Orders') {
             if (action === 'record_payment') {
-                const amountStr = window.prompt(`Enter amount to pay for Order #${item.orderNumber} (Remaining: ${companyConfig.currencySymbol}${item.remainingBalance}):`);
-                if (amountStr !== null) {
-                    const amount = amountStr === "" ? item.remainingBalance : parseFloat(amountStr);
-                    if (amount > 0) {
-                        try {
-                            await recordPayment(item.id, {
-                                amountPaid: amount,
-                                paymentMethod: 'Cash',
-                                reference: `Payment for Order #${item.orderNumber}`
-                            });
-                        } catch (error: any) {
-                            notify(`Payment failed: ${error.message}`, "error");
-                        }
-                    }
+                const remaining = (item.totalAmount || 0) - (item.paidAmount || 0);
+                if (remaining <= 0) {
+                    notify('This order is already fully paid.', 'info');
+                    return;
                 }
+                setPaymentOrder(item);
             }
             if (action === 'convert_to_invoice') {
                 if (window.confirm(`Convert Order #${item.orderNumber} to an Invoice?`)) {
@@ -996,7 +989,10 @@ const Orders: React.FC = () => {
                             roundingMethod: item.roundingMethod ?? '',
                         };
                         const invoiceId = await addInvoice(newInvoice);
-                        await updateOrderStatus(item.id, 'Completed');
+                        const orderPaidAmount = item.paidAmount || 0;
+                        const orderTotal = item.totalAmount || 0;
+                        const finalOrderStatus = orderPaidAmount >= orderTotal ? 'Completed' : (orderPaidAmount > 0 ? 'Partially Paid' : 'Pending');
+                        await updateOrderStatus(item.id, finalOrderStatus);
                         notify(`Order #${item.orderNumber} successfully converted to Invoice ${invoiceId}`, "success");
                         setActiveTab('Invoices');
                         if (selectedOrderForDetail) setSelectedOrderForDetail(null); // Close the modal after conversion
@@ -1540,6 +1536,16 @@ const Orders: React.FC = () => {
                             setSelectedOrderForDetail(null);
                         }}
                         onAction={handleAction}
+                    />
+                )}
+
+                {paymentOrder && (
+                    <OrderPaymentModal
+                        order={paymentOrder}
+                        onClose={() => setPaymentOrder(null)}
+                        onRecord={async (orderId, payment) => {
+                            await recordPayment(orderId, payment);
+                        }}
                     />
                 )}
             </div>

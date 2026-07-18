@@ -286,7 +286,10 @@ const CleanInvoiceTemplate = ({
   const discount = Number(dataAny.discount) || 0;
   const discountType = dataAny.discountType || 'fixed';
   const discountRaw = Number(dataAny.discountRaw || 0);
-  const discountLabel = discountType === 'percentage' && discountRaw > 0 ? `Discount ${discountRaw}%` : 'Discount';
+  const discountPercentage = discountType === 'percentage'
+    ? (discountRaw > 0 ? discountRaw : subtotal > 0 ? Number(((discount / subtotal) * 100).toFixed(2)) : 0)
+    : 0;
+  const discountLabel = discountType === 'percentage' && discountPercentage > 0 ? `Discount ${discountPercentage}%` : 'Discount';
   
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
   const resolvedWalletBalance = Number(dataAny.walletBalance || 0);
@@ -1064,6 +1067,9 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     0,
     Number(dataAny?.totalAmount || 0) - Number(dataAny?.amountPaid || 0)
   );
+  const discountType = dataAny.discountType || 'fixed';
+  const discountRaw = Number(dataAny.discountRaw || 0);
+  const discountLabel = discountType === 'percentage' && discountRaw > 0 ? `Discount ${discountRaw}%` : 'Discount';
   const pageStyle = {
     fontFamily: templateSettings.fontFamily,
     fontSize: templateSettings.bodyFontSize,
@@ -1582,7 +1588,7 @@ if (type === 'POS_RECEIPT') {
   } else {
     switch (type as string) {
       case 'ORDER':
-        title = 'Sales Invoice';
+        title = 'Sales Order';
         break;
       case 'SALES_ORDER':
         title = 'Sales Order';
@@ -1597,7 +1603,7 @@ if (type === 'POS_RECEIPT') {
         title = 'Purchase Order';
         break;
       case 'EXAMINATION_INVOICE':
-        title = 'Service Invoice';
+        title = 'Exam Invoice';
         break;
       default:
         title = toTitleCase(type);
@@ -1630,9 +1636,9 @@ if (type === 'POS_RECEIPT') {
                     </>
                   ) : type === 'ORDER' ? (
                     <>
-                      <Text>Invoice No. INV-{String(('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'ORD'))}</Text>
-                      <Text>Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {String(('orderNumber' in data && dataAny.orderNumber) || 'N/A')}</Text>
+                      <Text>Order No. {String(('orderNumber' in data && dataAny.orderNumber) || ('number' in data ? dataAny.number : 'ORD'))}</Text>
+                      <Text>Order Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Order Ref: {String(isFromQuotation && conversionDetails?.sourceNumber ? conversionDetails.sourceNumber : (('orderNumber' in data && dataAny.orderNumber) || 'N/A'))}</Text>
                       {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   ) : (type as string) === 'SALES_ORDER' ? (
@@ -1643,8 +1649,8 @@ if (type === 'POS_RECEIPT') {
                     </>
                   ) : type === 'EXAMINATION_INVOICE' ? (
                     <>
-                      <Text>Service Invoice No. {String('number' in data ? dataAny.number : 'INV')}</Text>
-                      <Text>Service Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
+                      <Text>Exam Invoice No. {String('number' in data ? dataAny.number : 'INV')}</Text>
+                      <Text>Exam Invoice Date: {String('date' in data ? dataAny.date : 'N/A')}</Text>
                       {Boolean(showDueDate) && 'dueDate' in data && !!data.dueDate && <Text>Due Date: {formatDateOnly(String(data.dueDate))}</Text>}
                     </>
                   ) : type === 'SUBSCRIPTION' ? (
@@ -1796,9 +1802,24 @@ if (type === 'POS_RECEIPT') {
                   <View style={s.summaryRight}>
                     <View style={s.summaryBox}>
                       <View style={s.summaryRow}>
-                        <Text style={{ flex: 1, fontWeight: 'bold' }}>{type === 'QUOTATION' ? 'Quoted Amount' : 'Subtotal'}</Text>
+                        <Text style={{ flex: 1, fontWeight: 'bold' }}>Subtotal</Text>
                         <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('subtotal' in data ? data.subtotal : 0)}</Text>
                       </View>
+
+                      {type === 'QUOTATION' && 'discount' in data && Number(data.discount) > 0 && (
+                        <View style={s.summaryRow}>
+                          <Text style={{ flex: 1 }}>{discountLabel}</Text>
+                          <Text style={{ textAlign: 'right' }}>-{currency} {formatAmount(Number(data.discount))}</Text>
+                        </View>
+                      )}
+
+                      {/* Quoted Amount - only for Quotations */}
+                      {type === 'QUOTATION' && (
+                        <View style={s.totalRow}>
+                          <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount</Text>
+                          <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(subtotal - discount)}</Text>
+                        </View>
+                      )}
 
                       {/* Total before payments - Hidden on Invoices, Orders, and Quotations */}
                       {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (

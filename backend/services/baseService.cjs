@@ -37,6 +37,44 @@ class BaseService {
       });
     });
   }
+
+  _transaction(callback) {
+    return new Promise((resolve, reject) => {
+      this.db.serialize(() => {
+        this.db.run("BEGIN TRANSACTION", (beginErr) => {
+          if (beginErr) {
+            return reject(beginErr);
+          }
+          try {
+            const result = callback();
+            if (result && typeof result.then === 'function') {
+              result.then((val) => {
+                this.db.run("COMMIT", (commitErr) => {
+                  if (commitErr) {
+                    this.db.run("ROLLBACK", () => reject(commitErr));
+                  } else {
+                    resolve(val);
+                  }
+                });
+              }).catch((err) => {
+                this.db.run("ROLLBACK", () => reject(err));
+              });
+            } else {
+              this.db.run("COMMIT", (commitErr) => {
+                if (commitErr) {
+                  this.db.run("ROLLBACK", () => reject(commitErr));
+                } else {
+                  resolve(result);
+                }
+              });
+            }
+          } catch (err) {
+            this.db.run("ROLLBACK", () => reject(err));
+          }
+        });
+      });
+    });
+  }
 }
 
 module.exports = BaseService;

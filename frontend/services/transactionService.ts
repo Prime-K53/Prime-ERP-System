@@ -4525,9 +4525,12 @@ export const transactionService = {
                 order.paidAmount += payment.amountPaid;
                 order.remainingBalance = order.totalAmount - order.paidAmount;
 
-                if (order.paidAmount >= order.totalAmount) {
-                    // Keep status as Partially Paid if not fulfilled, or update if business logic requires
-                    // For now, we follow the rule: status becomes 'Completed' ONLY through fulfillment
+                if (order.status !== 'Completed') {
+                    if (order.paidAmount >= order.totalAmount) {
+                        order.status = 'Paid';
+                    } else if (order.paidAmount > 0) {
+                        order.status = 'Partially Paid';
+                    }
                 }
 
                 await orderStore.put(order);

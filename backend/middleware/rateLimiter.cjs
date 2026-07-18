@@ -152,11 +152,14 @@ const getRateLimitStatus = (key) => {
   };
 };
 
+const createLimiter = apiLimiter;
+
 module.exports = {
   apiLimiter,
   authLimiter,
   sensitiveLimiter,
   uploadLimiter,
   resetRateLimit,
-  getRateLimitStatus
+  getRateLimitStatus,
+  createLimiter
 };

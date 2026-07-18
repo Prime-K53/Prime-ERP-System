@@ -556,6 +556,110 @@ const transferSchemas = {
   })
 };
 
+// Referral validation schemas
+const referralSchemas = {
+  createReferral: z.object({
+    customer_id: z.string().min(1, 'Customer ID is required'),
+    referred_by_id: z.string().min(1, 'Referrer ID is required'),
+    referred_by_name: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    pending_invoice_id: z.string().optional().nullable(),
+    pending_invoice_amount: z.number().min(0).optional().nullable()
+  }),
+  updateReferral: z.object({
+    notes: z.string().optional().nullable(),
+    status: z.enum(['active', 'converted', 'expired', 'cancelled']).optional()
+  }),
+  cancelReferral: z.object({
+    reason: z.string().optional().nullable()
+  }),
+  createReward: z.object({
+    referral_id: z.string().min(1, 'Referral ID is required'),
+    invoice_id: z.string().min(1, 'Invoice ID is required'),
+    invoice_amount: z.number().min(0, 'Invoice amount must be non-negative'),
+    customer_id: z.string().min(1, 'Customer ID is required'),
+    amount: z.number().min(0, 'Amount must be non-negative').optional(),
+    status: z.enum(['pending', 'approved', 'paid', 'cancelled']).optional().default('pending')
+  }),
+  approveReward: z.object({
+    approved_by: z.string().min(1, 'Approver ID is required')
+  }),
+  rejectReward: z.object({
+    reason: z.string().min(1, 'Reason is required'),
+    rejected_by: z.string().optional()
+  }),
+  createCampaign: z.object({
+    name: z.string().min(1, 'Campaign name is required'),
+    description: z.string().optional().nullable(),
+    start_date: z.string().min(1, 'Start date is required'),
+    end_date: z.string().optional().nullable(),
+    reward_type: z.enum(['fixed', 'percentage', 'hybrid']).default('percentage'),
+    reward_value: z.number().min(0).default(0),
+    reward_percentage: z.number().min(0).max(100).default(0),
+    min_purchase_amount: z.number().min(0).default(0),
+    max_reward_amount: z.number().min(0).default(0),
+    max_rewards_per_customer: z.number().int().min(0).default(0),
+    max_total_rewards: z.number().int().min(0).default(0),
+    bonus_multiplier: z.number().min(0).default(1),
+    target_segments_json: z.string().optional().nullable(),
+    excluded_customers_json: z.string().optional().nullable(),
+    terms_json: z.string().optional().nullable()
+  }),
+  updateCampaign: z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+    start_date: z.string().optional(),
+    end_date: z.string().optional().nullable(),
+    reward_type: z.enum(['fixed', 'percentage', 'hybrid']).optional(),
+    reward_value: z.number().min(0).optional(),
+    reward_percentage: z.number().min(0).max(100).optional(),
+    min_purchase_amount: z.number().min(0).optional(),
+    max_reward_amount: z.number().min(0).optional(),
+    max_rewards_per_customer: z.number().int().min(0).optional(),
+    max_total_rewards: z.number().int().min(0).optional(),
+    bonus_multiplier: z.number().min(0).optional(),
+    target_segments_json: z.string().optional().nullable(),
+    excluded_customers_json: z.string().optional().nullable(),
+    terms_json: z.string().optional().nullable()
+  }),
+  updateCampaignStatus: z.object({
+    status: z.enum(['draft', 'active', 'paused', 'completed', 'cancelled'])
+  }),
+  createReversal: z.object({
+    reward_id: z.string().min(1, 'Reward ID is required'),
+    reason: z.string().min(1, 'Reason is required'),
+    notes: z.string().optional().nullable()
+  }),
+  approveReversal: z.object({
+    approved_by: z.string().min(1, 'Approver ID is required'),
+    notes: z.string().optional().nullable()
+  }),
+  rejectReversal: z.object({
+    reason: z.string().min(1, 'Reason is required'),
+    rejected_by: z.string().optional(),
+    notes: z.string().optional().nullable()
+  }),
+  updateSettings: z.object({
+    settings: z.record(z.any())
+  }),
+  getReferralsQuery: z.object({
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(50),
+    status: z.enum(['active', 'converted', 'expired', 'cancelled', 'all']).optional().default('all'),
+    search: z.string().optional(),
+    customer_id: z.string().optional(),
+    referred_by_id: z.string().optional(),
+    referral_code: z.string().optional(),
+    sort_by: z.string().optional().default('created_at'),
+    sort_dir: z.enum(['asc', 'desc']).optional().default('desc')
+  }),
+  getAnalyticsQuery: z.object({
+    period: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).optional().default('monthly'),
+    period_start: z.string().optional(),
+    period_end: z.string().optional()
+  })
+};
+
 /**
  * Validate that a resource belongs to the requesting company.
  * Works with both singleton (getDatabase) and direct db patterns.
@@ -653,5 +757,6 @@ module.exports = {
   bankingSchemas,
   paymentSchemas,
   vatSchemas,
-  currencySchemas
+  currencySchemas,
+  referralSchemas
 };

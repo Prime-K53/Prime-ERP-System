@@ -1,12 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, ExternalLink, BarChart3, Percent, Users, RotateCw, User, AlertTriangle, Mail, Eye, MessageSquare, X, Phone, Gem, Trophy, Medal } from 'lucide-react'
+import { Search, Award, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, BarChart3, Percent, Users, RotateCw, AlertTriangle, Mail, Eye, MessageSquare, X, Gem, Trophy, Medal } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
 import { currencyService } from '../../services/currencyService'
 import { referralService } from '../../services/referralService'
-import { referralAnalyticsService } from '../../services/referralAnalyticsService'
-import { referralCampaignService } from '../../services/referralCampaignService'
-import { referralReversalService } from '../../services/referralReversalService'
 import { whatsappClient } from '../../services/whatsappClientService'
 import type { Referral, ReferralReward } from '../../types/referral'
 import { cloudDb } from '../../services/cloudDb'
@@ -14,7 +10,6 @@ import { cloudDb } from '../../services/cloudDb'
 import type { ReferralAnalytics, ReferralCampaign, ReversalRequest } from '../../types/referral-extended'
 const Referrals: React.FC = () => {
   const { companyConfig, user, notify } = useAuth()
-  const navigate = useNavigate()
   const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$'
 
   const [referrals, setReferrals] = useState<Referral[]>([])
@@ -50,11 +45,11 @@ const Referrals: React.FC = () => {
       const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals, allCustomers] = await Promise.all([
         referralService.getAllReferrals(),
         referralService.getPendingRewards(),
-        cloudDb.getAll<ReferralReward>('referralRewards').then(r => r || []),
-        referralCampaignService.getAllCampaigns(),
-        referralAnalyticsService.getLatestAnalytics(),
-        referralAnalyticsService.getAnalyticsHistory('monthly', 6),
-        referralReversalService.getAllReversals(),
+        referralService.getAllRewards().catch(() => []),
+        referralService.getAllCampaigns().catch(() => []),
+        referralService.getAnalytics({ period: 'monthly' }).catch(() => null),
+        referralService.getAnalyticsHistory({ period: 'monthly' }).catch(() => []),
+        referralService.getAllReversals().catch(() => []),
         cloudDb.getAll<any>('customers').then(c => c || []),
       ])
       setReferrals(allReferrals)
@@ -131,7 +126,7 @@ const Referrals: React.FC = () => {
       start = new Date(now.getFullYear(), 0, 1)
     }
     try {
-      const result = await referralAnalyticsService.generateAnalytics(period, start.toISOString(), now.toISOString())
+      const result = await referralService.getAnalytics({ period, period_start: start.toISOString(), period_end: now.toISOString() })
       setAnalytics(result)
       notify('Analytics generated', 'success')
       loadData()
@@ -146,9 +141,9 @@ const Referrals: React.FC = () => {
       return
     }
     try {
-      await referralCampaignService.createCampaign({
+      await referralService.createCampaign({
         ...newCampaign,
-        createdBy: user?.name || user?.id,
+        created_by: user?.name || user?.id,
       })
       notify('Campaign created', 'success')
       setShowCreateCampaign(false)
@@ -162,7 +157,7 @@ const Referrals: React.FC = () => {
   const handleApproveReversal = async (reversalId: string) => {
     if (!confirm('Approve this reversal? The reward amount will be deducted from the referrer\'s wallet.')) return
     try {
-      await referralReversalService.approveReversal(reversalId, user?.name || user?.id || 'system')
+      await referralService.approveReversal(reversalId, user?.name || user?.id || 'system')
       notify('Reversal processed', 'success')
       loadData()
     } catch (err: any) {
@@ -177,10 +172,9 @@ const Referrals: React.FC = () => {
     try {
       const reward = allRewards.find(r => r.referralId === selectedReferral.id)
       if (!reward) { notify('No reward found for this referral', 'error'); return }
-      await referralReversalService.requestReversal({
-        rewardId: reward.id,
+      await referralService.createReversal({
+        reward_id: reward.id,
         reason,
-        requestedBy: user?.name || user?.id || 'system',
       })
       notify('Reversal request submitted', 'success')
       setSelectedReferral(null)
@@ -251,7 +245,7 @@ const Referrals: React.FC = () => {
     const reason = prompt('Reason for rejection:')
     if (!reason) return
     try {
-      await referralReversalService.rejectReversal(reversalId, user?.name || user?.id || 'system', reason)
+      await referralService.rejectReversal(reversalId, reason, user?.name || user?.id || 'system')
       notify('Reversal rejected', 'info')
       loadData()
     } catch (err: any) {
@@ -760,10 +754,10 @@ const Referrals: React.FC = () => {
                             <td className="px-3 py-2 text-slate-500">{c.totalRewardsGiven} / {c.maxTotalRewards || '∞'}</td>
                             <td className="px-6 py-4">
                               <div className="flex gap-1">
-                                {c.status === 'draft' && <button onClick={async () => { await referralCampaignService.activateCampaign(c.id, user?.id); loadData(); notify('Campaign activated', 'success'); }} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold hover:bg-emerald-100">Activate</button>}
-                                {c.status === 'active' && <button onClick={async () => { await referralCampaignService.pauseCampaign(c.id, user?.id); loadData(); }} className="px-2 py-1 bg-amber-50 text-amber-600 rounded text-[10px] font-bold hover:bg-amber-100">Pause</button>}
-                                {c.status === 'paused' && <button onClick={async () => { await referralCampaignService.activateCampaign(c.id, user?.id); loadData(); }} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold hover:bg-emerald-100">Resume</button>}
-                                {(c.status === 'active' || c.status === 'paused') && <button onClick={async () => { await referralCampaignService.endCampaign(c.id, user?.id); loadData(); }} className="px-2 py-1 bg-rose-50 text-rose-600 rounded text-[10px] font-bold hover:bg-rose-100">End</button>}
+                                {c.status === 'draft' && <button onClick={async () => { await referralService.updateCampaignStatus(c.id, 'active'); loadData(); notify('Campaign activated', 'success'); }} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold hover:bg-emerald-100">Activate</button>}
+                                {c.status === 'active' && <button onClick={async () => { await referralService.updateCampaignStatus(c.id, 'paused'); loadData(); }} className="px-2 py-1 bg-amber-50 text-amber-600 rounded text-[10px] font-bold hover:bg-amber-100">Pause</button>}
+                                {c.status === 'paused' && <button onClick={async () => { await referralService.updateCampaignStatus(c.id, 'active'); loadData(); }} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold hover:bg-emerald-100">Resume</button>}
+                                {(c.status === 'active' || c.status === 'paused') && <button onClick={async () => { await referralService.updateCampaignStatus(c.id, 'completed'); loadData(); }} className="px-2 py-1 bg-rose-50 text-rose-600 rounded text-[10px] font-bold hover:bg-rose-100">End</button>}
                               </div>
                             </td>
                           </tr>

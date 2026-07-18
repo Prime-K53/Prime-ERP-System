@@ -372,9 +372,11 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                         <h4 className="font-bold text-slate-900 truncate max-w-[150px]">{item.customerName}</h4>
                                     </div>
                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                        item.status === 'Pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                            item.status === 'Cancelled' ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                                                'bg-blue-100 text-blue-700 border-blue-200'
+                                        item.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                            item.status === 'Partially Paid' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                item.status === 'Pending' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                                    item.status === 'Cancelled' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                                                        'bg-slate-100 text-slate-600 border-slate-200'
                                         }`}>{item.status}</span>
                                 </div>
                                 <div className="space-y-2 mb-4">
@@ -438,9 +440,11 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                         <td className="table-body-cell text-right font-bold text-emerald-600">{companyConfig.currencySymbol}{o.paidAmount.toLocaleString()}</td>
                                         <td className="table-body-cell text-center">
                                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                o.status === 'Pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                    o.status === 'Cancelled' ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                                                        'bg-blue-100 text-blue-700 border-blue-200'
+                                                o.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                                    o.status === 'Partially Paid' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                        o.status === 'Pending' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                                            o.status === 'Cancelled' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                                                                'bg-slate-100 text-slate-600 border-slate-200'
                                                 }`}>{o.status}</span>
                                         </td>
                                         <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>

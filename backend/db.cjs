@@ -1035,6 +1035,218 @@ const initDb = () => {
       });
 
       // User-company membership table for multi-tenant validation
+      // ==================== REFERRAL MODULE ====================
+      db.run(`CREATE TABLE IF NOT EXISTS customer_referrals (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        referred_by_id TEXT,
+        referred_by_name TEXT,
+        referral_code TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','converted','expired','cancelled')),
+        pending_invoice_id TEXT,
+        pending_invoice_amount REAL DEFAULT 0,
+        converted_invoice_id TEXT,
+        converted_at DATETIME,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        deleted_at DATETIME
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_customer ON customer_referrals(customer_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON customer_referrals(referred_by_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_code ON customer_referrals(referral_code)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_status ON customer_referrals(status)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_company ON customer_referrals(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_created ON customer_referrals(created_at)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_referrals_company_status ON customer_referrals(company_id, status)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_rewards (
+        id TEXT PRIMARY KEY,
+        referral_id TEXT NOT NULL,
+        customer_id TEXT NOT NULL,
+        invoice_id TEXT NOT NULL,
+        invoice_amount REAL DEFAULT 0,
+        amount REAL NOT NULL CHECK(amount >= 0),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','paid','cancelled')),
+        approved_at DATETIME,
+        approved_by TEXT,
+        cancelled_at DATETIME,
+        cancelled_by TEXT,
+        cancel_reason TEXT,
+        wallet_transaction_id TEXT,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (referral_id) REFERENCES customer_referrals(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_referral ON referral_rewards(referral_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_customer ON referral_rewards(customer_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_invoice ON referral_rewards(invoice_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_status ON referral_rewards(status)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_company ON referral_rewards(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_rewards_created ON referral_rewards(created_at)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_timeline (
+        id TEXT PRIMARY KEY,
+        referral_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        amount REAL,
+        actor_id TEXT,
+        actor_name TEXT,
+        metadata_json TEXT,
+        timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (referral_id) REFERENCES customer_referrals(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_timeline_referral ON referral_timeline(referral_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_timeline_event ON referral_timeline(event_type)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_timeline_company_referral ON referral_timeline(company_id, referral_id)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_audit_logs (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL CHECK(entity_type IN ('referral','reward','campaign','setting','reversal')),
+        entity_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        actor_id TEXT NOT NULL,
+        actor_name TEXT,
+        field_name TEXT,
+        old_value TEXT,
+        new_value TEXT,
+        reason TEXT,
+        correlation_id TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_audit_entity ON referral_audit_logs(entity_type, entity_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_audit_actor ON referral_audit_logs(actor_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON referral_audit_logs(timestamp)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_campaigns (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','paused','completed','cancelled')),
+        reward_type TEXT NOT NULL DEFAULT 'percentage' CHECK(reward_type IN ('fixed','percentage','hybrid')),
+        reward_value REAL DEFAULT 0,
+        reward_percentage REAL DEFAULT 0,
+        min_purchase_amount REAL DEFAULT 0,
+        max_reward_amount REAL DEFAULT 0,
+        max_rewards_per_customer INTEGER DEFAULT 0,
+        max_total_rewards INTEGER DEFAULT 0,
+        total_rewards_given INTEGER DEFAULT 0,
+        target_segments_json TEXT,
+        excluded_customers_json TEXT,
+        bonus_multiplier REAL DEFAULT 1,
+        terms_json TEXT,
+        created_by TEXT,
+        approved_by TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_campaigns_status ON referral_campaigns(status)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_campaigns_dates ON referral_campaigns(start_date, end_date)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_campaigns_company ON referral_campaigns(company_id)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_analytics (
+        id TEXT PRIMARY KEY,
+        period TEXT NOT NULL CHECK(period IN ('daily','weekly','monthly','quarterly','yearly')),
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        total_referrals INTEGER DEFAULT 0,
+        active_referrals INTEGER DEFAULT 0,
+        converted_referrals INTEGER DEFAULT 0,
+        total_rewards_amount REAL DEFAULT 0,
+        approved_rewards_amount REAL DEFAULT 0,
+        paid_rewards_amount REAL DEFAULT 0,
+        pending_rewards_amount REAL DEFAULT 0,
+        average_reward_amount REAL DEFAULT 0,
+        conversion_rate REAL DEFAULT 0,
+        revenue_attributed REAL DEFAULT 0,
+        roi REAL DEFAULT 0,
+        data_json TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_analytics_period ON referral_analytics(period, period_start)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_analytics_company ON referral_analytics(company_id)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_reversals (
+        id TEXT PRIMARY KEY,
+        reward_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','completed')),
+        requested_by TEXT NOT NULL,
+        requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        approved_by TEXT,
+        approved_at DATETIME,
+        rejected_by TEXT,
+        rejected_at DATETIME,
+        reject_reason TEXT,
+        completed_at DATETIME,
+        wallet_transaction_id TEXT,
+        notes TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reward_id) REFERENCES referral_rewards(id) ON DELETE CASCADE
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_reversals_reward ON referral_reversals(reward_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_reversals_status ON referral_reversals(status)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_reversals_created ON referral_reversals(created_at)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS referral_settings (
+        id TEXT PRIMARY KEY,
+        company_id TEXT NOT NULL,
+        settings_json TEXT NOT NULL DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(company_id)
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_settings_company ON referral_settings(company_id)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS idempotency_keys (
+        id TEXT PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        response_code INTEGER NOT NULL,
+        response_body TEXT,
+        method TEXT NOT NULL,
+        path TEXT NOT NULL,
+        user_id TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_idempotency_key ON idempotency_keys(key)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_idempotency_expires ON idempotency_keys(expires_at)`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        recipient_id TEXT NOT NULL,
+        referral_id TEXT,
+        reward_id TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','read','sent','failed')),
+        read_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_company ON notifications(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)`);
+
       db.run(`CREATE TABLE IF NOT EXISTS user_companies (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,

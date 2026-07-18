@@ -2528,7 +2528,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
                                         <span style={{color:"#666F6C",fontWeight:"500"}}>Discount{formData.discountType === 'percentage' && formData.discount > 0 ? ` ${formData.discount}%` : ''}</span>
-                                        <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                         <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{analysis.discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
                                         <span style={{color:"#666F6C",fontWeight:"500"}}>Other Charges</span>

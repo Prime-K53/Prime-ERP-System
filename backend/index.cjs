@@ -939,6 +939,10 @@ async function startServer() {
   const aiRoutes = require('./routes/aiRoutes.cjs');
   app.use('/api/ai', verifyToken, aiRoutes);
 
+  // --- Referral Management ---
+  const referralRoutes = require('./routes/referralRoutes.cjs');
+  app.use('/api/referrals', verifyToken, referralRoutes);
+
   // --- Finance / Accounting Endpoints ---
   const finance = new (require('./services/financeService.cjs'))();
   const banking = new (require('./services/bankingService.cjs'))();
