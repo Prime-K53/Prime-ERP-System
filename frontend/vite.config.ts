@@ -38,12 +38,12 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: { port: 5173, host: '127.0.0.1', https: true, allowedHosts: ['127.0.0.1', 'localhost'], headers: { 'Content-Security-Policy': CSP } },
-      plugins: [basicSsl(), react(), inlineFontsPlugin(), cjsGuardPlugin()],
+      plugins: [basicSsl(), react(), inlineFontsPlugin()],
       optimizeDeps: { include: ['react','react-dom','recharts','lucide-react','react-router-dom','idb','date-fns','@react-pdf/renderer','zustand','dexie'], exclude: ['@supabase/supabase-js','yoga-layout'] },
       define: { 'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.VITE_AI_PROVIDER': JSON.stringify(env.VITE_AI_PROVIDER), 'process.env.VITE_OPENROUTER_API_KEY': JSON.stringify(env.VITE_OPENROUTER_API_KEY), 'process.env.VITE_OPENROUTER_MODEL': JSON.stringify(env.VITE_OPENROUTER_MODEL) },
       esbuild: { drop: mode === 'production' ? ['console'] : [] },
       resolve: { dedupe: ['react', 'react-dom', 'dexie'], alias: [{ find: '@', replacement: path.resolve(__dirname, '.') }] },
       base: env.VITE_BASE_URL || './',
-      build: { outDir: 'dist', emptyOutDir: true, manifest: 'asset-manifest.json', sourcemap: false, commonjsOptions: { transformMixedEsModules: true, requireReturnsDefault: 'auto' }, rollupOptions: { output: { manualChunks(id) { if (id.includes('node_modules')) { if (id.includes('node_modules/lucide-react')) return 'icons'; if (id.includes('node_modules/recharts')) return 'charts'; if (id.includes('node_modules/@supabase')) return 'supabase'; if (id.includes('node_modules/react-pdf') || id.includes('node_modules/@react-pdf')) return 'pdf'; if (id.includes('node_modules/dexie')) return 'dexie'; if (id.includes('node_modules/zustand')) return 'zustand'; if (id.includes('node_modules/idb')) return 'idb'; if (id.includes('node_modules/date-fns')) return 'date-fns'; } return 'vendor'; } } } }
+      build: { outDir: 'dist', emptyOutDir: true, manifest: 'asset-manifest.json', sourcemap: false, commonjsOptions: { transformMixedEsModules: true, requireReturnsDefault: 'auto' } }
     };
 });
