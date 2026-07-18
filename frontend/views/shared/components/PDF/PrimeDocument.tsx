@@ -284,6 +284,9 @@ const CleanInvoiceTemplate = ({
   const totalAmount = Number(dataAny.totalAmount) || subtotal;
   const tax = Number(dataAny.tax) || 0;
   const discount = Number(dataAny.discount) || 0;
+  const discountType = dataAny.discountType || 'fixed';
+  const discountRaw = Number(dataAny.discountRaw || 0);
+  const discountLabel = discountType === 'percentage' && discountRaw > 0 ? `Discount ${discountRaw}%` : 'Discount';
   
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
   const resolvedWalletBalance = Number(dataAny.walletBalance || 0);
@@ -401,7 +404,7 @@ const CleanInvoiceTemplate = ({
             </View>
             {discount > 0 && (
               <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
-                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>Discount</Text>
+                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>{discountLabel}</Text>
                 <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>-{currency} {discount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
               </View>
             )}
@@ -695,7 +698,7 @@ const ModernInvoiceTemplate = ({
             )}
             {discount > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingRight: 4 }}>
-                <Text style={{ color: '#333333', fontSize: 11 * fontScale }}>Discount</Text>
+                <Text style={{ color: '#333333', fontSize: 11 * fontScale }}>{discountLabel}</Text>
                 <Text style={{ color: '#333333', fontSize: 11 * fontScale }}>-{currency} {discount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
               </View>
             )}
@@ -952,7 +955,7 @@ const ProfessionalInvoiceTemplate = ({
           )}
           {discount > 0 && (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 }}>
-              <Text style={{ color: '#999999', fontSize: 10 * fontScale }}>Discount —</Text>
+              <Text style={{ color: '#999999', fontSize: 10 * fontScale }}>{discountLabel} —</Text>
               <Text style={{ color: '#555555', fontSize: 10 * fontScale }}>-{currency} {discount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
             </View>
           )}

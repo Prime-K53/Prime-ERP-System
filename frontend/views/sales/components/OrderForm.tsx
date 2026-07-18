@@ -140,6 +140,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         items: [] as CartItem[],
         status: type === 'Invoice' ? 'Unpaid' : (type === 'Order' ? 'Pending' : 'Draft'),
         discount: 0,
+        discountType: 'fixed',
         otherCharges: 0,
         otherChargesEnabled: false,
         otherChargesAdjustment: '',
@@ -704,12 +705,15 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
 
         const pricingSummary = summarizePricingBreakdown(processedItems);
 
+        const rawDiscount = Number(formData.discount || 0);
+        const discountAmount = formData.discountType === 'percentage' ? (rawDiscount / 100) * totalGross : rawDiscount;
+
         const currentTaxRate = companyConfig?.taxRate || 0;
-        const taxAmount = (companyConfig?.enableTax) ? (totalGross - (formData.discount || 0)) * (currentTaxRate / 100) : 0;
+        const taxAmount = (companyConfig?.enableTax) ? (totalGross - discountAmount) * (currentTaxRate / 100) : 0;
         const otherCharges = Number(formData.otherCharges) || 0;
         const calcOtherCharges = Number(calculatedOtherCharges) || 0;
         const subTotal = totalGross;
-        const finalTotal = totalGross - Number(formData.discount || 0) + taxAmount + otherCharges + calcOtherCharges;
+        const finalTotal = totalGross - discountAmount + taxAmount + otherCharges + calcOtherCharges;
 
         return {
             subTotal,
@@ -721,10 +725,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             adjustmentBreakdown,
             otherCharges,
             pricingSummary,
+            discountAmount,
             totalQty,
             totalItems: processedItems.length,
         };
-    }, [formData.items, formData.discount, formData.otherCharges, formData.customerPricingTier, inventory, marketAdjustments, companyConfig, calculatedOtherCharges]);
+    }, [formData.items, formData.discount, formData.discountType, formData.otherCharges, formData.customerPricingTier, inventory, marketAdjustments, companyConfig, calculatedOtherCharges]);
 
     const finalDisplayTotal = analysis.totalAmount;
     const orderedAdjustmentEntries = useMemo(() => {
@@ -786,6 +791,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                     ? resolvedRecurringStatus
                     : (initialData.status || (type === 'Invoice' ? 'Unpaid' : (type === 'Order' ? 'Pending' : 'Draft'))),
                 discount: initialData.discount || 0,
+                discountType: initialData.discountType || 'fixed',
                 otherCharges: initialData.otherCharges || 0,
                 otherChargesCalculated: initialData.otherChargesCalculated ?? normalizedOtherCharges,
                 date: initialData.date || prev.date,
@@ -985,7 +991,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         }));
 
         const totalGross = processedItems.reduce((sum: number, i: any) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0);
-        const manualDiscount = Number(formData.discount || 0);
+        const rawManualDiscount = Number(formData.discount || 0);
+        const manualDiscount = formData.discountType === 'percentage' ? (rawManualDiscount / 100) * totalGross : rawManualDiscount;
         const ruleDiscount = processedItems.reduce((sum: number, i: any) => sum + (i.discount || 0), 0);
         const totalDiscount = manualDiscount + ruleDiscount;
         const totalTax = processedItems.reduce((sum: number, i: any) => sum + (i.taxAmount || 0), 0);
@@ -1095,6 +1102,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             totalAmount: finalTotalAmount,
             total: finalTotalAmount,
             discount: totalDiscount,
+            discountType: formData.discountType || 'fixed',
+            discountRaw: formData.discountType === 'percentage' ? Number(formData.discount || 0) : 0,
             otherCharges: otherCharges,
             discountDetails: processedItems.flatMap((i: any) => i.discountDetails || []),
             status: isRecurring
@@ -2470,8 +2479,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         Adjustment applied: {currency}{calculatedOtherCharges.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 )}
-                                <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"16px"}}>
                                     <span style={{fontSize:"11px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",whiteSpace:"nowrap"}}>Discount</span>
+                                    <div style={{display:"flex",alignItems:"center",gap:"6px",background:"#EFF6FF",borderRadius:"8px",padding:"3px"}}>
+                                        <button type="button" onClick={() => setFormData({ ...formData, discountType: 'fixed' })} style={{padding:"5px 10px",fontSize:"11px",fontWeight:"600",border:"none",borderRadius:"6px",cursor:"pointer",background:formData.discountType==='fixed'?'#2563EB':'transparent',color:formData.discountType==='fixed'?'#fff':'#2563EB',transition:"all 0.15s"}}>{currency}</button>
+                                        <button type="button" onClick={() => setFormData({ ...formData, discountType: 'percentage' })} style={{padding:"5px 10px",fontSize:"11px",fontWeight:"600",border:"none",borderRadius:"6px",cursor:"pointer",background:formData.discountType==='percentage'?'#2563EB':'transparent',color:formData.discountType==='percentage'?'#fff':'#2563EB',transition:"all 0.15s"}}>%</button>
+                                    </div>
                                     <div style={{position:"relative",flex:"1"}}>
                                         <input type="number" min="0" step="0.01" placeholder="0.00"
                                             value={formData.discount || ''}
@@ -2479,7 +2492,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             style={{width:"100%",fontFamily:"JetBrains Mono,monospace",fontSize:"13px",padding:"9px 34px 9px 12px",border:"1px solid #E4DFD1",borderRadius:"8px",background:"#FEFDFB",outline:"none"}}
                                             className="focus:border-[#2563EB]"
                                         />
-                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#2563EB"}}>{currency}</span>
+                                        <span style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"12px",fontWeight:"600",color:"#2563EB"}}>{formData.discountType === 'percentage' ? '%' : currency}</span>
                                     </div>
                                 </div>
                                 <div className="notes-box">
@@ -2515,8 +2528,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         </div>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
-                                        <span style={{color:"#666F6C",fontWeight:"500"}}>Discount</span>
-                                        <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{Number(formData.discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span style={{color:"#666F6C",fontWeight:"500"}}>Discount{formData.discountType === 'percentage' && formData.discount > 0 ? ` ${formData.discount}%` : ''}</span>
+                                        <span style={{fontFamily:"JetBrains Mono,monospace",fontWeight:"600",color:"#2563EB"}}>-{currency}{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px dashed #E4DFD1",fontSize:"12px"}}>
                                         <span style={{color:"#666F6C",fontWeight:"500"}}>Other Charges</span>
