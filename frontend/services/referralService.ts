@@ -116,11 +116,12 @@ export const referralService = {
     referredById?: string
     referredByName?: string
   }): Promise<Referral | null> {
-    if (!invoice.referredById) return null
+    console.log('[REFERRAL] registerReferralFromInvoice called with:', { id: invoice.id, customerId: invoice.customerId, referredById: invoice.referredById, totalAmount: invoice.totalAmount });
+    if (!invoice.referredById) { console.log('[REFERRAL] referredById is empty — skipping'); return null }
     if (invoice.customerId === invoice.referredById) return null
 
     const settings = getReferralSettings()
-    if (!settings.enabled) return null
+    if (!settings.enabled) { console.log('[REFERRAL] settings.enabled is false — skipping'); return null }
 
     const all = (await cloudDb.getAll<Referral>('referrals')) || []
     const existing = all.find(

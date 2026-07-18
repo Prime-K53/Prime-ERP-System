@@ -387,6 +387,21 @@ const Orders: React.FC = () => {
             setEditingItem(null);
             notify("Document saved successfully", "success");
 
+            if (data?.referredBy) {
+                import('../../services/referralService').then(({ referralService }) =>
+                    referralService.registerReferralFromInvoice({
+                        id: data.id,
+                        customerId: data.customerId || '',
+                        customerName: data.customerName,
+                        totalAmount: data.totalAmount,
+                        referredById: data.referredBy,
+                        referredByName: data.referredByName,
+                    }).catch(err =>
+                        console.error('[REFERRAL] register from order form failed:', err)
+                    )
+                );
+            }
+
             if (andPay && activeView === 'Invoices') {
                 // Redirect to payments with the customer name pre-selected
                 navigate('/sales-flow/payments', { state: { action: 'create', customer: data.customerName, invoiceId: data.id } });
