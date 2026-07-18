@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Activity, FileText, Users, PieChart, Sparkles, BarChart3, ShieldCheck } from 'lucide-react';
+import { Activity, FileText, Users, PieChart, Sparkles, BarChart3, ShieldCheck, Wallet } from 'lucide-react';
 import GenericHub from './GenericHub';
 
 const RevenueHub: React.FC = () => {
@@ -39,6 +39,13 @@ const RevenueHub: React.FC = () => {
       path: '/revenue/contacts',
       icon: <Users />,
       color: 'bg-blue-50 text-blue-500'
+    },
+    {
+      label: 'Wallet Statement',
+      description: 'Customer wallet transaction history with running balance and statement export.',
+      path: '/revenue/wallet-statement',
+      icon: <Wallet />,
+      color: 'bg-emerald-50 text-emerald-500'
     },
     {
       label: 'Business Intel',
