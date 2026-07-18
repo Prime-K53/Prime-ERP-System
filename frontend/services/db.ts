@@ -420,10 +420,10 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
     }
     const all = await db.getAll(storeName) as T[];
     const cid = await getCurrentCompanyId();
-    if (!cid) return [];
+    if (!cid) return all.filter((item: any) => !item?._companyId);
     return all.filter((item: any) => {
         const recordCompany = item?._companyId;
-        return recordCompany === cid;
+        return !recordCompany || recordCompany === cid;
     });
 });
 

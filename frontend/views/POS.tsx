@@ -1158,7 +1158,9 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
          material_total_cost: pricingSummary.materialTotal,
          taxTotal: round2(totalTax),
          taxDetails: itemTaxDetails,
-         discountTotal: round2(totalDiscount),
+          discountTotal: round2(totalDiscount),
+          referredBy: selectedCustomer?.referredById || '',
+          referredByName: selectedCustomer?.referredByName || '',
         };
 
       try {

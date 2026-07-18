@@ -8,6 +8,8 @@ export interface Referral {
   date: string
   convertedAt?: string
   convertedInvoiceId?: string
+  pendingInvoiceId?: string
+  pendingInvoiceAmount?: number
   notes?: string
   companyId?: string
   createdAt?: string
@@ -52,7 +54,7 @@ export interface ReferralSettings {
 }
 
 export const DEFAULT_REFERRAL_SETTINGS: ReferralSettings = {
-  enabled: false,
+  enabled: true,
   rewardType: 'percentage',
   rewardValue: 0,
   rewardPercentage: 5,

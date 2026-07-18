@@ -10,182 +10,93 @@ DROP TABLE IF EXISTS referral_timeline CASCADE;
 DROP TABLE IF EXISTS referral_rewards CASCADE;
 DROP TABLE IF EXISTS customer_referrals CASCADE;
 
--- Required helper: get the current company_id from session setting
-CREATE OR REPLACE FUNCTION get_current_company_id()
-RETURNS TEXT
-LANGUAGE SQL
-STABLE
-AS $$
-  SELECT NULLIF(current_setting('app.company_id', TRUE), '')::TEXT;
-$$;
-
 -- 1. Referrals
 CREATE TABLE customer_referrals (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_customer_referrals_company_id ON customer_referrals(company_id);
 
-ALTER TABLE customer_referrals ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS customer_referrals_company_isolation ON customer_referrals;
-CREATE POLICY customer_referrals_company_isolation ON customer_referrals
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS customer_referrals_company_isolation_insert ON customer_referrals;
-CREATE POLICY customer_referrals_company_isolation_insert ON customer_referrals
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 2. Referral Rewards
 CREATE TABLE referral_rewards (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_rewards_company_id ON referral_rewards(company_id);
 
-ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_rewards_company_isolation ON referral_rewards;
-CREATE POLICY referral_rewards_company_isolation ON referral_rewards
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_rewards_company_isolation_insert ON referral_rewards;
-CREATE POLICY referral_rewards_company_isolation_insert ON referral_rewards
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 3. Referral Timeline
 CREATE TABLE referral_timeline (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_timeline_company_id ON referral_timeline(company_id);
 
-ALTER TABLE referral_timeline ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_timeline_company_isolation ON referral_timeline;
-CREATE POLICY referral_timeline_company_isolation ON referral_timeline
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_timeline_company_isolation_insert ON referral_timeline;
-CREATE POLICY referral_timeline_company_isolation_insert ON referral_timeline
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 4. Referral Audit Logs
 CREATE TABLE referral_audit_logs (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_audit_company_id ON referral_audit_logs(company_id);
 
-ALTER TABLE referral_audit_logs ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_audit_company_isolation ON referral_audit_logs;
-CREATE POLICY referral_audit_company_isolation ON referral_audit_logs
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_audit_company_isolation_insert ON referral_audit_logs;
-CREATE POLICY referral_audit_company_isolation_insert ON referral_audit_logs
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 5. Referral Campaigns
 CREATE TABLE referral_campaigns (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_campaigns_company_id ON referral_campaigns(company_id);
 
-ALTER TABLE referral_campaigns ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_campaigns_company_isolation ON referral_campaigns;
-CREATE POLICY referral_campaigns_company_isolation ON referral_campaigns
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_campaigns_company_isolation_insert ON referral_campaigns;
-CREATE POLICY referral_campaigns_company_isolation_insert ON referral_campaigns
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 6. Referral Analytics
 CREATE TABLE referral_analytics (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_analytics_company_id ON referral_analytics(company_id);
 
-ALTER TABLE referral_analytics ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_analytics_company_isolation ON referral_analytics;
-CREATE POLICY referral_analytics_company_isolation ON referral_analytics
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_analytics_company_isolation_insert ON referral_analytics;
-CREATE POLICY referral_analytics_company_isolation_insert ON referral_analytics
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 7. Referral Reversals
 CREATE TABLE referral_reversals (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_reversals_company_id ON referral_reversals(company_id);
 
-ALTER TABLE referral_reversals ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_reversals_company_isolation ON referral_reversals;
-CREATE POLICY referral_reversals_company_isolation ON referral_reversals
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_reversals_company_isolation_insert ON referral_reversals;
-CREATE POLICY referral_reversals_company_isolation_insert ON referral_reversals
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
-
 -- 8. Referral Event History
 CREATE TABLE referral_event_history (
     id TEXT PRIMARY KEY,
     data JSONB NOT NULL DEFAULT '{}',
-    company_id TEXT REFERENCES company_config(id) ON DELETE CASCADE,
+    company_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_referral_events_company_id ON referral_event_history(company_id);
-
-ALTER TABLE referral_event_history ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS referral_events_company_isolation ON referral_event_history;
-CREATE POLICY referral_events_company_isolation ON referral_event_history
-    USING (company_id = get_current_company_id());
-
-DROP POLICY IF EXISTS referral_events_company_isolation_insert ON referral_event_history;
-CREATE POLICY referral_events_company_isolation_insert ON referral_event_history
-    FOR INSERT WITH CHECK (company_id = get_current_company_id());
 
 -- 9. Auto-expire referrals via scheduled function
 CREATE OR REPLACE FUNCTION expire_referrals()

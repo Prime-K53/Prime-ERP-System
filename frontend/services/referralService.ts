@@ -7,6 +7,7 @@ import { referralEventBus } from './referralEventBus'
 import { referralTimelineService } from './referralTimelineService'
 import { referralAuditService } from './referralAuditService'
 import { referralCampaignService } from './referralCampaignService'
+import { stringToUuid5 } from '../utils/uuid'
 
 const getCompanyConfig = () => {
   const saved = localStorage.getItem('nexus_company_config')
@@ -357,27 +358,18 @@ export const referralService = {
     referredByName?: string
     status?: string
   }): Promise<ReferralReward | null> {
-    console.log('[REFERRAL_SCAN STEP2] Invoice payload', JSON.stringify(invoice));
-    console.log('[REFERRAL_SCAN STEP5] Checking company ID...');
-    const _companyIdForScan = await cloudDb.getActiveCompanyId().catch(() => null);
-    console.log('[REFERRAL_SCAN STEP5] Company ID resolved:', _companyIdForScan);
-
-    if (!invoice.referredBy) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: missing_referredBy'); return null }
-    console.log('[REFERRAL_SCAN STEP2] referredBy present:', invoice.referredBy);
-    if (invoice.customerId === invoice.referredBy) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: self_referral', invoice.customerId, '===', invoice.referredBy); return null }
+    if (!invoice.referredBy) return null
+    if (invoice.customerId === invoice.referredBy) return null
 
     const settings = getReferralSettings()
-    console.log('[REFERRAL_SCAN STEP3] Settings.enabled:', settings?.enabled, 'settings:', JSON.stringify(settings));
-    if (!settings.enabled) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: referrals_disabled'); return null }
+    if (!settings.enabled) return null
 
-    const allKeys = (await cloudDb.getAll<any>('idempotencyKeys')) || []
     const idempotencyKeyId = `referral-reward:${invoice.id}`
-    const alreadyProcessed = allKeys.find((k: any) => k.id === idempotencyKeyId);
-    if (alreadyProcessed) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: already_processed (idempotency)', idempotencyKeyId); return null }
-    console.log('[REFERRAL_SCAN STEP3] Idempotency check passed');
+    const uuidKeyId = await stringToUuid5(idempotencyKeyId)
+    const allKeys = (await cloudDb.getAll<any>('idempotencyKeys')) || []
+    if (allKeys.find((k: any) => k.id === uuidKeyId)) return null
 
     const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
-    console.log('[REFERRAL_SCAN STEP6] READ_BACK referrals count:', allReferrals.length);
 
     const eligibility = await referralRuleEngine.evaluateEligibility({
       customerId: invoice.customerId,
@@ -385,8 +377,7 @@ export const referralService = {
       paidAmount: invoice.paidAmount,
       existingReferrals: allReferrals as Array<{ customerId: string; referredById: string; status: string }>,
     })
-    console.log('[REFERRAL_SCAN STEP4] Eligibility result:', JSON.stringify(eligibility));
-    if (!eligibility.allowed) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: eligibility_failed', eligibility.reason); return null }
+    if (!eligibility.allowed) return null
 
     const activeCampaign = await referralCampaignService.getApplicableCampaign(
       invoice.customerId,
@@ -397,28 +388,21 @@ export const referralService = {
       paidAmount: invoice.paidAmount,
       campaign: activeCampaign,
     })
-    console.log('[REFERRAL_SCAN STEP4] Reward calc result:', JSON.stringify(rewardCalc));
-    if (!rewardCalc.allowed || !rewardCalc.rewardAmount) { console.log('[REFERRAL_SCAN STEP3] EXIT_REASON: reward_calc_failed', rewardCalc?.reason || 'no reward amount'); return null }
+    if (!rewardCalc.allowed || !rewardCalc.rewardAmount) return null
 
     const rewardAmount = rewardCalc.rewardAmount
-    console.log('[REFERRAL_SCAN STEP4] Reward amount calculated:', rewardAmount);
 
     let referral = allReferrals.find(
       r => r.customerId === invoice.customerId && r.referredById === invoice.referredBy && r.status === 'active'
     )
     if (!referral) {
-      console.log('[REFERRAL_SCAN STEP3] No existing active referral found — auto-registering');
       referral = await this.registerReferral(invoice.customerId, invoice.referredBy, invoice.referredByName)
-      console.log('[REFERRAL_SCAN STEP3] Auto-registered referral id:', referral.id);
-    } else {
-      console.log('[REFERRAL_SCAN STEP3] Found existing active referral:', referral.id);
     }
 
     const needsApproval = (await referralRuleEngine.evaluateApprovalRequirement({
       rewardAmount,
       campaign: activeCampaign,
     })).needsApproval
-    console.log('[REFERRAL_SCAN STEP4] Needs approval:', needsApproval);
 
     const reward: ReferralReward = {
       id: generateId('REW'),
@@ -432,60 +416,28 @@ export const referralService = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    console.log('[REFERRAL_SCAN STEP6] Attempting PUT referralRewards', reward.id);
-    try {
-      await cloudDb.put('referralRewards', reward)
-      console.log('[REFERRAL_SCAN STEP6] PUT_SUCCESS referralRewards', reward.id);
-    } catch (e: any) {
-      console.error('[REFERRAL_SCAN STEP6] PUT_FAILED referralRewards', e?.message || e);
-      throw e;
-    }
 
-    console.log('[REFERRAL_SCAN STEP6] Attempting PUT idempotencyKeys', idempotencyKeyId);
-    try {
-      await cloudDb.put('idempotencyKeys', {
-        id: idempotencyKeyId,
-        scope: 'referral-reward',
-        sourceId: invoice.id,
-        createdAt: new Date().toISOString(),
-        metadata: { rewardId: reward.id, amount: rewardAmount, campaignId: activeCampaign?.id },
-      })
-      console.log('[REFERRAL_SCAN STEP6] PUT_SUCCESS idempotencyKeys');
-    } catch (e: any) {
-      console.error('[REFERRAL_SCAN STEP6] PUT_FAILED idempotencyKeys', e?.message || e);
-    }
+    await cloudDb.put('referralRewards', reward)
+    await cloudDb.recordIdempotency(idempotencyKeyId, reward.id)
 
-    console.log('[REFERRAL_SCAN STEP6] Attempting timeline addEntry for reward_earned');
-    try {
-      await referralTimelineService.addEntry({
-        referralId: referral.id,
-        eventType: 'reward_earned',
-        title: needsApproval ? 'Reward earned (pending approval)' : 'Reward earned',
-        description: `Reward of ${rewardAmount} earned from invoice #${invoice.id}`,
-        amount: rewardAmount,
-        metadata: { invoiceId: invoice.id, campaignId: activeCampaign?.id, needsApproval },
-      })
-      console.log('[REFERRAL_SCAN STEP6] Timeline entry added');
-    } catch (e: any) {
-      console.error('[REFERRAL_SCAN STEP6] Timeline addEntry failed', e?.message || e);
-    }
+    await referralTimelineService.addEntry({
+      referralId: referral.id,
+      eventType: 'reward_earned',
+      title: needsApproval ? 'Reward earned (pending approval)' : 'Reward earned',
+      description: `Reward of ${rewardAmount} earned from invoice #${invoice.id}`,
+      amount: rewardAmount,
+      metadata: { invoiceId: invoice.id, campaignId: activeCampaign?.id, needsApproval },
+    })
 
-    console.log('[REFERRAL_SCAN STEP6] Attempting audit log');
-    try {
-      await referralAuditService.log({
-        entityType: 'reward',
-        entityId: reward.id,
-        action: 'created',
-        actorId: 'system',
-        newValue: reward,
-        correlationId: `invoice-${invoice.id}`,
-      })
-      console.log('[REFERRAL_SCAN STEP6] Audit log added');
-    } catch (e: any) {
-      console.error('[REFERRAL_SCAN STEP6] Audit log failed', e?.message || e);
-    }
+    await referralAuditService.log({
+      entityType: 'reward',
+      entityId: reward.id,
+      action: 'created',
+      actorId: 'system',
+      newValue: reward,
+      correlationId: `invoice-${invoice.id}`,
+    })
 
-    console.log('[REFERRAL_SCAN STEP6] Emitting reward.earned event');
     await referralEventBus.emit('reward.earned', {
       source: 'referralService',
       entityType: 'reward',
@@ -495,51 +447,26 @@ export const referralService = {
     })
 
     if (!needsApproval) {
-      console.log('[REFERRAL_SCAN STEP3] Auto-approve path — needsApproval is false, crediting wallet');
       referral.status = 'converted'
       referral.convertedAt = new Date().toISOString()
       referral.convertedInvoiceId = invoice.id
       referral.pendingInvoiceId = undefined
       referral.pendingInvoiceAmount = undefined
-      console.log('[REFERRAL_SCAN STEP6] Attempting PUT referral for conversion', referral.id);
-      try {
-        await cloudDb.put('referrals', referral)
-        console.log('[REFERRAL_SCAN STEP6] PUT_SUCCESS referrals', referral.id);
-      } catch (e: any) {
-        console.error('[REFERRAL_SCAN STEP6] PUT_FAILED referrals', e?.message || e);
-      }
+      await cloudDb.put('referrals', referral)
 
-      console.log('[REFERRAL_SCAN STEP6] Attempting creditWalletForReward', reward.id);
-      try {
-        await this.creditWalletForReward(reward)
-        console.log('[REFERRAL_SCAN STEP6] creditWalletForReward SUCCESS');
-      } catch (e: any) {
-        console.error('[REFERRAL_SCAN STEP6] creditWalletForReward FAILED', e?.message || e);
-        throw e;
-      }
+      await this.creditWalletForReward(reward)
       reward.status = 'paid'
       reward.approvedAt = new Date().toISOString()
       reward.updatedAt = new Date().toISOString()
-      console.log('[REFERRAL_SCAN STEP6] Attempting PUT referralRewards for paid status', reward.id);
-      try {
-        await cloudDb.put('referralRewards', reward)
-        console.log('[REFERRAL_SCAN STEP6] PUT_SUCCESS referralRewards paid', reward.id);
-      } catch (e: any) {
-        console.error('[REFERRAL_SCAN STEP6] PUT_FAILED referralRewards paid', e?.message || e);
-      }
+      await cloudDb.put('referralRewards', reward)
 
-      try {
-        await referralTimelineService.addEntry({
-          referralId: referral.id,
-          eventType: 'reward_paid',
-          title: 'Reward paid',
-          description: `Reward of ${rewardAmount} credited to wallet`,
-          amount: rewardAmount,
-        })
-        console.log('[REFERRAL_SCAN STEP6] Timeline reward_paid entry added');
-      } catch (e: any) {
-        console.error('[REFERRAL_SCAN STEP6] Timeline reward_paid failed', e?.message || e);
-      }
+      await referralTimelineService.addEntry({
+        referralId: referral.id,
+        eventType: 'reward_paid',
+        title: 'Reward paid',
+        description: `Reward of ${rewardAmount} credited to wallet`,
+        amount: rewardAmount,
+      })
 
       await referralEventBus.emit('reward.paid', {
         source: 'referralService',
@@ -550,22 +477,8 @@ export const referralService = {
     }
 
     if (activeCampaign) {
-      console.log('[REFERRAL_SCAN STEP6] Incrementing campaign totalRewardsGiven');
       activeCampaign.totalRewardsGiven += 1
-      try {
-        await cloudDb.put('referralCampaigns', activeCampaign)
-        console.log('[REFERRAL_SCAN STEP6] PUT_SUCCESS referralCampaigns');
-      } catch (e: any) {
-        console.error('[REFERRAL_SCAN STEP6] PUT_FAILED referralCampaigns', e?.message || e);
-      }
-    }
-
-    console.log('[REFERRAL_SCAN STEP6] READ_BACK verification — fetching all referralRewards');
-    try {
-      const readBack = await cloudDb.getAll<any>('referralRewards');
-      console.log('[REFERRAL_SCAN STEP6] READ_BACK_COUNT referralRewards:', readBack?.length || 0);
-    } catch (e: any) {
-      console.error('[REFERRAL_SCAN STEP6] READ_BACK failed', e?.message || e);
+      await cloudDb.put('referralCampaigns', activeCampaign)
     }
 
     return reward

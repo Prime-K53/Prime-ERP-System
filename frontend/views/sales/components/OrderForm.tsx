@@ -1094,6 +1094,8 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             nextRunDate: isRecurring
                 ? normalizeDateInputValue(formData.nextRunDate || getDefaultRecurringNextRunDate(formData.frequency || 'Monthly', formData.startDate || formData.date))
                 : formData.nextRunDate,
+            referredBy: selectedCustomerObj?.referredById || '',
+            referredByName: selectedCustomerObj?.referredByName || '',
             createdBy: user?.name || user?.username || 'System User',
             referenceDoc: formData.referenceDoc || '',
 
@@ -2012,7 +2014,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             <div className="search-box" style={{position:"relative"}} ref={itemDropdownRef}>
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Item</span>
                                 <input type="text" placeholder="Search inventory..."
-                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
+                                    style={{width:"100%",padding:"7px 10px 7px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
                                     className="focus:border-[#2563EB]"
                                     value={itemSearch}
                                     onFocus={() => setIsItemDropdownOpen(true)}
@@ -2069,7 +2071,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             <div className="search-box" style={{position:"relative"}} ref={serviceDropdownRef}>
                                 <span style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",fontSize:"11px",fontWeight:"700",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB",background:"#FEFDFB",padding:"0 4px",zIndex:"1"}}>Services</span>
                                 <input type="text" placeholder="Search services..."
-                                    style={{width:"100%",padding:"11px 14px 11px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
+                                    style={{width:"100%",padding:"7px 10px 7px 68px",fontFamily:"Inter,sans-serif",fontSize:"13px",border:"1px solid #E4DFD1",borderRadius:"9px",background:"#FEFDFB",outline:"none",transition:"border-color .15s ease"}}
                                     className="focus:border-[#2563EB]"
                                     value={serviceSearch}
                                     onFocus={() => setIsServiceDropdownOpen(true)}
