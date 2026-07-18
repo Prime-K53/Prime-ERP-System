@@ -585,25 +585,46 @@ const Referrals: React.FC = () => {
                       <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="font-bold text-slate-900 flex items-center gap-2"><Users size={16} className="text-blue-500" /> Top Referrers</h3>
                       </div>
-                      <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                         {analytics.topReferrers.map((t, i) => {
                           const rank = i + 1
                           const tier = rank === 1 ? 'diamond' : rank === 2 ? 'gold' : rank === 3 ? 'silver' : rank === 4 ? 'bronze' : null
-                          const colors = tier === 'diamond' ? 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-purple-200' :
-                            tier === 'gold' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg shadow-amber-200' :
-                            tier === 'silver' ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-lg shadow-slate-200' :
-                            tier === 'bronze' ? 'bg-gradient-to-br from-orange-400 to-amber-600 text-white shadow-lg shadow-orange-200' :
-                            'bg-white border border-slate-200 text-slate-700'
+                          const cardStyle = tier === 'diamond'
+                            ? 'bg-gradient-to-br from-[#1a0533] via-[#2d1b69] to-[#0d0a2e] text-white shadow-2xl shadow-purple-900/30 ring-1 ring-purple-400/20'
+                            : tier === 'gold'
+                            ? 'bg-gradient-to-br from-[#1a1200] via-[#3d2e00] to-[#1a0e00] text-white shadow-2xl shadow-amber-900/30 ring-1 ring-amber-400/20'
+                            : tier === 'silver'
+                            ? 'bg-gradient-to-br from-[#0f1114] via-[#1e2126] to-[#141619] text-white shadow-2xl shadow-slate-900/30 ring-1 ring-slate-400/20'
+                            : tier === 'bronze'
+                            ? 'bg-gradient-to-br from-[#1a0a00] via-[#3d1f08] to-[#1a0e00] text-white shadow-2xl shadow-orange-900/30 ring-1 ring-orange-400/20'
+                            : 'bg-white border border-slate-200 text-slate-700 shadow-sm'
+                          const glow = tier === 'diamond' ? 'shadow-[0_0_30px_-5px_rgba(168,85,247,0.4)]' :
+                            tier === 'gold' ? 'shadow-[0_0_30px_-5px_rgba(251,191,36,0.4)]' :
+                            tier === 'silver' ? 'shadow-[0_0_30px_-5px_rgba(148,163,184,0.3)]' :
+                            tier === 'bronze' ? 'shadow-[0_0_30px_-5px_rgba(251,146,60,0.35)]' : ''
+                          const label = tier === 'diamond' ? 'Diamond' : tier === 'gold' ? 'Gold' : tier === 'silver' ? 'Silver' : tier === 'bronze' ? 'Bronze' : ''
+                          const labelColor = tier === 'diamond' ? 'text-purple-300' : tier === 'gold' ? 'text-amber-300' : tier === 'silver' ? 'text-slate-300' : tier === 'bronze' ? 'text-orange-300' : ''
                           const Icon = tier === 'diamond' ? Gem : tier === 'gold' ? Trophy : tier === 'silver' ? Medal : tier === 'bronze' ? Medal : Users
+                          const iconBg = tier === 'diamond' ? 'bg-gradient-to-br from-purple-400/30 to-pink-400/30' :
+                            tier === 'gold' ? 'bg-gradient-to-br from-amber-400/30 to-yellow-400/30' :
+                            tier === 'silver' ? 'bg-gradient-to-br from-slate-400/30 to-slate-300/30' :
+                            tier === 'bronze' ? 'bg-gradient-to-br from-orange-400/30 to-amber-400/30' :
+                            'bg-blue-50'
                           return (
-                            <div key={t.customerId || i} className={`${colors} rounded-xl p-4 flex flex-col items-center text-center transition-all hover:scale-[1.02]`}>
-                              <div className={`p-2 rounded-full mb-2 ${tier ? 'bg-white/20' : 'bg-blue-50'}`}>
-                                <Icon size={22} className={tier ? 'text-white' : 'text-blue-500'} />
+                            <div key={t.customerId || i} className={`${cardStyle} ${glow} rounded-2xl p-5 flex flex-col items-center text-center transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 relative overflow-hidden`}>
+                              <div className={`absolute inset-0 opacity-[0.04] ${tier ? 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-transparent' : ''}`} />
+                              {label && (
+                                <span className={`absolute top-2.5 right-3 text-[9px] font-black uppercase tracking-[0.2em] ${labelColor} opacity-60`}>#{rank}</span>
+                              )}
+                              <div className={`p-2.5 rounded-2xl mb-3 ${iconBg} backdrop-blur-sm`}>
+                                <Icon size={24} className={tier ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'text-blue-500'} />
                               </div>
-                              <p className={`font-bold text-sm leading-tight ${tier ? 'text-white' : 'text-slate-900'}`}>{t.customerName || t.customerId}</p>
-                              <div className="flex items-center gap-3 mt-2">
-                                <span className={`text-xs font-medium ${tier ? 'text-white/80' : 'text-slate-500'}`}>{t.referralCount} referrals</span>
-                                <span className={`text-xs font-black ${tier ? 'text-white' : 'text-emerald-600'}`}>{currency}{(t.rewardsAmount || 0).toLocaleString()}</span>
+                              <p className={`font-bold text-sm leading-tight tracking-tight ${tier ? 'text-white' : 'text-slate-900'}`}>{t.customerName || t.customerId}</p>
+                              {label && <p className={`text-[9px] font-black uppercase tracking-[0.25em] mt-0.5 ${labelColor}`}>{label}</p>}
+                              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/10 w-full justify-center">
+                                <span className={`text-[11px] font-semibold ${tier ? 'text-white/70' : 'text-slate-500'}`}>{t.referralCount} referrals</span>
+                                <span className={`w-px h-3 ${tier ? 'bg-white/10' : 'bg-slate-200'}`} />
+                                <span className={`text-[11px] font-black ${tier ? 'text-white' : 'text-emerald-600'}`}>{currency}{(t.rewardsAmount || 0).toLocaleString()}</span>
                               </div>
                             </div>
                           )
