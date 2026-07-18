@@ -936,18 +936,18 @@ export const VariantSelectorModal: React.FC<{
                 </div>
 
                 <div className="p-2 overflow-y-auto flex-1 divide-y divide-[#f4f5f8] custom-scrollbar">
-                    {product.variants?.map(v => (
+                    {product.variants?.map((v, vi) => (
                         <button
-                            key={v.id}
+                            key={v.id || vi}
                             onClick={() => handleVariantClick(v)}
                             className="w-full text-left px-6 py-4 hover:bg-[#f4f5f8] flex justify-between items-center transition-all group"
                         >
                             <div className="flex-1">
                                 <div className="font-bold text-[#393a3d] text-sm">{v.name}</div>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                    {Object.entries(v.attributes || {}).map(([key, val]) => (
-                                        <span key={key} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#eceef1] text-[#6b6c7f] uppercase">
-                                            {key.replace(/_/g, ' ')}: {String(val)}
+                                    {Object.entries(v.attributes || {}).map(([attrKey, val]) => (
+                                        <span key={attrKey} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#eceef1] text-[#6b6c7f] uppercase">
+                                            {attrKey.replace(/_/g, ' ')}: {String(val)}
                                         </span>
                                     ))}
                                 </div>
