@@ -26,6 +26,7 @@ import ClientLedger from './reports/ClientLedger';
 import InternalAuditor from './reports/InternalAuditor';
 import RoundingAnalytics from './reports/RoundingAnalytics';
 import BusinessHealthReport from './reports/BusinessHealthReport';
+import WalletStatement from './reports/WalletStatement';
 import { currencyService } from '../services/currencyService';
 import { getRevenueSourceLabel } from '../services/revenueAnalysisService';
 import {
@@ -40,6 +41,7 @@ type ReportCategory =
   | 'Auditor'
   | 'Financials'
   | 'Client Ledger'
+  | 'Wallet Statement'
   | 'Margin Performance'
   | 'Rounding Analytics'
   | 'Business Intel'
@@ -61,6 +63,7 @@ const Reports: React.FC = () => {
     if (location.pathname.includes('rounding-analytics')) return 'Rounding Analytics';
     if (location.pathname.includes('financials')) return 'Financials';
     if (location.pathname.includes('contacts')) return 'Client Ledger';
+    if (location.pathname.includes('wallet-statement')) return 'Wallet Statement';
     if (location.pathname.includes('auditor')) return 'Auditor';
     if (location.pathname.includes('intel')) return 'Business Intel';
     if (location.pathname.includes('health')) return 'Health Diagnostic';
@@ -77,6 +80,7 @@ const Reports: React.FC = () => {
     else if (location.pathname.includes('rounding-analytics')) setActiveCategory('Rounding Analytics');
     else if (location.pathname.includes('financials')) setActiveCategory('Financials');
     else if (location.pathname.includes('contacts')) setActiveCategory('Client Ledger');
+    else if (location.pathname.includes('wallet-statement')) setActiveCategory('Wallet Statement');
     else if (location.pathname.includes('auditor')) setActiveCategory('Auditor');
     else if (location.pathname.includes('intel')) setActiveCategory('Business Intel');
     else if (location.pathname.includes('health')) setActiveCategory('Health Diagnostic');
@@ -131,6 +135,7 @@ const Reports: React.FC = () => {
 
   const renderAuditor = () => <InternalAuditor />;
   const renderClientLedger = () => <ClientLedger />;
+  const renderWalletStatement = () => <WalletStatement />;
   const renderBusinessIntel = () => <BusinessHealthReport />;
 
   const renderMarginPerformance = () => {
@@ -482,6 +487,7 @@ const Reports: React.FC = () => {
           {activeCategory === 'Margin Performance' && renderMarginPerformance()}
           {activeCategory === 'Rounding Analytics' && <RoundingAnalytics />}
           {activeCategory === 'Client Ledger' && renderClientLedger()}
+          {activeCategory === 'Wallet Statement' && renderWalletStatement()}
           {activeCategory === 'Business Intel' && renderBusinessIntel()}
           {activeCategory === 'Health Diagnostic' && <BusinessHealthReport />}
           {activeCategory === 'Auditor' && renderAuditor()}
