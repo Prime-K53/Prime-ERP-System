@@ -808,7 +808,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotification({ id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, message, type });
   }, []);
 
-  logger.setNotifyCallback(notify);
+  useEffect(() => {
+    logger.setNotifyCallback(notify);
+  }, [notify]);
 
   const clearNotification = useCallback(() => {
     setNotification(null);
