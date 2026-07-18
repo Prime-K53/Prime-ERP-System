@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS public.idempotency_keys (
   result TEXT,
   company_id TEXT,
   expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.tax_rates (

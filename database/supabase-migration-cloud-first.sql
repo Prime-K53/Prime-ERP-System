@@ -3,12 +3,13 @@
 -- Run this in Supabase SQL Editor to enable the cloud-first architecture.
 -- ============================================================================
 
--- 1. Ensure idempotency_keys table exists and has the expires_at column
+-- 1. Ensure idempotency_keys table exists and has the updated_at column
 CREATE TABLE IF NOT EXISTS public.idempotency_keys (
   id UUID PRIMARY KEY,
   result TEXT,
   expires_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE IF EXISTS idempotency_keys 
@@ -23,6 +24,10 @@ ON idempotency_keys(expires_at);
 -- Add company_id for tenant isolation
 ALTER TABLE IF EXISTS idempotency_keys
 ADD COLUMN IF NOT EXISTS company_id TEXT;
+
+-- Add updated_at for cloudDb.getAll ordering
+ALTER TABLE IF EXISTS idempotency_keys
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_idempotency_keys_company_id
 ON idempotency_keys(company_id);
