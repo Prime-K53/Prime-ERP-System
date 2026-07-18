@@ -299,6 +299,12 @@ export const referralService = {
   },
 
   async creditWalletForReward(reward: ReferralReward): Promise<{ walletTransactionId: string }> {
+    const idempotencyKeyOpId = `referral-reward-credit:${reward.id}`
+    const alreadyCredited = await cloudDb.checkIdempotency(idempotencyKeyOpId)
+    if (alreadyCredited.alreadyProcessed) {
+      return { walletTransactionId: alreadyCredited.result || '' }
+    }
+
     const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
     const referral = allReferrals.find(r => r.id === reward.referralId)
     const referrerCustomerId = referral?.referredById
@@ -332,19 +338,17 @@ export const referralService = {
       customerId: referrerCustomerId,
       customerName: referrer.name || '',
     }
-    const idempotencyKey = {
-      id: `referral-reward-credit:${reward.id}`,
-      scope: 'referral-reward-credit',
-      sourceId: reward.id,
-      createdAt: new Date().toISOString(),
-    }
 
-    await Promise.all([
-      cloudDb.put('walletTransactions', walletTx),
-      cloudDb.put('customers', referrer),
-      cloudDb.put('ledger', ledgerEntry),
-      cloudDb.put('idempotencyKeys', idempotencyKey),
-    ])
+    try {
+      await Promise.all([
+        cloudDb.put('walletTransactions', walletTx),
+        cloudDb.put('customers', referrer),
+        cloudDb.put('ledger', ledgerEntry),
+        cloudDb.recordIdempotency(idempotencyKeyOpId, reward.id),
+      ])
+    } catch {
+      // best-effort
+    }
 
     return { walletTransactionId: walletTxId }
   },
