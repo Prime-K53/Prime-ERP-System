@@ -295,8 +295,8 @@ const Referrals: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-        <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-300">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+        <div className="max-w-6xl mx-auto space-y-4 animate-in fade-in duration-300">
           {/* Error banner */}
           {loadError && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 text-sm text-red-700">
@@ -312,84 +312,84 @@ const Referrals: React.FC = () => {
           )}
 
           {/* Stats (Referrals tab only) */}
-          {activeView === 'referrals' && <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {activeView === 'referrals' && <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'total' ? 'All' : 'total')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'total' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-blue-500 ${selectedMetric === 'total' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
                 <Award size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Referrals</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Total Referrals</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.total.toLocaleString()}</p>
               </div>
             </div>
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'active' ? 'All' : 'active')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'active' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-blue-500 ${selectedMetric === 'active' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
                 <TrendingUp size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Active</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Active</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.active.toLocaleString()}</p>
               </div>
             </div>
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'pendingInvoices' ? 'All' : 'pendingInvoices')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'pendingInvoices' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-amber-500 ${selectedMetric === 'pendingInvoices' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+              <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
                 <Clock size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pending Invoices</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Pending Invoices</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.pendingInvoices.toLocaleString()}</p>
-                <p className="text-[10px] text-slate-400 font-medium mt-0.5">{currency}{stats.pendingInvoiceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-slate-400 font-medium">{currency}{stats.pendingInvoiceTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'converted' ? 'All' : 'converted')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'converted' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-emerald-500 ${selectedMetric === 'converted' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+              <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
                 <CheckCircle size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Converted</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Converted</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.converted.toLocaleString()}</p>
               </div>
             </div>
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'pending' ? 'All' : 'pending')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'pending' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-amber-500 ${selectedMetric === 'pending' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+              <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
                 <Clock size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Pending Rewards</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Pending Rewards</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{stats.pendingRewards.toLocaleString()}</p>
               </div>
             </div>
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'paid' ? 'All' : 'paid')}
-              className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'paid' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+              className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-emerald-500 ${selectedMetric === 'paid' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
             >
-              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+              <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
                 <DollarSign size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">Total Paid</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-0.5">Total Paid</p>
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{stats.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
           </div>}
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
             </div>
           ) : activeView === 'referrals' ? (
@@ -399,7 +399,7 @@ const Referrals: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Search referrals by customer name, code..."
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                  className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -430,25 +430,25 @@ const Referrals: React.FC = () => {
               )}
 
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                   <h3 className="font-bold text-slate-900">All Referrals</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred Customer</th>
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrer</th>
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
-                          <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referred Customer</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrer</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {filteredReferrals.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic">No referrals found.</td>
+                            <td colSpan={6} className="px-3 py-10 text-center text-slate-400 italic">No referrals found.</td>
                           </tr>
                         ) : (
                           filteredReferrals.map((ref) => {
@@ -458,11 +458,11 @@ const Referrals: React.FC = () => {
                             const isSelected = selectedReferral?.id === ref.id
                             return (
                               <tr key={ref.id} onClick={e => { setSelectedReferral(ref); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
-                                <td className="px-6 py-4 font-bold text-slate-900">{customers.find(c => c.id === ref.customerId)?.name || ref.customerId}</td>
-                                <td className="px-6 py-4 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
-                                <td className="px-6 py-4 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
-                                <td className="px-6 py-4 font-black text-emerald-600">{amountLabel}</td>
-                                <td className="px-6 py-4 text-slate-500">{new Date(ref.date).toLocaleDateString()}</td>
+                                <td className="px-3 py-2 font-bold text-slate-900">{customers.find(c => c.id === ref.customerId)?.name || ref.customerId}</td>
+                                <td className="px-3 py-2 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
+                                <td className="px-3 py-2 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
+                                <td className="px-3 py-2 font-black text-emerald-600">{amountLabel}</td>
+                                <td className="px-3 py-2 text-slate-500">{new Date(ref.date).toLocaleDateString()}</td>
                                 <td className="px-6 py-4">
                                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${ref.status === 'active' && ref.pendingInvoiceId ? 'bg-amber-50 text-amber-700 border-amber-100' : ref.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-100' : ref.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                                     {ref.status === 'active' && ref.pendingInvoiceId ? 'Pending' : ref.status}
@@ -479,30 +479,30 @@ const Referrals: React.FC = () => {
             </>
           ) : activeView === 'approvals' ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+              <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                 <h3 className="font-bold text-slate-900">Reward Approval Queue</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
-                      <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
-                      <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
-                      <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
-                      <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {rewards.length === 0 ? (
-                      <tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 italic">No pending rewards.</td></tr>
+                      <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic">No pending rewards.</td></tr>
                     ) : (
                       rewards.map((r) => (
                         <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
-                          <td className="px-6 py-4 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
-                          <td className="px-6 py-4 text-slate-500 font-mono text-xs">#{r.invoiceId.slice(-8)}</td>
-                          <td className="px-6 py-4 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
+                          <td className="px-3 py-2 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
+                          <td className="px-3 py-2 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
+                          <td className="px-3 py-2 text-slate-500 font-mono text-xs">#{r.invoiceId.slice(-8)}</td>
+                          <td className="px-3 py-2 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => handleApprove(r.id)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors" title="Approve"><CheckCircle size={18} /></button>
@@ -532,9 +532,9 @@ const Referrals: React.FC = () => {
                   <div className="grid grid-cols-4 gap-4">
                     <div
                       onClick={() => setSelectedMetric(selectedMetric === 'Conversion Rate' ? 'All' : 'Conversion Rate')}
-                      className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'Conversion Rate' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+                      className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-blue-500 ${selectedMetric === 'Conversion Rate' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
                     >
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                      <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
                         <Percent size={20} />
                       </div>
                       <div>
@@ -544,9 +544,9 @@ const Referrals: React.FC = () => {
                     </div>
                     <div
                       onClick={() => setSelectedMetric(selectedMetric === 'Total Rewards' ? 'All' : 'Total Rewards')}
-                      className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'Total Rewards' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+                      className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-amber-500 ${selectedMetric === 'Total Rewards' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
                     >
-                      <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+                      <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
                         <Users size={20} />
                       </div>
                       <div>
@@ -556,9 +556,9 @@ const Referrals: React.FC = () => {
                     </div>
                     <div
                       onClick={() => setSelectedMetric(selectedMetric === 'Revenue Attributed' ? 'All' : 'Revenue Attributed')}
-                      className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'Revenue Attributed' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+                      className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-emerald-500 ${selectedMetric === 'Revenue Attributed' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
                     >
-                      <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                      <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
                         <DollarSign size={20} />
                       </div>
                       <div>
@@ -568,9 +568,9 @@ const Referrals: React.FC = () => {
                     </div>
                     <div
                       onClick={() => setSelectedMetric(selectedMetric === 'ROI' ? 'All' : 'ROI')}
-                      className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'ROI' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+                      className={`cursor-pointer transition-all duration-200 bg-white p-2 md:p-2.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 border-l-4 border-l-emerald-500 ${selectedMetric === 'ROI' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
                     >
-                      <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                      <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
                         <BarChart3 size={20} />
                       </div>
                       <div>
@@ -582,24 +582,24 @@ const Referrals: React.FC = () => {
 
                   {analytics.topReferrers && analytics.topReferrers.length > 0 && (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                      <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="font-bold text-slate-900 flex items-center gap-2"><Users size={16} className="text-blue-500" /> Top Referrers</h3>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrals</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rewards</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrals</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rewards</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {analytics.topReferrers.map((t, i) => (
                               <tr key={t.customerId || i} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4 font-bold text-slate-900">{t.customerName || t.customerId}</td>
-                                <td className="px-6 py-4 text-slate-500">{t.referralCount}</td>
-                                <td className="px-6 py-4 font-black text-emerald-600">{currency}{(t.rewardsAmount || 0).toLocaleString()}</td>
+                                <td className="px-3 py-2 font-bold text-slate-900">{t.customerName || t.customerId}</td>
+                                <td className="px-3 py-2 text-slate-500">{t.referralCount}</td>
+                                <td className="px-3 py-2 font-black text-emerald-600">{currency}{(t.rewardsAmount || 0).toLocaleString()}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -610,30 +610,30 @@ const Referrals: React.FC = () => {
 
                   {analyticsHistory.length > 0 && (
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                      <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                         <h3 className="font-bold text-slate-900">Analytics History</h3>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-100">
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Period</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrals</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Converted</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rate</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rewards</th>
-                              <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">ROI</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Period</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Referrals</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Converted</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rate</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Rewards</th>
+                              <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">ROI</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {analyticsHistory.map(a => (
                               <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4 font-bold text-slate-900">{new Date(a.periodStart).toLocaleDateString()} - {new Date(a.periodEnd).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 text-slate-500">{a.totalReferrals}</td>
-                                <td className="px-6 py-4 text-slate-500">{a.convertedReferrals}</td>
-                                <td className="px-6 py-4 font-bold text-slate-900">{a.conversionRate}%</td>
-                                <td className="px-6 py-4 font-black text-emerald-600">{currency}{a.totalRewardsAmount.toLocaleString()}</td>
-                                <td className="px-6 py-4 font-bold text-slate-900">{a.roi}%</td>
+                                <td className="px-3 py-2 font-bold text-slate-900">{new Date(a.periodStart).toLocaleDateString()} - {new Date(a.periodEnd).toLocaleDateString()}</td>
+                                <td className="px-3 py-2 text-slate-500">{a.totalReferrals}</td>
+                                <td className="px-3 py-2 text-slate-500">{a.convertedReferrals}</td>
+                                <td className="px-3 py-2 font-bold text-slate-900">{a.conversionRate}%</td>
+                                <td className="px-3 py-2 font-black text-emerald-600">{currency}{a.totalRewardsAmount.toLocaleString()}</td>
+                                <td className="px-3 py-2 font-bold text-slate-900">{a.roi}%</td>
                               </tr>
                             ))}
                           </tbody>
@@ -712,27 +712,27 @@ const Referrals: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Name</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Dates</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Reward</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Given / Max</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Actions</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Name</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Dates</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Reward</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Given / Max</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {campaigns.length === 0 ? (
-                        <tr><td colSpan={6} className="px-6 py-16 text-center text-slate-400 italic">No campaigns created yet.</td></tr>
+                        <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-400 italic">No campaigns created yet.</td></tr>
                       ) : (
                         campaigns.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-bold text-slate-900">{c.name}</td>
+                            <td className="px-3 py-2 font-bold text-slate-900">{c.name}</td>
                             <td className="px-6 py-4">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${c.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : c.status === 'draft' ? 'bg-slate-50 text-slate-500 border-slate-100' : c.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{c.status}</span>
                             </td>
-                            <td className="px-6 py-4 text-slate-500 text-xs">{new Date(c.startDate).toLocaleDateString()}{c.endDate ? ` - ${new Date(c.endDate).toLocaleDateString()}` : ''}</td>
-                            <td className="px-6 py-4 font-bold text-slate-900">{c.rewardType === 'fixed' ? currency + c.rewardValue : c.rewardType === 'percentage' ? `${c.rewardPercentage}%` : `${currency + c.rewardValue} + ${c.rewardPercentage}%`}{c.bonusMultiplier && c.bonusMultiplier > 1 ? ` x${c.bonusMultiplier}` : ''}</td>
-                            <td className="px-6 py-4 text-slate-500">{c.totalRewardsGiven} / {c.maxTotalRewards || '∞'}</td>
+                            <td className="px-3 py-2 text-slate-500 text-xs">{new Date(c.startDate).toLocaleDateString()}{c.endDate ? ` - ${new Date(c.endDate).toLocaleDateString()}` : ''}</td>
+                            <td className="px-3 py-2 font-bold text-slate-900">{c.rewardType === 'fixed' ? currency + c.rewardValue : c.rewardType === 'percentage' ? `${c.rewardPercentage}%` : `${currency + c.rewardValue} + ${c.rewardPercentage}%`}{c.bonusMultiplier && c.bonusMultiplier > 1 ? ` x${c.bonusMultiplier}` : ''}</td>
+                            <td className="px-3 py-2 text-slate-500">{c.totalRewardsGiven} / {c.maxTotalRewards || '∞'}</td>
                             <td className="px-6 py-4">
                               <div className="flex gap-1">
                                 {c.status === 'draft' && <button onClick={async () => { await referralCampaignService.activateCampaign(c.id, user?.id); loadData(); notify('Campaign activated', 'success'); }} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold hover:bg-emerald-100">Activate</button>}
@@ -758,22 +758,22 @@ const Referrals: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Reason</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Requested By</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
-                        <th className="px-6 py-3 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Reason</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Requested By</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                        <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {reversals.length === 0 ? (
-                        <tr><td colSpan={5} className="px-6 py-16 text-center text-slate-400 italic">No reversals recorded.</td></tr>
+                        <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic">No reversals recorded.</td></tr>
                       ) : (
                         reversals.map(r => (
                           <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 text-slate-500">{new Date(r.requestedAt).toLocaleDateString()}</td>
-                            <td className="px-6 py-4 text-slate-900 font-medium">{r.reason}</td>
-                            <td className="px-6 py-4 text-slate-500">{r.requestedBy}</td>
+                            <td className="px-3 py-2 text-slate-500">{new Date(r.requestedAt).toLocaleDateString()}</td>
+                            <td className="px-3 py-2 text-slate-900 font-medium">{r.reason}</td>
+                            <td className="px-3 py-2 text-slate-500">{r.requestedBy}</td>
                             <td className="px-6 py-4">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${r.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : r.status === 'completed' ? 'bg-rose-50 text-rose-700 border-rose-100' : r.status === 'rejected' ? 'bg-slate-50 text-slate-500 border-slate-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{r.status}</span>
                             </td>
