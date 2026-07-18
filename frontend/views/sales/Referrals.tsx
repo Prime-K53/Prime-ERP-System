@@ -30,6 +30,7 @@ const Referrals: React.FC = () => {
   const [reversals, setReversals] = useState<ReversalRequest[]>([])
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null)
   const [showMenu, setShowMenu] = useState(false)
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const [detailReferral, setDetailReferral] = useState<Referral | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -406,7 +407,7 @@ const Referrals: React.FC = () => {
 
               {/* Action Menu Popup */}
               {showMenu && selectedReferral && (
-                <div ref={menuRef} className="bg-white border border-slate-200 rounded-xl shadow-xl p-2 absolute z-50 w-56" style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}>
+                <div ref={menuRef} className="bg-white border border-slate-200 rounded-xl shadow-xl p-2 fixed z-50 w-56" style={{ left: Math.min(menuPos.x, window.innerWidth - 240), top: Math.min(menuPos.y, window.innerHeight - 220) }}>
                   <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 mb-1">
                     <span className="text-xs font-bold text-slate-500 truncate">{selectedReferral.customerId}</span>
                     <button onClick={() => { setShowMenu(false); setSelectedReferral(null) }} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
@@ -456,8 +457,8 @@ const Referrals: React.FC = () => {
                             const amountLabel = ref.pendingInvoiceAmount ? `${currency}${ref.pendingInvoiceAmount.toLocaleString()}` : rewardAmt > 0 ? `${currency}${rewardAmt.toLocaleString()}` : '-'
                             const isSelected = selectedReferral?.id === ref.id
                             return (
-                              <tr key={ref.id} onClick={() => { setSelectedReferral(ref); setShowMenu(true) }} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
-                                <td className="px-6 py-4 font-bold text-slate-900">{ref.customerId}</td>
+                              <tr key={ref.id} onClick={e => { setSelectedReferral(ref); setMenuPos({ x: e.clientX, y: e.clientY }); setShowMenu(true) }} className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200' : 'hover:bg-slate-50/50'}`}>
+                                <td className="px-6 py-4 font-bold text-slate-900">{customers.find(c => c.id === ref.customerId)?.name || ref.customerId}</td>
                                 <td className="px-6 py-4 text-slate-500">{ref.referredByName || ref.referredById || '-'}</td>
                                 <td className="px-6 py-4 text-slate-500 font-mono text-xs">{invoiceLabel}</td>
                                 <td className="px-6 py-4 font-black text-emerald-600">{amountLabel}</td>
@@ -828,7 +829,7 @@ const Referrals: React.FC = () => {
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-100">
                     <span className="text-slate-500 font-medium">Amount</span>
-                    <span className="font-bold text-emerald-600">{currency}{(detailReferral.pendingInvoiceAmount || 0).toLocaleString()}</span>
+                    <span className="font-bold text-emerald-600">{detailReferral.pendingInvoiceAmount ? currency + detailReferral.pendingInvoiceAmount.toLocaleString() : currency + allRewards.filter(r => r.referralId === detailReferral.id).reduce((s, r) => s + r.amount, 0).toLocaleString() || '-'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-100">
                     <span className="text-slate-500 font-medium">Date</span>
