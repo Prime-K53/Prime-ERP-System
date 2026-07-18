@@ -4,6 +4,21 @@ import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
+const cjsGuardPlugin = (): Plugin => ({
+  name: 'prime-cjs-guard',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.includes('node_modules/react') && !id.includes('node_modules/react-dom') && !id.includes('node_modules/scheduler')) return;
+    if (id.endsWith('.mjs') || id.endsWith('.esm.js')) return;
+    if (code.includes('exports.') && !code.startsWith('var exports') && !code.startsWith('var module')) {
+      return {
+        code: `var exports = {};\nvar module = { exports: exports };\n${code}`,
+        map: null,
+      };
+    }
+  },
+});
+
 const inlineFontsPlugin = (): Plugin => ({
   name: 'prime-inline-fonts',
   enforce: 'pre',
@@ -23,12 +38,12 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: { port: 5173, host: '127.0.0.1', https: true, allowedHosts: ['127.0.0.1', 'localhost'], headers: { 'Content-Security-Policy': CSP } },
-      plugins: [basicSsl(), react(), inlineFontsPlugin()],
+      plugins: [basicSsl(), react(), inlineFontsPlugin(), cjsGuardPlugin()],
       optimizeDeps: { include: ['react','react-dom','recharts','lucide-react','react-router-dom','idb','date-fns','@react-pdf/renderer','zustand','dexie'], exclude: ['@supabase/supabase-js','yoga-layout'] },
       define: { 'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.VITE_AI_PROVIDER': JSON.stringify(env.VITE_AI_PROVIDER), 'process.env.VITE_OPENROUTER_API_KEY': JSON.stringify(env.VITE_OPENROUTER_API_KEY), 'process.env.VITE_OPENROUTER_MODEL': JSON.stringify(env.VITE_OPENROUTER_MODEL) },
       esbuild: { drop: mode === 'production' ? ['console'] : [] },
       resolve: { dedupe: ['react', 'react-dom', 'dexie'], alias: [{ find: '@', replacement: path.resolve(__dirname, '.') }] },
       base: env.VITE_BASE_URL || './',
-      build: { outDir: 'dist', emptyOutDir: true, manifest: 'asset-manifest.json', sourcemap: false, commonjsOptions: { transformMixedEsModules: true, requireReturnsDefault: 'auto' }, rollupOptions: { output: { manualChunks(id) { if (id.includes('node_modules/lucide-react')) return 'icons'; if (id.includes('node_modules/recharts')) return 'charts'; if (id.includes('node_modules/@supabase')) return 'supabase'; if (id.includes('node_modules/react-pdf') || id.includes('node_modules/@react-pdf')) return 'pdf'; const parts = id.split(/[\\/]/); const nmIdx = parts.indexOf('node_modules'); if (nmIdx !== -1) { const pkg = parts[nmIdx + 1]; if (pkg === 'react' || pkg === 'react-dom' || pkg === 'scheduler') return 'react'; } if (id.includes('node_modules/dexie')) return 'dexie'; if (id.includes('node_modules/zustand')) return 'zustand'; if (id.includes('node_modules/idb')) return 'idb'; if (id.includes('node_modules/date-fns')) return 'date-fns'; if (id.includes('node_modules')) return 'vendor'; } } } }
+      build: { outDir: 'dist', emptyOutDir: true, manifest: 'asset-manifest.json', sourcemap: false, commonjsOptions: { transformMixedEsModules: true, requireReturnsDefault: 'auto' }, rollupOptions: { output: { manualChunks(id) { if (id.includes('node_modules')) { if (id.includes('node_modules/lucide-react')) return 'icons'; if (id.includes('node_modules/recharts')) return 'charts'; if (id.includes('node_modules/@supabase')) return 'supabase'; if (id.includes('node_modules/react-pdf') || id.includes('node_modules/@react-pdf')) return 'pdf'; if (id.includes('node_modules/dexie')) return 'dexie'; if (id.includes('node_modules/zustand')) return 'zustand'; if (id.includes('node_modules/idb')) return 'idb'; if (id.includes('node_modules/date-fns')) return 'date-fns'; } return 'vendor'; } } } }
     };
 });
