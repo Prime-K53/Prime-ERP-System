@@ -378,14 +378,24 @@ export const referralService = {
 
     const allReferrals = (await cloudDb.getAll<Referral>('referrals')) || []
 
-    const eligibility = await referralRuleEngine.evaluateEligibility({
-      customerId: invoice.customerId,
-      referredById: invoice.referredBy,
-      paidAmount: invoice.paidAmount,
-      existingReferrals: allReferrals as Array<{ customerId: string; referredById: string; status: string }>,
-    })
-    console.log('[REFERRAL-REWARD] eligibility:', eligibility);
-    if (!eligibility.allowed) { console.log('[REFERRAL-REWARD] not eligible'); return null }
+    let referral = allReferrals.find(
+      r => r.customerId === invoice.customerId && r.referredById === invoice.referredBy && r.status === 'active'
+    )
+
+    if (!referral) {
+      console.log('[REFERRAL-REWARD] no existing referral found — running eligibility check');
+      const eligibility = await referralRuleEngine.evaluateEligibility({
+        customerId: invoice.customerId,
+        referredById: invoice.referredBy,
+        paidAmount: invoice.paidAmount,
+        existingReferrals: allReferrals as Array<{ customerId: string; referredById: string; status: string }>,
+      })
+      console.log('[REFERRAL-REWARD] eligibility:', eligibility);
+      if (!eligibility.allowed) { console.log('[REFERRAL-REWARD] not eligible'); return null }
+      referral = await this.registerReferral(invoice.customerId, invoice.referredBy, invoice.referredByName)
+    } else {
+      console.log('[REFERRAL-REWARD] existing referral found, skipping eligibility:', referral.id);
+    }
 
     const activeCampaign = await referralCampaignService.getApplicableCampaign(
       invoice.customerId,
@@ -401,13 +411,6 @@ export const referralService = {
     if (!rewardCalc.allowed || !rewardCalc.rewardAmount) { console.log('[REFERRAL-REWARD] no reward calculated'); return null }
 
     const rewardAmount = rewardCalc.rewardAmount
-
-    let referral = allReferrals.find(
-      r => r.customerId === invoice.customerId && r.referredById === invoice.referredBy && r.status === 'active'
-    )
-    if (!referral) {
-      referral = await this.registerReferral(invoice.customerId, invoice.referredBy, invoice.referredByName)
-    }
 
     const needsApproval = (await referralRuleEngine.evaluateApprovalRequirement({
       rewardAmount,
