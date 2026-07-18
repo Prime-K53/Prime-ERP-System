@@ -397,6 +397,13 @@ export const referralService = {
       console.log('[REFERRAL-REWARD] existing referral found, skipping eligibility:', referral.id);
     }
 
+    const existingRewards = (await cloudDb.getAll<ReferralReward>('referralRewards')) || []
+    const alreadyRewarded = existingRewards.some(r => r.referralId === referral.id)
+    if (alreadyRewarded) {
+      console.log('[REFERRAL-REWARD] referral already has a reward, skipping');
+      return null
+    }
+
     const activeCampaign = await referralCampaignService.getApplicableCampaign(
       invoice.customerId,
       invoice.paidAmount

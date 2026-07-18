@@ -19,6 +19,7 @@ const Referrals: React.FC = () => {
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [rewards, setRewards] = useState<ReferralReward[]>([])
   const [allRewards, setAllRewards] = useState<ReferralReward[]>([])
+  const [customers, setCustomers] = useState<Array<{ id: string; name: string }>>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeView, setActiveView] = useState<'referrals' | 'approvals' | 'analytics' | 'campaigns' | 'reversals'>('referrals')
   const [isLoading, setIsLoading] = useState(true)
@@ -40,7 +41,7 @@ const Referrals: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals] = await Promise.all([
+      const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals, allCustomers] = await Promise.all([
         referralService.getAllReferrals(),
         referralService.getPendingRewards(),
         cloudDb.getAll<ReferralReward>('referralRewards').then(r => r || []),
@@ -48,6 +49,7 @@ const Referrals: React.FC = () => {
         referralAnalyticsService.getLatestAnalytics(),
         referralAnalyticsService.getAnalyticsHistory('monthly', 6),
         referralReversalService.getAllReversals(),
+        cloudDb.getAll<any>('customers').then(c => c || []),
       ])
       setReferrals(allReferrals)
       setRewards(pendingRewards)
@@ -56,6 +58,7 @@ const Referrals: React.FC = () => {
       setAnalytics(latestAnalytics)
       setAnalyticsHistory(analyticsHist)
       setReversals(allReversals)
+      setCustomers(allCustomers)
     } catch (err: any) {
       const msg = err?.message || 'Failed to load referral data'
       console.error('Failed to load referral data:', err)
@@ -225,8 +228,8 @@ const Referrals: React.FC = () => {
             </div>
           )}
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {/* Stats (Referrals tab only) */}
+          {activeView === 'referrals' && <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div
               onClick={() => setSelectedMetric(selectedMetric === 'total' ? 'All' : 'total')}
               className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'total' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
@@ -300,7 +303,7 @@ const Referrals: React.FC = () => {
                 <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{stats.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
-          </div>
+          </div>}
 
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
@@ -389,7 +392,7 @@ const Referrals: React.FC = () => {
                       rewards.map((r) => (
                         <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
-                          <td className="px-6 py-4 font-bold text-slate-900">{r.customerId}</td>
+                          <td className="px-6 py-4 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
                           <td className="px-6 py-4 text-slate-500 font-mono text-xs">#{r.invoiceId.slice(-8)}</td>
                           <td className="px-6 py-4 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
                           <td className="px-6 py-4 text-right">
