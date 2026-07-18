@@ -2129,6 +2129,7 @@ export const transactionService = {
                 return { success: true, id: invoice.id };
             }
         );
+        console.log('[REFERRAL] processInvoice complete. invoice.id:', invoice.id, 'referredBy:', invoice.referredBy, 'status:', invoice.status, 'customerId:', invoice.customerId);
         if (invoice.status === 'Paid' && invoice.customerId) {
             import('./engagementEngine').then(({ engagementEngine }) =>
                 engagementEngine.emit('invoice.paid', {
@@ -2149,6 +2150,7 @@ export const transactionService = {
         }
 
         if (invoice.referredBy) {
+            console.log('[REFERRAL] calling registerReferralFromInvoice for', invoice.id, 'referredBy:', invoice.referredBy);
             import('./referralService').then(({ referralService }) =>
                 referralService.registerReferralFromInvoice({
                     id: invoice.id,
@@ -2157,13 +2159,18 @@ export const transactionService = {
                     totalAmount: invoice.totalAmount,
                     referredById: invoice.referredBy,
                     referredByName: invoice.referredByName,
+                }).then(result => {
+                    console.log('[REFERRAL] registerReferralFromInvoice result:', result?.id, result?.status);
                 }).catch(err =>
                     logger.error('Referral registration from invoice failed:', err)
                 )
             );
+        } else {
+            console.log('[REFERRAL] invoice.referredBy is falsy — skipping registerReferralFromInvoice');
         }
 
         if (invoice.status === 'Paid' && invoice.referredBy) {
+            console.log('[REFERRAL] calling processInvoiceReward for', invoice.id);
             import('./referralService').then(({ referralService }) =>
                 referralService.processInvoiceReward({
                     id: invoice.id,
@@ -2172,6 +2179,8 @@ export const transactionService = {
                     paidAmount: invoice.paidAmount,
                     referredBy: invoice.referredBy,
                     referredByName: invoice.referredByName,
+                }).then(result => {
+                    console.log('[REFERRAL] processInvoiceReward result:', result?.id, result?.status);
                 }).catch(err =>
                     logger.error('Referral reward processing from invoice failed:', err)
                 )
