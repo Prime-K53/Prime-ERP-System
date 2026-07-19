@@ -12,7 +12,6 @@ import { useAuth } from '../../../context/AuthContext';
 import { generateAIResponse } from '../../../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import { currencyService } from '../../../services/currencyService';
-import { OfflineImage } from '../../../components/OfflineImage';
 
 interface ProductForecastDetailProps {
   item: Item;
@@ -192,15 +191,10 @@ const ProductForecastDetail: React.FC<ProductForecastDetailProps> = ({
             <ArrowLeft size={20}/>
           </button>
           
-          <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm shrink-0">
-                  <OfflineImage 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover"
-                      fallback={<div className="w-full h-full flex items-center justify-center text-slate-300"><Package size={20}/></div>}
-                  />
-              </div>
+           <div className="flex items-center gap-4">
+               <div className="w-12 h-12 bg-blue-50 rounded-lg border border-blue-200 overflow-hidden shadow-sm shrink-0 flex items-center justify-center">
+                   <Package size={24} className="text-blue-600"/>
+               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                     {item.name} <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Forecast View</span>

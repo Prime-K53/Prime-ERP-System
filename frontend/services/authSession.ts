@@ -58,16 +58,6 @@ export const ensureSessionAuthState = () => {
         // fall through
       }
     }
-    return {
-      userId: null,
-      role: null,
-      isSuperAdmin: false,
-      accessToken: null,
-      refreshToken: null,
-      expiresAt: null,
-      authMode: 'anonymous' as const,
-      isAuthenticated: false
-    };
   }
 
   const stored = getStoredUserSession();
@@ -91,7 +81,7 @@ export const ensureSessionAuthState = () => {
     accessToken: stored.accessToken ? String(stored.accessToken) : null,
     refreshToken: stored.refreshToken ? String(stored.refreshToken) : null,
     expiresAt: stored.tokenExpiry ? String(stored.tokenExpiry) : null,
-    authMode: 'anonymous' as const,
+    authMode: (SUPABASE_ENABLED ? 'supabase' : 'anonymous') as 'supabase' | 'anonymous',
     isAuthenticated: !isSessionExpired(stored)
   };
 };

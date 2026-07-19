@@ -54,7 +54,10 @@ export const DEFAULT_ACCOUNTS: Account[] = [
   { id: '3000', code: '3000', name: 'Owner\'s Equity', type: 'Equity' },
 
   // --- Revenue (4000-4999) ---
-  { id: '4000', code: '4000', name: 'Sales Revenue', type: 'Revenue' },
+  { id: '4000', code: '4000', name: 'Sales', type: 'Revenue' },
+  { id: '4001', code: '4001', name: 'Examination', type: 'Revenue' },
+  { id: '4002', code: '4002', name: 'Assessments', type: 'Revenue' },
+  { id: '4003', code: '4003', name: 'School Account', type: 'Revenue' },
 
   // --- Expenses (5000-6999) ---
   { id: '5000', code: '5000', name: 'Cost of Goods Sold', type: 'Expense' },

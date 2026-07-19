@@ -232,11 +232,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
           icon: <Cpu size={18} />,
           hideSubMenu: true,
           subItems: [
-            { label: 'AI Assistant', path: '/smart-operations/ai', icon: <Sparkles size={14} /> },
             { label: 'Market Adjustments', path: '/smart-operations/adjustments', icon: <TrendingUp size={14} /> },
             { label: 'Smart Pricing Engine', path: '/smart-operations/pricing', icon: <Calculator size={14} /> },
             { label: 'Marketing Messages', path: '/smart-operations/messages', icon: <MessageSquare size={14} /> },
+            { label: 'Referrals', path: '/smart-operations/referrals', icon: <Gift size={14} /> },
           ]
+        },
+        {
+          label: 'AI Analytics',
+          path: '/ai-analytics',
+          icon: <BarChart3 size={18} />,
         },
       ]
     },
@@ -256,8 +261,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
             { label: 'Billing / Invoices', path: '/sales-flow/invoices', icon: <FileSpreadsheet size={14} /> },
             { label: 'Subscriptions', path: '/sales-flow/subscriptions', icon: <RefreshCw size={14} /> },
             { label: 'Lead Board', path: '/sales-flow/leads', icon: <Target size={14} /> },
-            { label: 'Referrals', path: '/sales-flow/referrals', icon: <Gift size={14} /> },
-
           ]
         },
         {

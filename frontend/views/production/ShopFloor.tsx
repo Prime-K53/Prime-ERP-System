@@ -177,15 +177,15 @@ const ShopFloor: React.FC = () => {
                   <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Active Production</h3>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                  {activeJobs.map(wo => (
-                    <button 
-                      key={wo.id}
-                      onClick={() => setSelectedWo(wo)}
-                      className="w-full flex items-center gap-4 bg-white p-3 border border-slate-100 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all text-left group"
-                    >
-                      <div className="w-12 h-12 bg-slate-50 rounded border border-slate-100 overflow-hidden shrink-0">
-                        <OfflineImage src={inventory.find(i => i.id === wo.productId)?.image} alt={wo.productName} className="w-full h-full object-cover"/>
-                      </div>
+                   {activeJobs.map(wo => (
+                     <button 
+                       key={wo.id}
+                       onClick={() => setSelectedWo(wo)}
+                       className="w-full flex items-center gap-4 bg-white p-3 border border-slate-100 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all text-left group"
+                     >
+                       <div className="w-12 h-12 bg-blue-50 rounded border border-blue-200 overflow-hidden shrink-0 flex items-center justify-center">
+                         <Package size={20} className="text-blue-600"/>
+                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">#{wo.id}</span>
@@ -218,12 +218,12 @@ const ShopFloor: React.FC = () => {
                   <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Manufacturing Queue</h3>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                  {queueJobs.map(wo => (
-                    <div key={wo.id} className="flex items-center justify-between bg-white p-3 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 bg-slate-50 rounded border border-slate-100 overflow-hidden shrink-0">
-                          <OfflineImage src={inventory.find(i => i.id === wo.productId)?.image} alt={wo.productName} className="w-full h-full object-cover"/>
-                        </div>
+                   {queueJobs.map(wo => (
+                     <div key={wo.id} className="flex items-center justify-between bg-white p-3 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                       <div className="flex items-center gap-3 min-w-0">
+                         <div className="w-10 h-10 bg-blue-50 rounded border border-blue-200 overflow-hidden shrink-0 flex items-center justify-center">
+                           <Package size={16} className="text-blue-600"/>
+                         </div>
                         <div className="min-w-0">
                           <p className="text-[12px] font-bold text-slate-900 truncate">{wo.productName}</p>
                           <p className="text-[10px] font-medium text-slate-400 uppercase">Qty: {wo.quantityPlanned} • {wo.id}</p>

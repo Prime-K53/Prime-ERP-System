@@ -974,10 +974,17 @@ const ProfessionalInvoiceTemplate = ({
               <Text style={{ color: '#555555', fontSize: 10 * fontScale }}>-{currency} {amountPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
             </View>
           )}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: '#dddddd' }}>
-            <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>Total Grand —</Text>
-            <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>{currency} {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
-          </View>
+          {(type === 'INVOICE' || type === 'ORDER' || (type as string) === 'SALES_ORDER') ? (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: '#dddddd' }}>
+              <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>Due Balance —</Text>
+              <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>{currency} {(totalAmount - amountPaid).toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: '#dddddd' }}>
+              <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>Total Grand —</Text>
+              <Text style={{ color: accentColor, fontWeight: 'bold', fontSize: 12 * fontScale }}>{currency} {totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+            </View>
+          )}
         </View>
 
         {/* Bottom Row */}
@@ -1801,25 +1808,50 @@ if (type === 'POS_RECEIPT') {
                   {/* Right Side: Summary Values */}
                   <View style={s.summaryRight}>
                     <View style={s.summaryBox}>
-                      <View style={s.summaryRow}>
-                        <Text style={{ flex: 1, fontWeight: 'bold' }}>Subtotal</Text>
-                        <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('subtotal' in data ? data.subtotal : 0)}</Text>
-                      </View>
+                      {(() => {
+                        const itemsArr = ('items' in data ? data.items : []) as Array<Record<string, unknown>>;
+                        const itemsSum = itemsArr.length > 0 ? itemsArr.reduce((s: number, i: Record<string, unknown>) => s + Number(i.total || 0), 0) : null;
+                        const displaySubtotal = itemsSum !== null ? itemsSum : ('subtotal' in data ? Number(data.subtotal) : 0);
+                        const displayDiscount = 'discount' in data ? Number(data.discount) : 0;
+                        const displayTotal = itemsSum !== null ? itemsSum - displayDiscount : ('totalAmount' in data ? Number(data.totalAmount) : 0);
+                        const displayAmountPaid = 'amountPaid' in data ? Number(data.amountPaid) : 0;
 
-                      {type === 'QUOTATION' && 'discount' in data && Number(data.discount) > 0 && (
-                        <View style={s.summaryRow}>
-                          <Text style={{ flex: 1 }}>{discountLabel}</Text>
-                          <Text style={{ textAlign: 'right' }}>-{currency} {formatAmount(Number(data.discount))}</Text>
-                        </View>
-                      )}
+                        return (
+                          <>
+                            <View style={s.summaryRow}>
+                              <Text style={{ flex: 1, fontWeight: 'bold' }}>Subtotal</Text>
+                              <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(displaySubtotal)}</Text>
+                            </View>
 
-                      {/* Quoted Amount - only for Quotations */}
-                      {type === 'QUOTATION' && (
-                        <View style={s.totalRow}>
-                          <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount</Text>
-                          <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(subtotal - discount)}</Text>
-                        </View>
-                      )}
+                            {displayDiscount > 0 && (
+                              <View style={s.summaryRow}>
+                                <Text style={{ flex: 1 }}>{discountLabel}</Text>
+                                <Text style={{ textAlign: 'right' }}>-{currency} {formatAmount(displayDiscount)}</Text>
+                              </View>
+                            )}
+
+                            {type === 'QUOTATION' && (
+                              <View style={s.totalRow}>
+                                <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount</Text>
+                                <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(displayTotal)}</Text>
+                              </View>
+                            )}
+
+                            {type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
+                              <>
+                                <View style={s.summaryRow}>
+                                  <Text style={{ flex: 1, fontWeight: 'bold' }}>Amount Paid</Text>
+                                  <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(displayAmountPaid)}</Text>
+                                </View>
+                            <View style={s.totalRow}>
+                              <Text style={{ flex: 1 }}>Due Balance</Text>
+                              <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(('totalAmount' in data ? Number(data.totalAmount) : 0) - displayAmountPaid)}</Text>
+                            </View>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {/* Total before payments - Hidden on Invoices, Orders, and Quotations */}
                       {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
@@ -1827,23 +1859,6 @@ if (type === 'POS_RECEIPT') {
                         <Text style={{ fontWeight: 'bold' }}>Total Amount</Text>
                         <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
                       </View>
-                      )}
-
-                      {/* Amount Paid - Hidden on Quotations */}
-                      {type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
-                        <View style={s.summaryRow}>
-                          <Text style={{ flex: 1, fontWeight: 'bold' }}>Amount Paid</Text>
-                          <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('amountPaid' in data ? data.amountPaid : 0)}</Text>
-                        </View>
-                      )}
-
-
-                      {/* Balance Due - Grand Highlight - Hidden on Quotations */}
-                      {type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
-                        <View style={s.totalRow}>
-                          <Text style={{ flex: 1 }}>Balance Due</Text>
-                          <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(('totalAmount' in data ? data.totalAmount : 0) - ('amountPaid' in data ? data.amountPaid : 0))}</Text>
-                        </View>
                       )}
 
                       {/* Subscription Totals */}

@@ -969,6 +969,8 @@ const Orders: React.FC = () => {
                             paidAmount: item.paidAmount,
                             status: item.paidAmount >= item.totalAmount ? 'Paid' : 'Unpaid',
                             discount: item.discount || 0,
+                            discountType: item.discountType || 'fixed',
+                            discountRaw: item.discountRaw || 0,
                             notes: `Converted from [Order] #[${item.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
                             createdBy: user?.name || 'System User',
                             type: 'standard',
@@ -1409,8 +1411,8 @@ const Orders: React.FC = () => {
 
             {activeView === 'Invoices' && showVisualDashboard && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-500 shrink-0">
-                    <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm border border-slate-200 p-6 rounded-[2.5rem] shadow-sm flex flex-col h-[300px]">
-                        <div className="flex justify-between items-center mb-6">
+                    <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm border border-slate-200 p-6 rounded-[2.5rem] shadow-sm flex flex-col h-[300px] min-h-0">
+                        <div className="flex justify-between items-center mb-6 shrink-0">
                             <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2">
                                 <BarChart2 size={16} className="text-blue-600" /> Revenue & Profit Trends
                             </h3>
@@ -1419,9 +1421,9 @@ const Orders: React.FC = () => {
                                 <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Profit</div>
                             </div>
                         </div>
-                        <div style={{ width: '100%', height: 200, minHeight: 150 }}>
+                        <div className="flex-1 min-h-0 w-full">
                         {/* console.log("Chart container mounted", dashboardData.monthly) */}
-                        <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0}>
+                        <ResponsiveContainer width="100%" height="100%" minHeight={180} minWidth={0} aspect={3}>
                             <BarChart data={dashboardData.monthly}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
@@ -1436,13 +1438,13 @@ const Orders: React.FC = () => {
                         </ResponsiveContainer>
                         </div>
                     </div>
-                    <div className="bg-white/90 backdrop-blur-sm border border-slate-200 p-6 rounded-[2.5rem] shadow-sm flex flex-col h-[300px]">
-                        <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
+                    <div className="bg-white/90 backdrop-blur-sm border border-slate-200 p-6 rounded-[2.5rem] shadow-sm flex flex-col h-[300px] min-h-0">
+                        <h3 className="text-[10px] font-bold text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2 shrink-0">
                             <PieChartIcon size={16} className="text-blue-600" /> Status Distribution
                         </h3>
-                        <div style={{ width: '100%', height: 160, minHeight: 150 }}>
+                        <div className="flex-1 min-h-0 w-full">
                         {/* console.log("Chart container mounted", dashboardData.status) */}
-                        <ResponsiveContainer width="100%" height="100%" minHeight={150} minWidth={0}>
+                        <ResponsiveContainer width="100%" height="100%" minHeight={180} minWidth={0} aspect={1.2}>
                             <PieChart>
                                     <Pie
                                         data={dashboardData.status}

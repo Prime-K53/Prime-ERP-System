@@ -300,39 +300,62 @@ export const AccountDetailsDashboard: React.FC<AccountDetailsDashboardProps> = (
                             <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest">Description</th>
                             <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-right">Debit</th>
                             <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-right">Credit</th>
+                            <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-right">Balance</th>
                             <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-widest text-right">Reference</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {[...accountEntries].reverse().slice(0, 20).map((entry: any) => {
-                            const isDebit = entry.debitAccountId === account.id || entry.debitAccountId === account.code;
-                            return (
-                                <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-8 py-6">
-                                        <div className="text-xs font-bold text-slate-900">{new Date(entry.date).toLocaleDateString()}</div>
-                                        <div className="text-[10px] font-mono text-slate-400 mt-1 uppercase">#{entry.id.split('-')[0]}</div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="font-black text-slate-800 tracking-tight">{entry.description}</div>
-                                    </td>
-                                    <td className="px-8 py-6 text-right tabular-nums">
-                                        {isDebit ? (
-                                            <span className="font-black text-slate-900">{currency}{entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                        ) : <span className="text-slate-300">—</span>}
-                                    </td>
-                                    <td className="px-8 py-6 text-right tabular-nums">
-                                        {!isDebit ? (
-                                            <span className="font-black text-slate-900">{currency}{entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                        ) : <span className="text-slate-300">—</span>}
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tighter">
-                                            {entry.referenceId || 'N/A'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                        {(() => {
+                            const isAssetOrExpense = account.type === 'Asset' || account.type === 'Expense';
+                            const entriesWithBalance = accountEntries.reduce((acc, entry) => {
+                                const prevBalance = acc.length > 0 ? acc[acc.length - 1].runningBalance : 0;
+                                const isDebit = entry.debitAccountId === account.id || entry.debitAccountId === account.code;
+                                const isCredit = entry.creditAccountId === account.id || entry.creditAccountId === account.code;
+                                let change = 0;
+                                if (isAssetOrExpense) {
+                                    if (isDebit) change = entry.amount;
+                                    if (isCredit) change = -entry.amount;
+                                } else {
+                                    if (isCredit) change = entry.amount;
+                                    if (isDebit) change = -entry.amount;
+                                }
+                                return [...acc, { ...entry, runningBalance: prevBalance + change }];
+                            }, [] as any[]).reverse().slice(0, 20);
+                            return entriesWithBalance.map((entry: any) => {
+                                const isDebit = entry.debitAccountId === account.id || entry.debitAccountId === account.code;
+                                return (
+                                    <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="px-8 py-6">
+                                            <div className="text-xs font-bold text-slate-900">{new Date(entry.date).toLocaleDateString()}</div>
+                                            <div className="text-[10px] font-mono text-slate-400 mt-1 uppercase">#{entry.id.split('-')[0]}</div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="font-black text-slate-800 tracking-tight">{entry.description}</div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right tabular-nums">
+                                            {isDebit ? (
+                                                <span className="font-black text-red-600">{currency}{entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            ) : <span className="text-slate-300">—</span>}
+                                        </td>
+                                        <td className="px-8 py-6 text-right tabular-nums">
+                                            {!isDebit ? (
+                                                <span className="font-black text-green-600">{currency}{entry.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            ) : <span className="text-slate-300">—</span>}
+                                        </td>
+                                        <td className="px-8 py-6 text-right tabular-nums">
+                                            <span className={`font-black ${entry.runningBalance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                                                {currency}{entry.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold text-slate-600 border border-slate-200 uppercase tracking-tighter">
+                                                {entry.referenceId || 'N/A'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            });
+                        })()}
                     </tbody>
                 </table>
              </div>

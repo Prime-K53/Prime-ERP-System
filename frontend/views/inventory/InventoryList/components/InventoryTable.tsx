@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Copy, Archive, Trash2, Barcode, QrCode, Package, Edit3, TrendingUp } from 'lucide-react';
+import { MoreHorizontal, Copy, Archive, Trash2, Barcode, QrCode, Package, Edit3, TrendingUp, Layers, Box, Tag, Globe } from 'lucide-react';
 import type { Item } from '../../../../types';
 import { RowIndicators } from './RowIndicators';
 import { resolveMinimumMarkup } from '../../../../services/pricingValidationService';
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  'Raw Material': <Layers size={16} />,
+  'Material': <Box size={16} />,
+  'Product': <Package size={16} />,
+  'Stationery': <Tag size={16} />,
+  'Service': <Globe size={16} />,
+};
 
 interface Props {
   items: Item[];
@@ -96,6 +104,7 @@ const ActionRow: React.FC<ActionRowProps> = ({ item, ...p }) => {
         <td key={col} className="table-body-cell whitespace-nowrap">
           {col === 'Name' ? (
             <div className="flex items-center gap-2">
+              <span className="text-slate-500 shrink-0">{TYPE_ICONS[item.type || ''] || <Package size={16} />}</span>
               <span className="font-medium text-slate-900">{item.name}</span>
               <RowIndicators item={item} />
             </div>

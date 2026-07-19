@@ -867,13 +867,15 @@ export const transactionService = {
                 const paidRevenue = roundToCurrency(revenueAmount * paymentRatio);
                 const unpaidRevenue = roundToCurrency(revenueAmount - paidRevenue);
 
+                const revenueAccountId = sale.salesAccountId || gl.defaultSalesAccount;
+
                 if (paidRevenue > 0) {
                     const revenueEntry: LedgerEntry = {
                         id: generateId('LG-REV'),
                         date: sale.date,
                         description: `POS Sale Revenue #${sale.id}`,
                         debitAccountId: gl.cashDrawerAccount,
-                        creditAccountId: gl.defaultSalesAccount,
+                        creditAccountId: revenueAccountId,
                         amount: Number(paidRevenue.toFixed(2)),
                         referenceId: sale.id,
                         reconciled: false,
@@ -889,7 +891,7 @@ export const transactionService = {
                         date: sale.date,
                         description: `POS Sale Revenue (AR) #${sale.id}`,
                         debitAccountId: gl.accountsReceivable,
-                        creditAccountId: gl.defaultSalesAccount,
+                        creditAccountId: revenueAccountId,
                         amount: Number(unpaidRevenue.toFixed(2)),
                         referenceId: sale.id,
                         reconciled: false,
@@ -1434,7 +1436,7 @@ export const transactionService = {
                     id: generateId('LG-REF-REV'),
                     date: refund.date,
                     description: `Refund Revenue Return - Sale #${refund.saleId || refund.id}`,
-                    debitAccountId: gl.salesReturnAccount || gl.defaultSalesAccount,
+                    debitAccountId: refund.salesAccountId || gl.salesReturnAccount || gl.defaultSalesAccount,
                     creditAccountId: targetCreditAccount,
                     amount: Number(revenueReturnAmount.toFixed(2)),
                     referenceId: refund.id,
@@ -1641,7 +1643,7 @@ export const transactionService = {
                     date: invoice.date,
                     description: `Recurring Invoice #${invoice.id}`,
                     debitAccountId: gl.accountsReceivable,
-                    creditAccountId: gl.defaultSalesAccount,
+                    creditAccountId: invoice.salesAccountId || gl.defaultSalesAccount,
                     amount: totalAmount,
                     referenceId: invoice.id,
                     reconciled: false,
@@ -2006,7 +2008,7 @@ export const transactionService = {
                     date: invoice.date,
                     description: `Invoice #${invoice.id}`,
                     debitAccountId: gl.accountsReceivable,
-                    creditAccountId: gl.defaultSalesAccount,
+                    creditAccountId: invoice.salesAccountId || gl.defaultSalesAccount,
                     amount: totalAmount,
                     referenceId: invoice.id,
                     reconciled: false,
@@ -2343,7 +2345,7 @@ export const transactionService = {
                     date: invoiceData.date,
                     description: `Invoice #${invoiceData.id} from QTN #${quotationId}`,
                     debitAccountId: gl.accountsReceivable,
-                    creditAccountId: gl.defaultSalesAccount,
+                    creditAccountId: invoiceData.salesAccountId || gl.defaultSalesAccount,
                     amount: totalAmount,
                     referenceId: invoiceData.id,
                     reconciled: false,
@@ -2482,7 +2484,7 @@ export const transactionService = {
                     date: invoiceData.date,
                     description: `Invoice #${invoiceData.id} (from Job Order #${jobOrderId})`,
                     debitAccountId: gl.accountsReceivable,
-                    creditAccountId: gl.defaultSalesAccount,
+                    creditAccountId: invoiceData.salesAccountId || gl.defaultSalesAccount,
                     amount: totalAmount,
                     referenceId: invoiceData.id,
                     reconciled: false,

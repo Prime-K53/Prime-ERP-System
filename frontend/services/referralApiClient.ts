@@ -7,6 +7,8 @@ function getHeaders(): Record<string, string> {
     if (raw) {
       const user = JSON.parse(raw);
       if (user?.id) headers['x-user-id'] = user.id;
+      if (user?.role) headers['x-user-role'] = user.role;
+      if (user?.email) headers['x-user-email'] = user.email;
     }
   } catch {}
   try {

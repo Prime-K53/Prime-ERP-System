@@ -581,7 +581,6 @@ const AppLayout: React.FC = () => {
                   <Route path="/sales-flow/customers" element={<Navigate to="/sales-flow/clients" replace />} />
                   <Route path="/sales-flow/clients" element={<ProtectedRoute permission="sales.view"><Clients /></ProtectedRoute>} />
                   <Route path="/sales-flow/payments" element={<ProtectedRoute permission="sales.view"><Payments /></ProtectedRoute>} />
-                  <Route path="/sales-flow/referrals" element={<ProtectedRoute permission="referrals.view"><Referrals /></ProtectedRoute>} />
                 </Route>
 
                 {/* Procurement */}
@@ -619,21 +618,26 @@ const AppLayout: React.FC = () => {
                 {/* Smart Operations */}
                 <Route element={<ErrorBoundary name="Smart Operations"><Outlet /></ErrorBoundary>}>
                   <Route path="/smart-operations" element={<SmartOperationsHub />} />
-                  <Route path="/smart-operations/ai" element={<AIAssistant />} />
-                  <Route path="/smart-operations/ai/analytics" element={<AnalyticsHub />} />
-                  <Route path="/smart-operations/ai/gang-run" element={<GangRunOptimizer />} />
-                  <Route path="/smart-operations/ai/cash-flow" element={<CashFlowForecaster />} />
-                  <Route path="/smart-operations/ai/anomalies" element={<AnomalyDetectorComp />} />
-                  <Route path="/smart-operations/ai/churn" element={<ChurnPredictor />} />
-                  <Route path="/smart-operations/ai/reorder" element={<ReorderOptimizer />} />
-                  <Route path="/smart-operations/ai/po-match" element={<POMatcher />} />
-                  <Route path="/smart-operations/ai/scheduler" element={<SmartScheduler />} />
-                  <Route path="/smart-operations/ai/query" element={<ConversationalQuery />} />
-                  <Route path="/smart-operations/ai/audit" element={<AuditInvestigator />} />
-                  <Route path="/smart-operations/ai/bom" element={<BOMGenerator />} />
                   <Route path="/smart-operations/adjustments" element={<MarketAdjustments />} />
                   <Route path="/smart-operations/pricing" element={<SmartPricing />} />
                   <Route path="/smart-operations/messages" element={<MarketingMessages />} />
+                  <Route path="/smart-operations/referrals" element={<ProtectedRoute permission="referrals.view"><Referrals /></ProtectedRoute>} />
+                </Route>
+
+                {/* AI Analytics */}
+                <Route element={<ErrorBoundary name="AI Analytics"><Outlet /></ErrorBoundary>}>
+                  <Route path="/ai-analytics" element={<AnalyticsHub />} />
+                  <Route path="/ai-analytics/assistant" element={<AIAssistant />} />
+                  <Route path="/ai-analytics/gang-run" element={<GangRunOptimizer />} />
+                  <Route path="/ai-analytics/cash-flow" element={<CashFlowForecaster />} />
+                  <Route path="/ai-analytics/anomalies" element={<AnomalyDetectorComp />} />
+                  <Route path="/ai-analytics/churn" element={<ChurnPredictor />} />
+                  <Route path="/ai-analytics/reorder" element={<ReorderOptimizer />} />
+                  <Route path="/ai-analytics/po-match" element={<POMatcher />} />
+                  <Route path="/ai-analytics/scheduler" element={<SmartScheduler />} />
+                  <Route path="/ai-analytics/query" element={<ConversationalQuery />} />
+                  <Route path="/ai-analytics/audit" element={<AuditInvestigator />} />
+                  <Route path="/ai-analytics/bom" element={<BOMGenerator />} />
                 </Route>
 
                 {/* Examination */}

@@ -55,13 +55,19 @@ async function bootstrap() {
     await examinationService.ensureExaminationPricingSchema();
     console.log('Examination module schemas initialized.');
 
-    // Initialize auth schema (users table)
-    console.log('Initializing auth schema...');
-    const authService = require('./services/authService.cjs');
-    await authService.ensureAuthSchema();
-    console.log('Auth schema initialized.');
-    
-    console.log('Schema verification passed.');
+     // Initialize auth schema (users table)
+     console.log('Initializing auth schema...');
+     const authService = require('./services/authService.cjs');
+     await authService.ensureAuthSchema();
+     console.log('Auth schema initialized.');
+
+     // Initialize referral tables
+     console.log('Initializing referral tables...');
+     const migrate_add_referral_tables = require('./migrations/add_referral_tables.cjs');
+     await migrate_add_referral_tables();
+     console.log('Referral tables initialized.');
+     
+     console.log('Schema verification passed.');
   } catch (err) {
     console.error('--- DATABASE CRITICAL ERROR ---');
     console.error(err);

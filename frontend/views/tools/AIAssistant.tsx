@@ -10,6 +10,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useInventory } from '../../context/InventoryContext';
 import { useSales } from '../../context/SalesContext';
 import { useFinance } from '../../context/FinanceContext';
+import { useProcurement } from '../../context/ProcurementContext';
+import { useProduction } from '../../context/ProductionContext';
+import { useOrders } from '../../context/OrdersContext';
 import { currencyService } from '../../services/currencyService';
 import { generateAIResponse } from '../../services/geminiService';
 import { useNavigate } from 'react-router-dom';
@@ -70,8 +73,11 @@ const QUICK_TEMPLATES = [
 const AIAssistant: React.FC = () => {
   const { isOnline, notify, companyConfig, user } = useAuth();
   const { inventory } = useInventory();
-  const { customers, sales } = useSales();
-  const { invoices, accounts } = useFinance();
+  const { customers, sales, quotations, jobOrders, customerPayments, salesOrders, shipments } = useSales();
+  const { invoices, expenses, income, supplierPayments, employees } = useFinance();
+  const { purchases, suppliers } = useProcurement();
+  const { workOrders, batches } = useProduction();
+  const { orders } = useOrders();
   const navigate = useNavigate();
   
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -95,23 +101,81 @@ const AIAssistant: React.FC = () => {
 
   const generateContext = useCallback(() => {
     const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
+    const safe = (arr: any[], n = 100) => (Array.isArray(arr) ? arr.slice(0, n) : []);
+    
     return `
-SYSTEM CONTEXT:
-- Company: ${companyConfig?.companyName || 'Prime ERP'}
-- User: ${user?.name || 'Admin'}
-- Currency: ${currency}
-- Current Date: ${new Date().toLocaleDateString()}
+ROLE:
+You are an Enterprise ERP AI Assistant and Business Intelligence Analyst.
+Your primary responsibility is to answer questions using the ERP database records below, NOT dashboard summaries.
 
-DATA SUMMARY:
-- Inventory: ${inventory.length} items, total value: ${currency} ${inventory.reduce((sum, i) => sum + (i.cost * i.stock), 0).toLocaleString()}
-- Customers: ${customers.length} total customers
-- Invoices: ${invoices.length} total, ${invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length} pending
-- Sales Today: ${sales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).length} transactions
-- Accounts: ${accounts.length} chart of accounts
+CORE RULES:
+1. NEVER answer analytical questions from summary cards if detailed records exist.
+2. Always retrieve and analyze the underlying records before answering.
+3. For TOP / BEST / HIGHEST / LOWEST questions: retrieve ALL relevant records, calculate the ranking, sort, and return only the requested number.
+4. For product questions: use Products + Inventory + Sales Items + Purchase Items + Stock Movements.
+5. For missing data: say you cannot determine the answer because records are unavailable. Do NOT invent data.
+6. Perform calculations explicitly: SUM, COUNT, AVG, MIN, MAX, GROUP BY, ORDER BY, percentages, growth, trends, comparisons.
 
-Provide concise, actionable insights. Use the data above to give specific numbers.
+COMPANY: ${companyConfig?.companyName || 'Prime ERP'}
+USER: ${user?.name || 'Admin'}
+CURRENCY: ${currency}
+DATE: ${new Date().toLocaleDateString()}
+
+RAW ERP RECORDS:
+
+--- INVENTORY (${inventory.length} items) ---
+${JSON.stringify(safe(inventory.map(i => ({ id: i.id, name: i.name, sku: i.sku, type: i.type, category: i.category, cost: i.cost, price: i.price, stock: i.stock, minStockLevel: i.minStockLevel, reorderPoint: i.reorderPoint }))))}
+
+--- CUSTOMERS (${customers.length}) ---
+${JSON.stringify(safe(customers.map(c => ({ id: c.id, name: c.name, email: c.phone, segment: c.segment, creditLimit: c.creditLimit, outstandingBalance: c.outstandingBalance }))))}
+
+--- SALES (${sales.length}) ---
+${JSON.stringify(safe(sales.map(s => ({ id: s.id, date: s.date, customerName: s.customerName, totalAmount: s.totalAmount, status: s.status, items: s.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))))}
+
+--- INVOICES (${invoices.length}) ---
+${JSON.stringify(safe(invoices.map(inv => ({ id: inv.id, customerName: inv.customerName, totalAmount: inv.totalAmount, paidAmount: inv.paidAmount, date: inv.date, status: inv.status, items: inv.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))))}
+
+--- PURCHASES (${purchases.length}) ---
+${JSON.stringify(safe(purchases.map(p => ({ id: p.id, supplierId: p.supplierId, totalAmount: p.totalAmount, date: p.date, status: p.status, items: p.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))))}
+
+--- EXPENSES (${expenses.length}) ---
+${JSON.stringify(safe(expenses.map(e => ({ id: e.id, date: e.date, description: e.description, amount: e.amount, category: e.category, status: e.status }))))}
+
+--- INCOME (${income.length}) ---
+${JSON.stringify(safe(income.map(i => ({ id: i.id, date: i.date, description: i.description, amount: i.amount, category: i.category }))))}
+
+--- CUSTOMER PAYMENTS (${customerPayments.length}) ---
+${JSON.stringify(safe(customerPayments.map(p => ({ id: p.id, customerName: p.customerName, amount: p.amount, date: p.date, method: p.method, reference: p.reference }))))}
+
+--- SUPPLIER PAYMENTS (${supplierPayments.length}) ---
+${JSON.stringify(safe(supplierPayments.map(p => ({ id: p.id, supplierId: p.supplierId, amount: p.amount, date: p.date, method: p.method }))))}
+
+--- SUPPLIERS (${suppliers.length}) ---
+${JSON.stringify(safe(suppliers.map(s => ({ id: s.id, name: s.name, email: s.email, phone: s.phone, category: s.category }))))}
+
+--- ORDERS (${orders.length}) ---
+${JSON.stringify(safe(orders.map(o => ({ id: o.id, customerName: o.customerName, totalAmount: o.totalAmount, status: o.status, date: o.orderDate, items: o.items?.map((it: any) => ({ productId: it.productId, productName: it.productName, quantity: it.quantity, unitPrice: it.unitPrice, subtotal: it.subtotal })) }))))}
+
+--- WORK ORDERS (${workOrders.length}) ---
+${JSON.stringify(safe(workOrders.map(w => ({ id: w.id, productName: w.productName, status: w.status, quantityPlanned: w.quantityPlanned, quantityCompleted: w.quantityCompleted, customerName: w.customerName }))))}
+
+--- PRODUCTION BATCHES (${batches.length}) ---
+${JSON.stringify(safe(batches.map(b => ({ id: b.id, productName: b.productName, status: b.status, quantityProduced: b.quantityProduced, totalAmount: b.totalAmount }))))}
+
+--- EMPLOYEES (${employees.length}) ---
+${JSON.stringify(safe(employees.map(e => ({ id: e.id, name: e.name, role: e.role, salary: e.salary }))))}
+
+INSTRUCTIONS:
+1. Analyze the RAW records above to answer the user's question.
+2. Do NOT use summary totals from this prompt header. Compute answers from the record arrays.
+3. For rankings: aggregate quantities/revenues/profits from line items, sort descending, and return only the requested count.
+4. For product analysis: join inventory with sales/purchase line items.
+5. For customer analysis: join customers with sales/invoices/payments.
+6. For supplier analysis: join suppliers with purchases/payments.
+7. If records are insufficient, state that explicitly instead of guessing.
+8. Format answers in clean Markdown with tables where helpful.
 `;
-  }, [inventory, customers, invoices, sales, accounts, companyConfig, user]);
+  }, [inventory, customers, sales, invoices, purchases, expenses, income, customerPayments, supplierPayments, suppliers, orders, workOrders, batches, employees, companyConfig, user]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -132,7 +196,7 @@ Provide concise, actionable insights. Use the data above to give specific number
       const context = generateContext();
       const response = await generateAIResponse(
         `${context}\n\nUser Question: ${input}`,
-        "You are a helpful AI assistant for a business ERP system. Provide specific, data-driven answers based on the context provided."
+        "You are an Enterprise ERP AI Assistant and Business Intelligence Analyst. Always analyze the provided raw ERP records to answer questions. Never rely on summary cards. Compute rankings, totals, averages, and trends from the raw data arrays. If records are insufficient, say so explicitly. Format in Markdown."
       );
 
       const aiMessage: ChatMessage = {

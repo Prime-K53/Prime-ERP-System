@@ -109,7 +109,9 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }));
       const pricingSummary = summarizePricingBreakdown(normalizedMappedItems as unknown[]);
       const subtotal = normalizedMappedItems.reduce((sum, it) => sum + (toNum(it.subtotal)), 0);
-      const discount = 0;
+      const discount = toNum(quotation.discount);
+      const discountType = quotation.discountType || 'fixed';
+      const discountRaw = toNum(quotation.discountRaw || 0);
       const totalAmount = subtotal - discount;
 
         const newOrder: Order & Record<string, any> = {
@@ -123,6 +125,8 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         subtotal,
         totalAmount,
         discount,
+        discountType,
+        discountRaw,
         items: normalizedMappedItems,
         payments: [],
         paidAmount: 0,
@@ -172,9 +176,9 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
-      const subtotal = data.items.reduce((sum: number, it: any) => sum + (toNum(it.subtotal || (toNum(it.quantity || it.qty) * toNum(it.unitPrice || it.price || it.cost)))), 0);
+      const subtotal = toNum(data.subtotal) || data.items.reduce((sum: number, it: any) => sum + (toNum(it.subtotal || (toNum(it.quantity || it.qty) * toNum(it.unitPrice || it.price || it.cost)))), 0);
       const discount = toNum(data.discount);
-      const totalAmount = subtotal - discount;
+      const totalAmount = toNum(data.totalAmount) || (subtotal - discount);
       const normalizedItems = data.items.map((item: any) => attachPricingBreakdown({
         ...item,
         orderId: '',
@@ -195,6 +199,8 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         subtotal,
         totalAmount,
         discount,
+        discountType: data.discountType || 'fixed',
+        discountRaw: data.discountRaw || 0,
         items: normalizedItems,
         payments: [],
         paidAmount: 0,

@@ -198,8 +198,9 @@ export const referralService = {
   },
 
   // Reversals
-  async getAllReversals(params?: { page?: number; limit?: number; status?: string }): Promise<any> {
-    return referralApiClient.getReversals(params);
+  async getAllReversals(params?: { page?: number; limit?: number; status?: string }): Promise<any[]> {
+    const result = await referralApiClient.getReversals(params);
+    return (result.reversals || []) as any[];
   },
 
   async createReversal(data: { reward_id: string; reason: string; notes?: string }): Promise<any> {

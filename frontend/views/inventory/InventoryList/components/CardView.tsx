@@ -1,7 +1,15 @@
 import React from 'react';
-import { Package, Edit2, Eye } from 'lucide-react';
+import { Package, Edit2, Eye, Layers, Box, Tag, Globe } from 'lucide-react';
 import type { Item } from '../../../../types';
 import { StockBadge, RowIndicators } from './RowIndicators';
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  'Raw Material': <Layers size={18} />,
+  'Material': <Box size={18} />,
+  'Product': <Package size={18} />,
+  'Stationery': <Tag size={18} />,
+  'Service': <Globe size={18} />,
+};
 
 interface Props {
   items: Item[];
@@ -17,6 +25,7 @@ export const CardView: React.FC<Props> = ({ items, onView, onEdit }) => (
         style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 6px 18px rgba(15,23,42,.05)' }}>
         <div className="flex items-start justify-between mb-[10px]">
           <div className="flex items-center gap-2">
+            <span className="text-slate-500 shrink-0">{TYPE_ICONS[item.type || ''] || <Package size={18} />}</span>
             <span className="font-medium text-[14px]" style={{ color: '#0F172A' }}>{item.name}</span>
             <RowIndicators item={item} />
           </div>

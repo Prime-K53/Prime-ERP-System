@@ -529,7 +529,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             restoredSession = await syncSupabaseUserToLocal(session.user);
             if (restoredSession) {
               setUser(restoredSession);
+              sessionStorage.setItem('nexus_user', JSON.stringify({
+                ...restoredSession,
+                authMode: 'supabase',
+                accessToken: session.access_token || null,
+                tokenExpiry: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+              }));
             }
+          } else {
+            sessionStorage.removeItem('nexus_user');
           }
 
           const [groups, profileRows, logs, storedAlerts, storedReminders] = await Promise.all([
@@ -603,7 +611,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
               const profile = await syncSupabaseUserToLocal(session.user);
-              if (profile) restoredSession = profile;
+              if (profile) {
+                restoredSession = profile;
+                sessionStorage.setItem('nexus_user', JSON.stringify({
+                  ...profile,
+                  authMode: 'supabase',
+                  accessToken: session.access_token || null,
+                  tokenExpiry: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+                }));
+              }
             }
           } catch {
             await supabase.auth.signOut();
@@ -905,7 +921,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           const profile = await syncSupabaseUserToLocal(signInData.user);
           setRequiresSetup(false);
-          setUser({ ...profile, authMode: 'supabase' });
+          const supabaseUser = { ...profile, authMode: 'supabase' as const };
+          setUser(supabaseUser);
+          sessionStorage.setItem('nexus_user', JSON.stringify({
+            ...supabaseUser,
+            accessToken: signInData.session?.access_token || null,
+            tokenExpiry: signInData.session?.expires_at ? new Date(signInData.session.expires_at * 1000).toISOString() : null,
+          }));
           await updateLoginDiagnostic(email, {
             errorCode: '',
             errorMessage: '',
@@ -932,6 +954,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               authMode: 'anonymous'
             } as User;
             setUser(fakeUser);
+            sessionStorage.setItem('nexus_user', JSON.stringify({ ...fakeUser, authMode: 'anonymous' }));
             return 'SUCCESS';
         }
         
@@ -980,8 +1003,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (mfaCode.length !== 6) return 'INVALID';
         }
 
-        setUser({ ...foundUser, authMode: 'local' });
-        
+        const localUser = { ...foundUser, authMode: 'local' as const };
+        setUser(localUser);
+        sessionStorage.setItem('nexus_user', JSON.stringify(localUser));
+
         addAuditLog({
             action: 'LOGIN',
             entityType: 'User',
@@ -1254,7 +1279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Best-effort; proceed with new company creation
       }
 
-      const cloudCompanyId = existingCompanyId || config.companyId || crypto.randomUUID();
+      const cloudCompanyId = config.companyId || crypto.randomUUID();
       const normalizedConfig: CompanyConfig = withNormalizedSecurityConfig(normalizeCompanyNumberingConfig({
         ...defaultCompanyConfig,
         ...config,

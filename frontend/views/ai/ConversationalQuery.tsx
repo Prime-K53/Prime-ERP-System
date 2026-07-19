@@ -68,7 +68,7 @@ const ConversationalQuery: React.FC = () => {
   return (
     <div className="h-full flex flex-col bg-slate-50/50">
       <div className="flex items-center gap-3 p-4 border-b border-slate-200 bg-white">
-        <button onClick={() => navigate('/smart-operations/ai')} className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft size={20} /></button>
+        <button onClick={() => navigate('/ai-analytics')} className="p-2 rounded-lg hover:bg-slate-100"><ArrowLeft size={20} /></button>
         <MessageSquare className="text-purple-500" size={24} />
         <div><h1 className="text-lg font-bold text-slate-800">Conversational Query</h1><p className="text-xs text-slate-500">Ask business questions in plain English</p></div>
       </div>

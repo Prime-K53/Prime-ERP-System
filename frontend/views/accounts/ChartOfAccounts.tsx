@@ -79,6 +79,25 @@ const ChartOfAccounts: React.FC = () => {
     }, 0);
   }, [accountEntries, drilldownAccount]);
 
+  const accountBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+    (ledger || []).forEach(entry => {
+      const debitAcc = accounts.find(a => a.id === entry.debitAccountId || a.code === entry.debitAccountId);
+      const creditAcc = accounts.find(a => a.id === entry.creditAccountId || a.code === entry.creditAccountId);
+      [debitAcc, creditAcc].forEach((acc, idx) => {
+        if (!acc) return;
+        const isDebit = idx === 0;
+        const isAssetOrExpense = acc.type === 'Asset' || acc.type === 'Expense';
+        if (isAssetOrExpense) {
+          balances[acc.id] = (balances[acc.id] || 0) + (isDebit ? entry.amount : -entry.amount);
+        } else {
+          balances[acc.id] = (balances[acc.id] || 0) + (isDebit ? -entry.amount : entry.amount);
+        }
+      });
+    });
+    return balances;
+  }, [accounts, ledger]);
+
   const handleOpenModal = (account?: Account) => {
     if (!canEdit) return;
     if (account) {
@@ -260,57 +279,67 @@ const ChartOfAccounts: React.FC = () => {
 
         <div className="overflow-y-auto flex-1 custom-scrollbar">
            <table className="w-full text-left text-xs">
-             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 font-bold border-b border-slate-200/60 sticky top-0 z-10">
-               <tr>
-                 <th className="px-6 py-4 w-32 uppercase tracking-widest text-[9px]">Code</th>
-                 <th className="px-6 py-4 uppercase tracking-widest text-[9px]">Account Name</th>
-                 <th className="px-6 py-4 uppercase tracking-widest text-[9px]">Type</th>
-                 <th className="px-6 py-4 text-right uppercase tracking-widest text-[9px]">Actions</th>
-               </tr>
-             </thead>
-             <tbody className="divide-y divide-slate-100/50">
-               {filteredAccounts.map(acc => (
-                 <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors group">
-                   <td className="px-6 py-4 font-mono font-bold text-slate-600">{acc.code}</td>
-                   <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-3">
-                      <div className="p-1.5 bg-slate-50 text-slate-400 rounded-lg group-hover:text-blue-500 group-hover:bg-white transition-colors">
-                        <FolderTree size={14}/>
-                      </div>
-                      {acc.name}
-                   </td>
-                   <td className="px-6 py-4">
-                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getTypeColor(acc.type)}`}>
-                       {acc.type}
-                     </span>
-                   </td>
-                   <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => setDrilldownAccount(acc)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all"
-                            title="View Ledger"
-                          >
-                            <History size={14}/>
-                          </button>
-                          {canEdit && (
-                            <>
-                              <button onClick={() => handleOpenModal(acc)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all">
-                                <Edit2 size={14}/>
-                              </button>
-                              <button onClick={() => handleDelete(acc.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all">
-                                <Trash2 size={14}/>
-                              </button>
-                            </>
-                          )}
-                      </div>
-                   </td>
-                 </tr>
-               ))}
-               {filteredAccounts.length === 0 && (
-                 <tr><td colSpan={4} className="p-12 text-center text-slate-400 italic">No accounts found.</td></tr>
-               )}
-             </tbody>
-           </table>
+              <thead className="bg-slate-50/80 backdrop-blur text-slate-500 font-bold border-b border-slate-200/60 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-4 w-32 uppercase tracking-widest text-[9px]">Code</th>
+                  <th className="px-6 py-4 uppercase tracking-widest text-[9px]">Account Name</th>
+                  <th className="px-6 py-4 uppercase tracking-widest text-[9px]">Type</th>
+                  <th className="px-6 py-4 text-right uppercase tracking-widest text-[9px]">Balance</th>
+                  <th className="px-6 py-4 text-right uppercase tracking-widest text-[9px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100/50">
+                {filteredAccounts.map(acc => {
+                  const bal = accountBalances[acc.id] || 0;
+                  const isNegative = (acc.type === 'Asset' || acc.type === 'Expense') ? bal < 0 : bal < 0;
+                  return (
+                  <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors group">
+                    <td className="px-6 py-4 font-mono font-bold text-slate-600">{acc.code}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-3">
+                       <div className="p-1.5 bg-slate-50 text-slate-400 rounded-lg group-hover:text-blue-500 group-hover:bg-white transition-colors">
+                         <FolderTree size={14}/>
+                       </div>
+                       {acc.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getTypeColor(acc.type)}`}>
+                        {acc.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right tabular-nums">
+                      <span className={`font-bold ${bal === 0 ? 'text-slate-300' : isNegative ? 'text-red-600' : 'text-slate-900'}`}>
+                        {currency}{bal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button 
+                             onClick={() => setDrilldownAccount(acc)}
+                             className="p-2 text-slate-400 hover:text-emerald-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all"
+                             title="View Ledger"
+                           >
+                             <History size={14}/>
+                           </button>
+                           {canEdit && (
+                             <>
+                               <button onClick={() => handleOpenModal(acc)} className="p-2 text-slate-400 hover:text-blue-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all">
+                                 <Edit2 size={14}/>
+                               </button>
+                               <button onClick={() => handleDelete(acc.id)} className="p-2 text-slate-400 hover:text-red-600 bg-white border border-slate-100 rounded-lg shadow-sm transition-all">
+                                 <Trash2 size={14}/>
+                               </button>
+                             </>
+                           )}
+                       </div>
+                    </td>
+                  </tr>
+                  );
+                })}
+                {filteredAccounts.length === 0 && (
+                  <tr><td colSpan={5} className="p-12 text-center text-slate-400 italic">No accounts found.</td></tr>
+                )}
+              </tbody>
+            </table>
         </div>
       </div>
 

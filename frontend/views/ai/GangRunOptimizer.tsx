@@ -22,7 +22,7 @@ const GangRunOptimizer: React.FC = () => {
   return (
     <div className="h-full flex flex-col p-6 bg-slate-50/50 overflow-y-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/smart-operations/ai')} className="p-2 rounded-lg hover:bg-white transition-colors"><ArrowLeft size={20} /></button>
+        <button onClick={() => navigate('/ai-analytics')} className="p-2 rounded-lg hover:bg-white transition-colors"><ArrowLeft size={20} /></button>
         <Layers className="text-blue-500" size={28} />
         <div><h1 className="text-xl font-bold text-slate-800">Gang Run Optimizer</h1><p className="text-xs text-slate-500">Group similar print jobs to reduce setup waste</p></div>
       </div>

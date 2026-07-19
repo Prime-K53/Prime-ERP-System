@@ -26,13 +26,13 @@ import { resolveCustomerPrice, getApplicableDiscounts, applyDiscounts, increment
 import { calculateItemTax } from '../../../services/taxRateService';
 import { getFifoUnitCost } from '../../../services/fifoCostService';
 
+import { ItemModal } from '../../../components/items/ItemModal';
 import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 import { useOrderFormAI, AISuggestionItem, AIPriceOptimisation, AIFraudFlag } from '../../../hooks/useOrderFormAI';
 import InventoryTransactionHistory from '../../inventory/components/InventoryTransactionHistory';
 import { OfflineImage } from '../../../components/OfflineImage';
 import { currencyService } from '../../../services/currencyService';
 import { AIGeneratorCard } from '../../../components/AIGeneratorCard';
-import { CustomerSearch } from '../../../components/CustomerSearch';
 
 interface OrderFormProps {
     type: string;
@@ -113,9 +113,9 @@ const normalizeOtherCharges = (items: any[] = []): { items: any[]; otherChargesC
 
 export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave, onCancel, onPreview, saving }) => {
     const { companyConfig, notify, user } = useAuth();
-    const { invoices, recurringInvoices, accounts } = useFinance();
+    const { invoices, recurringInvoices, accounts, ledger } = useFinance();
     const { quotations, customerPayments, customers, addCustomer } = useSales();
-    const { inventory, marketAdjustments, updateReservedStock } = useInventory();
+    const { inventory, marketAdjustments, updateReservedStock, addItem } = useInventory();
     const { createOrder } = useOrders();
     const { handlePreview } = useDocumentPreview();
     const navigate = useNavigate();
@@ -136,7 +136,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         customerName: '',
         customerId: '',
         subAccountName: 'Main',
-        salesAccountId: companyConfig?.glMapping?.defaultSalesAccount || '4000',
+        salesAccountId: '4000',
         items: [] as CartItem[],
         status: type === 'Invoice' ? 'Unpaid' : (type === 'Order' ? 'Pending' : 'Draft'),
         discount: 0,
@@ -252,14 +252,16 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [serviceSearch, setServiceSearch] = useState('');
     const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
     const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
+    const [customerSearch, setCustomerSearch] = useState('');
     const [showItemHistory, setShowItemHistory] = useState(false);
     const [itemHistoryItemId, setItemHistoryItemId] = useState<string | undefined>();
     const [photoViewItem, setPhotoViewItem] = useState<Item | null>(null);
 
     const itemDropdownRef = useRef<HTMLDivElement>(null);
     const serviceDropdownRef = useRef<HTMLDivElement>(null);
+    const customerDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
 
 
@@ -307,9 +309,38 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
         );
     }, [inventory, serviceSearch]);
 
+    const filteredCustomers = useMemo(() => {
+        if (!customerSearch) return customers || [];
+        const term = customerSearch.toLowerCase();
+        return (customers || []).filter((c: Customer) =>
+            c.name?.toLowerCase().includes(term) ||
+            c.id?.toLowerCase().includes(term) ||
+            c.phone?.includes(term)
+        );
+    }, [customers, customerSearch]);
+
     const revenueAccounts = useMemo(() => {
         return (accounts as Account[]).filter(acc => acc.type === 'Revenue' || acc.code.startsWith('4'));
     }, [accounts]);
+
+    const accountBalances = useMemo(() => {
+        const balances: Record<string, number> = {};
+        (ledger || []).forEach((entry: any) => {
+            const debitAcc = accounts.find((a: any) => a.id === entry.debitAccountId || a.code === entry.debitAccountId);
+            const creditAcc = accounts.find((a: any) => a.id === entry.creditAccountId || a.code === entry.creditAccountId);
+            [debitAcc, creditAcc].forEach((acc, idx) => {
+                if (!acc) return;
+                const isDebit = idx === 0;
+                const isAssetOrExpense = acc.type === 'Asset' || acc.type === 'Expense';
+                if (isAssetOrExpense) {
+                    balances[acc.id] = (balances[acc.id] || 0) + (isDebit ? entry.amount : -entry.amount);
+                } else {
+                    balances[acc.id] = (balances[acc.id] || 0) + (isDebit ? -entry.amount : entry.amount);
+                }
+            });
+        });
+        return balances;
+    }, [accounts, ledger]);
 
     const [auditReason, setAuditReason] = useState('');
     const [selectedProductForVariants, setSelectedProductForVariants] = useState<Item | null>(null);
@@ -320,6 +351,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [manualOverrideValue, setManualOverrideValue] = useState('');
     const [showManualOverrideCard, setShowManualOverrideCard] = useState(false);
     const [bomTemplates, setBomTemplates] = useState<BOMTemplate[]>([]);
+    const [showCreateItemModal, setShowCreateItemModal] = useState(false);
     const [quickPrintModal, setQuickPrintModal] = useState<{ open: boolean; type: 'photocopy' | 'printing' }>({
       open: false,
       type: 'photocopy'
@@ -785,7 +817,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 customerPricingTier: initialData.customerPricingTier || '',
                 customerPricingSegment: editSegment,
                 subAccountName: initialData.subAccountName || 'Main',
-                salesAccountId: initialData.salesAccountId || companyConfig?.glMapping?.defaultSalesAccount || '4000',
+                salesAccountId: initialData.salesAccountId || '4000',
                 items: normalizedItems,
                 status: isRecurring
                     ? resolvedRecurringStatus
@@ -809,7 +841,6 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                     : initialData.nextRunDate || prev.nextRunDate,
                 referenceDoc: initialData.referenceDoc || ''
             }));
-            setCustomerSearch(initialData.customerName || '');
         }
     }, [type, initialData, invoices, recurringInvoices, quotations, companyConfig, isRecurring]);
 
@@ -1287,6 +1318,13 @@ const handleAddItem = async (item: Item) => {
         setItemSearch('');
     };
 
+    const handleCreateItemSave = async (item: Item): Promise<void> => {
+        const savedItem = { ...item, id: item.id || generateNextId('ITM', inventory, companyConfig) };
+        await addItem(savedItem);
+        await handleAddItem(savedItem);
+        setShowCreateItemModal(false);
+    };
+
 const handleVariantSelect = async (variant: ProductVariant) => {
         if (!selectedProductForVariants) return;
 
@@ -1346,11 +1384,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                 variantItem.adjustmentTotal = snapAdjTotal;
                 variantItem.smartPricingSnapshot = variant.smartPricingSnapshot;
             } else {
+                const parentFallbackPrice = resolveStoredSellingPrice(parentItem) || Number(parentItem.price) || 0;
                 const pricing = await calculateSellingPrice({
                     itemId: parentItem.id,
                     categoryId: parentItem.category,
                     baseCost: Number(variantItem.cost) || 0,
-                    basePrice: Number(variantItem.price) || undefined,
+                    basePrice: parentFallbackPrice > 0 ? parentFallbackPrice : undefined,
                     quantity: 1,
                     adjustments: marketAdjustmentsInput,
                     context: 'ORDER',
@@ -1662,21 +1701,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
         }
     };
 
-    const handleCustomerSearchSelect = async (sel: { id: string; name: string } | null) => {
-        if (!sel) return;
-        const existing = findCustomerByName(sel.name);
-        if (existing) {
-            await selectCustomer(sel.name, sel.id);
-        } else {
-            try {
-                const customer = await ensureCustomerExists(sel.name);
-                if (customer) await selectCustomer(customer.name, customer.id);
-            } catch (err: any) {
-                notify(`Failed to add client: ${err.message || 'Unknown error'}`, "error");
-            }
-        }
-    };
-
     const handleVoucherDateChange = (nextDate: string) => {
         setFormData((prev: any) => {
             if (!isRecurring) {
@@ -1885,12 +1909,43 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         </div>
                     )}
 
-                    <div className="docket-field mb-[10px]">
+                    <div className="docket-field mb-[10px] relative" ref={customerDropdownRef}>
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Customer</label>
-                        <button onClick={() => setShowCustomerSearch(true)}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-left text-[#23282A] outline-none hover:bg-[#EFF6FF] transition-colors cursor-pointer truncate">
-                            {formData.customerName || 'Search customer...'}
-                        </button>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={customerSearch || formData.customerName || ''}
+                                onChange={e => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
+                                onFocus={() => setShowCustomerDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                                placeholder="Search customer..."
+                                className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors placeholder:text-[#666F6C] pr-8"
+                            />
+                            <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666F6C]" />
+                        </div>
+                        {showCustomerDropdown && (
+                            <div className="absolute left-0 right-0 z-50 mt-1 bg-white border border-[#E4DFD1] rounded-[7px] shadow-lg max-h-[360px] overflow-y-auto">
+                                {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        onMouseDown={e => { e.preventDefault(); selectCustomer(c.name, c.id); setCustomerSearch(''); setShowCustomerDropdown(false); }}
+                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1]/50 last:border-b-0"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="truncate">{c.name}</span>
+                                            {(c.balance || c.outstandingBalance) ? (
+                                                <span className={`ml-2 text-[11px] font-medium whitespace-nowrap ${(c.balance || c.outstandingBalance) > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                                                    {currency}{(c.balance || c.outstandingBalance).toLocaleString()}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </button>
+                                )) : (
+                                    <div className="px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#666F6C]">No customers found</div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="docket-field mb-[10px]">
@@ -1935,7 +1990,9 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     <option key={acc.id} value={acc.id} className="text-[#23282A]">{acc.name}</option>
                                 ))}
                             </select>
-                            <button className="text-[11px] font-bold font-['Inter',sans-serif] bg-[#2563EB] text-white border border-[#2563EB] rounded-[7px] px-[10px] cursor-pointer whitespace-nowrap hover:bg-[#1D4ED8] transition-colors">Balance</button>
+                            <div className="flex items-center bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] whitespace-nowrap">
+                                {(accountBalances[formData.salesAccountId] || 0) >= 0 ? '' : '-'}{companyConfig?.currencySymbol || '$'}{Math.abs(accountBalances[formData.salesAccountId] || 0).toLocaleString()}
+                            </div>
                         </div>
                     </div>
 
@@ -2056,7 +2113,14 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 {isItemDropdownOpen && (
                                     <div className="absolute z-50 mt-[4px] w-full bg-[#FEFDFB] border border-[#E4DFD1] rounded-[6px] shadow-[0_8px_24px_-6px_rgba(16,43,40,0.15)] max-h-60 overflow-y-auto">
                                         {filteredInventory.length === 0 ? (
-                                            <div className="p-[12px] text-center text-[11px] text-[#666F6C] font-['JetBrains_Mono',monospace]">No matching items</div>
+                                            <div className="p-[12px] text-center">
+                                                <div className="text-[11px] text-[#666F6C] font-['JetBrains_Mono',monospace] mb-[6px]">No matching items</div>
+                                                <button type="button" onClick={() => setShowCreateItemModal(true)}
+                                                    className="inline-flex items-center gap-[4px] px-[10px] py-[5px] text-[11px] font-semibold text-white bg-[#2563EB] rounded-[6px] hover:bg-[#1D4ED8] transition-colors">
+                                                    <Plus size={12} />
+                                                    <span>Create new item</span>
+                                                </button>
+                                            </div>
                                         ) : (
                                             filteredInventory.map(item => {
                                                 const hasVariants = item.variants && item.variants.length > 0;
@@ -2326,8 +2390,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                     <tr key={idx} className="hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1] last:border-b-0">
                                                         <td className="px-[16px] py-[8px] text-[13px] text-[#23282A] font-medium flex items-center gap-[6px]">
                                                             {invItem?.image ? (
-                                                                <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-slate-200 overflow-hidden hover:border-indigo-300 hover:shadow-sm transition-all" title="View Photo">
-                                                                    <OfflineImage src={invItem.image} alt="" className="w-full h-full object-cover" />
+                                                                <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-blue-200 bg-blue-50 hover:border-blue-400 hover:shadow-sm transition-all flex items-center justify-center" title="View Details">
+                                                                    <Package size={14} className="text-blue-600"/>
                                                                 </button>
                                                             ) : (
                                                                 <span className="shrink-0 w-7 h-7 rounded border border-slate-100 flex items-center justify-center text-slate-300" title="No photo">
@@ -2671,13 +2735,13 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         </div>
                     </div>
                 )}
-
-                {showCustomerSearch && (
-                    <CustomerSearch open={showCustomerSearch}
-                        onSelect={handleCustomerSearchSelect}
-                        onClose={() => setShowCustomerSearch(false)}
-                        title="Select Customer"
-                        excludeIds={[]} />
+                {showCreateItemModal && (
+                    <ItemModal
+                        open={showCreateItemModal}
+                        onClose={() => setShowCreateItemModal(false)}
+                        onSave={handleCreateItemSave}
+                        allItems={inventory}
+                    />
                 )}
 
             </div>

@@ -11,6 +11,11 @@ function tenantContext(req, res, next) {
     return next();
   }
 
+  // Skip company membership check for header-based auth (trusted local origins only)
+  if (req.authMode === 'header') {
+    return next();
+  }
+
   // Require company_id for all authenticated non-auth API requests
   if (!req.companyId) {
     return res.status(400).json({

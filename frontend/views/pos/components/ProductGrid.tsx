@@ -6,8 +6,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { useProduction } from '../../../context/ProductionContext';
 import { useKeyboardListNavigation } from '../../../hooks/useKeyboardListNavigation';
 import { VariantSelectorModal, PrintingVariantModal } from './PosModals';
+import { ItemModal } from '../../../components/items/ItemModal';
 
 import { formatNumber } from '../../../utils/helpers';
+import { useInventory } from '../../../context/InventoryContext';
+import { generateNextId } from '../../../utils/helpers';
 import { resolveStoredCalculatedPrice, resolveStoredCost, resolveStoredSellingPrice } from '../../../utils/pricing';
 import { getSnapshotCalculatedAmount, resolveItemAdjustmentSnapshots } from '../../../utils/pricingBreakdown';
 
@@ -39,13 +42,15 @@ interface ProductGridProps {
 type ViewMode = 'Large' | 'Small' | 'List';
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, onConfigureService, onRecall, heldCount, onZReport }) => {
-    const { companyConfig } = useAuth(); const { boms } = useProduction();
+    const { companyConfig, user } = useAuth(); const { boms } = useProduction();
+    const { addItem: inventoryAddItem } = useInventory();
     const searchInputRef = useRef<HTMLInputElement>(null);
     const currency = companyConfig.currencySymbol;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('All');
     const [viewMode, setViewMode] = useState<ViewMode>('Large');
     const [selectedProductForVariants, setSelectedProductForVariants] = useState<Item | null>(null);
+    const [showCreateItemModal, setShowCreateItemModal] = useState(false);
     const lastKeyTimeRef = useRef(0);
     const scannerBufferRef = useRef('');
 
@@ -485,7 +490,26 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
             )}
 
             <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: viewMode === 'List' ? '0' : '12px 16px' }}>
-                {viewMode === 'List' ? (
+                {filteredProducts.length === 0 && searchTerm ? (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
+                        <div style={{ fontSize: 13, color: SOFT, marginBottom: 12 }}>No items found for "{searchTerm}"</div>
+                        <button
+                            type="button"
+                            onClick={() => setShowCreateItemModal(true)}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                padding: '8px 16px', fontSize: 13, fontWeight: 600,
+                                color: '#fff', background: B7, border: 'none', borderRadius: 8,
+                                cursor: 'pointer', transition: '.12s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = B6}
+                            onMouseOut={e => e.currentTarget.style.background = B7}
+                        >
+                            <Plus size={14} />
+                            <span>Create new item</span>
+                        </button>
+                    </div>
+                ) : viewMode === 'List' ? (
                     renderItems(filteredProducts)
                 ) : (
                     <div className="grid gap-3 content-start pb-20" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
@@ -493,6 +517,20 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                     </div>
                 )}
             </div>
+
+            {showCreateItemModal && (
+                <ItemModal
+                    open={showCreateItemModal}
+                    onClose={() => setShowCreateItemModal(false)}
+                    onSave={async (item) => {
+                        const savedItem = { ...item, id: item.id || generateNextId('ITM', inventory, companyConfig) };
+                        await inventoryAddItem(savedItem);
+                        addToCart(savedItem);
+                        setShowCreateItemModal(false);
+                    }}
+                    allItems={inventory}
+                />
+            )}
 
             {selectedProductForVariants && (
                 selectedProductForVariants.variants && selectedProductForVariants.variants.length > 0 ? (

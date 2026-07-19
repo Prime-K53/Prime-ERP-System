@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { useSales } from '../context/SalesContext';
 import { useInventory } from '../context/InventoryContext';
 import { useProcurement } from '../context/ProcurementContext';
-import { OfflineImage } from '../components/OfflineImage';
 import { askBusinessQuestion } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 
@@ -43,13 +42,13 @@ const GlobalSearch: React.FC = () => {
         if (isQuestion || (results.items.length === 0 && results.sales.length === 0 && results.contacts.length === 0)) {
             setIsAiLoading(true);
             try {
-                // Prepare a minimized context for the AI
+                const safe = (arr: any[], n = 50) => (Array.isArray(arr) ? arr.slice(0, n) : []);
                 const context = {
-                    inventoryCount: inventory.length,
-                    salesCount: sales.length,
-                    topCustomers: customers.slice(0, 10).map(c => ({ name: c.name, balance: c.balance })),
-                    lowStockItems: inventory.filter(i => i.stock <= (i.minStockLevel || 0)).slice(0, 10).map(i => ({ name: i.name, stock: i.stock })),
-                    recentSales: sales.slice(0, 5).map(s => ({ id: s.id, customer: s.customerName, total: s.totalAmount }))
+                    inventory: safe(inventory.map(i => ({ id: i.id, name: i.name, sku: i.sku, type: i.type, category: i.category, cost: i.cost, price: i.price, stock: i.stock, minStockLevel: i.minStockLevel }))),
+                    sales: safe(sales.map(s => ({ id: s.id, date: s.date, customerName: s.customerName, totalAmount: s.totalAmount, status: s.status, items: s.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))),
+                    customers: safe(customers.map(c => ({ id: c.id, name: c.name, email: c.phone, segment: c.segment, creditLimit: c.creditLimit, outstandingBalance: c.outstandingBalance }))),
+                    suppliers: safe(suppliers.map(s => ({ id: s.id, name: s.name, email: s.email, phone: s.phone, category: s.category }))),
+                    purchases: safe(purchases.map(p => ({ id: p.id, supplierId: p.supplierId, totalAmount: p.totalAmount, date: p.date, status: p.status, items: p.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))),
                 };
                 const answer = await askBusinessQuestion(query, context);
                 setAiAnswer(answer);
@@ -177,13 +176,8 @@ const GlobalSearch: React.FC = () => {
                     action: () => navigate('/inventory'),
                     content: (
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 overflow-hidden shrink-0 border border-slate-200">
-                                <OfflineImage 
-                                    src={item.image} 
-                                    alt={item.name} 
-                                    className="w-full h-full object-cover" 
-                                    fallback={<Package size={20}/>}
-                                />
+                            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 overflow-hidden shrink-0 border border-blue-200">
+                                <Package size={20}/>
                             </div>
                             <div className="min-w-0">
                                 <div className="font-bold text-slate-800 text-sm truncate">{item.name}</div>

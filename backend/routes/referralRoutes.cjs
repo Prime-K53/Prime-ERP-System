@@ -14,7 +14,7 @@ const referralService = new ReferralService();
 // --- Analytics ---
 router.get('/analytics/history', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), validateQuery(referralSchemas.getAnalyticsQuery), async (req, res) => {
   try {
-    const result = await referralService.getAnalyticsHistory({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAnalyticsHistory(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to get analytics history:', err);
@@ -24,7 +24,7 @@ router.get('/analytics/history', requireRole('Admin', 'Manager', 'Accountant', '
 
 router.get('/analytics', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), validateQuery(referralSchemas.getAnalyticsQuery), async (req, res) => {
   try {
-    const result = await referralService.getAnalytics({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAnalytics(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to get analytics:', err);
@@ -35,7 +35,7 @@ router.get('/analytics', requireRole('Admin', 'Manager', 'Accountant', 'Viewer')
 // --- Campaigns ---
 router.get('/campaigns', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAllCampaigns({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAllCampaigns(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to list campaigns:', err);
@@ -78,7 +78,7 @@ router.patch('/campaigns/:id/status', requireRole('Admin', 'Manager'), validateB
 // --- Reversals ---
 router.get('/reversals', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAllReversals({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAllReversals(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to list reversals:', err);
@@ -121,7 +121,7 @@ router.patch('/reversals/:id/reject', requireRole('Admin', 'Manager'), validateB
 // --- Rewards ---
 router.get('/rewards', requireRole('Admin', 'Manager', 'Accountant', 'Clerk', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAllRewards({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAllRewards(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to list rewards:', err);
@@ -206,7 +206,7 @@ router.put('/settings', requireRole('Admin', 'Manager'), validateBody(referralSc
 // --- Audit ---
 router.get('/audit', requireRole('Admin', 'Manager', 'Auditor'), async (req, res) => {
   try {
-    const result = await referralService.getAuditLogs({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAuditLogs(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to get audit logs:', err);
@@ -217,7 +217,7 @@ router.get('/audit', requireRole('Admin', 'Manager', 'Auditor'), async (req, res
 // --- CSV Export ---
 router.get('/export/referrals', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAll({ ...req.query, limit: 10000, companyId: req.companyId || '' });
+    const result = await referralService.getAll({ ...req.query, limit: 10000 }, req.companyId || '');
     const rows = result.referrals || [];
     const header = 'id,customer_id,referred_by_id,referred_by_name,referral_code,status,pending_invoice_id,pending_invoice_amount,converted_invoice_id,notes,created_at,updated_at';
     const csv = rows.map(r =>
@@ -234,7 +234,7 @@ router.get('/export/referrals', requireRole('Admin', 'Manager', 'Accountant', 'V
 
 router.get('/export/rewards', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAllRewards({ ...req.query, limit: 10000, companyId: req.companyId || '' });
+    const result = await referralService.getAllRewards({ ...req.query, limit: 10000 }, req.companyId || '');
     const rows = result.rewards || [];
     const header = 'id,referral_id,customer_id,invoice_id,invoice_amount,amount,status,approved_at,approved_by,wallet_transaction_id,created_at';
     const csv = rows.map(r =>
@@ -251,7 +251,7 @@ router.get('/export/rewards', requireRole('Admin', 'Manager', 'Accountant', 'Vie
 
 router.get('/export/analytics', requireRole('Admin', 'Manager', 'Accountant', 'Viewer'), async (req, res) => {
   try {
-    const result = await referralService.getAnalyticsHistory({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAnalyticsHistory(req.query, req.companyId || '');
     const rows = Array.isArray(result) ? result : [];
     const header = 'period,period_start,period_end,total_referrals,active_referrals,converted_referrals,total_rewards_amount,approved_rewards_amount,paid_rewards_amount,pending_rewards_amount,average_reward_amount,conversion_rate,revenue_attributed,roi,generated_at';
     const csv = rows.map(r =>
@@ -269,7 +269,7 @@ router.get('/export/analytics', requireRole('Admin', 'Manager', 'Accountant', 'V
 // --- Referrals ---
 router.get('/', requireRole('Admin', 'Manager', 'Accountant', 'Clerk', 'Viewer'), validateQuery(referralSchemas.getReferralsQuery), async (req, res) => {
   try {
-    const result = await referralService.getAll({ ...req.query, companyId: req.companyId || '' });
+    const result = await referralService.getAll(req.query, req.companyId || '');
     res.json(result);
   } catch (err) {
     console.error('[Referrals] Failed to list:', err);

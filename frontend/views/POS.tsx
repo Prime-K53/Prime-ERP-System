@@ -82,6 +82,7 @@ const POS: React.FC = () => {
   });
   const [giftCardModal, setGiftCardModal] = useState(false);
   const [giftCardForm, setGiftCardForm] = useState({ amount: 50, message: '', color: '#10b981' });
+  const [selectedSalesAccountId, setSelectedSalesAccountId] = useState('4000');
   const [bomTemplates, setBomTemplates] = useState<BOMTemplate[]>([]);
 
   const [lastSale, setLastSale] = useState<Sale | null>(null);
@@ -371,11 +372,12 @@ const POS: React.FC = () => {
       calculatedPrice = baseStoredPricing.calculatedPrice;
     } else {
       // Non-variant or variant without stored price — run the engine
+      const parentFallbackPrice = resolveStoredSellingPrice(baseItem) || Number(baseItem.price) || 0;
       const pricing = await calculateSellingPrice({
         itemId: baseItem.id,
         categoryId: baseItem.category,
         baseCost: isVariant ? variantStoredCost : Number(baseItem.cost),
-        basePrice: isVariant ? (variantStoredPrice || undefined) : (resolveStoredSellingPrice(baseItem) || undefined),
+        basePrice: (isVariant ? (variantStoredPrice > 0 ? variantStoredPrice : (parentFallbackPrice > 0 ? parentFallbackPrice : undefined)) : (parentFallbackPrice > 0 ? parentFallbackPrice : undefined)),
         quantity: newQty,
         adjustments: marketAdjustmentsInput,
         context: 'POS',
@@ -679,6 +681,9 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
 
     const effectiveCost = isCartItemVariant ? resolveStoredCost(itemInCart) : Number(baseItem.cost);
     const effectiveBasePrice = isCartItemVariant ? resolveStoredSellingPrice(itemInCart) : resolveStoredSellingPrice(baseItem);
+    const parentFallbackPrice = isCartItemVariant
+      ? (resolveStoredSellingPrice(baseItem) || Number(baseItem.price) || 0)
+      : 0;
     const effectiveAdjustmentTotal = marketAdjustmentsInput.reduce((sum: number, adj: any) => sum + (adj.calculatedAmount || 0), 0);
 
     if (effectiveBasePrice > 0) {
@@ -705,7 +710,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
       itemId: baseItem.id,
       categoryId: baseItem.category,
       baseCost: effectiveCost,
-      basePrice: effectiveBasePrice || undefined,
+      basePrice: (effectiveBasePrice > 0 ? effectiveBasePrice : (parentFallbackPrice > 0 ? parentFallbackPrice : undefined)),
       quantity: itemInCart.quantity,
       adjustments: marketAdjustmentsInput,
       context: 'POS',
@@ -898,11 +903,15 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
       ? itemInCart.price
       : (isCartItemVariant ? resolveStoredSellingPrice(itemInCart) : resolveStoredSellingPrice(baseItem));
 
+    const parentFallbackPrice = isCartItemVariant
+      ? (resolveStoredSellingPrice(baseItem) || Number(baseItem.price) || 0)
+      : 0;
+
     const pricing = await calculateSellingPrice({
       itemId: baseItem.id,
       categoryId: baseItem.category,
       baseCost: effectiveCost,
-      basePrice: effectiveBasePrice || undefined,
+      basePrice: (effectiveBasePrice > 0 ? effectiveBasePrice : (parentFallbackPrice > 0 ? parentFallbackPrice : undefined)),
       quantity: newQty,
       adjustments: marketAdjustmentsInput,
       context: 'POS',
@@ -1161,6 +1170,7 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
           discountTotal: round2(totalDiscount),
           referredBy: selectedCustomer?.referredById || '',
           referredByName: selectedCustomer?.referredByName || '',
+          salesAccountId: selectedSalesAccountId,
         };
 
       try {
@@ -1371,20 +1381,26 @@ const handleQuickPrintConfirm = (quantity: number, pagesPerCopy: number, total: 
     <div className="h-full flex flex-col md:flex-row overflow-hidden bg-slate-50 relative font-sans text-slate-800">
       <div className="flex-1 flex flex-col relative overflow-hidden">
         {/* Top Header Mimicking QBO */}
-         <div className="px-6 py-1 flex items-center justify-between z-30 bg-slate-50 border-b border-slate-200">
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:flex gap-2">
-              <button onClick={handleQuickPhotocopy} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
-                <Copy size={14} /> Photocopy
-              </button>
-              <button onClick={handleQuickTypePrinting} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
-                <FileText size={14} /> Type & Print
-              </button>
-              <button onClick={() => setGiftCardModal(true)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all flex items-center gap-1.5 shadow-sm">
-                <Gift size={14} /> Gift Card
-              </button>
-            </div>
-          </div>
+          <div className="px-6 py-1 flex items-center justify-between z-30 bg-slate-50 border-b border-slate-200">
+           <div className="flex items-center gap-4">
+             <div className="hidden lg:flex gap-2">
+               <button onClick={handleQuickPhotocopy} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
+                 <Copy size={14} /> Photocopy
+               </button>
+               <button onClick={handleQuickTypePrinting} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center gap-1.5 shadow-sm">
+                 <FileText size={14} /> Type & Print
+               </button>
+               <button onClick={() => setGiftCardModal(true)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all flex items-center gap-1.5 shadow-sm">
+                 <Gift size={14} /> Gift Card
+               </button>
+               <select value={selectedSalesAccountId} onChange={e => setSelectedSalesAccountId(e.target.value)}
+                 className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-700 hover:border-blue-300 transition-all shadow-sm outline-none cursor-pointer">
+                 {(accounts || []).filter((a: any) => a.type === 'Revenue').map(acc => (
+                   <option key={acc.id} value={acc.id}>{acc.name}</option>
+                 ))}
+               </select>
+             </div>
+           </div>
 
           <div className="flex gap-3 items-center">
             {companyConfig?.transactionSettings?.pos?.showShortcutHints !== false && (

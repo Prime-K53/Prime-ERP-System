@@ -164,7 +164,7 @@ const corsOptions = {
     return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id', 'x-company-id', 'x-idempotency-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id', 'x-company-id', 'x-idempotency-key', 'x-user-id', 'x-user-role', 'x-user-email'],
   credentials: true
 };
 

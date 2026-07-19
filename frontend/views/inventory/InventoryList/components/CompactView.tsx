@@ -1,7 +1,15 @@
 import React from 'react';
-import { Package } from 'lucide-react';
+import { Package, Layers, Box, Tag, Globe } from 'lucide-react';
 import type { Item } from '../../../../types';
 import { StockBadge, RowIndicators } from './RowIndicators';
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  'Raw Material': <Layers size={16} />,
+  'Material': <Box size={16} />,
+  'Product': <Package size={16} />,
+  'Stationery': <Tag size={16} />,
+  'Service': <Globe size={16} />,
+};
 
 interface Props {
   items: Item[];
@@ -15,7 +23,7 @@ export const CompactView: React.FC<Props> = ({ items, onView, onEdit }) => (
       <div key={`${item.id}-${idx}`} onClick={() => onView(item)}
         className="flex items-center gap-4 px-4 py-[7px] cursor-pointer transition-colors hover:bg-blue-50/50">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#F8FAFC', color: '#94A3B8' }}>
-          <Package size={16} />
+          {TYPE_ICONS[item.type || ''] || <Package size={16} />}
         </div>
         <div className="flex-1 min-w-0 flex items-center gap-3">
           <span className="text-[12.5px] font-medium truncate" style={{ color: '#0F172A' }}>{item.name}</span>
