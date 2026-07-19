@@ -43,6 +43,7 @@ import { enrichDocumentCustomerData } from '../../utils/documentCustomerData';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
 import { initializePrimePdfFonts } from '../shared/components/PDF/templateSettings';
 import { currencyService } from '../../services/currencyService';
+import { useConfirmDialog } from '../../components/ConfirmDialog';
 
 const SUBSCRIPTION_STATUSES = ['Draft', 'Active', 'Paused', 'Cancelled', 'Expired'] as const;
 
@@ -146,6 +147,7 @@ const Orders: React.FC = () => {
     const { createDeliveryNote, checkAndApplyLateFees } = useFinance();
     const { convertQuotationToWorkOrder, convertQuotationToJobTicket } = useSales();
     const { orders, cancelOrder, updateOrderStatus, recordPayment, createOrder, convertQuotationToOrder } = useOrders();
+    const { confirm, ConfirmDialogComponent } = useConfirmDialog();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -636,7 +638,14 @@ const Orders: React.FC = () => {
         }
 
         if (action === 'convert_to_order' && activeView === 'Quotations') {
-            if (window.confirm("Convert this quotation to an active order? This will mark the quotation as 'Converted'.")) {
+            const confirmed = await confirm({
+                title: 'Convert to Order',
+                message: "Convert this quotation to an active order? This will mark the quotation as 'Converted'.",
+                type: 'question',
+                confirmText: 'Convert',
+                cancelText: 'Cancel'
+            });
+            if (confirmed) {
                 const orderId = await convertQuotationToOrder(item);
                 if (orderId) {
                     setActiveTab('Orders');
@@ -1634,6 +1643,7 @@ const Orders: React.FC = () => {
                     onClose={() => setSelectedExchangeForDetail(null)}
                 />
             )}
+            <ConfirmDialogComponent />
         </div>
     );
 };

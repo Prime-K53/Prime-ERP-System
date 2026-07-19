@@ -128,6 +128,9 @@ const PERMANENT_ERROR_PATTERNS = [
   'violates foreign key constraint',
   'violates not-null constraint',
   'invalid input syntax',
+  'row-level security',
+  '42501',
+  'policy',
 ];
 
 export function classifyError(message: string): 'retryable' | 'permanent' {

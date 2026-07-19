@@ -42,30 +42,33 @@ const Referrals: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [allReferrals, pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals, allCustomers] = await Promise.all([
-        referralService.getAllReferrals(),
-        referralService.getPendingRewards(),
+      const [allCustomers, allReferrals] = await Promise.all([
+        cloudDb.getAll<any>('customers').then(c => c || []),
+        referralService.getAllReferrals().catch(() => [] as Referral[]),
+      ])
+      setCustomers(allCustomers)
+      setReferrals(allReferrals)
+      setIsLoading(false)
+      Promise.all([
+        referralService.getPendingRewards().catch(() => [] as ReferralReward[]),
         referralService.getAllRewards().catch(() => []),
         referralService.getAllCampaigns().catch(() => []),
         referralService.getAnalytics({ period: 'monthly' }).catch(() => null),
         referralService.getAnalyticsHistory({ period: 'monthly' }).catch(() => []),
         referralService.getAllReversals().catch(() => []),
-        cloudDb.getAll<any>('customers').then(c => c || []),
-      ])
-      setReferrals(allReferrals)
-      setRewards(pendingRewards)
-      setAllRewards(allRewards)
-      setCampaigns(allCampaigns)
-      setAnalytics(latestAnalytics)
-      setAnalyticsHistory(analyticsHist)
-      setReversals(allReversals)
-      setCustomers(allCustomers)
+      ]).then(([pendingRewards, allRewards, allCampaigns, latestAnalytics, analyticsHist, allReversals]) => {
+        setRewards(pendingRewards)
+        setAllRewards(allRewards)
+        setCampaigns(allCampaigns)
+        setAnalytics(latestAnalytics)
+        setAnalyticsHistory(analyticsHist)
+        setReversals(allReversals)
+      }).catch(() => {})
     } catch (err: any) {
       const msg = err?.message || 'Failed to load referral data'
       console.error('Failed to load referral data:', err)
       setLoadError(msg)
       notify?.(msg, 'error')
-    } finally {
       setIsLoading(false)
     }
   }

@@ -89,7 +89,7 @@ export const AIGeneratorCard: React.FC<AIGeneratorCardProps> = ({ type, onPopula
             <button
               onClick={() => handleGenerate(type === 'Invoice' ? 'invoice' : 'quotation')}
               disabled={loading || !input.trim()}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[#1a3a36] to-[#2a5a54] rounded-xl hover:from-[#0e2926] hover:to-[#1a3a36] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] rounded-xl hover:from-[#1D4ED8] hover:to-[#1E40AF] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
               {loading ? 'Generating with AI...' : `Generate ${type === 'Invoice' ? 'Invoice' : 'Quotation'}`}

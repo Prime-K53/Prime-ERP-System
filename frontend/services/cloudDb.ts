@@ -607,6 +607,31 @@ export const cloudDb = {
       };
       if (companyId) {
         record.company_id = companyId;
+      } else {
+        console.warn(`[cloudDb] No company_id for ${storeName} (id: ${record.id}). companyId=${JSON.stringify(companyId)}, item._companyId=${JSON.stringify(raw._companyId)}. Attempting direct profile lookup...`);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id) {
+            const { data: profile, error: profileErr } = await supabase
+              .from('profiles')
+              .select('company_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            console.warn(`[cloudDb] Profile lookup result:`, { userId: user.id, profile, error: profileErr });
+            if (profile?.company_id) {
+              record.company_id = profile.company_id;
+              activeCompanyId = profile.company_id;
+            }
+          } else {
+            console.warn(`[cloudDb] No authenticated user found`);
+          }
+        } catch (e) {
+          console.warn(`[cloudDb] Profile lookup threw:`, e);
+        }
+        if (!record.company_id) {
+          console.error(`[cloudDb] FINAL: cannot resolve company_id for ${storeName}. Skipping cloud write.`);
+          return null;
+        }
       }
 
       let query = supabase

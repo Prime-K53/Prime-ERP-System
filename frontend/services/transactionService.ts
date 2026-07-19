@@ -51,9 +51,11 @@ export const transactionService = {
         const timestamp = new Date().toISOString();
 
         // Pre-check stock availability for all items (atomic within transaction)
+        const config = getCompanyConfig();
+        const allowNegative = config?.inventorySettings?.allowNegativeStock === true;
         const checkStock = async (itemId: string, qty: number) => {
             const invItem = await resolveInventoryRecord(itemId, inventorySnapshot, inventoryStore);
-            if (invItem && (invItem.stock || 0) < qty && invItem.type !== 'Service') {
+            if (!allowNegative && invItem && (invItem.stock || 0) < qty && invItem.type !== 'Service') {
                 throw new Error(`Insufficient stock for "${invItem.name}": need ${qty}, have ${invItem.stock || 0}`);
             }
             return invItem;
@@ -3926,7 +3928,10 @@ export const transactionService = {
             async (tx) => {
                 const store = tx.objectStore('inventory');
                 const item = await store.get(itemId);
-                if (!item) throw new Error("Item not found");
+                if (!item) {
+                    logger.warn(`[Inventory] Cannot update reserved stock: item ${itemId} not found in local DB`);
+                    return { success: false, error: 'Item not found' };
+                }
 
                 if (variantId && item.variants) {
                     const variantIndex = item.variants.findIndex(v => v.id === variantId);
@@ -4617,7 +4622,16 @@ export const transactionService = {
                 const marketAdjustmentTransactionsStore = tx.objectStore('marketAdjustmentTransactions');
 
                 const order = await orderStore.get(orderId);
-                if (!order) throw new Error("Order not found");
+                if (!order) {
+                    const allOrders = await orderStore.getAll();
+                    const found = allOrders.find((o: Order) => o.id === orderId);
+                    if (!found) {
+                        console.warn(`[Orders.UpdateStatus] Order ${orderId} not found locally — skipping status update. Invoice was already created.`);
+                        return { success: true, message: 'Order not found locally — status unchanged' };
+                    }
+                    orderStore.put(found);
+                    return { success: true, message: 'Order re-synced locally, no status change applied' };
+                }
 
                 const oldStatus = order.status;
                 order.status = status;

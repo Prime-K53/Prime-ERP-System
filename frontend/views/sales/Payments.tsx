@@ -1199,27 +1199,37 @@ const Payments: React.FC = () => {
             {activeTab === 'Received' ? (
                 <>
                     {isModalOpen && (
-                        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95">
-                                <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-                                    <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">Record Customer Payment</h2>
-                                    <button onClick={() => setIsModalOpen(false)}><X size={20} /></button>
+                        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center shrink-0 bg-white">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                                            <PaymentIcon size={13} className="text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-[13px] font-bold text-slate-900 tracking-tight">Record Customer Payment</h2>
+                                            <p className="text-[10px] text-slate-400 font-medium">Process payment and allocate to invoices</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setIsModalOpen(false)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><X size={15} /></button>
                                 </div>
 
                                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                                    <div className="w-full md:w-80 bg-slate-50 p-6 border-r border-slate-200 overflow-y-auto custom-scrollbar flex flex-col">
-                                        <div className="space-y-4 flex-1">
-                                            {editMode && (
-                                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                                                    <p className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">
-                                                        Financial fields are locked after posting. Use Void and Re-post for amount/allocation corrections.
-                                                    </p>
-                                                </div>
-                                            )}
+                                    <div className="w-full md:w-[280px] bg-slate-50/80 p-3.5 border-r border-slate-200 overflow-y-auto custom-scrollbar flex flex-col gap-2.5">
+                                        {editMode && (
+                                            <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <p className="text-[10px] font-semibold text-amber-700 flex items-center gap-1.5">
+                                                    <AlertTriangle size={12} className="shrink-0" />
+                                                    Financial fields are locked after posting. Use Void and Re-post for corrections.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2.5 flex-1">
                                             <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Customer</label>
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-1">Customer</label>
                                                 <select
-                                                    className="w-full p-2.5 border rounded-xl bg-white text-[13px] outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-white text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                                                     value={formData.customerName}
                                                     disabled={editMode}
                                                     onChange={e => {
@@ -1240,8 +1250,8 @@ const Payments: React.FC = () => {
                                                     const cust = customers.find((c: any) => c.name === formData.customerName);
                                                     const bal = cust?.walletBalance || 0;
                                                     return bal > 0 ? (
-                                                        <p className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5">
-                                                            <Wallet size={12} /> Wallet Balance: {currency}{bal.toFixed(2)}
+                                                        <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                                                            <Wallet size={11} /> Wallet Balance: {currency}{bal.toFixed(2)}
                                                         </p>
                                                     ) : null;
                                                 })()}
@@ -1249,11 +1259,11 @@ const Payments: React.FC = () => {
 
                                             {formData.customerName && customers.find(c => c.name === formData.customerName)?.subAccounts?.length > 0 && (
                                                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                                    <label className="block text-[10px] font-bold text-blue-500 uppercase tracking-tight mb-1 flex items-center gap-2">
-                                                        <Building2 size={12} /> Credit Sub-Account
+                                                    <label className="block text-[10px] font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                                                        <Building2 size={11} className="text-blue-500" /> Credit Sub-Account
                                                     </label>
                                                     <select
-                                                        className="w-full p-2.5 border-2 border-blue-50 rounded-xl bg-white text-[13px] outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-700"
+                                                        className="w-full h-8 px-2.5 border border-blue-200 rounded-lg bg-white text-[12px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                                                         value={formData.subAccountName}
                                                         disabled={editMode}
                                                         onChange={e => setFormData({ ...formData, subAccountName: e.target.value })}
@@ -1263,21 +1273,19 @@ const Payments: React.FC = () => {
                                                             <option key={sa.id || sa.name} value={sa.name}>{sa.name}</option>
                                                         ))}
                                                     </select>
-                                                    <p className="text-[10px] text-slate-400 mt-1 italic">Choose which sub-account to credit this payment to.</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">Choose which sub-account to credit this payment to.</p>
                                                 </div>
                                             )}
 
-
-
                                             <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Payment Date</label>
-                                                <input type="date" className="w-full p-2.5 border rounded-xl bg-white text-[13px]" value={formData.date} disabled={editMode} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-1">Payment Date</label>
+                                                <input type="date" className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-white text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" value={formData.date} disabled={editMode} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                                             </div>
 
                                             <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">Payment Account</label>
+                                                <label className="block text-[10px] font-semibold text-slate-500 mb-1">Payment Account</label>
                                                 <select
-                                                    className="w-full p-2.5 border rounded-xl bg-white text-[13px] outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-white text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                                                     value={formData.accountId}
                                                     disabled={editMode}
                                                     onChange={e => {
@@ -1311,15 +1319,16 @@ const Payments: React.FC = () => {
                                                     )}
                                                 </select>
                                             </div>
+
                                             {formData.customerName && !editMode && (() => {
                                                 const cust = customers.find((c: any) => c.name === formData.customerName);
                                                 const bal = cust?.walletBalance || 0;
                                                 return bal > 0 ? (
-                                                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                                                        <label className="flex items-center gap-3 cursor-pointer">
+                                                    <div className="px-3 py-2 bg-gradient-to-r from-emerald-50 to-emerald-50/50 border border-emerald-200 rounded-lg">
+                                                        <label className="flex items-center gap-2 cursor-pointer">
                                                             <input
                                                                 type="checkbox"
-                                                                className="w-4 h-4 accent-emerald-600"
+                                                                className="w-3.5 h-3.5 rounded accent-emerald-600"
                                                                 checked={formData.paymentMethod === 'Wallet'}
                                                                 onChange={e => {
                                                                     if (e.target.checked) {
@@ -1330,24 +1339,24 @@ const Payments: React.FC = () => {
                                                                 }}
                                                             />
                                                             <div className="flex-1">
-                                                                <p className="text-[11px] font-bold text-emerald-800">Pay from Wallet</p>
+                                                                <p className="text-[11px] font-semibold text-emerald-800">Pay from Wallet</p>
                                                                 <p className="text-[10px] text-emerald-600">{currency}{bal.toFixed(2)} available</p>
                                                             </div>
                                                             {formData.paymentMethod === 'Wallet' && (
-                                                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200 px-2 py-0.5 rounded-full">Active</span>
+                                                                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-200 px-1.5 py-0.5 rounded-md">Active</span>
                                                             )}
                                                         </label>
                                                     </div>
                                                 ) : null;
                                             })()}
 
-                                            <div className="pt-4 border-t border-slate-200">
-                                                <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-tight mb-1.5">Amount Received</label>
+                                            <div>
+                                                <label className="block text-[10px] font-semibold text-blue-600 mb-1">Amount Received</label>
                                                 <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-blue-600">{currency}</span>
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-blue-500">{currency}</span>
                                                     <input
                                                         type="number"
-                                                        className="w-full pl-8 p-3 bg-white border-2 border-blue-100 rounded-2xl text-xl font-bold focus:border-blue-500 outline-none finance-nums"
+                                                        className="w-full pl-7 h-9 bg-white border-2 border-blue-200 rounded-lg text-base font-bold text-blue-700 focus:border-blue-500 outline-none finance-nums transition-all"
                                                         value={formData.amount || ''}
                                                         disabled={editMode}
                                                         onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
@@ -1357,108 +1366,121 @@ const Payments: React.FC = () => {
                                                 <button
                                                     onClick={handleAutoAllocate}
                                                     disabled={editMode || !formData.amount || availableInvoices.length === 0}
-                                                    className="w-full mt-2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-tight transition-all disabled:opacity-30"
+                                                    className="w-full mt-1.5 h-7 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-30 flex items-center justify-center gap-1"
                                                 >
-                                                    Auto-Allocate to Invoices
+                                                    <BarChart3 size={12} /> Auto-Allocate
                                                 </button>
                                             </div>
 
                                             {excessAmount > 0.01 && (
-                                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in zoom-in-95">
-                                                    <label className="block text-[10px] font-bold text-emerald-800 uppercase tracking-tight mb-3 flex items-center gap-2">
-                                                        <AlertTriangle size={14} /> Excess Amount: {currency}{excessAmount.toFixed(2)}
+                                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg animate-in zoom-in-95">
+                                                    <label className="block text-[10px] font-semibold text-emerald-800 mb-2 flex items-center gap-1.5">
+                                                        <AlertTriangle size={12} /> Excess: {currency}{excessAmount.toFixed(2)}
                                                     </label>
-                                                    <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-1.5">
                                                         <button
                                                             onClick={() => setFormData({ ...formData, excessHandling: 'Change' })}
                                                             disabled={editMode}
-                                                            className={`w-full py-2 rounded-xl text-[10px] font-bold uppercase border transition-all flex items-center justify-center gap-2 ${formData.excessHandling === 'Change' ? 'bg-white text-emerald-600 border-emerald-300 shadow-sm' : 'bg-emerald-600 text-white border-emerald-500'}`}
+                                                            className={`w-full h-7 rounded-lg text-[10px] font-semibold border transition-all flex items-center justify-center gap-1.5 ${formData.excessHandling === 'Change' ? 'bg-white text-emerald-600 border-emerald-300' : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700'}`}
                                                         >
-                                                            <Undo2 size={12} /> Give Change
+                                                            <Undo2 size={11} /> Give Change
                                                         </button>
                                                         <button
                                                             disabled={editMode || !formData.customerName}
                                                             onClick={() => setFormData({ ...formData, excessHandling: 'Wallet' })}
-                                                            className={`w-full py-2 rounded-xl text-[10px] font-bold uppercase border transition-all flex items-center justify-center gap-2 ${formData.excessHandling === 'Wallet' ? 'bg-white text-emerald-600 border-emerald-300 shadow-sm' : 'bg-emerald-600 text-white border-emerald-500'}`}
+                                                            className={`w-full h-7 rounded-lg text-[10px] font-semibold border transition-all flex items-center justify-center gap-1.5 ${formData.excessHandling === 'Wallet' ? 'bg-white text-emerald-600 border-emerald-300' : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700'}`}
                                                         >
-                                                            <Wallet size={12} /> To Wallet
+                                                            <Wallet size={11} /> To Wallet
                                                         </button>
                                                     </div>
                                                 </div>
                                             )}
 
-                                            <div className="pt-4 space-y-3">
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Entry Metadata</label>
-                                                <input type="text" className="w-full p-2 border rounded-xl text-[13px]" placeholder="Reference / Cheque #" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} />
-                                                <textarea className="w-full p-2 border rounded-xl text-[13px] h-20 resize-none" placeholder="Narration..." value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-semibold text-slate-500">Reference & Notes</label>
+                                                <input type="text" className="w-full h-8 px-2.5 border border-slate-200 rounded-lg text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400" placeholder="Reference / Cheque #" value={formData.reference} onChange={e => setFormData({ ...formData, reference: e.target.value })} />
+                                                <textarea className="w-full p-2.5 border border-slate-200 rounded-lg text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all h-[56px] resize-none placeholder:text-slate-400" placeholder="Narration..." value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
                                             </div>
                                         </div>
 
-                                        <div className="pt-6 shrink-0">
-                                            <button
-                                                onClick={handleSave}
-                                                disabled={isSubmitting}
-                                                className={`w-full py-4 rounded-2xl font-bold uppercase text-[11px] tracking-tight shadow-xl transition-all active:scale-95 ${isSubmitting ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none' : 'bg-emerald-600 text-white shadow-emerald-900/10 hover:bg-emerald-700'}`}
-                                            >
-                                                {isSubmitting ? 'Processing...' : 'Confirm & Post Payment'}
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={isSubmitting}
+                                            className={`w-full h-10 rounded-xl font-bold text-[11px] tracking-wide transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 ${isSubmitting ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-200 hover:shadow-blue-300 hover:from-blue-700 hover:to-blue-800'}`}
+                                        >
+                                            {isSubmitting ? (
+                                                <><Loader2 size={14} className="animate-spin" /> Processing...</>
+                                            ) : (
+                                                <><PaymentIcon size={14} /> Confirm & Post Payment</>
+                                            )}
+                                        </button>
                                     </div>
 
-                                    <div className="flex-1 bg-white p-6 overflow-y-auto custom-scrollbar">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-[13px] font-bold text-slate-800 uppercase tracking-tight">Invoice Allocations</h3>
-                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">{availableInvoices.length} Unpaid Found</span>
+                                    <div className="flex-1 bg-white p-3.5 overflow-y-auto custom-scrollbar">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-[12px] font-bold text-slate-800">Invoice Allocations</h3>
+                                            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{availableInvoices.length} unpaid</span>
                                         </div>
 
-                                        <table className="w-full text-left text-[13px] border-collapse">
-                                            <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-tight border-b border-slate-100 sticky top-0">
-                                                <tr>
-                                                    <th className="table-header">Invoice</th>
-                                                    <th className="table-header">Date</th>
-                                                    <th className="table-header text-right">Total</th>
-                                                    <th className="table-header text-right">Balance</th>
-                                                    <th className="table-header text-right w-32">Allocate</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {availableInvoices.map(inv => {
-                                                    const due = inv.totalAmount - (inv.paidAmount || 0);
-                                                    const alloc = allocations.find(a => a.invoiceId === inv.id);
+                                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                            <table className="w-full text-left text-[12px] border-collapse">
+                                                <thead>
+                                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Invoice</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide text-right">Total</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide text-right">Balance</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide text-right w-28">Allocate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {availableInvoices.map(inv => {
+                                                        const due = inv.totalAmount - (inv.paidAmount || 0);
+                                                        const alloc = allocations.find(a => a.invoiceId === inv.id);
 
-                                                    return (
-                                                        <tr key={inv.id} className="hover:bg-blue-50/30 transition-colors">
-                                                            <td className="table-body-cell">
-                                                                <div className="font-bold text-blue-600">#{inv.id}</div>
-                                                                {inv.subAccountName && <div className="text-[10px] text-slate-400 uppercase tracking-tight">{inv.subAccountName}</div>}
-                                                            </td>
-                                                            <td className="table-body-cell text-slate-500">{new Date(inv.date).toLocaleDateString()}</td>
-                                                            <td className="table-body-cell text-right text-slate-500 finance-nums">{currency}{inv.totalAmount.toFixed(2)}</td>
-                                                            <td className="table-body-cell text-right font-bold text-rose-500 finance-nums">{currency}{due.toFixed(2)}</td>
-                                                            <td className="table-body-cell text-right">
-                                                                <input
-                                                                    type="number"
-                                                                    className="w-24 p-1.5 border border-blue-200 rounded-lg text-right font-bold text-blue-600 focus:border-blue-500 outline-none finance-nums"
-                                                                    value={alloc?.amount || ''}
-                                                                    disabled={editMode}
-                                                                    onChange={e => {
-                                                                        const val = parseFloat(e.target.value) || 0;
-                                                                        setAllocations(prev => {
-                                                                            const filtered = prev.filter(a => a.invoiceId !== inv.id);
-                                                                            return [...filtered, { invoiceId: inv.id, amount: val }];
-                                                                        });
-                                                                    }}
-                                                                    placeholder="0.00"
-                                                                />
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                {availableInvoices.length === 0 && (
-                                                    <tr><td colSpan={5} className="p-20 text-center text-slate-300 font-medium italic">No outstanding invoices for this account context.</td></tr>
+                                                        return (
+                                                            <tr key={inv.id} className="hover:bg-blue-50/40 transition-colors">
+                                                                <td className="px-3 py-2">
+                                                                    <div className="font-semibold text-blue-600 text-[12px]">#{inv.id}</div>
+                                                                    {inv.subAccountName && <div className="text-[9px] text-slate-400 font-medium">{inv.subAccountName}</div>}
+                                                                </td>
+                                                                <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(inv.date).toLocaleDateString()}</td>
+                                                                <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{inv.totalAmount.toFixed(2)}</td>
+                                                                <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toFixed(2)}</td>
+                                                                <td className="px-3 py-2 text-right">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="w-20 h-7 px-1.5 border border-slate-200 rounded-md text-right font-semibold text-blue-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none finance-nums text-[12px] bg-white transition-all"
+                                                                        value={alloc?.amount || ''}
+                                                                        disabled={editMode}
+                                                                        onChange={e => {
+                                                                            const val = parseFloat(e.target.value) || 0;
+                                                                            setAllocations(prev => {
+                                                                                const filtered = prev.filter(a => a.invoiceId !== inv.id);
+                                                                                return [...filtered, { invoiceId: inv.id, amount: val }];
+                                                                            });
+                                                                        }}
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {availableInvoices.length === 0 && (
+                                                        <tr><td colSpan={5} className="p-10 text-center text-slate-300 font-medium italic">No outstanding invoices for this account context.</td></tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {allocations.length > 0 && (
+                                            <div className="mt-2 flex items-center justify-end gap-3 text-[12px]">
+                                                <span className="text-slate-500 font-medium">Allocated: <span className="font-bold text-slate-700 finance-nums">{currency}{allocations.reduce((s, a) => s + a.amount, 0).toFixed(2)}</span></span>
+                                                {excessAmount > 0.01 && (
+                                                    <span className="text-emerald-600 font-medium">Excess: <span className="font-bold finance-nums">{currency}{excessAmount.toFixed(2)}</span></span>
                                                 )}
-                                            </tbody>
-                                        </table>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -153,8 +153,8 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
                     <table className="w-full text-left text-sm">
                       <thead className="bg-slate-50/80 border-b border-slate-200">
                         <tr>
-                          <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Item / Description</th>
                           <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-wider text-center">Qty</th>
+                          <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-wider">Item / Description</th>
                           <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">Unit Price</th>
                           <th className="px-6 py-4 font-bold text-slate-500 text-[10px] uppercase tracking-wider text-right">Total</th>
                         </tr>
@@ -162,11 +162,11 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
                       <tbody className="divide-y divide-slate-100">
                         {quotation.items?.map((item, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantity}</td>
                             <td className="px-6 py-4">
                               <p className="font-bold text-slate-800">{item.name}</p>
                               {item.description && <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>}
                             </td>
-                            <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantity}</td>
                             <td className="px-6 py-4 text-right font-bold text-slate-700">{currency}{item.price.toLocaleString()}</td>
                             <td className="px-6 py-4 text-right font-bold text-slate-900">{currency}{(item.quantity * item.price).toLocaleString()}</td>
                           </tr>

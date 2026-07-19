@@ -88,7 +88,9 @@ class InventoryTransactionService {
       }
 
       // Check if sufficient quantity available
-      if (currentQuantity < quantity) {
+      const companyConfig = JSON.parse(localStorage.getItem('nexus_company_config') || '{}');
+      const allowNegative = companyConfig?.inventorySettings?.allowNegativeStock === true;
+      if (!allowNegative && currentQuantity < quantity) {
         return { 
           success: false, 
           error: `Insufficient stock. Available: ${currentQuantity}, Requested: ${quantity}` 
@@ -391,10 +393,13 @@ class InventoryReservationService {
 
       // Calculate truly available (stock - reserved)
       const trulyAvailable = availableQuantity - totalReserved;
-      
+
+      const companyConfig = JSON.parse(localStorage.getItem('nexus_company_config') || '{}');
+      const allowNegative = companyConfig?.inventorySettings?.allowNegativeStock === true;
+
       return {
         available: trulyAvailable,
-        canReserve: trulyAvailable >= quantity
+        canReserve: allowNegative || trulyAvailable >= quantity
       };
     } catch (error) {
       logger.error('[InventoryReservationService] Error checking availability:', error);

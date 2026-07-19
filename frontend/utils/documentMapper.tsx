@@ -378,14 +378,14 @@ export const mapErpDataToDocument = (type: DocumentType, data: any, renderOption
       default: // Invoice or Quotation
         const columns = options.showPrices
           ? [
-            { header: 'Description', accessor: 'name', wrapSafe: true },
             { header: 'Qty', accessor: 'quantity', align: 'center' as const },
+            { header: 'Description', accessor: 'name', wrapSafe: true },
             { header: 'Price', accessor: 'unitPrice', isCurrency: true },
             { header: 'Total', accessor: 'total', isCurrency: true }
           ]
           : [
-            { header: 'Description', accessor: 'name', wrapSafe: true },
-            { header: 'Qty', accessor: 'quantity', align: 'center' as const }
+            { header: 'Qty', accessor: 'quantity', align: 'center' as const },
+            { header: 'Description', accessor: 'name', wrapSafe: true }
           ];
 
         return (

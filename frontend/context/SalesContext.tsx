@@ -432,7 +432,8 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // Fast pre-check: stock availability (definitive atomic check happens inside processSale)
             const stockItems = (sale.items || []).filter((i: any) => i.type !== 'Service');
-            if (stockItems.length > 0) {
+            const allowNegative = companyConfig?.inventorySettings?.allowNegativeStock === true;
+            if (!allowNegative && stockItems.length > 0) {
                 const { available, unavailable } = await inventoryReservationService.checkSalesOrderAvailability(
                     stockItems.map((i: any) => ({ productId: i.id || i.productId, quantity: i.quantity }))
                 );

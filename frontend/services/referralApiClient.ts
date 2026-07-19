@@ -112,11 +112,15 @@ async function request<T>(method: string, endpoint: string, body?: any, params?:
       if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
     });
   }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   const res = await fetch(url.toString(), {
     method,
     headers: getHeaders(),
     body: body ? JSON.stringify(body) : undefined,
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
   if (!res.ok) {
     let errMsg = `API error: ${res.status}`;
     try {

@@ -107,8 +107,8 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-slate-100/50">
-                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description</th>
                                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Qty</th>
+                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description</th>
                                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Price</th>
                                                     <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Total</th>
                                                 </tr>
@@ -116,6 +116,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                             <tbody className="divide-y divide-slate-200/50">
                                                 {order.items.map((item, idx) => (
                                                     <tr key={idx} className="hover:bg-white transition-colors">
+                                                        <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantity}</td>
                                                         <td className="px-6 py-4">
                                                             <div className="font-bold text-slate-900">{item.productName}</div>
                                                             <div className="text-[10px] text-slate-400 font-mono mt-0.5">

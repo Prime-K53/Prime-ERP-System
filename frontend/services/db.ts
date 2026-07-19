@@ -435,9 +435,9 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
     const record = await db.get(storeName, id) as T | undefined;
     if (!record) return undefined;
     const cid = await getCurrentCompanyId();
-    if (!cid) return undefined;
+    if (!cid) return record;
     const recordCompany = (record as Record<string, unknown>)?._companyId;
-    if (recordCompany !== cid) return undefined;
+    if (recordCompany && recordCompany !== cid) return undefined;
     return record;
 });
 
@@ -1275,6 +1275,9 @@ export const dbService = {
                 const cloudResult = await cloudDb.put(String(storeName), item);
                 if (cloudResult?.id) {
                     await durableSyncQueue.markCompleted(queued.id, cloudResult.updatedAt);
+                } else {
+                    // cloudDb returned null (no company_id) — mark as failed so it won't retry
+                    await durableSyncQueue.markFailed(queued.id, 'No company_id resolvable');
                 }
             } catch (err) {
                 // Queue item stays pending — background sync will retry

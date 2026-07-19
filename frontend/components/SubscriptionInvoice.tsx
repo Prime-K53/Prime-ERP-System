@@ -45,8 +45,8 @@ const SubscriptionInvoice: React.FC<SubscriptionInvoiceProps> = ({
   autoEmail
 }) => {
   const columns = [
-    { header: 'Service Description', accessor: 'description', width: '55%', wrapSafe: true },
     { header: 'Qty', accessor: 'quantity', align: 'center' as const, width: '10%' },
+    { header: 'Service Description', accessor: 'description', width: '55%', wrapSafe: true },
     { header: 'Unit Price', accessor: 'rate', isCurrency: true, align: 'right' as const, width: '15%' },
     { header: 'Amount', accessor: 'total', isCurrency: true, align: 'right' as const, width: '20%' }
   ];

@@ -43,10 +43,10 @@ const PurchaseOrder: React.FC<PurchaseOrderProps> = ({
   paymentTerms
 }) => {
   const columns = [
+    { header: 'Qty', accessor: 'quantity', align: 'center' as const, width: '10%' },
     { header: 'Description', accessor: 'description', width: '50%', wrapSafe: true, render: (val) => (
       <div className="font-bold">{val}</div>
     )},
-    { header: 'Qty', accessor: 'quantity', align: 'center' as const, width: '10%' },
     { header: 'Price', accessor: 'rate', isCurrency: true, align: 'right' as const, width: '20%' },
     { header: 'Total', accessor: 'total', isCurrency: true, align: 'right' as const, width: '20%' }
   ];

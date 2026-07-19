@@ -1750,8 +1750,8 @@ if (type === 'POS_RECEIPT') {
               <View style={s.tableSectionTight}>
                 {/* 1. Restored Table Header with 2px border */}
                 <View style={s.tableHeader}>
-                  <Text style={s.colDesc}>Item Description</Text>
                   <Text style={s.colQty}>Qty</Text>
+                  <Text style={s.colDesc}>Item Description</Text>
                   <Text style={s.colPrice}>Price</Text>
                   <Text style={s.colTotal}>Total</Text>
                 </View>
@@ -1780,8 +1780,8 @@ if (type === 'POS_RECEIPT') {
                   
                   return (
                     <View key={i} style={s.row}>
+                      <Text style={s.colQty}>{Number(item.qty)}</Text>
                       <Text style={s.colDesc}>{formattedDesc}</Text>
-                      <Text style={s.colQty}>×{Number(item.qty)}</Text>
                       <Text style={s.colPrice}>{currency} {formatAmount(Number(item.price))}</Text>
                       <Text style={s.colTotal}>{currency} {formatAmount(Number(item.total))}</Text>
                     </View>
@@ -2168,18 +2168,18 @@ if (type === 'POS_RECEIPT') {
         {type === 'EXAMINATION_INVOICE' && (
           <View style={{ marginTop: 20 }}>
             <View style={s.tableHeader}>
-              <Text style={{ flex: 3 }}>Class / Subject</Text>
               <Text style={{ flex: 1, textAlign: 'center' }}>Qty</Text>
+              <Text style={{ flex: 3 }}>Class / Subject</Text>
               <Text style={{ flex: 1, textAlign: 'right' }}>Price</Text>
               <Text style={{ flex: 1.5, textAlign: 'right' }}>Total</Text>
             </View>
 
             {(('items' in data ? dataAny.items : []) as Array<Record<string, unknown>>).map((item: Record<string, unknown>, i: number) => (
               <View key={i} style={s.row}>
+                <Text style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>{Number(item.qty)}</Text>
                 <View style={{ flex: 3 }}>
                   <Text style={{ fontWeight: 'normal', fontSize: 12 }}>{String(item.desc)}</Text>
                 </View>
-                <Text style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>{Number(item.qty)}</Text>
                 <Text style={{ flex: 1, textAlign: 'right', fontSize: 12 }}>{formatAmount(Number(item.price))}</Text>
                 <Text style={{ flex: 1.5, textAlign: 'right', fontSize: 12 }}>{formatAmount(Number(item.total))}</Text>
               </View>
