@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Warehouse, Plus, Edit3, Trash2, MapPin, Building2, X, Loader2, Check } from 'lucide-react';
 import { useInventory } from '../../context/InventoryContext';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmDialog, ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 import type { Warehouse as WarehouseType } from '../../types';
 
 const WAREHOUSE_TYPES = ['Physical', 'Store', 'Virtual'] as const;
@@ -23,6 +24,7 @@ export const WarehousePage: React.FC = () => {
   const [form, setForm] = useState<WarehouseForm>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   const filtered = useMemo(() => {
     if (!search.trim()) return warehouses;
@@ -68,13 +70,21 @@ export const WarehousePage: React.FC = () => {
   };
 
   const handleDelete = async (wh: WarehouseType) => {
-    if (!window.confirm(`Delete warehouse "${wh.name}"? This cannot be undone.`)) return;
-    try {
-      await deleteWarehouse(wh.id);
-      notify('Warehouse deleted', 'success');
-    } catch (err: any) {
-      notify(err?.message || 'Failed to delete warehouse', 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Warehouse',
+      message: `Delete warehouse "${wh.name}"? This cannot be undone.`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deleteWarehouse(wh.id);
+          notify('Warehouse deleted', 'success');
+        } catch (err: any) {
+          notify(err?.message || 'Failed to delete warehouse', 'error');
+        }
+      }
+    });
   };
 
   return (
@@ -248,6 +258,19 @@ export const WarehousePage: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'danger'}
+      />
     </div>
   );
 };

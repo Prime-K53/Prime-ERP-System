@@ -18,6 +18,7 @@ import { enrichDocumentCustomerData } from '../../utils/documentCustomerData';
 import { mapToInvoiceData } from '../../utils/pdfMapper';
 import { PrimeDocument } from '../../views/shared/components/PDF/PrimeDocument';
 import { PrimeDocData } from '../../views/shared/components/PDF/schemas';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 import { pdf } from '@react-pdf/renderer';
 import { initializePrimePdfFonts } from '../../views/shared/components/PDF/templateSettings';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
@@ -129,6 +130,7 @@ const SubscriptionsView: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [searchText, setSearchTerm] = useState('');
     const [selectedMetric, setSelectedMetric] = useState<string>('All');
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const recurringInvoices = finance.recurringInvoices || [];
     const invoices = finance.invoices || [];
@@ -172,10 +174,17 @@ const SubscriptionsView: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm("Are you sure you want to delete this recurring invoice?")) {
-            await finance.deleteRecurringInvoice(id);
-            notify("Recurring invoice deleted", "info");
-        }
+        setConfirmState({
+            open: true,
+            title: 'Delete Recurring Invoice',
+            message: 'Are you sure you want to delete this recurring invoice?',
+            type: 'danger',
+            confirmText: 'Delete',
+            onConfirm: async () => {
+                await finance.deleteRecurringInvoice(id);
+                notify("Recurring invoice deleted", "info");
+            }
+        });
     };
 
     const handleView = (item: any) => {
@@ -382,6 +391,19 @@ const SubscriptionsView: React.FC = () => {
                     onAction={handleAction}
                 />
             </div>
+            <ConfirmDialog
+                open={confirmState.open}
+                onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+                onConfirm={() => {
+                    confirmState.onConfirm?.();
+                    setConfirmState(c => ({ ...c, open: false }));
+                }}
+                onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                type={confirmState.type || 'danger'}
+            />
         </div>
     );
 };

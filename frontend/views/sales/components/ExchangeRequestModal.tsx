@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { logger } from '@/services/logger';
 import { 
-  X, Search, AlertTriangle, Plus, Minus, 
+  Search, AlertTriangle, Plus, Minus, 
   ChevronRight, Info, CheckCircle2, ShoppingCart, FileText, RefreshCw 
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';
 import { useSalesStore } from '../../../stores/salesStore';
 import { useFinanceStore } from '../../../stores/financeStore';
 import { useAuth } from '../../../context/AuthContext';
@@ -150,21 +151,10 @@ export const ExchangeRequestModal: React.FC<ExchangeRequestModalProps> = ({ onCl
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">New Sales Exchange Request</h2>
-            <p className="text-sm text-gray-500">Step {step} of 2: {step === 1 ? 'Select Invoice' : 'Exchange Details'}</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-            <X className="w-6 h-6 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {step === 1 ? (
+    <Dialog open={true} onClose={onClose} title="New Sales Exchange Request" className="max-w-4xl">
+      <p className="text-sm text-slate-500 -mt-2 mb-2">Step {step} of 2: {step === 1 ? 'Select Invoice' : 'Exchange Details'}</p>
+      <div className="flex-1 overflow-y-auto">
+        {step === 1 ? (
             <div className="space-y-6">
               <div className="relative" ref={dropdownRef}>
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -459,10 +449,9 @@ export const ExchangeRequestModal: React.FC<ExchangeRequestModalProps> = ({ onCl
               </div>
             </div>
           )}
-        </div>
+          </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <DialogFooter className="bg-gray-50/50">
           <button
             onClick={onClose}
             className="px-6 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
@@ -489,9 +478,8 @@ export const ExchangeRequestModal: React.FC<ExchangeRequestModalProps> = ({ onCl
               )}
             </button>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+    </Dialog>
   );
 };
 

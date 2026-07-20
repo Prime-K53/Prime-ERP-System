@@ -8,6 +8,7 @@ import {
     FileText, Download, CheckCircle, AlertCircle, Plus, Calendar
 } from 'lucide-react';
 import { VatReturn } from '../../types';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 export const VatReports: React.FC = () => {
     const { returns, generateReturn, fileReturn, isLoading } = useVatStore();
@@ -20,6 +21,7 @@ export const VatReports: React.FC = () => {
         month: new Date().getMonth(),
         year: new Date().getFullYear()
     });
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -37,9 +39,16 @@ export const VatReports: React.FC = () => {
     };
 
     const handleFileReturn = async (returnId: string) => {
-        if (window.confirm('Are you sure you want to file this return? This action cannot be undone.')) {
-            await fileReturn(returnId);
-        }
+        setConfirmState({
+            open: true,
+            title: 'File VAT Return',
+            message: 'Are you sure you want to file this return? This action cannot be undone.',
+            type: 'warning',
+            confirmText: 'File Return',
+            onConfirm: async () => {
+                await fileReturn(returnId);
+            }
+        });
     };
 
     const handleMarkPaid = async (returnId: string) => {
@@ -170,6 +179,19 @@ export const VatReports: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+            <ConfirmDialog
+                open={confirmState.open}
+                onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+                onConfirm={() => {
+                    confirmState.onConfirm?.();
+                    setConfirmState(c => ({ ...c, open: false }));
+                }}
+                onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                type={confirmState.type || 'warning'}
+            />
         </div>
     );
 };

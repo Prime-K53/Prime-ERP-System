@@ -266,6 +266,7 @@ const Settings: React.FC = () => {
     const [complianceConfig, setComplianceConfig] = useState<ComplianceConfig>({ gdprEnabled: false, dataRetentionDays: 365, autoAnonymizeAfterDays: 730, consentRequired: true, privacyPolicyUrl: '', dataDeletionEnabled: true });
 
     const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
+    const [doubleConfirmState, setDoubleConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const readBackupStatus = () => {
         let restoreMeta: { restoredAt?: string; filename?: string; snapshotDate?: string } | null = null;
@@ -526,52 +527,34 @@ const Settings: React.FC = () => {
             type: 'danger',
             confirmText: 'Delete',
             onConfirm: () => {
-                const doubleConfirm = window.confirm(
-                    'ARE YOU SURE?\n\nAll company data will be deleted. Local data will be cleared. You will be signed out.'
-                );
-                if (!doubleConfirm) return;
-
-                (async () => {
-                    try {
-                        if (isSupabaseConfigured()) {
-                            const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
-                            if (companyId) {
-                                await cloudDb.deleteCompany(companyId);
+                setDoubleConfirmState({
+                    open: true,
+                    title: 'Final Confirmation',
+                    message: 'ARE YOU SURE?\n\nAll company data will be deleted. Local data will be cleared. You will be signed out.',
+                    type: 'danger',
+                    confirmText: 'Yes, Delete Everything',
+                    onConfirm: async () => {
+                        (async () => {
+                            try {
+                                if (isSupabaseConfigured()) {
+                                    const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
+                                    if (companyId) {
+                                        await cloudDb.deleteCompany(companyId);
+                                    }
+                                    await supabase.auth.signOut();
+                                } else {
+                                    await api.system.deleteWorkspace();
+                                }
+                                await dbService.factoryReset();
+                                localStorage.clear();
+                                sessionStorage.clear();
+                                window.location.reload();
+                            } catch (error: any) {
+                                notify?.('Delete failed: ' + (error?.message || error), 'error');
                             }
-                            await supabase.auth.signOut();
-                        } else {
-                            await api.system.deleteWorkspace();
-                        }
-                        await dbService.factoryReset();
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        window.location.reload();
-                    } catch (error) {
-                        const msg = error instanceof Error ? error.message : String(error);
-                        if (msg.includes('foreign key') || msg.includes('23503')) {
-                            notify(
-                                'Company data could not be fully deleted due to database constraints. ' +
-                                'Run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard.',
-                                'error'
-                            );
-                        } else if (msg.includes('permission') || msg.includes('42501')) {
-                            notify(
-                                'Permission denied. Run the SQL from database/supabase-cascade-delete.sql in your ' +
-                                'Supabase dashboard to create a privileged deletion function, then try again.',
-                                'error'
-                            );
-                        } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                            notify(
-                                'Could not reach the local backend server to wipe the database. ' +
-                                'Make sure the backend is running (npm run dev). ' +
-                                'Local storage has been cleared — you will be signed out.',
-                                'warning'
-                            );
-                        } else {
-                            notify('Failed to delete company: ' + msg, 'error');
-                        }
+                        })();
                     }
-                })();
+                });
             }
         });
     };
@@ -3266,21 +3249,33 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     onCancel={() => setShow2FASetup(false)}
                 />
             )}
+            <ConfirmDialog
+              open={confirmState.open}
+              onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+              onConfirm={() => {
+                confirmState.onConfirm?.();
+                setConfirmState(c => ({ ...c, open: false }));
+              }}
+              onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+              title={confirmState.title}
+              message={confirmState.message}
+              confirmText={confirmState.confirmText}
+              type={confirmState.type || 'question'}
+            />
+            <ConfirmDialog
+              open={doubleConfirmState.open}
+              onOpenChange={(open) => !open && setDoubleConfirmState(c => ({ ...c, open: false }))}
+              onConfirm={() => {
+                doubleConfirmState.onConfirm?.();
+                setDoubleConfirmState(c => ({ ...c, open: false }));
+              }}
+              onCancel={() => setDoubleConfirmState(c => ({ ...c, open: false }))}
+              title={doubleConfirmState.title}
+              message={doubleConfirmState.message}
+              confirmText={doubleConfirmState.confirmText}
+              type={doubleConfirmState.type || 'danger'}
+            />
         </div>
-
-        <ConfirmDialog
-          open={confirmState.open}
-          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
-          onConfirm={() => {
-            confirmState.onConfirm?.();
-            setConfirmState(c => ({ ...c, open: false }));
-          }}
-          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
-          title={confirmState.title}
-          message={confirmState.message}
-          confirmText={confirmState.confirmText}
-          type={confirmState.type || 'question'}
-        />
     );
 };
 

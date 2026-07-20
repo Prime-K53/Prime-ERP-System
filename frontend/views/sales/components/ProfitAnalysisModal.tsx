@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
-/* Fix: Added missing BarChart3 to imports */
-import { X, TrendingUp, DollarSign, PieChart, AlertTriangle, ArrowRight, Recycle, BarChart3, ShieldCheck } from 'lucide-react';
+import { TrendingUp, DollarSign, PieChart, AlertTriangle, ArrowRight, Recycle, BarChart3, ShieldCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';
 import { Invoice, WorkOrder } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
 import { useInventory } from '../../../context/InventoryContext';
@@ -81,24 +81,9 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
   }, [invoice, boms, inventory, workOrders]);
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="p-8 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-            <div>
-                <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3 tracking-tighter uppercase">
-                    <TrendingUp className="text-emerald-600" size={28}/> P&L Performance Audit
-                </h2>
-                <p className="text-xs text-slate-500 font-mono mt-1">Voucher Tracking ID: {invoice.id}</p>
-            </div>
-            <button onClick={onClose} className="p-3 hover:bg-slate-200 rounded-2xl text-slate-400 hover:text-slate-600 transition-all">
-                <X size={24}/>
-            </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+    <Dialog open={true} onClose={onClose} title="P&L Performance Audit" className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <p className="text-xs text-slate-500 font-mono -mt-2 mb-2">Voucher Tracking ID: {invoice.id}</p>
+        <div className="space-y-6 custom-scrollbar overflow-y-auto flex-1 pr-1">
             
             {/* KPI Cards (QBO Style) */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -226,8 +211,7 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
                 </div>
             )}
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 };
 

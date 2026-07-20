@@ -18,6 +18,7 @@ import { OfflineImage } from '../../../components/OfflineImage';
 import { generateAIResponse } from '../../../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 import { AuditTimeline } from '../../shared/components/AuditTimeline';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 import { generateNextId } from '../../../utils/helpers';
 
 
@@ -41,6 +42,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ item, onBack, onEdit, o
     const [showLabelModal, setShowLabelModal] = useState(false);
     const [selectedVariantFilter, setSelectedVariantFilter] = useState<string>('all');
     const [isRepricing, setIsRepricing] = useState(false);
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     // Variant Detection
     const hasVariants = item.isVariantParent && item.variants && item.variants.length > 0;
@@ -472,11 +474,17 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ item, onBack, onEdit, o
                                 className="p-1.5 text-slate-400 hover:text-red-600 bg-white border border-slate-100 rounded shadow-sm transition-colors"
                                 title="Delete Item"
                                 onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
-                                        // Handle delete logic - usually passed down or via context
-                                        notify(`${item.name} deleted successfully`, 'success');
-                                        onBack();
-                                    }
+                                    setConfirmState({
+                                        open: true,
+                                        title: 'Delete Item',
+                                        message: `Are you sure you want to delete ${item.name}?`,
+                                        type: 'danger',
+                                        confirmText: 'Delete',
+                                        onConfirm: () => {
+                                            notify(`${item.name} deleted successfully`, 'success');
+                                            onBack();
+                                        }
+                                    });
                                 }}
                             >
                                 <Trash2 size={16} />
@@ -1170,6 +1178,19 @@ const variantObj = variants.find(x => x.id === v.id) || {} as { printConsumption
                     </div>
                 )}
             </div>
+            <ConfirmDialog
+                open={confirmState.open}
+                onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+                onConfirm={() => {
+                    confirmState.onConfirm?.();
+                    setConfirmState(c => ({ ...c, open: false }));
+                }}
+                onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                type={confirmState.type || 'danger'}
+            />
         </div>
     );
 };

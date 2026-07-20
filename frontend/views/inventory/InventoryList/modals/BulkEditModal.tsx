@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Save, Package, DollarSign, Warehouse, Users, Hash, AlertCircle, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../../components/Dialog';
+import { Save, Package, DollarSign, Warehouse, Users, Hash, AlertCircle, Loader2 } from 'lucide-react';
 import type { Item } from '../../../../types';
 
 interface Props {
@@ -60,57 +61,42 @@ export const BulkEditModal: React.FC<Props> = ({ open, items, onClose, onSave })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(22,32,27,.5)' }}>
-      <div className="bg-white rounded-[16px] w-full max-w-lg overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)' }}>
-        <div className="px-5 py-4 border-b border-[#E5E8E1] flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[#DCF0EA]" style={{ color: '#128C72' }}>
-              <Package size={20} />
+    <Dialog open={open} onClose={onClose} title="Bulk Edit">
+      <div className="max-h-[60vh] overflow-y-auto space-y-4">
+        {FIELDS.map(field => {
+          const currentVal = updates[field.key] !== undefined ? String(updates[field.key]) : '';
+          return (
+            <div key={field.key}>
+              <label className="flex items-center gap-1.5 text-xs font-medium mb-1.5" style={{ color: '#6C766F' }}>
+                {field.icon} {field.label}
+              </label>
+              {field.type === 'select' ? (
+                <select value={currentVal || getCurrentValue(field.key)} onChange={e => handleFieldChange(field.key, e.target.value)}
+                  className="w-full px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm bg-white outline-none focus:border-[#128C72]" style={{ color: '#16201B' }}>
+                  <option value="">— No change —</option>
+                  {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              ) : (
+                <input type={field.type} value={currentVal || getCurrentValue(field.key)} onChange={e => handleFieldChange(field.key, e.target.value)}
+                  placeholder="— No change —"
+                  className="w-full px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm outline-none focus:border-[#128C72]" style={{ color: '#16201B' }} />
+              )}
             </div>
-            <div>
-              <h2 className="font-bold" style={{ color: '#16201B' }}>Bulk Edit</h2>
-              <p className="text-xs font-medium" style={{ color: '#6C766F' }}>{items.length} item{items.length !== 1 ? 's' : ''} selected</p>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ color: '#9CA59E' }}><X size={20} /></button>
-        </div>
-
-        <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
-          {FIELDS.map(field => {
-            const currentVal = updates[field.key] !== undefined ? String(updates[field.key]) : '';
-            return (
-              <div key={field.key}>
-                <label className="flex items-center gap-1.5 text-xs font-medium mb-1.5" style={{ color: '#6C766F' }}>
-                  {field.icon} {field.label}
-                </label>
-                {field.type === 'select' ? (
-                  <select value={currentVal || getCurrentValue(field.key)} onChange={e => handleFieldChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm bg-white outline-none focus:border-[#128C72]" style={{ color: '#16201B' }}>
-                    <option value="">— No change —</option>
-                    {field.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                ) : (
-                  <input type={field.type} value={currentVal || getCurrentValue(field.key)} onChange={e => handleFieldChange(field.key, e.target.value)}
-                    placeholder="— No change —"
-                    className="w-full px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm outline-none focus:border-[#128C72]" style={{ color: '#16201B' }} />
-                )}
-              </div>
-            );
-          })}
-          {activeFields === 0 && <p className="text-xs text-center py-4" style={{ color: '#9CA59E' }}>Select fields above to edit. Empty fields are not changed.</p>}
-        </div>
-
-        <div className="px-5 py-4 border-t border-[#E5E8E1] flex gap-3">
-          <button type="button" onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>
-            Cancel
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={submitting || activeFields === 0}
-            className="flex-1 px-4 py-2.5 rounded-[7px] text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#128C72] text-white hover:bg-[#0E5C4C]">
-            {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Apply to {items.length} item{items.length !== 1 ? 's' : ''}
-          </button>
-        </div>
+          );
+        })}
+        {activeFields === 0 && <p className="text-xs text-center py-4" style={{ color: '#9CA59E' }}>Select fields above to edit. Empty fields are not changed.</p>}
       </div>
-    </div>
+
+      <DialogFooter>
+        <button type="button" onClick={onClose}
+          className="flex-1 px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>
+          Cancel
+        </button>
+        <button type="button" onClick={handleSubmit} disabled={submitting || activeFields === 0}
+          className="flex-1 px-4 py-2.5 rounded-[7px] text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#128C72] text-white hover:bg-[#0E5C4C]">
+          {submitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Apply to {items.length} item{items.length !== 1 ? 's' : ''}
+        </button>
+      </DialogFooter>
+    </Dialog>
   );
 };

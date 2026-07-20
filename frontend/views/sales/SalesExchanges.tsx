@@ -9,7 +9,7 @@ import { ExchangeDetailsModal } from './components/ExchangeDetailsModal';
 import { SalesExchangeList } from './components/SalesLists';
 import { useDocumentPreview } from '../../hooks/useDocumentPreview';
 import { useAuth } from '../../context/AuthContext';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/Dialog';
+import { ConfirmDialog, useConfirmDialog } from '../../components/ConfirmDialog';
 
 const SalesExchanges: React.FC = () => {
   const { 
@@ -24,21 +24,7 @@ const SalesExchanges: React.FC = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [selectedExchange, setSelectedExchange] = useState<SalesExchange | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [confirmState, setConfirmState] = useState<{
-    open: boolean;
-    title: string;
-    message: string;
-    confirmLabel: string;
-    intent: 'danger' | 'primary';
-    onConfirm: null | (() => Promise<void>);
-  }>({
-    open: false,
-    title: '',
-    message: '',
-    confirmLabel: 'Confirm',
-    intent: 'primary',
-    onConfirm: null
-  });
+  const { confirm: confirmDialog, ConfirmDialogComponent } = useConfirmDialog();
 
   useEffect(() => {
     fetchExchanges();
@@ -56,48 +42,43 @@ const SalesExchanges: React.FC = () => {
   });
 
   const handleBulkCancel = async () => {
-    setConfirmState({
-      open: true,
+    const ok = await confirmDialog({
       title: 'Cancel Selected Exchange Requests',
       message: `Cancel ${selectedIds.length} selected exchange request(s)?`,
-      confirmLabel: 'Cancel Requests',
-      intent: 'danger',
-      onConfirm: async () => {
-        await bulkCancelSalesExchanges(selectedIds);
-        setSelectedIds([]);
-      }
+      type: 'danger',
+      confirmText: 'Cancel Requests',
     });
+    if (ok) {
+      await bulkCancelSalesExchanges(selectedIds);
+      setSelectedIds([]);
+    }
   };
 
   const handleAction = async (item: SalesExchange, action: string) => {
     if (action === 'print_note' || action === 'download_pdf') {
       handlePreview('SALES_EXCHANGE', item);
     } else if (action === 'email_note') {
-      // Logic to open email modal if integrated here, 
-      // otherwise handled by the shared component pattern
       notify("Email feature for exchanges is managed via the main Sales Dashboard", "info");
     } else if (action === 'approve_exchange') {
-      setConfirmState({
-        open: true,
+      const ok = await confirmDialog({
         title: 'Approve Exchange Request',
         message: 'Approve this exchange request and authorize replacement/reprint?',
-        confirmLabel: 'Approve',
-        intent: 'primary',
-        onConfirm: async () => {
-          await approveSalesExchange(item.id, "Approved from exchanges view");
-        }
+        type: 'info',
+        confirmText: 'Approve',
       });
+      if (ok) {
+        await approveSalesExchange(item.id, "Approved from exchanges view");
+      }
     } else if (action === 'cancel_exchange') {
-      setConfirmState({
-        open: true,
+      const ok = await confirmDialog({
         title: 'Cancel Exchange Request',
         message: 'Cancel this exchange request and void it?',
-        confirmLabel: 'Cancel Request',
-        intent: 'danger',
-        onConfirm: async () => {
-          await cancelSalesExchange(item.id);
-        }
+        type: 'danger',
+        confirmText: 'Cancel Request',
       });
+      if (ok) {
+        await cancelSalesExchange(item.id);
+      }
     }
   };
 
@@ -223,17 +204,16 @@ const SalesExchanges: React.FC = () => {
             viewMode="List"
             onView={(ex) => setSelectedExchange(ex)}
             onEdit={() => {}} // No edit for exchanges per policy
-            onDelete={(id) => {
-              setConfirmState({
-                open: true,
+            onDelete={async (id) => {
+              const ok = await confirmDialog({
                 title: 'Mark Exchange as Deleted',
                 message: 'Mark this exchange record as deleted? Physical deletion remains restricted for audit compliance.',
-                confirmLabel: 'Mark Deleted',
-                intent: 'danger',
-                onConfirm: async () => {
-                  await deleteSalesExchange(id);
-                }
+                type: 'danger',
+                confirmText: 'Mark Deleted',
               });
+              if (ok) {
+                await deleteSalesExchange(id);
+              }
             }}
             onAction={handleAction}
             selectedIds={selectedIds}
@@ -242,35 +222,7 @@ const SalesExchanges: React.FC = () => {
         </div>
       </div>
 
-      <Dialog open={confirmState.open} onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{confirmState.title}</DialogTitle>
-          </DialogHeader>
-          <div className="px-8 py-6 text-sm text-slate-600">{confirmState.message}</div>
-          <DialogFooter>
-            <button
-              onClick={() => setConfirmState(prev => ({ ...prev, open: false }))}
-              className="px-4 py-2 text-slate-600 border border-slate-200 rounded-lg font-semibold hover:bg-slate-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  await confirmState.onConfirm?.();
-                  setConfirmState(prev => ({ ...prev, open: false }));
-                } catch (error: any) {
-                  notify(error?.message || 'Operation failed', 'error');
-                }
-              }}
-              className={`px-4 py-2 text-white rounded-lg font-semibold transition-colors ${confirmState.intent === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-            >
-              {confirmState.confirmLabel}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialogComponent />
 
       {isRequestModalOpen && (
         <ExchangeRequestModal 

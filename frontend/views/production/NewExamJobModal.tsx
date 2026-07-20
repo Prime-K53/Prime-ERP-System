@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Dialog } from '../../components/Dialog';
 import { logger } from '@/services/logger';
 import {
   School as SchoolIcon,
@@ -22,7 +23,6 @@ import {
   FileSpreadsheet,
   Mail,
   Save,
-  X,
   Edit3,
   Wallet,
   Eye,
@@ -623,21 +623,8 @@ export const NewExamJobModal: React.FC<NewExamJobModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-normal text-slate-900">New Examination Job</h2>
-            <p className="text-[11px] font-normal text-slate-400 mt-0.5">Create a new batch for a school and calculate costs instantly</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-1 overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose} title="Create New Examination Job" className="max-w-6xl h-[90vh] flex flex-col">
+      <div className="flex flex-1 overflow-hidden">
           <div className="w-2/3 p-6 overflow-y-auto border-r border-slate-200 space-y-8 custom-scrollbar bg-[#F8FAFC]">
             <div className="grid grid-cols-2 gap-x-8 gap-y-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               {/* Row 1: School, Class, Academic Year, Term, Exam Type */}
@@ -911,7 +898,6 @@ export const NewExamJobModal: React.FC<NewExamJobModalProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Notifications */}
       {error && (
@@ -928,6 +914,6 @@ export const NewExamJobModal: React.FC<NewExamJobModalProps> = ({
           <button onClick={() => setSuccess(null)} className="ml-4 hover:opacity-70"><Trash2 size={16} /></button>
         </div>
       )}
-    </div>
+    </Dialog>
   );
 };

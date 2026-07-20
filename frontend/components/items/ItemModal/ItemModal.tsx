@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { generateAutoSKU } from '../../../utils/skuGenerator';
 import { currencyService } from '../../../services/currencyService';
 import { aiService } from '../../../services/ai/aiService';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 
 type Category = 'raw' | 'product' | 'service' | 'stationery';
 
@@ -402,9 +403,28 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
 
   const isEditing = !!item?.id;
 
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    type?: ConfirmDialogType;
+    onConfirm?: () => void;
+  }>({ open: false, title: '', message: '' });
+
   const handleRequestClose = useCallback(() => {
     if (dirtyRef.current) {
-      if (!window.confirm('You have unsaved changes. Discard them?')) return;
+      setConfirmState({
+        open: true,
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Discard them?',
+        type: 'warning',
+        confirmText: 'Discard',
+        onConfirm: () => {
+          onClose();
+        }
+      });
+      return;
     }
     onClose();
   }, [onClose]);
@@ -1394,7 +1414,18 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
                 style={{ ...s.tab, ...(category === cat ? s.tabActive : {}) }} 
                 onClick={() => {
                   if (category !== cat && dirtyRef.current) {
-                    if (!window.confirm('Switching category will lose unsaved form data. Continue?')) return;
+                    setConfirmState({
+                      open: true,
+                      title: 'Switch Category',
+                      message: 'Switching category will lose unsaved form data. Continue?',
+                      type: 'warning',
+                      confirmText: 'Continue',
+                      onConfirm: () => {
+                        setCategory(cat);
+                        dirtyRef.current = true;
+                      }
+                    });
+                    return;
                   }
                   setCategory(cat);
                   dirtyRef.current = true;
@@ -1502,14 +1533,22 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
             <div style={s.footerActions}>
               {isEditing && (
                 <button style={{ ...s.btn, ...s.btnDanger }} onClick={async () => {
-                  if (!window.confirm(`Archive "${name}"? It will be marked inactive and hidden from POS.`)) return;
-                  try {
-                    await updateItem({ ...item, status: 'Inactive' } as Item, 'Archived by user');
-                    notify?.('Item archived', 'success');
-                    onClose();
-                  } catch (err: any) {
-                    notify?.(`Archive failed: ${err?.message}`, 'error');
-                  }
+                  setConfirmState({
+                    open: true,
+                    title: 'Archive Item',
+                    message: `Archive "${name}"? It will be marked inactive and hidden from POS.`,
+                    type: 'warning',
+                    confirmText: 'Archive',
+                    onConfirm: async () => {
+                      try {
+                        await updateItem({ ...item, status: 'Inactive' } as Item, 'Archived by user');
+                        notify?.('Item archived', 'success');
+                        onClose();
+                      } catch (err: any) {
+                        notify?.(`Archive failed: ${err?.message}`, 'error');
+                      }
+                    }
+                  });
                 }}>Archive</button>
               )}
               <button style={s.btn} onClick={handleRequestClose}>Cancel</button>
@@ -1591,6 +1630,19 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

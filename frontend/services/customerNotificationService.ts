@@ -160,12 +160,7 @@ export const customerNotificationService = {
 
     const canProceed = await checkRateLimit(type, data.id);
     if (!canProceed) {
-      console.warn(`[Notification] Rate limit exceeded for ${type} ${data.id}`);
-      return;
-    }
-
-    if (typeof window !== 'undefined' && !window.confirm(`Send notification to ${data.customerName} about this ${ACTIVITY_LABELS[type] || type}?`)) {
-      logger.info(`[Notification] User cancelled notification for ${type} ${data.id}`);
+      logger.info(`[Notification] Rate limit exceeded for ${type} ${data.id}`);
       return;
     }
 

@@ -8,13 +8,14 @@ interface DialogProps {
   onClose?: () => void;
   title?: string;
   children: React.ReactNode;
+  className?: string;
 }
 
 interface DivProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, children }) => {
+const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, children, className }) => {
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const { registerShortcut } = useKeyboardContext();
 
@@ -61,7 +62,7 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, chi
         aria-modal="true"
         aria-label={title || 'Dialog'}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent className={className || 'max-w-xl'}>
           {(title || onClose) && (
             <DialogHeader className="flex items-center justify-between py-4 px-6">
               {title && <DialogTitle>{title}</DialogTitle>}

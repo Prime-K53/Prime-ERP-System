@@ -14,6 +14,7 @@ import {
   Clock, Users,
   Plus, RefreshCw, TrendingUp, CalendarDays
 } from 'lucide-react';
+import { ConfirmDialog, useConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const RecurringProfiles: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const RecurringProfiles: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isRunningBilling, setIsRunningBilling] = useState(false);
   const [actionProfileId, setActionProfileId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   // Load default start date
   useEffect(() => {
@@ -162,19 +164,24 @@ const RecurringProfiles: React.FC = () => {
   };
 
   const handleDeleteProfile = async (profileId: string) => {
-    if (!window.confirm('Delete this recurring profile? This action cannot be undone.')) {
-      return;
-    }
-    setActionProfileId(profileId);
-    try {
-      await deleteRecurringProfile(profileId);
-      toast.success('Recurring profile deleted');
-    } catch (error) {
-      logger.error('Error deleting recurring profile:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete recurring profile');
-    } finally {
-      setActionProfileId(null);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Recurring Profile',
+      message: 'Delete this recurring profile? This action cannot be undone.',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: () => {
+        setActionProfileId(profileId);
+        deleteRecurringProfile(profileId).then(() => {
+          toast.success('Recurring profile deleted');
+        }).catch((error) => {
+          logger.error('Error deleting recurring profile:', error);
+          toast.error(error instanceof Error ? error.message : 'Failed to delete recurring profile');
+        }).finally(() => {
+          setActionProfileId(null);
+        });
+      }
+    });
   };
 
   const calculateNextRun = (profile: ExaminationRecurringProfile) => {
@@ -192,6 +199,14 @@ const RecurringProfiles: React.FC = () => {
     if (diffDays === 1) return 'Tomorrow';
     return `${diffDays} days`;
   };
+
+  function handleViewSource(sourceType: string, sourceId: string) {
+    if (sourceType === 'job') {
+      navigate(`/examination/jobs/${sourceId}`);
+    } else {
+      navigate(`/examination/groups?group=${sourceId}`);
+    }
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -520,16 +535,21 @@ const RecurringProfiles: React.FC = () => {
         </CardContent>
       </Card>
       </div>
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'danger'}
+      />
     </div>
   );
-
-  function handleViewSource(sourceType: string, sourceId: string) {
-    if (sourceType === 'job') {
-      navigate(`/examination/jobs/${sourceId}`);
-    } else {
-      navigate(`/examination/groups?group=${sourceId}`);
-    }
-  }
 };
 
 export default RecurringProfiles;

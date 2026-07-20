@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, AlertCircle, CheckCircle, Loader2, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../../components/Dialog';
+import { Upload, AlertCircle, CheckCircle, Loader2, Download } from 'lucide-react';
 import { useAuth } from '../../../../context/AuthContext';
 import type { Item } from '../../../../types';
 import { parseCSV } from '../../../../services/excelService';
@@ -74,115 +75,100 @@ export const ImportModal: React.FC<Props> = ({ open, onClose, onImport }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(22,32,27,.5)' }}>
-      <div className="bg-white rounded-[16px] w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)' }}>
-        <div className="px-5 py-4 border-b border-[#E5E8E1] flex items-center justify-between bg-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[#DCF0EA]" style={{ color: '#128C72' }}><Upload size={20} /></div>
-            <div>
-              <h2 className="font-bold" style={{ color: '#16201B' }}>Import Items</h2>
-              <p className="text-xs" style={{ color: '#9CA59E' }}>{step === 'upload' ? 'Upload a CSV file' : step === 'preview' ? `${rawData.length} rows found` : step === 'importing' ? 'Importing...' : 'Import complete'}</p>
+    <Dialog open={open} onClose={onClose} title="Import Items">
+      {step === 'upload' && (
+        <div className="space-y-6">
+          <div className="border-2 border-dashed rounded-[16px] p-12 text-center cursor-pointer transition-colors" style={{ borderColor: '#9CA59E', background: '#F6F7F2' }}
+            onClick={() => fileRef.current?.click()}>
+            <Upload size={40} className="mx-auto mb-3" style={{ color: '#9CA59E' }} />
+            <p className="text-sm font-semibold" style={{ color: '#3B453F' }}>Drop CSV file here or click to browse</p>
+            <p className="text-xs mt-1" style={{ color: '#9CA59E' }}>Supports .csv files with header row</p>
+            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          </div>
+          <button onClick={downloadTemplate} className="flex items-center gap-2 text-xs font-medium mx-auto transition-all cursor-pointer" style={{ color: '#128C72' }}>
+            <Download size={14} /> Download sample template
+          </button>
+        </div>
+      )}
+
+      {step === 'preview' && (
+        <div className="space-y-4">
+          <div className="flex items-start gap-2 p-3 rounded-[10px] border" style={{ background: '#FBEFDA', borderColor: '#FBEFDA' }}>
+            <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#B9791C' }} />
+            <div className="text-xs" style={{ color: '#B9791C' }}>
+              <p className="font-semibold">Map CSV columns to item fields</p>
+              <p>Unmapped columns will be ignored.</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ color: '#9CA59E' }}><X size={20} /></button>
+          <div className="max-h-64 overflow-y-auto border border-[#E5E8E1] rounded-[10px]">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[#E5E8E1]" style={{ background: '#F6F7F2' }}>
+                  <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>CSV Column</th>
+                  <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>Item Field</th>
+                  <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>Sample Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(rawData[0] || {}).map(col => (
+                  <tr key={col} className="border-b border-[#EFF1EB]">
+                    <td className="p-2 font-medium" style={{ color: '#3B453F' }}>{col}</td>
+                    <td className="p-2">
+                      <select value={columnMap[col] || ''} onChange={e => setColumnMap(prev => ({ ...prev, [col]: e.target.value }))}
+                        className="w-full px-2 py-1 border border-[#E5E8E1] rounded-[5px] text-xs bg-white outline-none" style={{ color: '#16201B' }}>
+                        <option value="">— Skip —</option>
+                        {['name', 'sku', 'barcode', 'type', 'category', 'brand', 'unit', 'stock', 'costPrice', 'sellingPrice', 'status', 'description', 'minStockLevel', 'reorderPoint'].map(k => (
+                          <option key={k} value={k}>{k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-2" style={{ color: '#9CA59E' }}>{rawData[0]?.[col] || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-5">
-          {step === 'upload' && (
-            <div className="space-y-6">
-              <div className="border-2 border-dashed rounded-[16px] p-12 text-center cursor-pointer transition-colors" style={{ borderColor: '#9CA59E', background: '#F6F7F2' }}
-                onClick={() => fileRef.current?.click()}>
-                <Upload size={40} className="mx-auto mb-3" style={{ color: '#9CA59E' }} />
-                <p className="text-sm font-semibold" style={{ color: '#3B453F' }}>Drop CSV file here or click to browse</p>
-                <p className="text-xs mt-1" style={{ color: '#9CA59E' }}>Supports .csv files with header row</p>
-                <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-              </div>
-              <button onClick={downloadTemplate} className="flex items-center gap-2 text-xs font-medium mx-auto transition-all cursor-pointer" style={{ color: '#128C72' }}>
-                <Download size={14} /> Download sample template
-              </button>
-            </div>
-          )}
-
-          {step === 'preview' && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 p-3 rounded-[10px] border" style={{ background: '#FBEFDA', borderColor: '#FBEFDA' }}>
-                <AlertCircle size={16} className="mt-0.5 shrink-0" style={{ color: '#B9791C' }} />
-                <div className="text-xs" style={{ color: '#B9791C' }}>
-                  <p className="font-semibold">Map CSV columns to item fields</p>
-                  <p>Unmapped columns will be ignored.</p>
-                </div>
-              </div>
-              <div className="max-h-64 overflow-y-auto border border-[#E5E8E1] rounded-[10px]">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-[#E5E8E1]" style={{ background: '#F6F7F2' }}>
-                      <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>CSV Column</th>
-                      <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>Item Field</th>
-                      <th className="text-left p-2 font-medium" style={{ color: '#9CA59E' }}>Sample Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.keys(rawData[0] || {}).map(col => (
-                      <tr key={col} className="border-b border-[#EFF1EB]">
-                        <td className="p-2 font-medium" style={{ color: '#3B453F' }}>{col}</td>
-                        <td className="p-2">
-                          <select value={columnMap[col] || ''} onChange={e => setColumnMap(prev => ({ ...prev, [col]: e.target.value }))}
-                            className="w-full px-2 py-1 border border-[#E5E8E1] rounded-[5px] text-xs bg-white outline-none" style={{ color: '#16201B' }}>
-                            <option value="">— Skip —</option>
-                            {['name', 'sku', 'barcode', 'type', 'category', 'brand', 'unit', 'stock', 'costPrice', 'sellingPrice', 'status', 'description', 'minStockLevel', 'reorderPoint'].map(k => (
-                              <option key={k} value={k}>{k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="p-2" style={{ color: '#9CA59E' }}>{rawData[0]?.[col] || ''}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {step === 'importing' && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 size={40} className="animate-spin mb-4" style={{ color: '#128C72' }} />
-              <p className="text-sm font-semibold" style={{ color: '#3B453F' }}>Importing {rawData.length} items...</p>
-            </div>
-          )}
-
-          {step === 'result' && result && (
-            <div className="space-y-4">
-              <div className={`rounded-[16px] p-6 text-center border ${result.errors.length === 0 ? 'bg-[#F2FAF7] border-[#DCF0EA]' : 'bg-[#FBEFDA] border-[#FBEFDA]'}`}>
-                <div className={`inline-flex p-3 rounded-full mb-3 ${result.errors.length === 0 ? 'bg-[#DCF0EA]' : 'bg-[#FBEFDA]'}`} style={{ color: result.errors.length === 0 ? '#128C72' : '#B9791C' }}>
-                  {result.errors.length === 0 ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
-                </div>
-                <p className="text-lg font-bold" style={{ color: '#16201B' }}>{result.success} item{result.success !== 1 ? 's' : ''} imported</p>
-                {result.errors.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-semibold mb-1" style={{ color: '#BE4339' }}>{result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:</p>
-                    <ul className="text-xs space-y-0.5" style={{ color: '#BE4339' }}>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+      {step === 'importing' && (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 size={40} className="animate-spin mb-4" style={{ color: '#128C72' }} />
+          <p className="text-sm font-semibold" style={{ color: '#3B453F' }}>Importing {rawData.length} items...</p>
         </div>
+      )}
 
-        {step !== 'importing' && (
-          <div className="px-5 py-4 border-t border-[#E5E8E1] flex gap-3 shrink-0" style={{ background: '#F6F7F2' }}>
-            <button onClick={onClose}
-              className="px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>
-              {step === 'result' ? 'Close' : 'Cancel'}
-            </button>
-            {step === 'preview' && (
-              <button onClick={handleImport}
-                className="px-6 py-2.5 rounded-[7px] text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ml-auto bg-[#128C72] text-white hover:bg-[#0E5C4C]">
-                <Upload size={16} /> Import {rawData.length} Items
-              </button>
+      {step === 'result' && result && (
+        <div className="space-y-4">
+          <div className={`rounded-[16px] p-6 text-center border ${result.errors.length === 0 ? 'bg-[#F2FAF7] border-[#DCF0EA]' : 'bg-[#FBEFDA] border-[#FBEFDA]'}`}>
+            <div className={`inline-flex p-3 rounded-full mb-3 ${result.errors.length === 0 ? 'bg-[#DCF0EA]' : 'bg-[#FBEFDA]'}`} style={{ color: result.errors.length === 0 ? '#128C72' : '#B9791C' }}>
+              {result.errors.length === 0 ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
+            </div>
+            <p className="text-lg font-bold" style={{ color: '#16201B' }}>{result.success} item{result.success !== 1 ? 's' : ''} imported</p>
+            {result.errors.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold mb-1" style={{ color: '#BE4339' }}>{result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:</p>
+                <ul className="text-xs space-y-0.5" style={{ color: '#BE4339' }}>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              </div>
             )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+
+      {step !== 'importing' && (
+        <DialogFooter>
+          <button onClick={onClose}
+            className="px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>
+            {step === 'result' ? 'Close' : 'Cancel'}
+          </button>
+          {step === 'preview' && (
+            <button onClick={handleImport}
+              className="px-6 py-2.5 rounded-[7px] text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ml-auto bg-[#128C72] text-white hover:bg-[#0E5C4C]">
+              <Upload size={16} /> Import {rawData.length} Items
+            </button>
+          )}
+        </DialogFooter>
+      )}
+    </Dialog>
   );
 };

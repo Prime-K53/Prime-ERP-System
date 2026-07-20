@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
-  X, CheckCircle, XCircle, Printer, Clock,
+  CheckCircle, XCircle, Printer, Clock,
   User, Calendar, MessageSquare, AlertCircle,
   FileText, ArrowRight, Package, TrendingDown, RefreshCw
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';
 import { useSalesStore } from '../../../stores/salesStore';
 import { useDocumentPreview } from '../../../hooks/useDocumentPreview';
 import { SalesExchange } from '../../../types';
@@ -58,27 +59,17 @@ export const ExchangeDetailsModal: React.FC<ExchangeDetailsModalProps> = ({ exch
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-gray-200">
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-start bg-gray-50/50">
-          <div>
-            <div className="flex items-center space-x-3 mb-1">
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">EXCHANGE {exchange.exchange_number}</h2>
-              {getStatusBadge(exchange.status)}
-            </div>
-            <p className="text-gray-500 flex items-center text-sm">
-              <Calendar className="w-4 h-4 mr-1.5" />
-              Requested on {format(new Date(exchange.exchange_date), 'MMMM dd, yyyy HH:mm')}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-            <X className="w-6 h-6 text-gray-500" />
-          </button>
+    <Dialog open={true} onClose={onClose} title={`EXCHANGE ${exchange.exchange_number}`} className="max-w-5xl">
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center space-x-3">
+          {getStatusBadge(exchange.status)}
         </div>
-
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <p className="text-slate-500 flex items-center text-sm">
+          <Calendar className="w-4 h-4 mr-1.5" />
+          Requested on {format(new Date(exchange.exchange_date), 'MMMM dd, yyyy HH:mm')}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column: Details & Items */}
             <div className="lg:col-span-2 space-y-8">
               {/* Info Cards */}
@@ -271,9 +262,7 @@ export const ExchangeDetailsModal: React.FC<ExchangeDetailsModalProps> = ({ exch
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { X, ClipboardCheck, Search, CheckCircle, AlertCircle, Loader2, ArrowUpDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../../components/Dialog';
+import { ClipboardCheck, Search, CheckCircle, AlertCircle, Loader2, ArrowUpDown } from 'lucide-react';
 import type { Item } from '../../../../types';
 import { useInventory } from '../../../../context/InventoryContext';
 import { useAuth } from '../../../../context/AuthContext';
@@ -48,100 +49,85 @@ export const StockCountModal: React.FC<Props> = ({ open, items, onClose }) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(22,32,27,.5)' }}>
-      <div className="bg-white rounded-[16px] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)' }}>
-        <div className="px-5 py-4 border-b border-[#E5E8E1] flex items-center justify-between bg-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center bg-[#DCF0EA]" style={{ color: '#128C72' }}><ClipboardCheck size={20} /></div>
-            <div>
-              <h2 className="font-bold" style={{ color: '#16201B' }}>Stock Count</h2>
-              <p className="text-xs" style={{ color: '#9CA59E' }}>{completed ? 'Count complete' : `${items.length} items · ${itemsWithVariance.length} with variance`}</p>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ color: '#9CA59E' }}><X size={20} /></button>
+    <Dialog open={open} onClose={onClose} title="Stock Count">
+      {completed ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="inline-flex p-4 rounded-full mb-4 bg-[#DCF0EA]" style={{ color: '#128C72' }}><CheckCircle size={48} /></div>
+          <p className="text-lg font-bold" style={{ color: '#16201B' }}>Stock Count Complete</p>
+          <p className="text-sm mt-1" style={{ color: '#6C766F' }}>{itemsWithVariance.length} item{itemsWithVariance.length !== 1 ? 's' : ''} adjusted</p>
+          <p className="text-xs mt-0.5" style={{ color: '#9CA59E' }}>Total variance: {totalVariance > 0 ? '+' : ''}{totalVariance} units</p>
+          <button onClick={onClose} className="mt-6 px-6 py-2.5 rounded-[7px] font-semibold text-sm transition-all cursor-pointer bg-[#128C72] text-white hover:bg-[#0E5C4C]">Close</button>
         </div>
-
-        {completed ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12">
-            <div className="inline-flex p-4 rounded-full mb-4 bg-[#DCF0EA]" style={{ color: '#128C72' }}><CheckCircle size={48} /></div>
-            <p className="text-lg font-bold" style={{ color: '#16201B' }}>Stock Count Complete</p>
-            <p className="text-sm mt-1" style={{ color: '#6C766F' }}>{itemsWithVariance.length} item{itemsWithVariance.length !== 1 ? 's' : ''} adjusted</p>
-            <p className="text-xs mt-0.5" style={{ color: '#9CA59E' }}>Total variance: {totalVariance > 0 ? '+' : ''}{totalVariance} units</p>
-            <button onClick={onClose} className="mt-6 px-6 py-2.5 rounded-[7px] font-semibold text-sm transition-all cursor-pointer bg-[#128C72] text-white hover:bg-[#0E5C4C]">Close</button>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-5 py-3 border-b border-[#E5E8E1] flex items-center gap-3" style={{ background: '#F6F7F2' }}>
-              <div className="relative flex-1 max-w-xs">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA59E' }} />
-                <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-[#E5E8E1] rounded-[7px] text-sm outline-none bg-white focus:border-[#128C72]" placeholder="Filter items..." />
-              </div>
-              <select value={selectedWarehouse} onChange={e => setSelectedWarehouse(e.target.value)}
-                className="px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm bg-white outline-none" style={{ color: '#16201B' }}>
-                {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
-              </select>
-              <div className="ml-auto flex items-center gap-4 text-xs" style={{ color: '#6C766F' }}>
-                <span>System: <strong style={{ color: '#16201B' }}>{totalSystem}</strong></span>
-                <span>Counted: <strong style={{ color: '#16201B' }}>{totalCounted}</strong></span>
-                <span className={totalVariance === 0 ? '' : ''} style={{ color: totalVariance === 0 ? '#128C72' : '#B9791C' }}>
-                  Variance: <strong>{totalVariance > 0 ? '+' : ''}{totalVariance}</strong>
-                </span>
-              </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#E5E8E1]">
+            <div className="relative flex-1 max-w-xs">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA59E' }} />
+              <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-[#E5E8E1] rounded-[7px] text-sm outline-none bg-white focus:border-[#128C72]" placeholder="Filter items..." />
             </div>
+            <select value={selectedWarehouse} onChange={e => setSelectedWarehouse(e.target.value)}
+              className="px-3 py-2 border border-[#E5E8E1] rounded-[7px] text-sm bg-white outline-none" style={{ color: '#16201B' }}>
+              {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
+            </select>
+            <div className="ml-auto flex items-center gap-4 text-xs" style={{ color: '#6C766F' }}>
+              <span>System: <strong style={{ color: '#16201B' }}>{totalSystem}</strong></span>
+              <span>Counted: <strong style={{ color: '#16201B' }}>{totalCounted}</strong></span>
+              <span style={{ color: totalVariance === 0 ? '#128C72' : '#B9791C' }}>
+                Variance: <strong>{totalVariance > 0 ? '+' : ''}{totalVariance}</strong>
+              </span>
+            </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr className="border-b border-[#E5E8E1] sticky top-0" style={{ background: '#F6F7F2' }}>
-                    <th className="text-left p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Item</th>
-                    <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>System</th>
-                    <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Counted</th>
-                    <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Variance</th>
-                    <th className="text-center p-3 w-20"></th>
+          <div className="max-h-72 overflow-y-auto mb-4">
+            <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="border-b border-[#E5E8E1] sticky top-0" style={{ background: '#F6F7F2' }}>
+                  <th className="text-left p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Item</th>
+                  <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>System</th>
+                  <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Counted</th>
+                  <th className="text-center p-3 font-medium text-[10.5px] uppercase tracking-[.07em]" style={{ color: '#9CA59E' }}>Variance</th>
+                  <th className="text-center p-3 w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {countRows.map((row, idx) => (
+                  <tr key={`${row.itemId}-${idx}`} className="border-b border-[#EFF1EB]" style={row.variance !== 0 ? { background: '#FBEFDA' } : {}}>
+                    <td className="p-3">
+                      <div className="font-semibold" style={{ color: '#16201B' }}>{row.name}</div>
+                      <div className="text-[10px] font-mono" style={{ color: '#9CA59E' }}>{row.sku}</div>
+                    </td>
+                    <td className="p-3 text-center font-bold font-mono tabular-nums" style={{ color: '#16201B' }}>{row.systemStock}</td>
+                    <td className="p-3 text-center">
+                      <input type="number" min={0} value={row.countedStock} onChange={e => handleStockChange(row.itemId, parseInt(e.target.value) || 0)}
+                        className="w-20 text-center px-2 py-1.5 border border-[#E5E8E1] rounded-[7px] text-sm font-semibold font-mono tabular-nums outline-none focus:border-[#128C72]" />
+                    </td>
+                    <td className={`p-3 text-center font-bold font-mono tabular-nums ${row.variance === 0 ? '' : row.variance > 0 ? 'text-[#128C72]' : 'text-[#BE4339]'}`}>
+                      {row.variance > 0 ? '+' : ''}{row.variance}
+                    </td>
+                    <td className="p-3 text-center">
+                      <button onClick={() => acceptSystem(row.itemId)}
+                        className="text-[10px] font-medium flex items-center gap-1 mx-auto transition-all cursor-pointer" style={{ color: '#128C72' }}>
+                        <ArrowUpDown size={11} /> Use system
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {countRows.map((row, idx) => (
-                    <tr key={`${row.itemId}-${idx}`} className="border-b border-[#EFF1EB]" style={row.variance !== 0 ? { background: '#FBEFDA' } : {}}>
-                      <td className="p-3">
-                        <div className="font-semibold" style={{ color: '#16201B' }}>{row.name}</div>
-                        <div className="text-[10px] font-mono" style={{ color: '#9CA59E' }}>{row.sku}</div>
-                      </td>
-                      <td className="p-3 text-center font-bold font-mono tabular-nums" style={{ color: '#16201B' }}>{row.systemStock}</td>
-                      <td className="p-3 text-center">
-                        <input type="number" min={0} value={row.countedStock} onChange={e => handleStockChange(row.itemId, parseInt(e.target.value) || 0)}
-                          className="w-20 text-center px-2 py-1.5 border border-[#E5E8E1] rounded-[7px] text-sm font-semibold font-mono tabular-nums outline-none focus:border-[#128C72]" />
-                      </td>
-                      <td className={`p-3 text-center font-bold font-mono tabular-nums ${row.variance === 0 ? '' : row.variance > 0 ? 'text-[#128C72]' : 'text-[#BE4339]'}`}>
-                        {row.variance > 0 ? '+' : ''}{row.variance}
-                      </td>
-                      <td className="p-3 text-center">
-                        <button onClick={() => acceptSystem(row.itemId)}
-                          className="text-[10px] font-medium flex items-center gap-1 mx-auto transition-all cursor-pointer" style={{ color: '#128C72' }}>
-                          <ArrowUpDown size={11} /> Use system
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {countRows.length === 0 && <tr><td colSpan={5} className="p-12 text-center text-sm" style={{ color: '#9CA59E' }}>No matching items</td></tr>}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="px-5 py-4 border-t border-[#E5E8E1] flex items-center justify-between shrink-0" style={{ background: '#F6F7F2' }}>
-              <span className="text-xs" style={{ color: '#9CA59E' }}>{itemsWithVariance.length} item{itemsWithVariance.length !== 1 ? 's' : ''} with variance</span>
-              <div className="flex gap-3">
-                <button onClick={onClose} className="px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>Cancel</button>
-                <button onClick={handleSubmit} disabled={submitting || itemsWithVariance.length === 0}
-                  className="px-6 py-2.5 rounded-[7px] text-sm font-bold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#128C72] text-white hover:bg-[#0E5C4C]">
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <ClipboardCheck size={16} />} Complete Count ({itemsWithVariance.length} adj.)
-                </button>
-              </div>
-            </div>
+                ))}
+                {countRows.length === 0 && <tr><td colSpan={5} className="p-12 text-center text-sm" style={{ color: '#9CA59E' }}>No matching items</td></tr>}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
-    </div>
+
+          <DialogFooter>
+            <span className="text-xs mr-auto" style={{ color: '#9CA59E' }}>{itemsWithVariance.length} item{itemsWithVariance.length !== 1 ? 's' : ''} with variance</span>
+            <button onClick={onClose} className="px-4 py-2.5 border border-[#E5E8E1] rounded-[7px] text-sm font-medium transition-all cursor-pointer bg-white" style={{ color: '#3B453F' }}>Cancel</button>
+            <button onClick={handleSubmit} disabled={submitting || itemsWithVariance.length === 0}
+              className="px-6 py-2.5 rounded-[7px] text-sm font-bold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#128C72] text-white hover:bg-[#0E5C4C]">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <ClipboardCheck size={16} />} Complete Count ({itemsWithVariance.length} adj.)
+            </button>
+          </DialogFooter>
+        </>
+      )}
+    </Dialog>
   );
 };

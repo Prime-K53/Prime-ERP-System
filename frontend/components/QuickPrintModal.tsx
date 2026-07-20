@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Copy, Printer, Calculator, FileText, TrendingUp, Sparkles, Package } from 'lucide-react';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from './Dialog';
 
 interface QuickPrintModalProps {
   open: boolean;
@@ -89,125 +90,121 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(22,32,27,.5)' }} role="dialog" aria-modal="true">
-      <div className="bg-white rounded-[16px] w-full max-w-md max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(15,30,25,.04), 0 6px 18px rgba(15,30,25,.05)', fontFamily: "'Inter',sans-serif", fontSize: 13.5, lineHeight: 1.45, color: '#23282A' }}>
-        <div className="flex items-center justify-between shrink-0" style={{ padding: '12px 16px', borderBottom: '1px solid #E2DED3', background: 'white' }}>
-          <div className="flex items-center gap-3">
-            <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center ${iconBg}`}>
-              <Icon className="w-[18px] h-[18px]" />
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogHeader className="flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: '1px solid #E2DED3', background: 'white' }}>
+        <div className="flex items-center gap-3">
+          <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center ${iconBg}`}>
+            <Icon className="w-[18px] h-[18px]" />
+          </div>
+          <div>
+            <DialogTitle style={{ fontSize: 20, color: '#23282A', margin: 0, lineHeight: 1.4 }}>
+              {isPhotocopy ? 'Quick Photocopy' : 'Type & Printing'}
+            </DialogTitle>
+            <p style={{ fontSize: 13, color: '#8A8578', margin: 0, lineHeight: 1.45 }}>
+              {currency}{pricePerPage} per {isPhotocopy ? 'sheet' : 'page'}
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={onClose} style={{ color: '#B8B2A2', padding: 6 }} aria-label="Close modal">
+          <X className="w-5 h-5" />
+        </button>
+      </DialogHeader>
+
+      <div className="space-y-4">
+        <div className={premiumCard}>
+          {renderCardHeader(<Calculator size={15} className="text-white" />, 'Order Details', isPhotocopy ? 'Double-sided' : 'Single-sided', accentGradient)}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={premiumLabel}><FileText size={12} /> Pages per Copy</label>
+              <input type="number" min={1} value={pagesPerCopy} onChange={(e) => setPagesPerCopy(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
             </div>
             <div>
-              <h2 className="font-bold" style={{ fontSize: 20, color: '#23282A', margin: 0, lineHeight: 1.4 }}>
-                {isPhotocopy ? 'Quick Photocopy' : 'Type & Printing'}
-              </h2>
-              <p style={{ fontSize: 13, color: '#8A8578', margin: 0, lineHeight: 1.45 }}>
-                {currency}{pricePerPage} per {isPhotocopy ? 'sheet' : 'page'}
-              </p>
+              <label className={premiumLabel}><Package size={12} /> Number of Copies</label>
+              <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
             </div>
           </div>
-          <button type="button" onClick={onClose} style={{ color: '#B8B2A2', padding: 6 }} aria-label="Close modal">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ padding: '14px 16px' }}>
-          <div className="flex-1 overflow-auto custom-scrollbar min-h-0 space-y-4">
-            <div className={premiumCard}>
-              {renderCardHeader(<Calculator size={15} className="text-white" />, 'Order Details', isPhotocopy ? 'Double-sided' : 'Single-sided', accentGradient)}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={premiumLabel}><FileText size={12} /> Pages per Copy</label>
-                  <input type="number" min={1} value={pagesPerCopy} onChange={(e) => setPagesPerCopy(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
+        {effectiveStaplePrice !== null && (
+          <div className={premiumCard}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-[#F7EFDF] text-[#B8863B]">
+                  <Package size={14} />
                 </div>
                 <div>
-                  <label className={premiumLabel}><Package size={12} /> Number of Copies</label>
-                  <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
+                  <p className="text-sm font-medium text-[#23282A]">Stapling</p>
+                  <p className="text-[11px] text-[#8A8578]">{currency}{effectiveStaplePrice.toFixed(2)} per copy</p>
                 </div>
               </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={enableStapling} onChange={e => setEnableStapling(e.target.checked)} className="sr-only peer" />
+                <div className={`w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#87C1BB] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${enableStapling ? toggleActiveBg : toggleInactiveBg}`} />
+              </label>
             </div>
-
-            {effectiveStaplePrice !== null && (
-              <div className={premiumCard}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 rounded-lg bg-[#F7EFDF] text-[#B8863B]">
-                      <Package size={14} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[#23282A]">Stapling</p>
-                      <p className="text-[11px] text-[#8A8578]">{currency}{effectiveStaplePrice.toFixed(2)} per copy</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={enableStapling} onChange={e => setEnableStapling(e.target.checked)} className="sr-only peer" />
-                    <div className={`w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#87C1BB] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${enableStapling ? toggleActiveBg : toggleInactiveBg}`} />
-                  </label>
+            {enableStapling && (
+              <div className="mt-3 pt-3 border-t border-[#F0EFE8]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#8A8578]">Stapling ({currency}{effectiveStaplePrice.toFixed(2)} × {quantity} copies)</span>
+                  <span className="font-mono font-medium text-[#23282A]">{currency}{pinningCost.toFixed(2)}</span>
                 </div>
-                {enableStapling && (
-                  <div className="mt-3 pt-3 border-t border-[#F0EFE8]">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#8A8578]">Stapling ({currency}{effectiveStaplePrice.toFixed(2)} × {quantity} copies)</span>
-                      <span className="font-mono font-medium text-[#23282A]">{currency}{pinningCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
-
-            <div className={premiumCard}>
-              {renderCardHeader(<TrendingUp size={15} className="text-white" />, 'Cost Summary', undefined, 'from-[#2C6F67] to-[#183F3B]')}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-[#8A8578]">Total {isPhotocopy ? 'Sheets' : 'Pages'}</span>
-                  <span className="font-mono font-medium text-[#23282A] tabular-nums">{isPhotocopy ? totalSheets : totalPages}</span>
-                </div>
-                {isPhotocopy && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#8A8578]">Total Pages <span className="text-[10px] text-[#B8B2A2]">(toner basis)</span></span>
-                    <span className="font-mono font-medium text-[#6B6659] tabular-nums">{totalPages}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-[#8A8578]">{isPhotocopy ? 'Sheet' : 'Page'} Cost</span>
-                  <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{printTotal.toFixed(2)}</span>
-                </div>
-                {costPerPage ? (
-                  <>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-[#8A8578]">Toner Cost ({currency}{costPerPage.toFixed(2)}/pg)</span>
-                      <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{materialCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-[#2C6F67]">Estimated Profit</span>
-                      <span className="font-mono font-medium text-[#2C6F67] tabular-nums">+{currency}{(finalTotal - materialCost).toFixed(2)}</span>
-                    </div>
-                  </>
-                ) : null}
-                {enableStapling && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#8A8578]">Stapling</span>
-                    <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{pinningCost.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-2 border-t border-[#E2DED3]">
-                  <span className="text-sm font-semibold text-[#23282A]">Total</span>
-                  <span className="font-mono font-bold text-[#2C6F67] tabular-nums" style={{ fontSize: 18 }}>{currency}{finalTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
           </div>
+        )}
 
-          <div className="flex items-center justify-between shrink-0 pt-3 mt-3 border-t border-[#E2DED3]">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[#E2DED3] text-xs font-medium text-[#6B6659] hover:bg-[#F8F7F2] hover:border-[#D4CFC2] transition-all">
-              Cancel
-            </button>
-            <button type="button" onClick={handleConfirm} className="px-4 py-2 bg-gradient-to-br from-[#2C6F67] to-[#183F3B] text-white rounded-lg text-xs font-semibold hover:shadow-[0_4px_14px_rgba(44,111,103,0.35)] transition-all shadow-[0_4px_14px_rgba(44,111,103,0.25)] flex items-center gap-2">
-              <Sparkles size={13} /> Add to Cart
-            </button>
+        <div className={premiumCard}>
+          {renderCardHeader(<TrendingUp size={15} className="text-white" />, 'Cost Summary', undefined, 'from-[#2C6F67] to-[#183F3B]')}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[#8A8578]">Total {isPhotocopy ? 'Sheets' : 'Pages'}</span>
+              <span className="font-mono font-medium text-[#23282A] tabular-nums">{isPhotocopy ? totalSheets : totalPages}</span>
+            </div>
+            {isPhotocopy && (
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#8A8578]">Total Pages <span className="text-[10px] text-[#B8B2A2]">(toner basis)</span></span>
+                <span className="font-mono font-medium text-[#6B6659] tabular-nums">{totalPages}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[#8A8578]">{isPhotocopy ? 'Sheet' : 'Page'} Cost</span>
+              <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{printTotal.toFixed(2)}</span>
+            </div>
+            {costPerPage ? (
+              <>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#8A8578]">Toner Cost ({currency}{costPerPage.toFixed(2)}/pg)</span>
+                  <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{materialCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-medium text-[#2C6F67]">Estimated Profit</span>
+                  <span className="font-mono font-medium text-[#2C6F67] tabular-nums">+{currency}{(finalTotal - materialCost).toFixed(2)}</span>
+                </div>
+              </>
+            ) : null}
+            {enableStapling && (
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#8A8578]">Stapling</span>
+                <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{pinningCost.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center pt-2 border-t border-[#E2DED3]">
+              <span className="text-sm font-semibold text-[#23282A]">Total</span>
+              <span className="font-mono font-bold text-[#2C6F67] tabular-nums" style={{ fontSize: 18 }}>{currency}{finalTotal.toFixed(2)}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <DialogFooter className="flex items-center justify-between" style={{ borderTop: '1px solid #E2DED3' }}>
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[#E2DED3] text-xs font-medium text-[#6B6659] hover:bg-[#F8F7F2] hover:border-[#D4CFC2] transition-all">
+          Cancel
+        </button>
+        <button type="button" onClick={handleConfirm} className="px-4 py-2 bg-gradient-to-br from-[#2C6F67] to-[#183F3B] text-white rounded-lg text-xs font-semibold hover:shadow-[0_4px_14px_rgba(44,111,103,0.35)] transition-all shadow-[0_4px_14px_rgba(44,111,103,0.25)] flex items-center gap-2">
+          <Sparkles size={13} /> Add to Cart
+        </button>
+      </DialogFooter>
+    </Dialog>
   );
 };
 

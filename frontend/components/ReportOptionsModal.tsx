@@ -8,6 +8,7 @@ import { useDocumentStore } from '../stores/documentStore';
 import { calculateAccountBalances, getAgedData } from '../services/reportService';
 import { format, parseISO, startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
 import { currencyService } from '../services/currencyService';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from './Dialog';
 
 interface ReportOptionsModalProps {
     isOpen: boolean;
@@ -181,121 +182,119 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
-                <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
-                            <Calendar size={24} />
+        <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+            <DialogHeader className="flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
+                        <Calendar size={24} />
+                    </div>
+                    <div>
+                        <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">{reportLabel}</DialogTitle>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">Report Configuration & Advanced Options</p>
+                    </div>
+                </div>
+                <button onClick={onClose} className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-slate-600 rounded-2xl transition-all shadow-sm" title="Close" aria-label="Close">
+                    <X size={20} />
+                </button>
+            </DialogHeader>
+
+            <div className="overflow-y-auto space-y-10 max-h-[60vh]">
+                {/* Date Range Selection */}
+                <section>
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Reporting Period</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-slate-50 rounded-[2rem] border border-slate-200/60">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
+                            <div className="relative group">
+                                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                <input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{reportLabel}</h2>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5">Report Configuration & Advanced Options</p>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Date</label>
+                            <div className="relative group">
+                                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                <input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-slate-600 rounded-2xl transition-all shadow-sm" title="Close" aria-label="Close">
-                        <X size={20} />
-                    </button>
-                </div>
 
-                <div className="flex-1 overflow-y-auto p-10 space-y-10">
-                    {/* Date Range Selection */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Reporting Period</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 bg-slate-50 rounded-[2rem] border border-slate-200/60">
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
-                                <div className="relative group">
-                                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                                    <input
-                                        type="date"
-                                        value={dateRange.start}
-                                        onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-sm"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">End Date</label>
-                                <div className="relative group">
-                                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                                    <input
-                                        type="date"
-                                        value={dateRange.end}
-                                        onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-sm"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mt-4">
-                            {[
-                                { label: 'This Year', start: startOfYear(new Date()), end: endOfYear(new Date()) },
-                                { label: 'This Month', start: startOfMonth(new Date()), end: endOfMonth(new Date()) },
-                                { label: 'Q1', start: new Date(new Date().getFullYear(), 0, 1), end: new Date(new Date().getFullYear(), 2, 31) },
-                                { label: 'Full Year 2024', start: new Date(2024, 0, 1), end: new Date(2024, 11, 31) }
-                            ].map(opt => (
-                                <button
-                                    key={opt.label}
-                                    onClick={() => setDateRange({ start: opt.start.toISOString().split('T')[0], end: opt.end.toISOString().split('T')[0] })}
-                                    className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all"
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Advanced Toggles */}
-                    <section>
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Advanced Analysis</h3>
-                        </div>
-                        <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {[
+                            { label: 'This Year', start: startOfYear(new Date()), end: endOfYear(new Date()) },
+                            { label: 'This Month', start: startOfMonth(new Date()), end: endOfMonth(new Date()) },
+                            { label: 'Q1', start: new Date(new Date().getFullYear(), 0, 1), end: new Date(new Date().getFullYear(), 2, 31) },
+                            { label: 'Full Year 2024', start: new Date(2024, 0, 1), end: new Date(2024, 11, 31) }
+                        ].map(opt => (
                             <button
-                                onClick={() => setCompareWithPrevious(!compareWithPrevious)}
-                                className={`w-full p-6 rounded-[2rem] border transition-all flex items-center justify-between group ${compareWithPrevious ? 'bg-blue-50 border-blue-200 ring-4 ring-blue-50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                                key={opt.label}
+                                onClick={() => setDateRange({ start: opt.start.toISOString().split('T')[0], end: opt.end.toISOString().split('T')[0] })}
+                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all"
                             >
-                                <div className="flex items-center gap-6">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${compareWithPrevious ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
-                                        <Activity size={28} />
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-black text-slate-800 uppercase tracking-tight">Compare with Previous Period</p>
-                                        <p className="text-[10px] font-medium text-slate-500 mt-1 max-w-sm">Enable side-by-side comparison with the immediately preceding date range of equal length.</p>
-                                    </div>
-                                </div>
-                                <div className={`w-12 h-6 rounded-full relative transition-colors ${compareWithPrevious ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${compareWithPrevious ? 'left-7' : 'left-1'}`} />
-                                </div>
+                                {opt.label}
                             </button>
-                        </div>
-                    </section>
-                </div>
-
-                <div className="p-8 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-slate-400">
-                        <Filter size={14} />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Selection: {dateRange.start} — {dateRange.end}</span>
+                        ))}
                     </div>
+                </section>
 
-                    <div className="flex gap-4">
+                {/* Advanced Toggles */}
+                <section>
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Advanced Analysis</h3>
+                    </div>
+                    <div className="space-y-4">
                         <button
-                            onClick={handlePreview}
-                            className="px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center gap-3 active:scale-95"
+                            onClick={() => setCompareWithPrevious(!compareWithPrevious)}
+                            className={`w-full p-6 rounded-[2rem] border transition-all flex items-center justify-between group ${compareWithPrevious ? 'bg-blue-50 border-blue-200 ring-4 ring-blue-50' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
                         >
-                            <Eye size={20} />
-                            Generate Preview
+                            <div className="flex items-center gap-6">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${compareWithPrevious ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                                    <Activity size={28} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight">Compare with Previous Period</p>
+                                    <p className="text-[10px] font-medium text-slate-500 mt-1 max-w-sm">Enable side-by-side comparison with the immediately preceding date range of equal length.</p>
+                                </div>
+                            </div>
+                            <div className={`w-12 h-6 rounded-full relative transition-colors ${compareWithPrevious ? 'bg-blue-600' : 'bg-slate-200'}`}>
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${compareWithPrevious ? 'left-7' : 'left-1'}`} />
+                            </div>
                         </button>
                     </div>
-                </div>
+                </section>
             </div>
-        </div>
+
+            <DialogFooter className="bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-slate-400">
+                    <Filter size={14} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Selection: {dateRange.start} — {dateRange.end}</span>
+                </div>
+
+                <div className="flex gap-4">
+                    <button
+                        onClick={handlePreview}
+                        className="px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center gap-3 active:scale-95"
+                    >
+                        <Eye size={20} />
+                        Generate Preview
+                    </button>
+                </div>
+            </DialogFooter>
+        </Dialog>
     );
 };
 

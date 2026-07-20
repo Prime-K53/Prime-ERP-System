@@ -1,6 +1,7 @@
 import React from 'react';
-import { AlertTriangle, HelpCircle, Info, X, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, HelpCircle, Info, CheckCircle, XCircle } from 'lucide-react';
 import { useKeyboardContext, trapFocus } from '../core/keyboard';
+import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from './Dialog';
 
 export type ConfirmDialogType = 'warning' | 'danger' | 'info' | 'success' | 'question';
 
@@ -24,35 +25,30 @@ const typeConfig = {
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
     confirmBtn: 'bg-amber-600 hover:bg-amber-700',
-    borderColor: 'border-amber-200'
   },
   danger: {
     icon: XCircle,
     iconBg: 'bg-red-100',
     iconColor: 'text-red-600',
     confirmBtn: 'bg-red-600 hover:bg-red-700',
-    borderColor: 'border-red-200'
   },
   info: {
     icon: Info,
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
     confirmBtn: 'bg-blue-600 hover:bg-blue-700',
-    borderColor: 'border-blue-200'
   },
   success: {
     icon: CheckCircle,
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',
     confirmBtn: 'bg-emerald-600 hover:bg-emerald-700',
-    borderColor: 'border-emerald-200'
   },
   question: {
     icon: HelpCircle,
     iconBg: 'bg-slate-100',
     iconColor: 'text-slate-600',
     confirmBtn: 'bg-blue-600 hover:bg-blue-700',
-    borderColor: 'border-slate-200'
   }
 };
 
@@ -118,26 +114,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
       <div ref={dialogRef} className="w-full max-w-md animate-in zoom-in-95 duration-200" role="alertdialog" aria-modal="true" aria-label={title}>
-        <div className={`relative bg-white rounded-2xl border ${config.borderColor} shadow-xl overflow-hidden`}>
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900 tracking-tight">
-              {title}
-            </h3>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="flex items-center justify-between py-4 px-6">
+            <DialogTitle>{title}</DialogTitle>
             <button
               onClick={handleCancel}
-              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+              className="text-slate-400 hover:text-slate-600 transition-colors text-xl font-bold"
               type="button"
+              title="Close"
+              aria-label="Close"
             >
-              <X size={18} />
+              ✕
             </button>
-          </div>
+          </DialogHeader>
 
-          {/* Content */}
           <div className="px-6 py-5">
             <div className="flex items-start gap-4">
               <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${config.iconBg} flex items-center justify-center`}>
@@ -149,8 +143,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3">
+          <DialogFooter>
             {showCancel && (
               <button
                 onClick={handleCancel}
@@ -175,8 +168,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               )}
               {confirmText}
             </button>
-          </div>
-        </div>
+          </DialogFooter>
+        </DialogContent>
       </div>
     </div>
   );

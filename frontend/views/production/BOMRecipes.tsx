@@ -8,10 +8,12 @@ import { useAuth } from '../../context/AuthContext';
 import { BOMTemplate, Item } from '../../types';
 import { dbService } from '../../services/db';
 import { repriceMasterInventoryFromAdjustments } from '../../services/masterInventoryPricingService';
+import { useConfirmDialog } from '../../components/ConfirmDialog';
 
 const BOMRecipes: React.FC = () => {
     const { inventory } = useInventory();
     const { notify, companyConfig, updateCompanyConfig, addAuditLog } = useAuth();
+    const { confirm, ConfirmDialogComponent } = useConfirmDialog();
     const [activeTab, setActiveTab] = useState<'Templates'>('Templates');
     const [templates, setTemplates] = useState<BOMTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +77,13 @@ const BOMRecipes: React.FC = () => {
     };
 
     const handleDeleteTemplate = async (id: string) => {
-        if (!window.confirm("Are you sure you want to delete this BOM Recipe?")) return;
+        const ok = await confirm({
+            title: 'Delete BOM Recipe',
+            message: 'Are you sure you want to delete this BOM Recipe?',
+            type: 'danger',
+            confirmText: 'Delete',
+        });
+        if (!ok) return;
         try {
             const oldVal = templates.find(t => t.id === id);
             await dbService.delete('bomTemplates', id);
@@ -348,6 +356,7 @@ const BOMRecipes: React.FC = () => {
                     )}
                 </div>
             </div>
+            <ConfirmDialogComponent />
         </div>
     );
 };

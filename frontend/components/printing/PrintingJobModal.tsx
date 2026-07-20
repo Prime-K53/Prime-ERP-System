@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  X, Save, ShoppingCart, FileText, Clock, User, Hash, Layers,
+  Save, ShoppingCart, FileText, Hash, Layers,
   Printer, Book, Image, Palette, Scissors, Wrench, Package,
-  DollarSign, Percent, Tag, ChevronDown, ChevronUp, AlertCircle,
-  CheckCircle, Upload, FilePlus, Star
+  DollarSign, AlertCircle,
+  CheckCircle, Upload, Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePrintingStore } from '../../stores/printingStore';
 import { printingService } from '../../services/printingService';
 import { formatNumber } from '../../utils/helpers';
+import { Dialog } from '../Dialog';
 import type {
   PrintingJobSpecification, PaperSize, ColorMode, SidedMode,
   Orientation, ArtworkSource, ArtworkStatus, PrintingJobPriority, FinishingSpec,
@@ -19,10 +20,12 @@ interface PrintingJobModalProps {
   serviceName: string;
   customerName?: string;
   customerId?: string;
+  open?: boolean;
+  onClose?: () => void;
   onSaveDraft: (spec: PrintingJobSpecification) => void;
   onAddToCart: (spec: PrintingJobSpecification) => void;
   onSaveAsQuote: (spec: PrintingJobSpecification) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
 }
 
 type ModalTab = 'basic' | 'specs' | 'finishing' | 'artwork' | 'pricing' | 'summary';
@@ -208,8 +211,14 @@ const JobSummaryCard: React.FC<{ spec: PrintingJobSpecification; currency: strin
 
 export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
   serviceId, serviceName, customerName, customerId,
+  open = true,
+  onClose,
   onSaveDraft, onAddToCart, onSaveAsQuote, onCancel,
 }) => {
+  const handleClose = useCallback(() => {
+    onClose?.();
+    onCancel?.();
+  }, [onClose, onCancel]);
   const { companyConfig } = useAuth();
   const currency = companyConfig.currencySymbol;
   const { calculatePricing } = usePrintingStore();
@@ -284,260 +293,238 @@ export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-xl">
-              <Printer size={20} className="text-indigo-600" />
+    <Dialog open={open} onClose={handleClose} title="Printing Job Details" className="max-w-6xl">
+      {/* Tabs */}
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50/50 -mt-6 -mx-6 px-6 pt-2 pb-2 mb-6 shrink-0">
+        {TABS.map(t => <TabButton key={t.key} tab={t.key} icon={t.icon} />)}
+      </div>
+
+      {/* Body */}
+      {activeTab === 'basic' && (
+        <div className="max-w-2xl space-y-5">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Basic Information</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Job Name *</label>
+              <input type="text" value={spec.jobName} onChange={e => updateSpec({ jobName: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="e.g. Business Cards" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">Configure Printing Job</h2>
-              <p className="text-xs text-slate-500 font-medium">{serviceName}</p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Service</label>
+              <input type="text" value={spec.serviceName} disabled
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Customer *</label>
+              <input type="text" value={spec.customerName} onChange={e => updateSpec({ customerName: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Customer name" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Unit</label>
+              <select value={spec.unit} onChange={e => updateSpec({ unit: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
+                <option value="pcs">Pieces</option>
+                <option value="sets">Sets</option>
+                <option value="books">Books</option>
+                <option value="boxes">Boxes</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Quantity</label>
+              <input type="number" min={1} value={spec.quantity} onChange={e => updateSpec({ quantity: Math.max(1, Number(e.target.value)) })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Due Date</label>
+              <input type="date" value={spec.dueDate} onChange={e => updateSpec({ dueDate: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600">Priority</label>
+              <div className="flex gap-2">
+                {(['Normal', 'Urgent', 'Express'] as PrintingJobPriority[]).map(p => (
+                  <button key={p} onClick={() => updateSpec({ priority: p })}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-all
+                      ${spec.priority === p
+                        ? p === 'Normal' ? 'bg-slate-800 text-white border-slate-800'
+                          : p === 'Urgent' ? 'bg-orange-500 text-white border-orange-500'
+                          : 'bg-red-500 text-white border-red-500'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-rose-500">
-            <X size={18} />
+        </div>
+      )}
+
+      {activeTab === 'specs' && (
+        <div className="max-w-3xl space-y-6">
+          <div>
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Layers size={16} /> Paper
+            </h3>
+            <PaperSpecSection paper={spec.paper} onChange={paper => updateSpec({ paper })} />
+          </div>
+          <div className="border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Printer size={16} /> Printing
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Color</label>
+                <div className="flex gap-2">
+                  {(['Full Color', 'Black & White'] as ColorMode[]).map(c => (
+                    <button key={c} onClick={() => updateSpec({ printing: { ...spec.printing, color: c } })}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
+                        ${spec.printing.color === c ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Sides</label>
+                <div className="flex gap-2">
+                  {(['Single Sided', 'Double Sided'] as SidedMode[]).map(s => (
+                    <button key={s} onClick={() => updateSpec({ printing: { ...spec.printing, sides: s } })}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
+                        ${spec.printing.sides === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
+                      {s === 'Single Sided' ? 'Single' : 'Double'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Pages per Copy</label>
+                <input type="number" min={1} value={spec.printing.pages} onChange={e => updateSpec({ printing: { ...spec.printing, pages: Math.max(1, Number(e.target.value)) } })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-600">Orientation</label>
+                <div className="flex gap-2">
+                  {(['Portrait', 'Landscape'] as Orientation[]).map(o => (
+                    <button key={o} onClick={() => updateSpec({ printing: { ...spec.printing, orientation: o } })}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
+                        ${spec.printing.orientation === o ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'finishing' && (
+        <div className="max-w-3xl space-y-4">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Scissors size={16} /> Finishing Options
+          </h3>
+          <FinishingOptions finishing={spec.finishing} onChange={finishing => updateSpec({ finishing })} />
+        </div>
+      )}
+
+      {activeTab === 'artwork' && (
+        <div className="max-w-2xl space-y-5">
+          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Image size={16} /> Artwork
+          </h3>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-600">Artwork Source</label>
+            <div className="flex gap-3">
+              {(['Customer Artwork', 'Design Required'] as ArtworkSource[]).map(src => (
+                <button key={src} onClick={() => updateSpec({ artwork: { ...spec.artwork, source: src } })}
+                  className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-all
+                    ${spec.artwork.source === src ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                  {src}
+                </button>
+              ))}
+            </div>
+          </div>
+          {spec.artwork.source === 'Customer Artwork' && (
+            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 transition-colors cursor-pointer">
+              <Upload size={32} className="mx-auto mb-3 text-slate-300" />
+              <p className="text-sm font-medium text-slate-600">Drop artwork files here or click to upload</p>
+              <p className="text-xs text-slate-400 mt-1">PDF, AI, EPS, PSD, TIFF — Max 50MB</p>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-600">Artwork Status</label>
+            <div className="flex gap-2">
+              {(['Pending', 'Received', 'Approved'] as ArtworkStatus[]).map(s => (
+                <button key={s} onClick={() => updateSpec({ artwork: { ...spec.artwork, status: s } })}
+                  className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all
+                    ${spec.artwork.status === s
+                      ? s === 'Approved' ? 'bg-emerald-600 text-white border-emerald-600'
+                        : s === 'Received' ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-amber-600 text-white border-amber-600'
+                      : 'bg-white text-slate-600 border-slate-200'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-600">Customer Notes</label>
+            <textarea value={spec.customerNotes} onChange={e => updateSpec({ customerNotes: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Any special instructions from the customer..." />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-600">Internal Production Notes</label>
+            <textarea value={spec.internalNotes} onChange={e => updateSpec({ internalNotes: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Internal instructions for the production team..." />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'pricing' && (
+        <div className="max-w-md mx-auto">
+          <PricingDisplay pricing={spec.pricing} currency={currency} />
+        </div>
+      )}
+
+      {activeTab === 'summary' && (
+        <div className="max-w-lg mx-auto">
+          <JobSummaryCard spec={spec} currency={currency} />
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="border-t border-slate-200 bg-slate-50 -mx-6 -mb-6 px-6 py-4 mt-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-lg px-4 py-2 border border-slate-200">
+            <span className="text-xs text-slate-500">Total</span>
+            <div className="font-bold text-lg text-indigo-600">{currency}{formatNumber(spec.pricing.grandTotal)}</div>
+          </div>
+          {!canAddToCart && (
+            <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">
+              <AlertCircle size={12} /> Fill required fields
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handleClose}
+            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all">
+            Cancel
+          </button>
+          <button onClick={() => onSaveDraft(spec)}
+            className="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all flex items-center gap-1.5">
+            <Save size={14} /> Save Draft
+          </button>
+          <button onClick={() => onSaveAsQuote(spec)}
+            className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex items-center gap-1.5">
+            <FileText size={14} /> Save as Quote
+          </button>
+          <button onClick={() => onAddToCart(spec)} disabled={!canAddToCart}
+            className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm">
+            <ShoppingCart size={16} /> Add to Cart
           </button>
         </div>
-
-        {/* Tabs */}
-        <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/50 flex gap-1 overflow-x-auto shrink-0">
-          {TABS.map(t => <TabButton key={t.key} tab={t.key} icon={t.icon} />)}
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6">
-            {activeTab === 'basic' && (
-              <div className="max-w-2xl space-y-5">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Job Name *</label>
-                    <input type="text" value={spec.jobName} onChange={e => updateSpec({ jobName: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="e.g. Business Cards" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Service</label>
-                    <input type="text" value={spec.serviceName} disabled
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Customer *</label>
-                    <input type="text" value={spec.customerName} onChange={e => updateSpec({ customerName: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Customer name" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Unit</label>
-                    <select value={spec.unit} onChange={e => updateSpec({ unit: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
-                      <option value="pcs">Pieces</option>
-                      <option value="sets">Sets</option>
-                      <option value="books">Books</option>
-                      <option value="boxes">Boxes</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Quantity</label>
-                    <input type="number" min={1} value={spec.quantity} onChange={e => updateSpec({ quantity: Math.max(1, Number(e.target.value)) })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Due Date</label>
-                    <input type="date" value={spec.dueDate} onChange={e => updateSpec({ dueDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-600">Priority</label>
-                    <div className="flex gap-2">
-                      {(['Normal', 'Urgent', 'Express'] as PrintingJobPriority[]).map(p => (
-                        <button key={p} onClick={() => updateSpec({ priority: p })}
-                          className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-all
-                            ${spec.priority === p
-                              ? p === 'Normal' ? 'bg-slate-800 text-white border-slate-800'
-                                : p === 'Urgent' ? 'bg-orange-500 text-white border-orange-500'
-                                : 'bg-red-500 text-white border-red-500'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'specs' && (
-              <div className="max-w-3xl space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Layers size={16} /> Paper
-                  </h3>
-                  <PaperSpecSection paper={spec.paper} onChange={paper => updateSpec({ paper })} />
-                </div>
-                <div className="border-t border-slate-100 pt-5">
-                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Printer size={16} /> Printing
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600">Color</label>
-                      <div className="flex gap-2">
-                        {(['Full Color', 'Black & White'] as ColorMode[]).map(c => (
-                          <button key={c} onClick={() => updateSpec({ printing: { ...spec.printing, color: c } })}
-                            className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                              ${spec.printing.color === c ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600">Sides</label>
-                      <div className="flex gap-2">
-                        {(['Single Sided', 'Double Sided'] as SidedMode[]).map(s => (
-                          <button key={s} onClick={() => updateSpec({ printing: { ...spec.printing, sides: s } })}
-                            className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                              ${spec.printing.sides === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                            {s === 'Single Sided' ? 'Single' : 'Double'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600">Pages per Copy</label>
-                      <input type="number" min={1} value={spec.printing.pages} onChange={e => updateSpec({ printing: { ...spec.printing, pages: Math.max(1, Number(e.target.value)) } })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-600">Orientation</label>
-                      <div className="flex gap-2">
-                        {(['Portrait', 'Landscape'] as Orientation[]).map(o => (
-                          <button key={o} onClick={() => updateSpec({ printing: { ...spec.printing, orientation: o } })}
-                            className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                              ${spec.printing.orientation === o ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                            {o}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'finishing' && (
-              <div className="max-w-3xl space-y-4">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Scissors size={16} /> Finishing Options
-                </h3>
-                <FinishingOptions finishing={spec.finishing} onChange={finishing => updateSpec({ finishing })} />
-              </div>
-            )}
-
-            {activeTab === 'artwork' && (
-              <div className="max-w-2xl space-y-5">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Image size={16} /> Artwork
-                </h3>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">Artwork Source</label>
-                  <div className="flex gap-3">
-                    {(['Customer Artwork', 'Design Required'] as ArtworkSource[]).map(src => (
-                      <button key={src} onClick={() => updateSpec({ artwork: { ...spec.artwork, source: src } })}
-                        className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-all
-                          ${spec.artwork.source === src ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                        {src}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {spec.artwork.source === 'Customer Artwork' && (
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 transition-colors cursor-pointer">
-                    <Upload size={32} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-medium text-slate-600">Drop artwork files here or click to upload</p>
-                    <p className="text-xs text-slate-400 mt-1">PDF, AI, EPS, PSD, TIFF — Max 50MB</p>
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">Artwork Status</label>
-                  <div className="flex gap-2">
-                    {(['Pending', 'Received', 'Approved'] as ArtworkStatus[]).map(s => (
-                      <button key={s} onClick={() => updateSpec({ artwork: { ...spec.artwork, status: s } })}
-                        className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all
-                          ${spec.artwork.status === s
-                            ? s === 'Approved' ? 'bg-emerald-600 text-white border-emerald-600'
-                              : s === 'Received' ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-amber-600 text-white border-amber-600'
-                            : 'bg-white text-slate-600 border-slate-200'}`}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">Customer Notes</label>
-                  <textarea value={spec.customerNotes} onChange={e => updateSpec({ customerNotes: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Any special instructions from the customer..." />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-600">Internal Production Notes</label>
-                  <textarea value={spec.internalNotes} onChange={e => updateSpec({ internalNotes: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Internal instructions for the production team..." />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'pricing' && (
-              <div className="max-w-md mx-auto">
-                <PricingDisplay pricing={spec.pricing} currency={currency} />
-              </div>
-            )}
-
-            {activeTab === 'summary' && (
-              <div className="max-w-lg mx-auto">
-                <JobSummaryCard spec={spec} currency={currency} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg px-4 py-2 border border-slate-200">
-              <span className="text-xs text-slate-500">Total</span>
-              <div className="font-bold text-lg text-indigo-600">{currency}{formatNumber(spec.pricing.grandTotal)}</div>
-            </div>
-            {!canAddToCart && (
-              <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">
-                <AlertCircle size={12} /> Fill required fields
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onCancel}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all">
-              Cancel
-            </button>
-            <button onClick={() => onSaveDraft(spec)}
-              className="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all flex items-center gap-1.5">
-              <Save size={14} /> Save Draft
-            </button>
-            <button onClick={() => onSaveAsQuote(spec)}
-              className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex items-center gap-1.5">
-              <FileText size={14} /> Save as Quote
-            </button>
-            <button onClick={() => onAddToCart(spec)} disabled={!canAddToCart}
-              className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm">
-              <ShoppingCart size={16} /> Add to Cart
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Dialog>
   );
 };
 

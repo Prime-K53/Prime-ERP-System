@@ -6,6 +6,7 @@ import { useFinance } from '../../../context/FinanceContext';
 import { useBankingStore } from '../../../context/BankingContext';
 import { DEFAULT_ACCOUNTS } from '../../../constants';
 import { currencyService } from '../../../services/currencyService';
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';
 
 import { formatNumber } from '../../../utils/helpers';
 
@@ -181,7 +182,6 @@ const canCompleteSale = useMemo(() => {
     // Keyboard Shortcuts Logic
     useEffect(() => {
         const handleGlobalKeys = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') handleCancel();
             if (e.key === 'Enter' && canCompleteSale) handleComplete();
 
             // Numerical shortcuts for payment methods (Alt + 1, 2, 3...)
@@ -280,8 +280,8 @@ const canCompleteSale = useMemo(() => {
         </button>
     );
     return (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4">
-            <div style={{ width: 700, background: '#fff', borderRadius: 8, boxShadow: '0 20px 60px rgba(0,0,0,.35)', overflow: 'hidden' }}>
+        <Dialog open={true} onOpenChange={(open) => { if (!open) onCancel(); }}>
+            <div className="-m-6">
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #dde5e2' }}>
                     <div>
@@ -460,6 +460,6 @@ const canCompleteSale = useMemo(() => {
                     &larr; Back to register
                 </div>
             </div>
-        </div>
+        </Dialog>
     );
 };

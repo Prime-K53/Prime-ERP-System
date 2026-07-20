@@ -6,9 +6,11 @@ import { User, UserGroup } from '../../types';
 import { AVAILABLE_PERMISSIONS } from '../../constants';
 import { localFileStorage } from '../../services/localFileStorage';
 import { OfflineImage } from '../../components/OfflineImage';
+import { useConfirmDialog } from '../../components/ConfirmDialog';
 
 const UserManagement: React.FC = () => {
   const { allUsers, userGroups, manageUser, deleteUser, manageUserGroup, deleteUserGroup, passwordPolicy, updatePasswordPolicy, checkPermission, validatePasswordStrength, notify } = useAuth();
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [activeTab, setActiveTab] = useState<'Users' | 'Groups' | 'Policies'>('Users');
 
   // User Modal State
@@ -105,7 +107,13 @@ const UserManagement: React.FC = () => {
   };
 
   const handleEnforceMfa = async () => {
-      if(window.confirm("This will enable MFA for all active users. Continue?")) {
+      const ok = await confirm({
+          title: 'Enforce MFA',
+          message: 'This will enable MFA for all active users. Continue?',
+          type: 'warning',
+          confirmText: 'Enforce',
+      });
+      if (ok) {
           for(const u of allUsers) {
               if(u.active && !u.mfaEnabled) {
                   await manageUser({...u, mfaEnabled: true, securityLevel: 'Elevated'});
@@ -502,6 +510,7 @@ const UserManagement: React.FC = () => {
          {activeTab === 'Groups' && renderGroups()}
          {activeTab === 'Policies' && renderPolicies()}
       </div>
+      <ConfirmDialogComponent />
     </div>
   );
 };

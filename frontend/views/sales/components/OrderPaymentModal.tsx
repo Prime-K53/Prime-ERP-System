@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Wallet, CreditCard, Smartphone, Banknote, Package, User, Hash, Calendar } from 'lucide-react';
+import { DollarSign, Wallet, CreditCard, Smartphone, Banknote, Package, User, Hash, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';
 import { Order } from '../../../types';
 import { DEFAULT_ACCOUNTS, ACCOUNT_IDS } from '../../../constants';
 import { currencyService } from '../../../services/currencyService';
@@ -109,8 +110,11 @@ export const OrderPaymentModal: React.FC<OrderPaymentModalProps> = ({ order, onC
     );
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[80] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-[0_25px_60px_rgba(15,23,42,0.18)] w-full max-w-[860px] overflow-hidden border border-[#F1F5F9] flex">
+        <Dialog open={true} onClose={onClose} title="Record Payment" className="max-w-[860px]">
+            <p className="text-[12px] text-[#64748B] -mt-2 mb-2 font-medium">
+                Receive payment against this order
+            </p>
+            <div className="flex -mx-6 -mb-6">
                 {/* Left Panel - Order Summary */}
                 <div className="w-[260px] bg-[#FAFBFF] border-r border-[#F1F5F9] p-5 flex flex-col shrink-0">
                     <div className="flex items-center gap-2.5 mb-5">
@@ -152,18 +156,6 @@ export const OrderPaymentModal: React.FC<OrderPaymentModalProps> = ({ order, onC
 
                 {/* Right Panel - Payment Form */}
                 <div className="flex-1 flex flex-col min-w-0">
-                    <div className="px-6 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-white">
-                        <div>
-                            <h2 className="text-[20px] font-semibold text-[#0F172A] tracking-tight leading-snug">Record Payment</h2>
-                            <p className="text-[12px] text-[#64748B] mt-0.5 font-medium">
-                                Receive payment against this order
-                            </p>
-                        </div>
-                        <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F1F5F9] text-[#64748B] transition-colors" aria-label="Close">
-                            <X size={18} />
-                        </button>
-                    </div>
-
                     <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
                         {isFullyPaid ? (
                             <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -269,6 +261,6 @@ export const OrderPaymentModal: React.FC<OrderPaymentModalProps> = ({ order, onC
                     </form>
                 </div>
             </div>
-        </div>
+        </Dialog>
     );
 };

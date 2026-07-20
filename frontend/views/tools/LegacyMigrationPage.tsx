@@ -4,44 +4,50 @@ import {
     SkipForward, RefreshCw, Download
 } from 'lucide-react';
 import { legacyMigrationService, type MigrationSummary } from '../../services/legacyMigrationService';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const LegacyMigrationPage: React.FC = () => {
     const [running, setRunning] = useState(false);
     const [summary, setSummary] = useState<MigrationSummary | null>(null);
     const [progress, setProgress] = useState<{ current: number; total: number; percent: number; currentItem: string } | null>(null);
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const handleRun = async () => {
-        if (!window.confirm(
-            'This will scan all inventory items and populate productType, inventoryRole, and Variant fields from legacy type data.\n\n' +
-            'Items already migrated will be skipped.\n\nContinue?'
-        )) return;
+        setConfirmState({
+            open: true,
+            title: 'Run Legacy Migration',
+            message: 'This will scan all inventory items and populate productType, inventoryRole, and Variant fields from legacy type data.\n\nItems already migrated will be skipped.\n\nContinue?',
+            type: 'warning',
+            confirmText: 'Continue',
+            onConfirm: async () => {
+                setRunning(true);
+                setSummary(null);
+                setProgress({ current: 0, total: 0, percent: 0, currentItem: 'Starting...' });
 
-        setRunning(true);
-        setSummary(null);
-        setProgress({ current: 0, total: 0, percent: 0, currentItem: 'Starting...' });
-
-        try {
-            const result = await legacyMigrationService.migrateLegacyTypes((p) => {
-                setProgress(p);
-            });
-            setSummary(result);
-        } catch (err) {
-            setSummary({
-                totalItems: 0,
-                processed: 0,
-                errors: 1,
-                skipped: 0,
-                details: [{
-                    itemId: '',
-                    itemName: '',
-                    action: 'error',
-                    error: err instanceof Error ? err.message : 'Migration failed',
-                }],
-            });
-        } finally {
-            setRunning(false);
-            setProgress(null);
-        }
+                try {
+                    const result = await legacyMigrationService.migrateLegacyTypes((p) => {
+                        setProgress(p);
+                    });
+                    setSummary(result);
+                } catch (err) {
+                    setSummary({
+                        totalItems: 0,
+                        processed: 0,
+                        errors: 1,
+                        skipped: 0,
+                        details: [{
+                            itemId: '',
+                            itemName: '',
+                            action: 'error',
+                            error: err instanceof Error ? err.message : 'Migration failed',
+                        }],
+                    });
+                } finally {
+                    setRunning(false);
+                    setProgress(null);
+                }
+            }
+        });
     };
 
     const handleExport = () => {
@@ -185,6 +191,19 @@ const LegacyMigrationPage: React.FC = () => {
                     )}
                 </div>
             </div>
+            <ConfirmDialog
+                open={confirmState.open}
+                onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+                onConfirm={() => {
+                    confirmState.onConfirm?.();
+                    setConfirmState(c => ({ ...c, open: false }));
+                }}
+                onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                type={confirmState.type || 'warning'}
+            />
         </div>
     );
 };
