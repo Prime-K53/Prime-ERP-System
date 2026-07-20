@@ -850,6 +850,12 @@ const ProfessionalInvoiceTemplate = ({
   const totalAmount = Number(dataAny.totalAmount) || subtotal;
   const tax = Number(dataAny.tax) || 0;
   const discount = Number(dataAny.discount) || 0;
+  const discountType = dataAny.discountType || 'fixed';
+  const discountRaw = Number(dataAny.discountRaw || 0);
+  const discountPercentage = discountType === 'percentage'
+    ? (discountRaw > 0 ? discountRaw : subtotal > 0 ? Number(((discount / subtotal) * 100).toFixed(2)) : 0)
+    : 0;
+  const discountLabel = discountType === 'percentage' && discountPercentage > 0 ? `Discount (${discountPercentage}%)` : 'Discount';
   
   const showDueDate = templateSettings.showDueDate;
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
@@ -1824,6 +1830,12 @@ if (type === 'POS_RECEIPT') {
                         const displayDiscount = 'discount' in data ? Number(data.discount) : 0;
                         const displayTotal = itemsSum !== null ? itemsSum - displayDiscount : ('totalAmount' in data ? Number(data.totalAmount) : 0);
                         const displayAmountPaid = 'amountPaid' in data ? Number(data.amountPaid) : 0;
+                        const displayDiscountType = dataAny.discountType || 'fixed';
+                        const displayDiscountRaw = Number(dataAny.discountRaw || 0);
+                        const displayDiscountPct = displayDiscountType === 'percentage'
+                          ? (displayDiscountRaw > 0 ? displayDiscountRaw : displaySubtotal > 0 ? Number(((displayDiscount / displaySubtotal) * 100).toFixed(2)) : 0)
+                          : 0;
+                        const displayDiscountLabel = displayDiscountType === 'percentage' && displayDiscountPct > 0 ? `Discount (${displayDiscountPct}%)` : 'Discount';
 
                         return (
                           <>
@@ -1834,7 +1846,7 @@ if (type === 'POS_RECEIPT') {
 
                             {displayDiscount > 0 && (
                               <View style={s.summaryRow}>
-                                <Text style={{ flex: 1 }}>{discountLabel}</Text>
+                                <Text style={{ flex: 1 }}>{displayDiscountLabel}</Text>
                                 <Text style={{ textAlign: 'right' }}>-{currency} {formatAmount(displayDiscount)}</Text>
                               </View>
                             )}
