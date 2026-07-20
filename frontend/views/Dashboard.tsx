@@ -26,6 +26,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import { format } from 'date-fns';
+import { ConfirmDialog, ConfirmDialogType } from '../components/ConfirmDialog';
 
 // ─── CSS keyframes injected once ──────────────────────────────────────────────
 const DASHBOARD_STYLES = `
@@ -784,44 +785,58 @@ const DashboardContent: React.FC = () => {
 
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const handleCreateCompany = async () => {
-    if (window.confirm('Create a new company? This will permanently wipe and reset all current data except your subscription status.')) {
-       try {
-         await resetSystem();
-         window.location.reload();
-       } catch (e) {
-         logger.error(e);
-       }
-    }
+    setConfirmState({
+      open: true,
+      title: 'Create New Company',
+      message: 'Create a new company? This will permanently wipe and reset all current data except your subscription status.',
+      type: 'danger',
+      confirmText: 'Create New Company',
+      onConfirm: () => {
+         (async () => {
+            try {
+              await resetSystem();
+              window.location.reload();
+            } catch (e) {
+              logger.error(e);
+            }
+         })();
+      }
+    });
   };
 
   const handleRestoreBackupFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const shouldRestore = window.confirm(`Restore company from backup "${file.name}"? This will replace the current local database context.`);
-      if (!shouldRestore) {
-          event.target.value = '';
-          return;
-      }
-      try {
-          const raw = await file.text();
-          const parsed = JSON.parse(raw);
-          if (!parsed || typeof parsed !== 'object' || !parsed.data) {
-              throw new Error('Invalid Prime ERP backup structure.');
+      setConfirmState({
+        open: true,
+        title: 'Restore Company Backup',
+        message: `Restore company from backup "${file.name}"? This will replace the current local database context.`,
+        type: 'warning',
+        confirmText: 'Restore',
+        onConfirm: async () => {
+          try {
+              const raw = await file.text();
+              const parsed = JSON.parse(raw);
+              if (!parsed || typeof parsed !== 'object' || !parsed.data) {
+                  throw new Error('Invalid Prime ERP backup structure.');
+              }
+              await dbService.importDatabase(raw);
+              alert('Company restored successfully. Reloading view...');
+              window.location.reload();
+          } catch (error) {
+              logger.error('Failed to restore company', error);
+              alert(error instanceof Error ? error.message : 'Company restore failed');
+          } finally {
+              event.target.value = '';
+              setShowCompanyMenu(false);
           }
-          await dbService.importDatabase(raw);
-          alert('Company restored successfully. Reloading view...');
-          window.location.reload();
-      } catch (error) {
-          logger.error('Failed to restore company', error);
-          alert(error instanceof Error ? error.message : 'Company restore failed');
-      } finally {
-          event.target.value = '';
-          setShowCompanyMenu(false);
-      }
+        }
+      });
   };
 
   // ── Search Live Preview Logic ────────────────────────────────────────────
@@ -2372,6 +2387,20 @@ const DashboardContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

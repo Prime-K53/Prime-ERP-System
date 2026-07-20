@@ -18,6 +18,7 @@ import { isAfter, parseISO, subDays, format } from 'date-fns';
 import { exportToCSV } from '../../utils/helpers';
 import { currencyService } from '../../services/currencyService';
 import { CustomerSearch } from '../../components/CustomerSearch';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 export const Clients: React.FC = () => {
   const { customers, addCustomer, updateCustomer, deleteCustomer, isLoading, customerPayments } = useSales();
@@ -36,6 +37,8 @@ export const Clients: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<'All' | 'Overdue' | 'Open' | 'Paid'>('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   // Advanced Filters State
   const [balanceRange, setBalanceRange] = useState<string>('Any Balance');
@@ -155,18 +158,32 @@ export const Clients: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
-      await deleteCustomer(id);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Client',
+      message: 'Are you sure you want to delete this client?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteCustomer(id);
+      }
+    });
   };
 
   const handleBatchDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} clients?`)) {
-      for (const id of selectedIds) {
-        await deleteCustomer(id);
+    setConfirmState({
+      open: true,
+      title: 'Delete Clients',
+      message: `Are you sure you want to delete ${selectedIds.length} clients?`,
+      type: 'danger',
+      confirmText: 'Delete All',
+      onConfirm: async () => {
+        for (const id of selectedIds) {
+          await deleteCustomer(id);
+        }
+        setSelectedIds([]);
       }
-      setSelectedIds([]);
-    }
+    });
   };
 
   const handleBatchStatusUpdate = async (status: 'Active' | 'Inactive') => {
@@ -729,6 +746,20 @@ export const Clients: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={selectedCustomer ? updateCustomer : addCustomer}
         customer={selectedCustomer}
+      />
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
       />
 
     </div>

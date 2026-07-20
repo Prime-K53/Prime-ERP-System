@@ -959,6 +959,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     try {
       if (onSave) {
         await onSave(finalItem);
+        onClose();
       } else {
         if (item?.id) {
           await updateItem(finalItem);

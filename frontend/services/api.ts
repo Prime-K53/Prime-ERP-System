@@ -1098,17 +1098,28 @@ export const api = {
         return dbService.getAll<Supplier>('suppliers');
       }
     }, 'Suppliers.GetAll'),
-    save: (s: Supplier) => handle(async () => {
+    create: (s: Supplier) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Suppliers.Save');
       await dbService.put('suppliers', s);
       try {
         const response = await apiClient.post(getApiPath('suppliers'), s);
         return response.data || s;
       } catch (err) {
-        ensureBackendInProd('Suppliers.Save', err);
+        ensureBackendInProd('Suppliers.Create', err);
         return { success: true, localOnly: true };
       }
-    }, 'Suppliers.Save'),
+    }, 'Suppliers.Create'),
+    update: (s: Supplier) => handle(async () => {
+      checkAuth(['Admin', 'Accountant', 'Clerk'], 'Suppliers.Update');
+      await dbService.put('suppliers', s);
+      try {
+        const response = await apiClient.put(getApiPath(`suppliers/${encodeURIComponent(s.id)}`), s);
+        return response.data || s;
+      } catch (err) {
+        ensureBackendInProd('Suppliers.Update', err);
+        return { success: true, localOnly: true };
+      }
+    }, 'Suppliers.Update'),
     deleteSupplier: (id: string) => handle(async () => {
       checkAuth(['Admin'], 'Suppliers.Delete');
       await dbService.delete('suppliers', id);

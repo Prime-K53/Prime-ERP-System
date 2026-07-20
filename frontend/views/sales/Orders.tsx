@@ -43,7 +43,7 @@ import { enrichDocumentCustomerData } from '../../utils/documentCustomerData';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
 import { initializePrimePdfFonts } from '../shared/components/PDF/templateSettings';
 import { currencyService } from '../../services/currencyService';
-import { useConfirmDialog } from '../../components/ConfirmDialog';
+import { useConfirmDialog, ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const SUBSCRIPTION_STATUSES = ['Draft', 'Active', 'Paused', 'Cancelled', 'Expired'] as const;
 
@@ -148,6 +148,15 @@ const Orders: React.FC = () => {
     const { convertQuotationToWorkOrder, convertQuotationToJobTicket, convertOrderToJobTicket } = useSales();
     const { orders, cancelOrder, updateOrderStatus, recordPayment, createOrder, convertQuotationToOrder } = useOrders();
     const { confirm, ConfirmDialogComponent } = useConfirmDialog();
+    const [confirmState, setConfirmState] = useState<{
+      open: boolean;
+      title: string;
+      message: string;
+      confirmText?: string;
+      cancelText?: string;
+      type?: 'warning' | 'danger' | 'info' | 'success' | 'question';
+      onConfirm?: () => void;
+    }>({ open: false, title: '', message: '' });
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -246,22 +255,30 @@ const Orders: React.FC = () => {
             ? `Mark ${count} exchange records as deleted? Physical deletion is restricted for audit compliance.`
             : `Are you sure you want to delete ${count} selected records?`;
 
-        if (window.confirm(confirmMsg)) {
-            try {
-                for (const id of selectedInvoiceIds) {
-                    if (activeView === 'Invoices') await deleteInvoice(id);
-                    else if (activeView === 'Quotations') await deleteQuotation(id);
-                    else if (activeView === 'SalesOrders') await deleteJobOrder(id);
-                    else if (activeView === 'Exchanges') await deleteSalesExchange(id);
+        setConfirmState({
+            open: true,
+            title: activeView === 'Exchanges' ? 'Delete Exchange' : 'Delete Records',
+            message: confirmMsg,
+            type: 'danger',
+            confirmText: 'Delete',
+            onConfirm: async () => {
+                try {
+                    for (const id of selectedInvoiceIds) {
+                        if (activeView === 'Invoices') await deleteInvoice(id);
+                        else if (activeView === 'Quotations') await deleteQuotation(id);
+                        else if (activeView === 'SalesOrders') await deleteJobOrder(id);
+                        else if (activeView === 'Exchanges') await deleteSalesExchange(id);
+                    }
+                    setSelectedInvoiceIds([]);
+                    const successMsg = activeView === 'Exchanges' ? `${count} records marked as deleted` : `${count} records deleted successfully`;
+                    notify(successMsg, "success");
+                } catch (error: any) {
+                    notify(`Failed to delete some records: ${error.message}`, "error");
                 }
-                setSelectedInvoiceIds([]);
-                const successMsg = activeView === 'Exchanges' ? `${count} records marked as deleted` : `${count} records deleted successfully`;
-                notify(successMsg, "success");
-            } catch (error: any) {
-                notify(`Failed to delete some records: ${error.message}`, "error");
             }
-        }
+        });
     };
+
     const [sortField, setSortField] = useState<keyof Invoice>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
@@ -329,10 +346,16 @@ const Orders: React.FC = () => {
 
     const handleDelete = async (id: string) => {
         if (activeView === 'Exchanges') {
-            if (window.confirm("Mark this exchange record as deleted? Physical deletion is restricted for audit compliance.")) {
-                deleteSalesExchange(id);
-                notify("Exchange record marked as deleted", "info");
-            }
+            setConfirmState({
+                open: true,
+                title: 'Delete Exchange',
+                message: 'Mark this exchange record as deleted? Physical deletion is restricted for audit compliance.',
+                type: 'warning',
+                onConfirm: () => {
+                    deleteSalesExchange(id);
+                    notify("Exchange record marked as deleted", "info");
+                }
+            });
             return;
         }
 
@@ -353,13 +376,19 @@ const Orders: React.FC = () => {
             return;
         }
 
-        if (window.confirm("Are you sure you want to delete this record?")) {
-            if (activeView === 'Quotations') deleteQuotation(id);
-            else if (activeView === 'Invoices') deleteInvoice(id);
-            else if (activeView === 'Subscriptions') deleteRecurringInvoice(id);
-            else if (activeView === 'SalesOrders') deleteJobOrder(id);
-            notify("Record deleted", "info");
-        }
+        setConfirmState({
+            open: true,
+            title: 'Delete Record',
+            message: 'Are you sure you want to delete this record?',
+            type: 'danger',
+            onConfirm: () => {
+                if (activeView === 'Quotations') deleteQuotation(id);
+                else if (activeView === 'Invoices') deleteInvoice(id);
+                else if (activeView === 'Subscriptions') deleteRecurringInvoice(id);
+                else if (activeView === 'SalesOrders') deleteJobOrder(id);
+                notify("Record deleted", "info");
+            }
+        });
     };
 
     const handleSave = async (data: any, asDraft: boolean, reason?: string, andPay?: boolean) => {
@@ -638,15 +667,20 @@ const Orders: React.FC = () => {
                 ? 'Approve this examination quotation? This will create an examination batch with the saved classes and learner counts.'
                 : 'Approve this quotation?';
 
-            if (!window.confirm(message)) {
-                return;
-            }
-
-            try {
-                await approveQuotation(item.id);
-            } catch {
-                // Approval feedback is handled in the sales context.
-            }
+            setConfirmState({
+                open: true,
+                title: 'Approve Quotation',
+                message,
+                type: 'success',
+                confirmText: 'Approve',
+                onConfirm: async () => {
+                    try {
+                        await approveQuotation(item.id);
+                    } catch {
+                        // Approval feedback is handled in the sales context.
+                    }
+                }
+            });
             return;
         }
 
@@ -925,16 +959,30 @@ const Orders: React.FC = () => {
         }
         else if (activeView === 'Exchanges') {
             if (action === 'approve_exchange') {
-                if (window.confirm("Approve this exchange request? This will authorize the replacement/reprint.")) {
-                    await approveSalesExchange(item.id, "Approved from Sales Dashboard");
-                    notify("Exchange approved and authorized for reprint", "success");
-                }
+                setConfirmState({
+                    open: true,
+                    title: 'Approve Exchange',
+                    message: 'Approve this exchange request? This will authorize the replacement/reprint.',
+                    type: 'success',
+                    confirmText: 'Approve',
+                    onConfirm: async () => {
+                        await approveSalesExchange(item.id, "Approved from Sales Dashboard");
+                        notify("Exchange approved and authorized for reprint", "success");
+                    }
+                });
             }
             if (action === 'cancel_exchange') {
-                if (window.confirm("Cancel this exchange request?")) {
-                    await cancelSalesExchange(item.id);
-                    notify("Exchange request cancelled", "info");
-                }
+                setConfirmState({
+                    open: true,
+                    title: 'Cancel Exchange',
+                    message: 'Cancel this exchange request?',
+                    type: 'warning',
+                    confirmText: 'Cancel',
+                    onConfirm: async () => {
+                        await cancelSalesExchange(item.id);
+                        notify("Exchange request cancelled", "info");
+                    }
+                });
             }
             if (action === 'print_note' || action === 'download_pdf') {
                 handlePreview('SALES_EXCHANGE', item);
@@ -963,76 +1011,78 @@ const Orders: React.FC = () => {
                 });
             }
             if (action === 'convert_to_invoice') {
-                if (window.confirm(`Convert Order #${item.orderNumber} to an Invoice?`)) {
-                    try {
-                        const issuedDate = new Date().toISOString().split('T')[0];
-                        const customer = customers.find((entry: any) =>
-                            entry.id === item.customerId || entry.name === item.customerName
-                        );
-                        const paymentPolicy = resolveCustomerPaymentPolicy({
-                            customer,
-                            subAccountName: item.subAccountName,
-                            transactionType: 'invoice',
-                            issuedDate,
-                            preserveCustomTerms: true
-                        });
-                        const newInvoice: Invoice = {
-                            id: '',
-                            invoiceNumber: '',
-                            customerName: item.customerName,
-                            customerId: item.customerId,
-                            date: issuedDate,
-                            dueDate: paymentPolicy.dueDate,
-                            items: item.items.map((i: any) => ({
-                                ...i,
-                                description: i.productName || i.description,
-                                price: i.unitPrice,
-                                // Preserve all revenue-analysis fields from the original order item
-                                cost: i.cost ?? i.cost_price ?? 0,
-                                cost_price: i.cost_price ?? i.cost ?? 0,
-                                adjustmentSnapshots: i.adjustmentSnapshots || [],
-                                adjustmentTotal: i.adjustmentTotal ?? i.pricingBreakdown?.adjustmentTotal ?? 0,
-                                pricingBreakdown: i.pricingBreakdown,
-                                smartPricingSnapshot: i.smartPricingSnapshot,
-                                productionCostSnapshot: i.productionCostSnapshot,
-                            })),
-                            totalAmount: item.totalAmount,
-                            paidAmount: item.paidAmount,
-                            status: item.paidAmount >= item.totalAmount ? 'Paid' : 'Unpaid',
-                            discount: item.discount || 0,
-                            discountType: item.discountType || 'fixed',
-                            discountRaw: item.discountRaw || 0,
-                            notes: `Converted from [Order] #[${item.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
-                            createdBy: user?.name || 'System User',
-                            type: 'standard',
-                            paymentTerms: paymentPolicy.paymentTerms,
-                            // Preserve root-level pricing aggregates so Revenue Analysis can use them
-                            conversionDetails: {
-                                sourceType: 'order',
-                                sourceNumber: item.orderNumber,
-                                date: new Date().toLocaleDateString(),
-                                acceptedBy: user?.name || 'System'
-                            },
-                            materialTotal: item.materialTotal ?? 0,
-                            adjustmentTotal: item.adjustmentTotal ?? 0,
-                            adjustmentSnapshots: item.adjustmentSnapshots || [],
-                            profitMarginTotal: item.profitMarginTotal ?? 0,
-                            roundingTotal: item.roundingTotal ?? item.roundingDifference ?? 0,
-                            roundingDifference: item.roundingDifference ?? item.roundingTotal ?? 0,
-                            roundingMethod: item.roundingMethod ?? '',
-                        };
-                        const invoiceId = await addInvoice(newInvoice);
-                        const orderPaidAmount = item.paidAmount || 0;
-                        const orderTotal = item.totalAmount || 0;
-                        const finalOrderStatus = 'Converted';
-                        await updateOrderStatus(item.id, finalOrderStatus);
-                        notify(`Order #${item.orderNumber} successfully converted to Invoice ${invoiceId}`, "success");
-                        setActiveTab('Invoices');
-                        if (selectedOrderForDetail) setSelectedOrderForDetail(null); // Close the modal after conversion
-                    } catch (error: any) {
-                        notify(`Conversion failed: ${error.message}`, "error");
+                setConfirmState({
+                    open: true,
+                    title: 'Convert to Invoice',
+                    message: `Convert Order #${item.orderNumber} to an Invoice?`,
+                    type: 'question',
+                    confirmText: 'Convert',
+                    onConfirm: async () => {
+                        try {
+                            const issuedDate = new Date().toISOString().split('T')[0];
+                            const customer = customers.find((entry: any) =>
+                                entry.id === item.customerId || entry.name === item.customerName
+                            );
+                            const paymentPolicy = resolveCustomerPaymentPolicy({
+                                customer,
+                                subAccountName: item.subAccountName,
+                                transactionType: 'invoice',
+                                issuedDate,
+                                preserveCustomTerms: true
+                            });
+                            const newInvoice: Invoice = {
+                                id: '',
+                                invoiceNumber: '',
+                                customerName: item.customerName,
+                                customerId: item.customerId,
+                                date: issuedDate,
+                                dueDate: paymentPolicy.dueDate,
+                                items: item.items.map((i: any) => ({
+                                    ...i,
+                                    description: i.productName || i.description,
+                                    price: i.unitPrice,
+                                    cost: i.cost ?? i.cost_price ?? 0,
+                                    cost_price: i.cost_price ?? i.cost ?? 0,
+                                    adjustmentSnapshots: i.adjustmentSnapshots || [],
+                                    adjustmentTotal: i.adjustmentTotal ?? i.pricingBreakdown?.adjustmentTotal ?? 0,
+                                    pricingBreakdown: i.pricingBreakdown,
+                                    smartPricingSnapshot: i.smartPricingSnapshot,
+                                    productionCostSnapshot: i.productionCostSnapshot,
+                                })),
+                                totalAmount: item.totalAmount,
+                                paidAmount: item.paidAmount,
+                                status: item.paidAmount >= item.totalAmount ? 'Paid' : 'Unpaid',
+                                discount: item.discount || 0,
+                                discountType: item.discountType || 'fixed',
+                                discountRaw: item.discountRaw || 0,
+                                notes: `Converted from [Order] #[${item.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
+                                createdBy: user?.name || 'System User',
+                                type: 'standard',
+                                paymentTerms: paymentPolicy.paymentTerms,
+                                conversionDetails: {
+                                    sourceType: 'order',
+                                    sourceNumber: item.orderNumber,
+                                    date: new Date().toLocaleDateString(),
+                                    acceptedBy: user?.name || 'System'
+                                },
+                                materialTotal: item.materialTotal ?? 0,
+                                adjustmentTotal: item.adjustmentTotal ?? 0,
+                                adjustmentSnapshots: item.adjustmentSnapshots || [],
+                                profitMarginTotal: item.profitMarginTotal ?? 0,
+                                roundingTotal: item.roundingTotal ?? item.roundingDifference ?? 0,
+                                roundingDifference: item.roundingDifference ?? item.roundingTotal ?? 0,
+                                roundingMethod: item.roundingMethod ?? '',
+                            };
+                            const invoiceId = await addInvoice(newInvoice);
+                            await updateOrderStatus(item.id, 'Converted');
+                            notify(`Order #${item.orderNumber} successfully converted to Invoice ${invoiceId}`, "success");
+                            setActiveTab('Invoices');
+                            if (selectedOrderForDetail) setSelectedOrderForDetail(null);
+                        } catch (error: any) {
+                            notify(`Conversion failed: ${error.message}`, "error");
+                        }
                     }
-                }
+                });
             }
             if (action === 'cancel_order') {
                 const reason = window.prompt(`Reason for cancelling Order #${item.orderNumber}: `);
@@ -1136,98 +1186,123 @@ const Orders: React.FC = () => {
                 }
                 return;
             }
-            if (window.confirm(`Mark ${selectedInvoiceIds.length} invoices as Paid ? `)) {
-                selectedInvoiceIds.forEach(id => {
-                    const inv = invoices.find(i => i.id === id);
-                    if (inv && inv.status !== 'Paid') {
-                        updateInvoice({ ...inv, status: 'Paid', paidAmount: inv.totalAmount });
-                    }
-                });
-                notify(`Successfully processed ${selectedInvoiceIds.length} payments`, "success");
-                setSelectedInvoiceIds([]);
-            }
+            setConfirmState({
+                open: true,
+                title: 'Mark as Paid',
+                message: `Mark ${selectedInvoiceIds.length} invoices as Paid?`,
+                type: 'success',
+                confirmText: 'Mark Paid',
+                onConfirm: () => {
+                    selectedInvoiceIds.forEach(id => {
+                        const inv = invoices.find(i => i.id === id);
+                        if (inv && inv.status !== 'Paid') {
+                            updateInvoice({ ...inv, status: 'Paid', paidAmount: inv.totalAmount });
+                        }
+                    });
+                    notify(`Successfully processed ${selectedInvoiceIds.length} payments`, "success");
+                    setSelectedInvoiceIds([]);
+                }
+            });
         } else if (action === 'bulk_convert') {
             if (activeView === 'Orders') {
                 const count = selectedInvoiceIds.length;
-                if (window.confirm(`Convert ${count} selected orders to invoices ? `)) {
-                    try {
-                        for (const id of selectedInvoiceIds) {
-                            const order = orders.find(o => o.id === id);
-                            if (!order) continue;
+                setConfirmState({
+                    open: true,
+                    title: 'Convert to Invoices',
+                    message: `Convert ${count} selected orders to invoices?`,
+                    type: 'question',
+                    confirmText: 'Convert',
+                    onConfirm: async () => {
+                        try {
+                            for (const id of selectedInvoiceIds) {
+                                const order = orders.find(o => o.id === id);
+                                if (!order) continue;
 
-                            const invoiceData = {
-                                ...order,
-                                id: '',
-                                invoiceNumber: '',
-                                date: new Date().toISOString().split('T')[0],
-                                status: 'Unpaid',
-                                notes: `Converted from [Order] #[${order.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
-                                items: order.items.map((i: any) => ({
-                                    ...i,
-                                    description: i.productName || i.description,
-                                    price: i.unitPrice,
-                                    // Preserve all revenue-analysis fields
-                                    cost: i.cost ?? i.cost_price ?? 0,
-                                    cost_price: i.cost_price ?? i.cost ?? 0,
-                                    adjustmentSnapshots: i.adjustmentSnapshots || [],
-                                    adjustmentTotal: i.adjustmentTotal ?? i.pricingBreakdown?.adjustmentTotal ?? 0,
-                                    pricingBreakdown: i.pricingBreakdown,
-                                    smartPricingSnapshot: i.smartPricingSnapshot,
-                                    productionCostSnapshot: i.productionCostSnapshot,
-                                })),
-                                conversionDetails: {
-                                    sourceType: 'order',
-                                    sourceNumber: order.orderNumber,
-                                    date: new Date().toLocaleDateString(),
-                                    acceptedBy: user?.name || 'System'
-                                },
-                            };
-                            const invoiceId = await addInvoice(invoiceData);
-                            await updateOrderStatus(order.id, 'Converted');
+                                const invoiceData = {
+                                    ...order,
+                                    id: '',
+                                    invoiceNumber: '',
+                                    date: new Date().toISOString().split('T')[0],
+                                    status: 'Unpaid',
+                                    notes: `Converted from [Order] #[${order.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
+                                    items: order.items.map((i: any) => ({
+                                        ...i,
+                                        description: i.productName || i.description,
+                                        price: i.unitPrice,
+                                        cost: i.cost ?? i.cost_price ?? 0,
+                                        cost_price: i.cost_price ?? i.cost ?? 0,
+                                        adjustmentSnapshots: i.adjustmentSnapshots || [],
+                                        adjustmentTotal: i.adjustmentTotal ?? i.pricingBreakdown?.adjustmentTotal ?? 0,
+                                        pricingBreakdown: i.pricingBreakdown,
+                                        smartPricingSnapshot: i.smartPricingSnapshot,
+                                        productionCostSnapshot: i.productionCostSnapshot,
+                                    })),
+                                    conversionDetails: {
+                                        sourceType: 'order',
+                                        sourceNumber: order.orderNumber,
+                                        date: new Date().toLocaleDateString(),
+                                        acceptedBy: user?.name || 'System'
+                                    },
+                                };
+                                const invoiceId = await addInvoice(invoiceData);
+                                await updateOrderStatus(order.id, 'Converted');
+                            }
+                            setSelectedInvoiceIds([]);
+                            notify(`${count} orders converted to invoices`, "success");
+                        } catch (error: any) {
+                            notify(`Bulk conversion failed: ${error.message} `, "error");
                         }
-                        setSelectedInvoiceIds([]);
-                        notify(`${count} orders converted to invoices`, "success");
-                    } catch (error: any) {
-                        notify(`Bulk conversion failed: ${error.message} `, "error");
                     }
-                }
+                });
             }
         } else if (action === 'bulk_approve') {
-            if (window.confirm(`Approve ${selectedInvoiceIds.length} selected exchanges ? `)) {
-                try {
-                    for (const id of selectedInvoiceIds) {
-                        await approveSalesExchange(id, "Bulk approved by supervisor");
+            setConfirmState({
+                open: true,
+                title: 'Approve Exchanges',
+                message: `Approve ${selectedInvoiceIds.length} selected exchanges?`,
+                type: 'success',
+                confirmText: 'Approve',
+                onConfirm: async () => {
+                    try {
+                        for (const id of selectedInvoiceIds) {
+                            await approveSalesExchange(id, "Bulk approved by supervisor");
+                        }
+                        notify(`Successfully approved ${selectedInvoiceIds.length} exchanges`, "success");
+                        setSelectedInvoiceIds([]);
+                    } catch (error: any) {
+                        notify(`Failed to approve some exchanges: ${error.message} `, "error");
                     }
-                    notify(`Successfully approved ${selectedInvoiceIds.length} exchanges`, "success");
-                    setSelectedInvoiceIds([]);
-                } catch (error: any) {
-                    notify(`Failed to approve some exchanges: ${error.message} `, "error");
                 }
-            }
+            });
         } else if (action === 'bulk_cancel') {
             const type = activeView === 'Exchanges' ? 'exchanges' : 'invoices';
-            if (window.confirm(`Cancel ${selectedInvoiceIds.length} selected ${type}?`)) {
-                try {
-                    if (activeView === 'Exchanges') {
-                        // Logic for cancelling exchanges
-                        for (const id of selectedInvoiceIds) {
-                            const ex = salesExchanges.find(e => e.id === id);
-                            if (ex && (ex.status === 'pending' || ex.status === 'Pending')) {
-                                await cancelSalesExchange(id);
+            setConfirmState({
+                open: true,
+                title: 'Bulk Cancel',
+                message: `Cancel ${selectedInvoiceIds.length} selected ${type}?`,
+                type: 'warning',
+                confirmText: 'Cancel',
+                onConfirm: async () => {
+                    try {
+                        if (activeView === 'Exchanges') {
+                            for (const id of selectedInvoiceIds) {
+                                const ex = salesExchanges.find(e => e.id === id);
+                                if (ex && (ex.status === 'pending' || ex.status === 'Pending')) {
+                                    await cancelSalesExchange(id);
+                                }
                             }
+                        } else {
+                            selectedInvoiceIds.forEach(id => {
+                                const inv = invoices.find(i => i.id === id);
+                                if (inv && inv.status !== 'Paid') {
+                                    updateInvoice({ ...inv, status: 'Cancelled' });
+                                }
+                            });
                         }
-                    } else {
-                        selectedInvoiceIds.forEach(id => {
-                            const inv = invoices.find(i => i.id === id);
-                            if (inv && inv.status !== 'Paid') {
-                                updateInvoice({ ...inv, status: 'Cancelled' });
-                            }
-                        });
-                    }
-                    notify(`Successfully processed bulk cancel for ${selectedInvoiceIds.length} items`, "info");
-                    setSelectedInvoiceIds([]);
-                } catch (error: any) {
-                    notify(`Bulk cancel failed: ${error.message} `, "error");
+                        notify(`Successfully processed bulk cancel for ${selectedInvoiceIds.length} items`, "info");
+                        setSelectedInvoiceIds([]);
+                    } catch (error: any) {
+                        notify(`Bulk cancel failed: ${error.message} `, "error");
                 }
             }
         } else if (action === 'bulk_email') {
@@ -1702,6 +1777,20 @@ const Orders: React.FC = () => {
                 />
             )}
             <ConfirmDialogComponent />
+            <ConfirmDialog
+                open={confirmState.open}
+                onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+                onConfirm={() => {
+                    confirmState.onConfirm?.();
+                    setConfirmState(c => ({ ...c, open: false }));
+                }}
+                onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                cancelText={confirmState.cancelText}
+                type={confirmState.type || 'question'}
+            />
         </div>
     );
 };

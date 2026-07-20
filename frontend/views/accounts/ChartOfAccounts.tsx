@@ -8,6 +8,7 @@ import { Account, AccountType, LedgerEntry } from '../../types';
 import { format, parseISO } from 'date-fns';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
 import { currencyService } from '../../services/currencyService';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const ChartOfAccounts: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +28,8 @@ const ChartOfAccounts: React.FC = () => {
     name: '',
     type: 'Asset'
   });
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   // Drilldown State
   const [drilldownAccount, setDrilldownAccount] = useState<Account | null>(null);
@@ -158,10 +161,17 @@ const ChartOfAccounts: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (!canEdit) return;
-    if (window.confirm("Are you sure? Deleting an account with transaction history will cause reporting errors.")) {
-      deleteAccount(id);
-      notify("Account deleted", "info");
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Account',
+      message: 'Are you sure? Deleting an account with transaction history will cause reporting errors.',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: () => {
+        deleteAccount(id);
+        notify('Account deleted', 'info');
+      }
+    });
   };
 
   const getTypeColor = (type: AccountType) => {
@@ -345,11 +355,25 @@ const ChartOfAccounts: React.FC = () => {
 
       {/* Account Details Dashboard */}
       {drilldownAccount && (
-        <AccountDetailsDashboard 
-            account={drilldownAccount} 
-            onClose={() => setDrilldownAccount(null)} 
+        <AccountDetailsDashboard
+            account={drilldownAccount}
+            onClose={() => setDrilldownAccount(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

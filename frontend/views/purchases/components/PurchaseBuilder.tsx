@@ -546,7 +546,8 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
                 isOpen={isSupplierModalOpen}
                 onClose={() => setIsSupplierModalOpen(false)}
                 onSave={handleAddSupplier}
-                supplier={{ name: supplierSearch } as Supplier}
+                mode="create"
+                initialSupplier={{ name: supplierSearch } as Partial<Supplier>}
             />
         </div>
     );

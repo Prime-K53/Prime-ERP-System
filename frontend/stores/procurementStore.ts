@@ -172,10 +172,17 @@ export const useProcurementStore = create<ProcurementState>((set, get) => ({
 
   addSupplier: async (supplier) => {
     const prev = get().suppliers;
-    const newSupplier = { ...supplier, id: supplier.id || generateNextId('SUP', get().suppliers) };
+    const requestedId = String(supplier.id || '').trim();
+    const idInUse = requestedId
+      ? prev.some(existingSupplier => existingSupplier.id === requestedId)
+      : false;
+    const newSupplier = {
+      ...supplier,
+      id: requestedId && !idInUse ? requestedId : generateNextId('SUP', prev)
+    };
     set(state => ({ suppliers: [...state.suppliers, newSupplier] }));
     try {
-      await api.suppliers.save(newSupplier);
+      await api.suppliers.create(newSupplier);
       return newSupplier;
     } catch (error) {
       set({ suppliers: prev });
@@ -187,7 +194,7 @@ export const useProcurementStore = create<ProcurementState>((set, get) => ({
     const prev = get().suppliers;
     set(state => ({ suppliers: state.suppliers.map(s => s.id === supplier.id ? supplier : s) }));
     try {
-      await api.suppliers.save(supplier);
+      await api.suppliers.update(supplier);
     } catch (error) {
       set({ suppliers: prev });
       throw error;

@@ -12,6 +12,7 @@ import { serviceResourceService } from '../../services/serviceResourceService';
 import { useInventory } from '../../context/InventoryContext';
 import { currencyService } from '../../services/currencyService';
 import { useAuth } from '../../context/AuthContext';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const RESOURCE_TYPES: { label: string; value: ServiceResourceType }[] = [
     { label: 'Inventory', value: 'inventory' },
@@ -38,6 +39,7 @@ const ServiceRecipeEditorPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [notify, setNotify] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const showNotify = (message: string, type: 'success' | 'error') => {
         setNotify({ message, type });
@@ -157,14 +159,22 @@ const ServiceRecipeEditorPage: React.FC = () => {
     };
 
     const handleDeleteRecipe = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this recipe?')) return;
-        try {
+      setConfirmState({
+        open: true,
+        title: 'Delete Recipe',
+        message: 'Are you sure you want to delete this recipe?',
+        type: 'danger',
+        confirmText: 'Delete',
+        onConfirm: async () => {
+          try {
             await serviceRecipeService.deleteRecipe(id);
             showNotify('Recipe deleted', 'success');
             loadData();
-        } catch (err) {
+          } catch (err) {
             showNotify('Failed to delete recipe', 'error');
+          }
         }
+      });
     };
 
     const handleCreateNewVersion = async (recipe: ServiceRecipe) => {
@@ -568,10 +578,25 @@ const ServiceRecipeEditorPage: React.FC = () => {
                             )}
                         </div>
                     )}
-                </div>
             </div>
         </div>
-    );
+
+        <ConfirmDialog
+          open={confirmState.open}
+          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+          onConfirm={() => {
+            confirmState.onConfirm?.();
+            setConfirmState(c => ({ ...c, open: false }));
+          }}
+          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          type={confirmState.type || 'question'}
+        />
+    </div>
+    </div>
+  );
 };
 
 export default ServiceRecipeEditorPage;

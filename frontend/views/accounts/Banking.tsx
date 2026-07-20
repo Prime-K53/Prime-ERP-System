@@ -20,6 +20,7 @@ import BankingReports from '../../components/BankingReports';
 import { PreviewModal } from '../shared/components/PDF/PreviewModal';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
 import { currencyService } from '../../services/currencyService';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 type ScheduledRow = {
   id: string;
@@ -71,6 +72,8 @@ const Banking: React.FC = () => {
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('Document Preview');
   const [documentPreviewContent, setDocumentPreviewContent] = useState<React.ReactNode>(null);
   const [auditedAccount, setAuditedAccount] = useState<any | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   const openDocumentPreview = (title: string, content: React.ReactNode) => {
     setDocumentPreviewTitle(title);
@@ -516,12 +519,19 @@ const Banking: React.FC = () => {
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (window.confirm('Are you sure you want to deactivate this account?')) {
-      await deleteAccount(id);
-      if (selectedAccountId === id) {
-        setSelectedAccountId(null);
+    setConfirmState({
+      open: true,
+      title: 'Deactivate Account',
+      message: 'Are you sure you want to deactivate this account?',
+      type: 'danger',
+      confirmText: 'Deactivate',
+      onConfirm: async () => {
+        await deleteAccount(id);
+        if (selectedAccountId === id) {
+          setSelectedAccountId(null);
+        }
       }
-    }
+    });
   };
 
   const handleCreateTransaction = () => {
@@ -708,9 +718,16 @@ const Banking: React.FC = () => {
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      await deleteTransaction(id);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Transaction',
+      message: 'Are you sure you want to delete this transaction?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteTransaction(id);
+      }
+    });
   };
 
   const handleCreateScheduledPayment = () => {
@@ -754,9 +771,16 @@ const Banking: React.FC = () => {
   };
 
   const handleDeleteScheduledPayment = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this scheduled payment?')) {
-      await deleteScheduledPayment(id);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Scheduled Payment',
+      message: 'Are you sure you want to delete this scheduled payment?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteScheduledPayment(id);
+      }
+    });
   };
 
   const handleCreateFee = () => {
@@ -886,9 +910,16 @@ const Banking: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      await deleteCategory(id);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Category',
+      message: 'Are you sure you want to delete this category?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteCategory(id);
+      }
+    });
   };
 
   const handleExportTransactions = () => {
@@ -2295,15 +2326,29 @@ const Banking: React.FC = () => {
       )}
       {auditedAccount && (
         <div className="fixed inset-0 z-[100]">
-          <AccountDetailsDashboard 
+          <AccountDetailsDashboard
             account={{
               ...auditedAccount,
-              code: auditedAccount.accountNumber, // Map accountNumber to code for audit fetching
-            }} 
-            onClose={() => setAuditedAccount(null)} 
+              code: auditedAccount.accountNumber,
+            }}
+            onClose={() => setAuditedAccount(null)}
           />
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

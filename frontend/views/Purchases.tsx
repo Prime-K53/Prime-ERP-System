@@ -15,6 +15,7 @@ import { SupplierPaymentModal } from './purchases/components/SupplierPaymentModa
 import { PurchaseReceiveModal } from './purchases/components/PurchaseReceiveModal';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateNextId } from '../utils/helpers';
+import { ConfirmDialog, ConfirmDialogType } from '../components/ConfirmDialog';
 
 const Purchases: React.FC = () => {
   const { refreshAllData } = useData();
@@ -30,10 +31,12 @@ const Purchases: React.FC = () => {
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [paymentPurchase, setPaymentPurchase] = useState<Purchase | null>(null);
   const [receivingPurchase, setReceivingPurchase] = useState<Purchase | null>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
+   const navigate = useNavigate();
+   const location = useLocation();
 
-  React.useEffect(() => {
+   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
+
+   React.useEffect(() => {
      if (location.state?.action === 'create') {
        setActiveTab('New');
        if (location.state.supplierId) {
@@ -106,13 +109,18 @@ const Purchases: React.FC = () => {
       const purchase = purchases.find(p => p.id === id);
       if (!purchase) return;
 
-      if(window.confirm("Verify this Bill? This will lock the record as a confirmed payable.")) {
-          // In a real system, converting might mean posting to GL.
-          // Here we just mark it Closed/Verified to separate from draft POs.
-          updatePurchase({ ...purchase, status: 'Closed' });
-          setSelectedPurchase(null);
-          notify("Bill verified and closed for payment", "success");
-      }
+      setConfirmState({
+        open: true,
+        title: 'Verify Bill',
+        message: 'Verify this Bill? This will lock the record as a confirmed payable.',
+        type: 'info',
+        confirmText: 'Verify',
+        onConfirm: () => {
+            updatePurchase({ ...purchase, status: 'Closed' });
+            setSelectedPurchase(null);
+            notify("Bill verified and closed for payment", "success");
+        }
+      });
   };
 
   const handleEditOrder = (po: Purchase) => {
@@ -140,57 +148,66 @@ const Purchases: React.FC = () => {
           return;
       }
 
-      if (!window.confirm(`Merge ${ids.length} orders into one new Bill? Original orders will be cancelled.`)) {
-          return;
-      }
-
-      // Combine items
-      const combinedItems: any[] = [];
-      selectedOrders.forEach(order => {
-          order.items.forEach(item => {
-              const existing = combinedItems.find(i => i.itemId === item.itemId && i.cost === item.cost);
-              if (existing) {
-                  existing.quantity += item.quantity;
-              } else {
-                  // Clone item to avoid reference issues
-                  combinedItems.push({ ...item, receivedQty: 0 });
-              }
+      setConfirmState({
+        open: true,
+        title: 'Merge Orders',
+        message: `Merge ${ids.length} orders into one new Bill? Original orders will be cancelled.`,
+        type: 'warning',
+        confirmText: 'Merge',
+        onConfirm: () => {
+          // Combine items
+          const combinedItems: any[] = [];
+          selectedOrders.forEach(order => {
+              order.items.forEach(item => {
+                  const existing = combinedItems.find(i => i.itemId === item.itemId && i.cost === item.cost);
+                  if (existing) {
+                      existing.quantity += item.quantity;
+                  } else {
+                      combinedItems.push({ ...item, receivedQty: 0 });
+                  }
+              });
           });
+
+          const totalCost = combinedItems.reduce((sum, i) => sum + (i.quantity * i.cost), 0);
+          const newId = generateNextId('PO', purchases, companyConfig);
+
+          addPurchase({
+              id: newId,
+              date: new Date().toISOString(),
+              supplierId,
+              items: combinedItems,
+              total: totalCost,
+              status: 'Draft',
+              notes: `Merged from orders: ${ids.join(', ')}`,
+              paymentStatus: 'Unpaid'
+          });
+
+          selectedOrders.forEach(order => {
+              updatePurchase({ ...order, status: 'Cancelled', notes: `${order.notes || ''} [Merged into ${newId}]` });
+          });
+
+          notify("Orders merged successfully! New Draft Bill created.", "success");
+        }
       });
-
-      const totalCost = combinedItems.reduce((sum, i) => sum + (i.quantity * i.cost), 0);
-      const newId = generateNextId('PO', purchases, companyConfig);
-
-      // Create New PO
-      addPurchase({
-          id: newId,
-          date: new Date().toISOString(),
-          supplierId,
-          items: combinedItems,
-          total: totalCost,
-          status: 'Draft',
-          notes: `Merged from orders: ${ids.join(', ')}`,
-          paymentStatus: 'Unpaid'
-      });
-
-      // Cancel old POs
-      selectedOrders.forEach(order => {
-          updatePurchase({ ...order, status: 'Cancelled', notes: `${order.notes || ''} [Merged into ${newId}]` });
-      });
-
-      notify("Orders merged successfully! New Draft Bill created.", "success");
   };
 
   const handleBatchDelete = (ids: string[]) => {
-      if (window.confirm(`Delete ${ids.length} selected bills? This will mark them as Cancelled.`)) {
-          ids.forEach(id => {
-              const po = purchases.find(p => p.id === id);
-              if (po) {
-                  updatePurchase({ ...po, status: 'Cancelled', paymentStatus: 'Cancelled' });
-              }
-          });
-          notify(`${ids.length} bills cancelled successfully.`, "success");
-      }
+      setConfirmState({
+        open: true,
+        title: 'Delete Bills',
+        message: `Delete ${ids.length} selected bills? This will mark them as Cancelled.`,
+        type: 'danger',
+        confirmText: 'Delete',
+        onConfirm: () => {
+            ids.forEach(id => {
+                const po = purchases.find(p => p.id === id);
+                if (po) {
+                    updatePurchase({ ...po, status: 'Cancelled', paymentStatus: 'Cancelled' });
+                }
+            });
+            notify(`${ids.length} bills cancelled successfully.`, "success");
+        }
+      });
   };
 
   const handlePaymentRequest = (purchase: Purchase) => {
@@ -283,20 +300,20 @@ const Purchases: React.FC = () => {
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {activeTab === 'New' && (
-            <PurchaseBuilder 
-                inventory={inventory} 
-                suppliers={suppliers} 
+            <PurchaseBuilder
+                inventory={inventory}
+                suppliers={suppliers}
                 onCreateOrder={handleCreateOrder}
                 initialData={editingPurchase}
                 onUpdateOrder={handleUpdateOrder}
                 onCancel={() => { setEditingPurchase(null); setActiveTab('History'); }}
             />
-        )} 
-        
+        )}
+
         {activeTab === 'History' && (
-            <PurchaseHistory 
-                purchases={purchases} 
-                suppliers={suppliers} 
+            <PurchaseHistory
+                purchases={purchases}
+                suppliers={suppliers}
                 onReceive={handleReceive}
                 onView={(po) => setSelectedPurchase(po)}
                 onEdit={handleEditOrder}
@@ -306,6 +323,20 @@ const Purchases: React.FC = () => {
             />
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
 
 
     </div>

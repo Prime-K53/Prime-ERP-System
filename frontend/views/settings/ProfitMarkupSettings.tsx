@@ -6,7 +6,7 @@ import {
   DollarSign, Percent, Globe, Tag, Package, Shield,
   Clock, User, Info, ChevronRight, Zap
 } from 'lucide-react';
-import { currencyService } from '../../services/currencyService';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
 import { getUrl, HAS_REMOTE_BACKEND } from '../../config/api';
 import { dbService } from '../../services/db';
@@ -216,43 +216,6 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
   );
 }
 
-// ─── Confirmation Dialog ──────────────────────────────────────────────────────
-
-interface ConfirmDialogProps {
-  open: boolean;
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  danger?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', danger, onConfirm, onCancel }: ConfirmDialogProps) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        <div className={`p-6 border-b ${danger ? 'border-red-100 bg-red-50' : 'border-amber-100 bg-amber-50'}`}>
-          <div className="flex items-center gap-3">
-            <AlertTriangle size={20} className={danger ? 'text-red-600' : 'text-amber-600'} />
-            <h3 className={`font-bold text-lg ${danger ? 'text-red-700' : 'text-amber-800'}`}>{title}</h3>
-          </div>
-        </div>
-        <div className="p-6">
-          <p className="text-slate-600 text-sm leading-relaxed">{message}</p>
-        </div>
-        <div className="p-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
-          <button onClick={onCancel} className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Cancel</button>
-          <button onClick={onConfirm} className={`px-5 py-2 rounded-lg text-sm font-bold text-white transition-all active:scale-95 ${
-            danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
-          }`}>{confirmLabel}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Override Modal ───────────────────────────────────────────────────────────
 
 interface OverrideModalProps {
@@ -446,7 +409,7 @@ const ProfitMarkupSettings: React.FC = () => {
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState>({ open: false, mode: 'create', scope: 'category' });
-  const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; action: () => void; danger?: boolean }>({ open: false, title: '', message: '', action: () => {} });
+  const [confirm, setConfirm] = useState<{ open: boolean; title: string; message: string; confirmLabel?: string; type?: ConfirmDialogType; action: () => void }>({ open: false, title: '', message: '', action: () => {} });
   const [searchLine, setSearchLine] = useState('');
   const [csvUploading, setCsvUploading] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
@@ -549,11 +512,11 @@ const ProfitMarkupSettings: React.FC = () => {
       open: true,
       title: 'Update Global Margin',
       message: 'This will affect all products and orders that do not have a category or line-item override. Are you sure?',
+      confirmLabel: 'Update Global Margin',
+      type: 'warning',
       action: async () => {
-        setConfirm(c => ({ ...c, open: false }));
         setSavingGlobal(true);
 
-        // Build the record that will be saved locally regardless of API success
         const now = new Date().toISOString();
         const offlineRecord: MarginSetting = {
           id: globalSetting?.id || `local-global-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -576,6 +539,33 @@ const ProfitMarkupSettings: React.FC = () => {
               method: 'PATCH',
               body: JSON.stringify({ margin_value: val, margin_type: globalType, is_active: true, reason: globalReason || 'Global margin update' }),
             });
+          } else {
+            await apiFetch('/profit-margins', {
+              method: 'POST',
+              body: JSON.stringify({ scope: 'global', scope_ref_id: null, margin_type: globalType, margin_value: val, is_active: true, reason: globalReason || 'Initial global margin' }),
+            });
+          }
+          toast('Global margin saved', 'success');
+          await load();
+        } catch (err: any) {
+          const cached = readCachedMarginSettings();
+          const idx = cached.findIndex(s => s.scope === 'global');
+          if (idx >= 0) {
+            cached[idx] = { ...cached[idx], ...offlineRecord };
+          } else {
+            cached.push(offlineRecord);
+          }
+          cacheMarginSettings(cached);
+          try {
+            await dbService.put('profitMarginSettings', offlineRecord);
+          } catch { /* best-effort */ }
+          setSettings(cached);
+          toast('Saved locally (backend offline — will sync when reconnected)', 'info');
+        } finally {
+          setSavingGlobal(false);
+        }
+      }
+    });
           } else {
             await apiFetch('/profit-margins', {
               method: 'POST',
@@ -630,6 +620,8 @@ const ProfitMarkupSettings: React.FC = () => {
       danger: true,
       title: 'Delete Override',
       message: `This will soft-delete the override for "${s.scope_ref_id || 'global'}". The next applicable level will take effect. This action is logged.`,
+      confirmLabel: 'Delete',
+      type: 'danger',
       action: async () => {
         setConfirm(c => ({ ...c, open: false }));
         try {
@@ -706,7 +698,16 @@ const ProfitMarkupSettings: React.FC = () => {
       <ToastContainer toasts={toasts} />
 
       {/* Confirm dialog */}
-      <ConfirmDialog {...confirm} onCancel={() => setConfirm(c => ({ ...c, open: false }))} onConfirm={confirm.action} />
+      <ConfirmDialog
+        open={confirm.open}
+        onOpenChange={(open) => !open && setConfirm(c => ({ ...c, open: false }))}
+        onConfirm={confirm.action}
+        onCancel={() => setConfirm(c => ({ ...c, open: false }))}
+        title={confirm.title}
+        message={confirm.message}
+        confirmText={confirm.confirmLabel}
+        type={confirm.type || 'warning'}
+      />
 
       {/* Override Modal */}
       {modal.open && (

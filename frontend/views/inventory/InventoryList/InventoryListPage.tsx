@@ -21,6 +21,7 @@ import { ItemModal } from '../../../components/items/ItemModal';
 import { BulkEditModal } from './modals/BulkEditModal';
 import { AssignModal } from './modals/AssignModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 
 function money(n: number, symbol = '$'): string {
   n = Number(n) || 0;
@@ -110,6 +111,8 @@ export const InventoryListPage: React.FC = () => {
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
+
   const toggleExpand = useCallback((id: string) => {
     setExpandedItems(prev => {
       const next = new Set(prev);
@@ -131,27 +134,43 @@ export const InventoryListPage: React.FC = () => {
   }, [selectedIds, toggleSelect]);
 
   const handleBulkDelete = useCallback(async () => {
-    if (!window.confirm(`Delete ${selectedItems.length} item(s)? This cannot be undone.`)) return;
-    try {
-      await Promise.all(selectedItems.map(i => deleteItem(i.id)));
-      notify?.(`${selectedItems.length} item(s) deleted`, 'success');
-      clearSelection();
-      refresh();
-    } catch (error: any) {
-      notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Items',
+      message: `Delete ${selectedItems.length} item(s)? This cannot be undone.`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await Promise.all(selectedItems.map(i => deleteItem(i.id)));
+          notify?.(`${selectedItems.length} item(s) deleted`, 'success');
+          clearSelection();
+          refresh();
+        } catch (error: any) {
+          notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
+        }
+      }
+    });
   }, [selectedItems, deleteItem, notify, clearSelection, refresh]);
 
   const handleBulkArchive = useCallback(async () => {
-    if (!window.confirm(`Archive ${selectedItems.length} item(s)?`)) return;
-    try {
-      await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
-      notify?.(`${selectedItems.length} item(s) archived`, 'success');
-      clearSelection();
-      refresh();
-    } catch (error: any) {
-      notify?.(`Archive failed: ${error?.message || 'Unknown error'}`, 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Archive Items',
+      message: `Archive ${selectedItems.length} item(s)?`,
+      type: 'warning',
+      confirmText: 'Archive',
+      onConfirm: async () => {
+        try {
+          await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
+          notify?.(`${selectedItems.length} item(s) archived`, 'success');
+          clearSelection();
+          refresh();
+        } catch (error: any) {
+          notify?.(`Archive failed: ${error?.message || 'Unknown error'}`, 'error');
+        }
+      }
+    });
   }, [selectedItems, updateItem, notify, clearSelection, refresh]);
 
   const handleBulkActivate = useCallback(async () => {
@@ -166,15 +185,23 @@ export const InventoryListPage: React.FC = () => {
   }, [selectedItems, updateItem, notify, clearSelection, refresh]);
 
   const handleBulkDeactivate = useCallback(async () => {
-    if (!window.confirm(`Deactivate ${selectedItems.length} item(s)?`)) return;
-    try {
-      await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
-      notify?.(`${selectedItems.length} item(s) deactivated`, 'success');
-      clearSelection();
-      refresh();
-    } catch (error: any) {
-      notify?.(`Deactivate failed: ${error?.message || 'Unknown error'}`, 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Deactivate Items',
+      message: `Deactivate ${selectedItems.length} item(s)?`,
+      type: 'warning',
+      confirmText: 'Deactivate',
+      onConfirm: async () => {
+        try {
+          await Promise.all(selectedItems.map(i => updateItem({ ...i, status: 'Inactive' })));
+          notify?.(`${selectedItems.length} item(s) deactivated`, 'success');
+          clearSelection();
+          refresh();
+        } catch (error: any) {
+          notify?.(`Deactivate failed: ${error?.message || 'Unknown error'}`, 'error');
+        }
+      }
+    });
   }, [selectedItems, updateItem, notify, clearSelection, refresh]);
 
   const handleExportSelected = useCallback(() => {
@@ -232,10 +259,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSaveItem = useCallback(async (savedItem: Item) => {
     try {
-      if (savedItem.id && allItems.some((i: Item) => i.id === savedItem.id)) {
+      // Always use addItem/updateItem based on whether the item has an ID
+      // The store methods handle ID generation and deduplication correctly
+      if (savedItem.id) {
+        // Item has an ID - treat as update
+        // addItem/updateItem in the store will handle this correctly
         await updateItem(savedItem);
         notify?.('Item updated successfully', 'success');
       } else {
+        // No ID - treat as new item
         await addItem(savedItem);
         notify?.('Item created successfully', 'success');
       }
@@ -245,7 +277,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     } catch (error: any) {
       notify?.(`Save failed: ${error?.message || 'Unknown error'}`, 'error');
     }
-  }, [allItems, updateItem, addItem, notify, refresh]);
+  }, [updateItem, addItem, notify, refresh]);
 
   const handleViewItem = useCallback((item: Item) => {
     navigate(`/supply-chain/inventory/${item.id}`);
@@ -286,14 +318,22 @@ const handleProduce = useCallback((item: Item) => {
 
   const handleToggleStatus = useCallback(async (item: Item) => {
     const newStatus = item.status === 'Active' ? 'Inactive' : 'Active';
-    if (!window.confirm(`${newStatus === 'Inactive' ? 'Archive' : 'Activate'} "${item.name}"?`)) return;
-    try {
-      await updateItem({ ...item, status: newStatus });
-      notify?.(`${item.name} ${newStatus === 'Inactive' ? 'archived' : 'activated'}`, 'success');
-      refresh();
-    } catch (error: any) {
-      notify?.(`Failed to update status: ${error?.message || 'Unknown error'}`, 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: newStatus === 'Inactive' ? 'Archive Item' : 'Activate Item',
+      message: `${newStatus === 'Inactive' ? 'Archive' : 'Activate'} "${item.name}"?`,
+      type: 'question',
+      confirmText: newStatus === 'Inactive' ? 'Archive' : 'Activate',
+      onConfirm: async () => {
+        try {
+          await updateItem({ ...item, status: newStatus });
+          notify?.(`${item.name} ${newStatus === 'Inactive' ? 'archived' : 'activated'}`, 'success');
+          refresh();
+        } catch (error: any) {
+          notify?.(`Failed to update status: ${error?.message || 'Unknown error'}`, 'error');
+        }
+      }
+    });
   }, [updateItem, notify, refresh]);
 
   const handlePrintBarcode = useCallback((item: Item) => {
@@ -309,15 +349,23 @@ const handleProduce = useCallback((item: Item) => {
   }, [notify]);
 
   const handleDeleteItem = useCallback(async (item: Item) => {
-    if (!window.confirm(`Delete "${item.name}"?`)) return;
-    try {
-      await deleteItem(item.id);
-      notify?.('Item deleted', 'success');
-      refresh();
-      clearSelection();
-    } catch (error: any) {
-      notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Item',
+      message: `Delete "${item.name}"?`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deleteItem(item.id);
+          notify?.('Item deleted', 'success');
+          refresh();
+          clearSelection();
+        } catch (error: any) {
+          notify?.(`Delete failed: ${error?.message || 'Unknown error'}`, 'error');
+        }
+      }
+    });
   }, [deleteItem, notify, refresh, clearSelection]);
 
   // Build all items rows for InventoryTable on dashboard
@@ -342,11 +390,19 @@ const handleProduce = useCallback((item: Item) => {
   }, [updateItem, refresh]);
 
   const deleteSimple = useCallback(async (item: Item) => {
-    if (!window.confirm(`Delete "${item.name}"?`)) return;
-    try {
-      await deleteItem(item.id);
-      refresh();
-    } catch { /* ignore */ }
+    setConfirmState({
+      open: true,
+      title: 'Delete Item',
+      message: `Delete "${item.name}"?`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await deleteItem(item.id);
+          refresh();
+        } catch { /* ignore */ }
+      }
+    });
   }, [deleteItem, refresh]);
 
   if (loading) {
@@ -1189,6 +1245,20 @@ const handleProduce = useCallback((item: Item) => {
           onClose={() => setIsInsightsOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

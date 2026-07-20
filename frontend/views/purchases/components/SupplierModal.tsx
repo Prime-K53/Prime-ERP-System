@@ -7,54 +7,56 @@ interface SupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (supplier: Supplier) => Promise<void>;
-  supplier?: Supplier;
+  mode?: 'create' | 'edit';
+  initialSupplier?: Partial<Supplier>;
 }
 
-export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, onSave, supplier }) => {
+const DEFAULT_SUPPLIER_FORM: Partial<Supplier> = {
+  name: '',
+  phone: '',
+  address: '',
+  city: '',
+  billingAddress: '',
+  shippingAddress: '',
+  balance: 0,
+  category: '',
+  notes: '',
+  paymentTerms: 'Net 30',
+  bankAccountDetails: ''
+};
+
+export const SupplierModal: React.FC<SupplierModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  mode = 'create',
+  initialSupplier
+}) => {
+  const isEditing = mode === 'edit' && Boolean(initialSupplier?.id);
   const [activeTab, setActiveTab] = useState<'address' | 'payment' | 'additional'>('address');
-  const [formData, setFormData] = useState<Partial<Supplier>>({
-    name: '',
-    phone: '',
-    address: '',
-    city: '',
-    billingAddress: '',
-    shippingAddress: '',
-    balance: 0,
-    category: '',
-    notes: '',
-    paymentTerms: 'Net 30',
-    bankAccountDetails: ''
-  });
+  const [formData, setFormData] = useState<Partial<Supplier>>(DEFAULT_SUPPLIER_FORM);
 
   const [useBillingForShipping, setUseBillingForShipping] = useState(true);
 
   useEffect(() => {
-    if (supplier) {
-      setFormData(supplier);
-      setUseBillingForShipping(supplier.billingAddress === supplier.shippingAddress);
+    if (isEditing && initialSupplier) {
+      setFormData({ ...DEFAULT_SUPPLIER_FORM, ...initialSupplier });
+      setUseBillingForShipping(initialSupplier.billingAddress === initialSupplier.shippingAddress);
     } else {
-      setFormData({
-        name: '',
-        phone: '',
-        address: '',
-        city: '',
-        billingAddress: '',
-        shippingAddress: '',
-        balance: 0,
-        category: '',
-        notes: '',
-        paymentTerms: 'Net 30',
-        bankAccountDetails: ''
-      });
+      const { id: _ignoredId, ...createDraft } = initialSupplier || {};
+      setFormData({ ...DEFAULT_SUPPLIER_FORM, ...createDraft });
       setUseBillingForShipping(true);
     }
-  }, [supplier, isOpen]);
+  }, [initialSupplier, isEditing, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const dataToSave = { ...formData };
+    if (!isEditing) {
+      delete dataToSave.id;
+    }
     if (useBillingForShipping) {
       dataToSave.shippingAddress = dataToSave.billingAddress;
     }
@@ -96,7 +98,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, o
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                {supplier ? 'Edit Supplier' : 'New Supplier'}
+                {isEditing ? 'Edit Supplier' : 'New Supplier'}
               </h2>
               <p className="text-sm text-slate-500 font-medium mt-0.5">Manage supplier profile and payment settings</p>
             </div>
@@ -304,7 +306,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({ isOpen, onClose, o
             className="flex items-center gap-2 px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm"
           >
             <Save size={20} />
-            {supplier ? 'Save Changes' : 'Create Supplier'}
+            {isEditing ? 'Save Changes' : 'Create Supplier'}
           </button>
         </div>
       </div>

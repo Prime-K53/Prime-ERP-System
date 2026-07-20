@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { 
-  Play, CheckCircle, AlertTriangle, Activity, Clock, 
+import {
+  Play, CheckCircle, AlertTriangle, Activity, Clock,
   Package, ShieldAlert, Trash2, History, ShieldCheck,
   ChevronRight, ArrowLeft, MoreVertical, Search, Filter,
   Settings, User, Terminal, Cpu, Info
@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { WorkOrder } from '../../types';
 import { OfflineImage } from '../../components/OfflineImage';
 import { format } from 'date-fns';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const ShopFloor: React.FC = () => {
   const { workOrders, updateWorkOrderStatus, logProductionStep, completeWorkOrder, boms } = useProduction();
@@ -25,6 +26,8 @@ const ShopFloor: React.FC = () => {
   const [wasteDestroyed, setWasteDestroyed] = useState(false);
   const [destructionCert, setDestructionCert] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   // Auto-select Paper/Toner for Examinations
   React.useEffect(() => {
@@ -47,15 +50,22 @@ const ShopFloor: React.FC = () => {
   };
 
   const handleFinishJob = (wo: WorkOrder) => {
-      if(window.confirm("Are you sure you want to finish this job? This will complete the production process.")) {
-          updateWorkOrderStatus(wo.id, 'Completed');
-          logProductionStep({
-              id: '', workOrderId: wo.id, operationName: 'Production', timestamp: new Date().toISOString(),
-              action: 'Complete', operatorId: user?.username || 'Operator'
-          });
-          completeWorkOrder(wo.id);
-          notify("Job completed successfully!", "success");
+    setConfirmState({
+      open: true,
+      title: 'Finish Job',
+      message: 'Are you sure you want to finish this job? This will complete the production process.',
+      type: 'warning',
+      confirmText: 'Finish',
+      onConfirm: () => {
+        updateWorkOrderStatus(wo.id, 'Completed');
+        logProductionStep({
+            id: '', workOrderId: wo.id, operationName: 'Production', timestamp: new Date().toISOString(),
+            action: 'Complete', operatorId: user?.username || 'Operator'
+        });
+        completeWorkOrder(wo.id);
+        notify("Job completed successfully!", "success");
       }
+    });
   };
 
   const handleLog = (type: 'Complete' | 'Log Waste') => {
@@ -89,10 +99,17 @@ const ShopFloor: React.FC = () => {
           });
 
           if (selectedWo.quantityCompleted + qtyInput >= selectedWo.quantityPlanned) {
-              if(window.confirm("Order Target Reached. Finalize Job?")) {
-                  completeWorkOrder(selectedWo.id);
-                  setSelectedWo(null);
-              }
+              setConfirmState({
+                  open: true,
+                  title: 'Finalize Job',
+                  message: 'Order Target Reached. Finalize Job?',
+                  type: 'question',
+                  confirmText: 'Finalize',
+                  onConfirm: () => {
+                      completeWorkOrder(selectedWo.id);
+                      setSelectedWo(null);
+                  }
+              });
           }
       }
 
@@ -418,6 +435,20 @@ const ShopFloor: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

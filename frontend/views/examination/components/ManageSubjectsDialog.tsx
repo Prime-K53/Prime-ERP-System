@@ -10,6 +10,7 @@ import { useInventory } from '../../../context/InventoryContext';
 import { examinationBatchService } from '../../../services/examinationBatchService';
 import OverrideDialog from './OverrideDialog';
 import { calculateLocalClassPreviewBase, calculateRoundedClassPreview } from '../../../utils/examinationClassPricing';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 
 interface ManageSubjectsDialogProps {
   open: boolean;
@@ -108,6 +109,7 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
   const [adjustmentSourceWarning, setAdjustmentSourceWarning] = useState<string | null>(null);
   const [isMarginOpen, setIsMarginOpen] = useState(false);
   const [globalMargin, setGlobalMargin] = useState<any>(null);
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   useEffect(() => {
     import('../../../utils/getEffectiveMargin').then(({ getEffectiveMargin }) => {
@@ -146,12 +148,29 @@ export const ManageSubjectsDialog: React.FC<ManageSubjectsDialogProps> = ({
       // Only prompt for significant changes if not 0->something small
       const diff = Math.abs(newCount - currentCount);
       const isSignificant = diff > 50 || (currentCount > 20 && diff / currentCount > 0.25);
-      
+
       if (isSignificant) {
-        if (!window.confirm(`You are changing the learner count from ${currentCount} to ${newCount}. This will recalculate all costs. Continue?`)) {
-          setLearnerCount(currentCount);
-          return;
-        }
+        setConfirmState({
+          open: true,
+          title: 'Update Learner Count',
+          message: `You are changing the learner count from ${currentCount} to ${newCount}. This will recalculate all costs. Continue?`,
+          type: 'warning',
+          confirmText: 'Update',
+          onConfirm: () => {
+            setIsUpdatingLearners(true);
+            (async () => {
+              try {
+                await onUpdateClass(examinationClass.id, { number_of_learners: newCount });
+              } catch (error) {
+                logger.error('Failed to update learner count:', error);
+                setLearnerCount(currentCount);
+              } finally {
+                setIsUpdatingLearners(false);
+              }
+            })();
+          }
+        });
+        return;
       }
 
       setIsUpdatingLearners(true);

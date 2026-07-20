@@ -1,6 +1,7 @@
 import React from 'react';
 import { CompanyConfig } from '../../../types';
 import { Bell, Mail, MessageSquare, ShieldAlert, CheckCircle2, Smartphone } from 'lucide-react';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 
 interface NotificationsTabProps {
   config: CompanyConfig;
@@ -9,6 +10,9 @@ interface NotificationsTabProps {
 }
 
 export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setConfig, notify }) => {
+  const [confirmState, setConfirmState] = React.useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
+  const [pendingDisable, setPendingDisable] = React.useState(false);
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
       <section>
@@ -193,16 +197,24 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
                 onChange={e => {
                   const newValue = e.target.checked;
                   if (!newValue) {
-                    if (window.confirm("Are you sure you want to disable customer activity notifications? This will stop automatic messaging app triggers for business activities.")) {
-                      setConfig({
-                        ...config,
-                        notificationSettings: {
-                          ...config.notificationSettings,
-                          customerActivityNotifications: false
-                        }
-                      });
-                      notify('Notifications disabled', 'info');
-                    }
+                    setPendingDisable(true);
+                    setConfirmState({
+                      open: true,
+                      title: 'Disable Notifications',
+                      message: 'Are you sure you want to disable customer activity notifications? This will stop automatic messaging app triggers for business activities.',
+                      type: 'warning',
+                      confirmText: 'Disable',
+                      onConfirm: () => {
+                        setConfig({
+                          ...config,
+                          notificationSettings: {
+                            ...config.notificationSettings,
+                            customerActivityNotifications: false
+                          }
+                        });
+                        notify('Notifications disabled', 'info');
+                      }
+                    });
                   } else {
                     setConfig({
                       ...config,
@@ -219,7 +231,21 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
             </label>
           </div>
         </div>
-      </section>
+
+        <ConfirmDialog
+          open={confirmState.open}
+          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+          onConfirm={() => {
+            confirmState.onConfirm?.();
+            setConfirmState(c => ({ ...c, open: false }));
+          }}
+          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          type={confirmState.type || 'question'}
+        />
+      </div>
     </div>
   );
 };

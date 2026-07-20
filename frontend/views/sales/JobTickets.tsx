@@ -16,6 +16,7 @@ import { useDocumentStore } from '../../stores/documentStore';
 import { isStoredFileIdentifier } from '../../utils/documentPreview';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const statusConfig: Record<JobTicketStatus, { label: string; color: string; icon: React.ReactNode; cardBg: string }> = {
   Received: { label: 'Received', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <Package size={14} />, cardBg: 'bg-blue-50' },
@@ -44,7 +45,7 @@ const typeConfig: Record<JobTicketType, { label: string; icon: React.ReactNode }
 export const JobTickets: React.FC = () => {
   const { companyConfig, notify } = useAuth(); const { customers } = useSales();
   const currency = companyConfig.currencySymbol;
-  
+
   const [tickets, setTickets] = useState<JobTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +54,8 @@ export const JobTickets: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTicket, setEditingTicket] = useState<JobTicket | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   useEffect(() => { loadTickets(); }, []);
 
@@ -129,15 +132,23 @@ export const JobTickets: React.FC = () => {
   };
 
   const handleDeleteTicket = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this job ticket?')) return;
-    try {
-      await jobTicketService.delete(id);
-      notify('Job ticket deleted', 'success');
-      loadTickets();
-      setSelectedTicket(null);
-    } catch (error) {
-      notify('Failed to delete job ticket', 'error');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Job Ticket',
+      message: 'Are you sure you want to delete this job ticket?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await jobTicketService.delete(id);
+          notify('Job ticket deleted', 'success');
+          loadTickets();
+          setSelectedTicket(null);
+        } catch (error) {
+          notify('Failed to delete job ticket', 'error');
+        }
+      }
+    });
   };
 
   const handleStatusChange = async (id: string, status: JobTicketStatus) => {
@@ -462,6 +473,20 @@ export const JobTickets: React.FC = () => {
           onReorder={(ticket) => { setEditingTicket(ticket); setSelectedTicket(null); }}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'question'}
+      />
     </div>
   );
 };

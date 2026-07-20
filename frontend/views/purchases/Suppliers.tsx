@@ -14,6 +14,7 @@ import { isAfter, parseISO, subDays, format } from 'date-fns';
 import { exportToCSV } from '../../utils/helpers';
 import { currencyService } from '../../services/currencyService';
 import { useFinance } from '../../context/FinanceContext';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 const Suppliers: React.FC = () => {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier, isLoading, purchases } = useProcurement();
@@ -31,6 +32,14 @@ const Suppliers: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<'All' | 'Overdue' | 'Open' | 'Paid'>('All');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    type?: ConfirmDialogType;
+    onConfirm?: () => void;
+  }>({ open: false, title: '', message: '' });
 
   useEffect(() => {
       const handleClickOutside = () => setActiveMenuId(null);
@@ -124,19 +133,38 @@ const Suppliers: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSupplier(undefined);
+  };
+
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this supplier?')) {
-      await deleteSupplier(id);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Supplier',
+      message: 'Are you sure you want to delete this supplier?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteSupplier(id);
+      }
+    });
   };
 
   const handleBatchDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} suppliers?`)) {
-      for (const id of selectedIds) {
-        await deleteSupplier(id);
+    setConfirmState({
+      open: true,
+      title: 'Delete Suppliers',
+      message: `Are you sure you want to delete ${selectedIds.length} suppliers?`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        for (const id of selectedIds) {
+          await deleteSupplier(id);
+        }
+        setSelectedIds([]);
       }
-      setSelectedIds([]);
-    }
+    });
   };
 
   const handleBatchStatusUpdate = async (status: 'Active' | 'Inactive') => {
@@ -454,9 +482,23 @@ const Suppliers: React.FC = () => {
 
       <SupplierModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSave={selectedSupplier ? updateSupplier : addSupplier}
-        supplier={selectedSupplier}
+        mode={selectedSupplier?.id ? 'edit' : 'create'}
+        initialSupplier={selectedSupplier}
+      />
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+        onConfirm={() => {
+          confirmState.onConfirm?.();
+          setConfirmState(c => ({ ...c, open: false }));
+        }}
+        onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        type={confirmState.type || 'danger'}
       />
     </div>
   );

@@ -32,6 +32,24 @@ describe('Procurement API Integration', () => {
       const afterDelete = await procurement.getSuppliers(TEST_COMPANY_ID);
       expect(afterDelete.find(s => s.id === supplier.id)).toBeUndefined();
     });
+
+    test('create supplier with duplicate id does not overwrite an existing supplier', async () => {
+      await procurement.createSupplier({
+        id: 'SUP-DUPLICATE',
+        name: 'Original Supplier',
+        email: 'original@example.com'
+      }, TEST_COMPANY_ID);
+
+      await expect(procurement.createSupplier({
+        id: 'SUP-DUPLICATE',
+        name: 'Replacement Supplier',
+        email: 'replacement@example.com'
+      }, TEST_COMPANY_ID)).rejects.toThrow();
+
+      const supplier = await procurement.getSupplierById('SUP-DUPLICATE', TEST_COMPANY_ID);
+      expect(supplier.name).toBe('Original Supplier');
+      expect(supplier.email).toBe('original@example.com');
+    });
   });
 
   describe('Purchase Orders', () => {

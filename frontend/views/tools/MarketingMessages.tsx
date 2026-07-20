@@ -17,6 +17,7 @@ import { aiService, SmartReplySuggestion, AIConfig } from '../../services/aiServ
 import { whatsappClient, WhatsAppAccount } from '../../services/whatsappClientService';
 import { supabase } from '../../services/supabaseClient';
 import { currencyService } from '../../services/currencyService';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 
 interface CampaignFormData {
   name: string;
@@ -82,6 +83,7 @@ const MarketingMessages: React.FC = () => {
   const [activityLog, setActivityLog] = useState<any[]>([]);
   const [activityFilters, setActivityFilters] = useState<{ status?: string; dateRange?: string }>({});
   const [queueStats, setQueueStats] = useState<{ status: string; count: number }[]>([]);
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   const replaceVars = (text: string): string => {
     return text.split('{{name}}').join('Customer Name')
@@ -621,11 +623,18 @@ const MarketingMessages: React.FC = () => {
   };
 
   const handleDeleteAutomation = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this flow?')) {
-      await dbService.delete('whatsappAutomations', id);
-      await loadData();
-      notify('Automation flow deleted', 'success');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Automation Flow',
+      message: 'Are you sure you want to delete this flow?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await dbService.delete('whatsappAutomations', id);
+        await loadData();
+        notify('Automation flow deleted', 'success');
+      }
+    });
   };
 
   const addAutomationStep = () => {
@@ -2675,6 +2684,20 @@ const MarketingMessages: React.FC = () => {
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={confirmState.open}
+      onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+      onConfirm={() => {
+        confirmState.onConfirm?.();
+        setConfirmState(c => ({ ...c, open: false }));
+      }}
+      onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+      title={confirmState.title}
+      message={confirmState.message}
+      confirmText={confirmState.confirmText}
+      type={confirmState.type || 'question'}
+    />
   );
 };
 

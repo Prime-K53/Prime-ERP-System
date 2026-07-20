@@ -17,6 +17,7 @@ import { attachDocumentSecurity } from '../../../utils/documentSecurity';
 import AIDocumentSummarizer from '../../../components/ai/AIDocumentSummarizer';
 import { useLocation } from 'react-router-dom';
 import DocLink from '../../../components/DocLink';
+import { ConfirmDialog, ConfirmDialogType } from '../../../components/ConfirmDialog';
 
 interface PurchaseOrderDetailProps {
     purchase: Purchase;
@@ -36,6 +37,8 @@ const PurchaseOrderDetail: React.FC<PurchaseOrderDetailProps> = ({ purchase, sup
     const currency = companyConfig.currencySymbol;
     const [activeTab, setActiveTab] = useState<'Overview' | 'Landing' | 'Related'>('Overview');
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
     const purchaseWithVendor = useMemo(() => {
         const supplier = (suppliers || []).find(s => s.id === purchase.supplierId) ||
@@ -99,10 +102,17 @@ const PurchaseOrderDetail: React.FC<PurchaseOrderDetailProps> = ({ purchase, sup
     };
 
     const handleCancel = () => {
-        if (window.confirm("Are you sure you want to cancel this order?")) {
-            updatePurchase({ ...purchase, status: 'Cancelled' });
-            onClose();
-        }
+        setConfirmState({
+            open: true,
+            title: 'Cancel Order',
+            message: 'Are you sure you want to cancel this order?',
+            type: 'danger',
+            confirmText: 'Cancel Order',
+            onConfirm: () => {
+                updatePurchase({ ...purchase, status: 'Cancelled' });
+                onClose();
+            }
+        });
     };
 
     const handlePrint = () => {
@@ -130,10 +140,17 @@ const PurchaseOrderDetail: React.FC<PurchaseOrderDetailProps> = ({ purchase, sup
     };
 
     const handleConvertToBill = () => {
-        if (confirm("Convert this Purchase Order into a Bill/Expense? This will verify the PO as closed and create a payable record.")) {
-            onConvert(purchase.id);
-            onClose();
-        }
+        setConfirmState({
+            open: true,
+            title: 'Convert to Bill',
+            message: 'Convert this Purchase Order into a Bill/Expense? This will verify the PO as closed and create a payable record.',
+            type: 'info',
+            confirmText: 'Convert',
+            onConfirm: () => {
+                onConvert(purchase.id);
+                onClose();
+            }
+        });
     };
 
     const printStyles = `
@@ -394,10 +411,24 @@ const PurchaseOrderDetail: React.FC<PurchaseOrderDetailProps> = ({ purchase, sup
                             )}
                         </div>
                     )}
-                </div>
             </div>
         </div>
-    );
+
+        <ConfirmDialog
+          open={confirmState.open}
+          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+          onConfirm={() => {
+            confirmState.onConfirm?.();
+            setConfirmState(c => ({ ...c, open: false }));
+          }}
+          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          type={confirmState.type || 'question'}
+        />
+    </div>
+  );
 };
 
 export default PurchaseOrderDetail;

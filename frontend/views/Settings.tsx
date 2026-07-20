@@ -59,6 +59,7 @@ import { ReferralSettingsTab } from './settings/tabs/ReferralSettingsTab';
 import { EngagementSettingsTab } from './settings/tabs/EngagementSettingsTab';
 import CustomizeDashboard from '../components/dashboard/CustomizeDashboard';
 import { useDashboardStore } from '../stores/dashboardStore';
+import { ConfirmDialog, ConfirmDialogType } from '../components/ConfirmDialog';
 
 // Pricing settings validation using reusable utility
 
@@ -264,6 +265,8 @@ const Settings: React.FC = () => {
     const restoreInputRef = useRef<HTMLInputElement>(null);
     const [complianceConfig, setComplianceConfig] = useState<ComplianceConfig>({ gdprEnabled: false, dataRetentionDays: 365, autoAnonymizeAfterDays: 730, consentRequired: true, privacyPolicyUrl: '', dataDeletionEnabled: true });
 
+    const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
+
     const readBackupStatus = () => {
         let restoreMeta: { restoredAt?: string; filename?: string; snapshotDate?: string } | null = null;
         try {
@@ -389,46 +392,45 @@ const Settings: React.FC = () => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const shouldRestore = window.confirm(
-            `Restore database backup "${file.name}"? This will replace the current local database and reload the app.`
-        );
+        setConfirmState({
+            open: true,
+            title: 'Restore Database Backup',
+            message: `Restore database backup "${file.name}"? This will replace the current local database and reload the app.`,
+            type: 'warning',
+            confirmText: 'Restore',
+            onConfirm: async () => {
+                setIsRestoringBackup(true);
+                try {
+                    const raw = await file.text();
+                    const parsed = JSON.parse(raw);
 
-        if (!shouldRestore) {
-            event.target.value = '';
-            return;
-        }
+                    if (!parsed || typeof parsed !== 'object' || !parsed.data) {
+                        throw new Error('The selected file is not a valid Prime ERP backup.');
+                    }
 
-        setIsRestoringBackup(true);
+                    await dbService.importDatabase(raw);
 
-        try {
-            const raw = await file.text();
-            const parsed = JSON.parse(raw);
+                    localStorage.setItem(
+                        'prime_erp_backup_restored',
+                        JSON.stringify({
+                            restoredAt: new Date().toISOString(),
+                            filename: file.name,
+                            snapshotDate: parsed?.meta?.date || ''
+                        })
+                    );
 
-            if (!parsed || typeof parsed !== 'object' || !parsed.data) {
-                throw new Error('The selected file is not a valid Prime ERP backup.');
+                    setBackupStatus(readBackupStatus());
+                    notify('Database restored successfully. Reloading now...', 'success');
+                    setTimeout(() => window.location.reload(), 700);
+                } catch (error) {
+                    logger.error('Failed to restore backup', error);
+                    notify(error instanceof Error ? error.message : 'Failed to restore backup', 'error');
+                } finally {
+                    setIsRestoringBackup(false);
+                    event.target.value = '';
+                }
             }
-
-            await dbService.importDatabase(raw);
-
-            localStorage.setItem(
-                'prime_erp_backup_restored',
-                JSON.stringify({
-                    restoredAt: new Date().toISOString(),
-                    filename: file.name,
-                    snapshotDate: parsed?.meta?.date || ''
-                })
-            );
-
-            setBackupStatus(readBackupStatus());
-            notify('Database restored successfully. Reloading now...', 'success');
-            setTimeout(() => window.location.reload(), 700);
-        } catch (error) {
-            logger.error('Failed to restore backup', error);
-            notify(error instanceof Error ? error.message : 'Failed to restore backup', 'error');
-        } finally {
-            setIsRestoringBackup(false);
-            event.target.value = '';
-        }
+        });
     };
 
     const handleSave = async () => {
@@ -517,57 +519,61 @@ const Settings: React.FC = () => {
     };
 
     const handleDeleteCompany = async () => {
-        const confirmed = window.confirm(
-            `Delete "${config.companyName}" permanently?\n\n` +
-            'This will remove your company from the cloud and reset all local data. This action cannot be undone.'
-        );
-        if (!confirmed) return;
+        setConfirmState({
+            open: true,
+            title: 'Delete Company',
+            message: `Delete "${config.companyName}" permanently?\n\nThis will remove your company from the cloud and reset all local data. This action cannot be undone.`,
+            type: 'danger',
+            confirmText: 'Delete',
+            onConfirm: () => {
+                const doubleConfirm = window.confirm(
+                    'ARE YOU SURE?\n\nAll company data will be deleted. Local data will be cleared. You will be signed out.'
+                );
+                if (!doubleConfirm) return;
 
-        const doubleConfirm = window.confirm(
-            'ARE YOU SURE?\n\n' +
-            'All company data will be deleted. Local data will be cleared. You will be signed out.'
-        );
-        if (!doubleConfirm) return;
-
-        try {
-            if (isSupabaseConfigured()) {
-                const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
-                if (companyId) {
-                    await cloudDb.deleteCompany(companyId);
-                }
-                await supabase.auth.signOut();
-            } else {
-                await api.system.deleteWorkspace();
+                (async () => {
+                    try {
+                        if (isSupabaseConfigured()) {
+                            const companyId = config.companyId || (config as CompanyConfig & { id?: string }).id;
+                            if (companyId) {
+                                await cloudDb.deleteCompany(companyId);
+                            }
+                            await supabase.auth.signOut();
+                        } else {
+                            await api.system.deleteWorkspace();
+                        }
+                        await dbService.factoryReset();
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.reload();
+                    } catch (error) {
+                        const msg = error instanceof Error ? error.message : String(error);
+                        if (msg.includes('foreign key') || msg.includes('23503')) {
+                            notify(
+                                'Company data could not be fully deleted due to database constraints. ' +
+                                'Run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard.',
+                                'error'
+                            );
+                        } else if (msg.includes('permission') || msg.includes('42501')) {
+                            notify(
+                                'Permission denied. Run the SQL from database/supabase-cascade-delete.sql in your ' +
+                                'Supabase dashboard to create a privileged deletion function, then try again.',
+                                'error'
+                            );
+                        } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                            notify(
+                                'Could not reach the local backend server to wipe the database. ' +
+                                'Make sure the backend is running (npm run dev). ' +
+                                'Local storage has been cleared — you will be signed out.',
+                                'warning'
+                            );
+                        } else {
+                            notify('Failed to delete company: ' + msg, 'error');
+                        }
+                    }
+                })();
             }
-            await dbService.factoryReset();
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.reload();
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            if (msg.includes('foreign key') || msg.includes('23503')) {
-                notify(
-                    'Company data could not be fully deleted due to database constraints. ' +
-                    'Run the SQL from database/supabase-cascade-delete.sql in your Supabase dashboard.',
-                    'error'
-                );
-            } else if (msg.includes('permission') || msg.includes('42501')) {
-                notify(
-                    'Permission denied. Run the SQL from database/supabase-cascade-delete.sql in your ' +
-                    'Supabase dashboard to create a privileged deletion function, then try again.',
-                    'error'
-                );
-            } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                notify(
-                    'Could not reach the local backend server to wipe the database. ' +
-                    'Make sure the backend is running (npm run dev). ' +
-                    'Local storage has been cleared — you will be signed out.',
-                    'warning'
-                );
-            } else {
-                notify('Failed to delete company: ' + msg, 'error');
-            }
-        }
+        });
     };
 
     const handleAssetUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => {
@@ -3261,6 +3267,20 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 />
             )}
         </div>
+
+        <ConfirmDialog
+          open={confirmState.open}
+          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+          onConfirm={() => {
+            confirmState.onConfirm?.();
+            setConfirmState(c => ({ ...c, open: false }));
+          }}
+          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          type={confirmState.type || 'question'}
+        />
     );
 };
 

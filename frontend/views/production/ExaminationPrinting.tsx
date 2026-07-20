@@ -56,6 +56,7 @@ import { SafeFormulaEngine } from '../../services/formulaEngine';
 import { inventoryTransactionService } from '../../services/inventoryTransactionService';
 import { currencyService } from '../../services/currencyService';
 import { NewExamJobModal } from './NewExamJobModal';
+import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
 import {
   buildExamHiddenBOMTemplate,
   EXAM_HIDDEN_BOM_FORMULAS,
@@ -133,6 +134,8 @@ const ExaminationPrinting: React.FC = () => {
   const [actualWaste, setActualWaste] = useState<string>('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<FinancialDoc | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
 
   // --- Configuration State ---
   const [newClassName, setNewClassName] = useState('');
@@ -305,14 +308,22 @@ const ExaminationPrinting: React.FC = () => {
   };
 
   const handleDeleteClass = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this class?')) return;
-    try {
-      await api.production.deleteClass(id);
-      fetchClasses();
-      setSuccess('Class deleted successfully');
-    } catch (err) {
-      setError('Failed to delete class');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Class',
+      message: 'Are you sure you want to delete this class?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await api.production.deleteClass(id);
+          fetchClasses();
+          setSuccess('Class deleted successfully');
+        } catch (err) {
+          setError('Failed to delete class');
+        }
+      }
+    });
   };
 
   const handleAddSubjectList = async () => {
@@ -329,14 +340,22 @@ const ExaminationPrinting: React.FC = () => {
   };
 
   const handleDeleteSubjectList = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this subject?')) return;
-    try {
-      await api.production.deleteSubject(id);
-      fetchSubjects();
-      setSuccess('Subject deleted successfully');
-    } catch (err) {
-      setError('Failed to delete subject');
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Subject',
+      message: 'Are you sure you want to delete this subject?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        try {
+          await api.production.deleteSubject(id);
+          fetchSubjects();
+          setSuccess('Subject deleted successfully');
+        } catch (err) {
+          setError('Failed to delete subject');
+        }
+      }
+    });
   };
 
   const fetchQueue = async () => {
@@ -697,18 +716,26 @@ const ExaminationPrinting: React.FC = () => {
   };
 
   const handleDeleteSubject = async (examId: string) => {
-    if (!window.confirm('Are you sure you want to delete this subject from the queue?')) return;
-    setLoading(true);
-    try {
-      await (api.production as { deleteExamPaper: (id: string) => Promise<unknown> }).deleteExamPaper(examId);
-      setSuccess('Subject removed from queue');
-      fetchQueue();
-      fetchStats();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setConfirmState({
+      open: true,
+      title: 'Delete Subject',
+      message: 'Are you sure you want to delete this subject from the queue?',
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await (api.production as { deleteExamPaper: (id: string) => Promise<unknown> }).deleteExamPaper(examId);
+          setSuccess('Subject removed from queue');
+          fetchQueue();
+          fetchStats();
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const handleUpdateSubject = async (examId: string, updates: any) => {
@@ -827,23 +854,30 @@ const ExaminationPrinting: React.FC = () => {
 
   const handleDeleteBatches = async () => {
     if (selectedBatches.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedBatches.length} batch(es)? This action cannot be undone.`)) return;
-
-    setLoading(true);
-    try {
-      for (const batchId of selectedBatches) {
-        await api.production.deleteExamBatch(batchId);
+    setConfirmState({
+      open: true,
+      title: 'Delete Batches',
+      message: `Are you sure you want to delete ${selectedBatches.length} batch(es)? This action cannot be undone.`,
+      type: 'danger',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          for (const batchId of selectedBatches) {
+            await api.production.deleteExamBatch(batchId);
+          }
+          setSuccess(`${selectedBatches.length} batch(es) deleted successfully!`);
+          setSelectedBatches([]);
+          fetchQueue();
+          fetchStats();
+        } catch (err: any) {
+          logger.error('Error in handleDeleteBatches:', err);
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
       }
-      setSuccess(`${selectedBatches.length} batch(es) deleted successfully!`);
-      setSelectedBatches([]);
-      fetchQueue();
-      fetchStats();
-    } catch (err: any) {
-      logger.error('Error in handleDeleteBatches:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handlePreviewInvoice = (batchId: string) => {
@@ -1572,15 +1606,22 @@ const ExaminationPrinting: React.FC = () => {
                                   </button>
                                 </>
                               )}
-                              <button
-                                onClick={() => {
-                                  if (window.confirm('Are you sure you want to delete this job record?')) {
-                                    api.production.deleteExamBatch(job.batch_id).then(() => fetchQueue());
-                                  }
-                                }}
-                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                title="Delete Record"
-                              >
+                                <button
+                                  onClick={() => {
+                                    setConfirmState({
+                                      open: true,
+                                      title: 'Delete Record',
+                                      message: 'Are you sure you want to delete this job record?',
+                                      type: 'danger',
+                                      confirmText: 'Delete',
+                                      onConfirm: () => {
+                                        api.production.deleteExamBatch(job.batch_id).then(() => fetchQueue());
+                                      }
+                                    });
+                                  }}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="Delete Record"
+                                >
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -2102,6 +2143,20 @@ const ExaminationPrinting: React.FC = () => {
             <button onClick={() => setSuccess(null)} className="ml-4 hover:opacity-70"><Trash2 size={16} /></button>
           </div>
         )}
+
+        <ConfirmDialog
+          open={confirmState.open}
+          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+          onConfirm={() => {
+            confirmState.onConfirm?.();
+            setConfirmState(c => ({ ...c, open: false }));
+          }}
+          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          type={confirmState.type || 'question'}
+        />
       </div>
     </div>
   );
