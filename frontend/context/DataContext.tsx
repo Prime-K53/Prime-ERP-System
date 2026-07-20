@@ -85,6 +85,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const channelRef = useRef<BroadcastChannel | null>(null);
     const lastRefreshAtRef = useRef(0);
     const instanceIdRef = useRef(generateOpaqueId('ctx', { randomLength: 8 }));
+    // Share the instance ID with db.ts so that emitDataChange uses the same
+    // source value, allowing self-triggered data-changed events to be filtered out.
+    dbService.source = instanceIdRef.current;
 
     const refreshAllData = useCallback(async (options?: { force?: boolean }) => {
         if (!options?.force && Date.now() - lastRefreshAtRef.current < FRESH_THRESHOLD_MS) {

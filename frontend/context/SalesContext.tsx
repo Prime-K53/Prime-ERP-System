@@ -4,7 +4,7 @@ import { useSalesStore } from '../stores/salesStore';
 import { useFinance } from './FinanceContext';
 import { useProductionStore } from '../stores/productionStore';
 import { useInventoryStore } from '../stores/inventoryStore';
-import { Sale, Quotation, JobOrder, HeldOrder, ZReport, CustomerPayment, Invoice, WorkOrder, LedgerEntry, RecurringInvoice, WalletTransaction, CartItem, Customer, SalesExchange, ReprintJob, SalesOrder, Shipment } from '../types';
+import { Sale, Quotation, JobOrder, HeldOrder, ZReport, CustomerPayment, Invoice, WorkOrder, LedgerEntry, RecurringInvoice, WalletTransaction, CartItem, Customer, SalesExchange, ReprintJob, SalesOrder, Shipment, Order } from '../types';
 import { generateNextId, roundFinancial, resolveCustomerPaymentPolicy, resolveCustomerPaymentTerms } from '../utils/helpers';
 import { useAuth } from './AuthContext';
 import { bomService } from '../services/bomService';
@@ -99,6 +99,7 @@ interface SalesContextType {
     createQuoteRevision: (originalId: string) => void;
     convertQuotationToWorkOrder: (quotation: Quotation) => Promise<string>;
     convertQuotationToJobTicket: (quotation: Quotation) => Promise<string>;
+    convertOrderToJobTicket: (order: Order) => Promise<string>;
     convertQuotationToInvoice: (quotation: Quotation) => Promise<string>;
 
     addJobOrder: (jobOrder: JobOrder) => void;
@@ -764,6 +765,25 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             await salesStore.fetchSalesData();
             await productionStore.fetchProductionData();
             notify(`Quotation ${q.id} converted to Job Ticket ${result.jobTicketId}`, "success");
+            return result.jobTicketId;
+        } catch (err: any) {
+            notify(`Conversion Failed: ${err.message}`, "error");
+            throw err;
+        }
+    };
+
+    const convertOrderToJobTicket = async (order: Order): Promise<string> => {
+        try {
+            const requestMetadata = {
+                requestedBy: user?.username || user?.id || 'system',
+                requesterRole: user?.role || 'System'
+            };
+
+            const result = await jobTicketConversionService.convertOrderToJobTicket(order.id, requestMetadata);
+
+            await salesStore.fetchSalesData();
+            await productionStore.fetchProductionData();
+            notify(`Order ${order.id} converted to Job Ticket ${result.jobTicketId}`, "success");
             return result.jobTicketId;
         } catch (err: any) {
             notify(`Conversion Failed: ${err.message}`, "error");
@@ -1475,6 +1495,7 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             },
             convertQuotationToWorkOrder,
             convertQuotationToJobTicket,
+            convertOrderToJobTicket,
             convertQuotationToInvoice,
             convertJobOrderToInvoice,
             updateCustomerPayment, deleteCustomerPayment,

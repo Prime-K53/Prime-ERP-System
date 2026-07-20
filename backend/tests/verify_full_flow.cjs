@@ -130,8 +130,8 @@ async function testFullFlow() {
   const invoicedBatch = await examinationService.getBatchById(batch.id);
   console.log(`   Batch Status: ${invoicedBatch.status}`);
   
-  if (invoicedBatch.status !== 'Invoiced') {
-    throw new Error('Batch status should be Invoiced');
+  if (invoicedBatch.status !== 'Completed') {
+    throw new Error('Batch status should be Completed');
   }
 
   // 8. Verify Audit Logs

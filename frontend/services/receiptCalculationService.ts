@@ -82,25 +82,32 @@ const inferPaymentPurpose = (
 const buildNarrative = (
   snapshot: CustomerReceiptSnapshot,
   customerName: string,
-  currencySymbol: string
+  currencySymbol: string,
+  appliedOrders?: string[]
 ): string => {
   const date = toDisplayDate(snapshot.generatedAt);
   const fmt = (v: number) => `${currencySymbol} ${round2(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const invoiceList = snapshot.appliedInvoices.length > 0 ? snapshot.appliedInvoices.join(', ') : 'unallocated invoices';
+  const invoiceList = snapshot.appliedInvoices.length > 0 ? snapshot.appliedInvoices.join(', ') : '';
+  const orderList = appliedOrders && appliedOrders.length > 0 ? appliedOrders.join(', ') : '';
+  const refList = orderList
+    ? `order(s) ${orderList}`
+    : invoiceList
+      ? `invoice(s) ${invoiceList}`
+      : 'unallocated invoices';
 
   if (snapshot.paymentPurpose === 'WALLET_TOPUP') {
     return `Receipt acknowledgment for wallet top-up of ${fmt(snapshot.amountTendered)} received from ${customerName} on ${date}.`;
   }
 
   if (snapshot.paymentStatus === 'Partial') {
-    return `This receipt confirms payment of ${fmt(snapshot.amountTendered)} from ${customerName} on ${date} toward invoice(s) ${invoiceList}. Outstanding balance is ${fmt(snapshot.balanceDueAfterPayment)}.`;
+    return `This receipt confirms payment of ${fmt(snapshot.amountTendered)} from ${customerName} on ${date} toward ${refList}. Outstanding balance is ${fmt(snapshot.balanceDueAfterPayment)}.`;
   }
 
   if (snapshot.paymentStatus === 'Overpaid' && snapshot.walletDeposit > 0) {
-    return `Payment of ${fmt(snapshot.amountTendered)} from ${customerName} on ${date} was received for invoice(s) ${invoiceList}. Excess amount ${fmt(snapshot.walletDeposit)} has been credited to wallet.`;
+    return `Payment of ${fmt(snapshot.amountTendered)} from ${customerName} on ${date} was received for ${refList}. Excess amount ${fmt(snapshot.walletDeposit)} has been credited to wallet.`;
   }
 
-  return `Receipt acknowledgment for payment of ${fmt(snapshot.amountTendered)} received from ${customerName} on ${date} for invoice(s) ${invoiceList}.`;
+  return `Receipt acknowledgment for payment of ${fmt(snapshot.amountTendered)} received from ${customerName} on ${date} for ${refList}.`;
 };
 
 export const calculateCustomerPaymentSnapshot = (
@@ -160,6 +167,7 @@ export interface BuildCustomerReceiptDocInput {
   snapshot?: CustomerReceiptSnapshot;
   currencySymbol?: string;
   currentBalance?: number;
+  appliedOrders?: string[];
 }
 
 export const buildCustomerReceiptDoc = ({
@@ -167,7 +175,8 @@ export const buildCustomerReceiptDoc = ({
   customerName,
   snapshot,
   currencySymbol = '$',
-  currentBalance = 0
+  currentBalance = 0,
+  appliedOrders
 }: BuildCustomerReceiptDocInput) => {
   const snap = snapshot || payment.receiptSnapshot || calculateCustomerPaymentSnapshot({
     amountTendered: payment.amount,
@@ -180,26 +189,49 @@ export const buildCustomerReceiptDoc = ({
   });
 
   const resolvedCustomerName = customerName || payment.customerName || 'Customer';
-  const narrative = snap.narrative || buildNarrative(snap, resolvedCustomerName, currencySymbol);
+  const resolvedOrders = appliedOrders || [];
+  const orderAmount = resolvedOrders.length > 0
+    ? round2((payment as any).orderAllocations?.reduce((s: number, a: any) => s + (a.amount || 0), 0) || 0)
+    : 0;
+
+  let adjustedSnap = snap;
+  if (orderAmount > 0) {
+    const newAmountApplied = round2(snap.amountApplied + orderAmount);
+    const unapplied = round2(Math.max(0, snap.amountTendered - newAmountApplied));
+    const shouldWalletDeposit = (snap as any).paymentPurpose === 'WALLET_TOPUP' || payment.excessHandling === 'Wallet';
+    const newWalletDeposit = round2(shouldWalletDeposit ? unapplied : 0);
+    const newChangeGiven = round2(shouldWalletDeposit ? 0 : unapplied);
+    const newAmountRetained = round2(snap.amountTendered - newChangeGiven);
+    adjustedSnap = {
+      ...snap,
+      amountApplied: newAmountApplied,
+      changeGiven: newChangeGiven,
+      amountRetained: newAmountRetained,
+      walletDeposit: newWalletDeposit
+    };
+  }
+
+  const narrative = snap.narrative || buildNarrative(adjustedSnap, resolvedCustomerName, currencySymbol, resolvedOrders);
 
   return {
     receiptNumber: payment.id,
     date: toDisplayDate(payment.date),
     customerName: resolvedCustomerName,
-    amountReceived: round2(snap.amountTendered),
-    amountApplied: round2(snap.amountApplied),
-    amountRetained: round2(snap.amountRetained),
-    changeGiven: round2(snap.changeGiven),
+    amountReceived: round2(adjustedSnap.amountTendered),
+    amountApplied: round2(adjustedSnap.amountApplied),
+    amountRetained: round2(adjustedSnap.amountRetained),
+    changeGiven: round2(adjustedSnap.changeGiven),
     paymentMethod: payment.paymentMethod,
-    appliedInvoices: snap.appliedInvoices,
-    invoiceTotal: round2(snap.invoiceTotalAtPosting),
-    paymentStatus: toSchemaPaymentStatus(snap.paymentStatus),
-    balanceDue: round2(snap.balanceDueAfterPayment),
-    overpaymentAmount: round2(snap.walletDeposit),
-    walletDeposit: round2(snap.walletDeposit),
+    appliedInvoices: adjustedSnap.appliedInvoices,
+    appliedOrders: resolvedOrders,
+    invoiceTotal: round2(adjustedSnap.invoiceTotalAtPosting),
+    paymentStatus: toSchemaPaymentStatus(adjustedSnap.paymentStatus),
+    balanceDue: round2(adjustedSnap.balanceDueAfterPayment),
+    overpaymentAmount: round2(adjustedSnap.walletDeposit),
+    walletDeposit: round2(adjustedSnap.walletDeposit),
     narrative,
     currentBalance: round2(currentBalance),
-    calculationVersion: snap.calculationVersion || 1
+    calculationVersion: adjustedSnap.calculationVersion || 1
   };
 };
 

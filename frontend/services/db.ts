@@ -235,6 +235,7 @@ const isRecoverableDbConnectionError = (error: unknown): boolean => {
 };
 
 const resetDbConnection = async (db?: IDBPDatabase<NexusDB> | null) => {
+    console.warn('[DB] resetDbConnection called!', new Error().stack);
     try {
         db?.close();
     } catch (err) {
@@ -296,7 +297,7 @@ type SyncStatus = 'idle' | 'connected' | 'syncing' | 'error' | 'restricted';
 let onSyncStateChange: ((status: SyncStatus) => void) | null = null;
 const DATA_CHANGED_EVENT = 'primeerp:data-changed';
 const DATA_CHANGED_CHANNEL = 'primeerp-data-sync';
-const DB_SOURCE = `db-${Math.random().toString(36).slice(2)}`;
+let DB_SOURCE = `db-${Math.random().toString(36).slice(2)}`;
 let dataChangeChannel: BroadcastChannel | null = null;
 
 const RXDB_COLLECTION_BY_STORE: Partial<Record<keyof NexusDB, string>> = {
@@ -348,6 +349,76 @@ const mergeByIdentifier = <T>(...sources: T[][]): T[] => {
     });
 
     return [...keyed.values(), ...passthrough];
+};
+
+/** Resolve which record is newer.
+ *  - version/_version wins if one is higher.
+ *  - Server timestamps (serverUpdatedAt/updated_at) are authoritative.
+ *  - Client _updatedAt is compared when server timestamps tie.
+ *  - If everything is equal, prefer cloud. */
+const pickNewerRecord = <T>(cloud: T, local: T): T => {
+    const c = cloud as Record<string, unknown>;
+    const l = local as Record<string, unknown>;
+
+    const cVer = Number(c.version || c._version || 0);
+    const lVer = Number(l.version || l._version || 0);
+    if (cVer > lVer) return cloud;
+    if (lVer > cVer) return local;
+
+    // Server-authoritative timestamps
+    const cServer = new Date(
+        (c.serverUpdatedAt || c.updated_at || 0) as string | number
+    ).getTime();
+    const lServer = new Date(
+        (l.serverUpdatedAt || l.updated_at || 0) as string | number
+    ).getTime();
+
+    if (cServer > lServer) return cloud;
+    if (lServer > cServer) return local;
+
+    // Compare client timestamps
+    const cClient = new Date(
+        (c._updatedAt || 0) as string | number
+    ).getTime();
+    const lClient = new Date(
+        (l._updatedAt || 0) as string | number
+    ).getTime();
+
+    if (lClient > cClient) return local;
+    if (cClient > lClient) return cloud;
+
+    // Everything equal — prefer cloud
+    return cloud;
+};
+
+/** Merge cloud and local data with timestamp-awareness */
+const timestampAwareMerge = <T>(cloudValues: T[], localValues: T[]): T[] => {
+    const cloudMap = new Map<string, T>();
+    const passthrough: T[] = [];
+
+    for (const row of cloudValues) {
+        const candidate = row as Record<string, unknown>;
+        const key = String(candidate?.id ?? candidate?.key ?? '');
+        if (!key) { passthrough.push(row); continue; }
+        cloudMap.set(key, row);
+    }
+
+    for (const row of localValues) {
+        const candidate = row as Record<string, unknown>;
+        const key = String(candidate?.id ?? candidate?.key ?? '');
+        if (!key) { passthrough.push(row); continue; }
+        if (key === 'ITM-P726/001') {
+            const existing = cloudMap.get(key) as Record<string, unknown> || {};
+            console.log(`[DEBUG] merge ITM-P726/001: cloud _updatedAt=${existing._updatedAt} updated_at=${existing.updated_at} _cloudSource=${existing._cloudSource} | local _updatedAt=${candidate._updatedAt} updated_at=${candidate.updated_at} _cloudSource=${candidate._cloudSource}`);
+        }
+        if (cloudMap.has(key)) {
+            cloudMap.set(key, pickNewerRecord(cloudMap.get(key)!, row));
+        } else {
+            cloudMap.set(key, row);
+        }
+    }
+
+    return [...cloudMap.values(), ...passthrough];
 };
 
 const extractLegacySettingValue = <T>(value: any): T | undefined => {
@@ -418,13 +489,28 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
         console.warn(`Object store "${storeName}" not found in IndexedDB.`);
         return [];
     }
-    const all = await db.getAll(storeName) as T[];
+    // Use getAllKeys + get to avoid any stale-snapshot issues with getAll
+    const keys = await db.getAllKeys(storeName);
+    const items: T[] = [];
+    for (const key of keys) {
+        const item = await db.get(storeName, key);
+        if (item !== undefined) items.push(item);
+    }
+    if (storeName === 'inventory') {
+        console.log(`[DEBUG] inventory getAllKeys+get: total=${items.length}, keys=`, keys);
+    }
     const cid = await getCurrentCompanyId();
-    if (!cid) return all.filter((item: any) => !item?._companyId);
-    return all.filter((item: any) => {
+    if (!cid) return items;
+    const filtered = items.filter((item: any) => {
         const recordCompany = item?._companyId;
         return !recordCompany || recordCompany === cid;
     });
+    if (storeName === 'inventory') {
+        const hasCid = items.filter((i: any) => i._companyId).length;
+        const matchCid = filtered.filter((i: any) => i._companyId).length;
+        console.log(`[DEBUG] getAllFromLegacyStore filter: total=${items.length}, has_companyId=${hasCid}, match_cid=${matchCid}, after_filter=${filtered.length}`);
+    }
+    return filtered;
 });
 
 const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Promise<T | undefined> => withDbRecovery(async (db) => {
@@ -443,7 +529,20 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
 
 const putToLegacyStore = async <T>(storeName: keyof NexusDB, item: T): Promise<string> => withDbRecovery(async (db) => {
     stampCompanyId(item);
+    if (storeName === 'inventory') {
+        console.log(`[DEBUG putToLegacyStore] about to put item id=${(item as any).id}, name=${(item as any).name}, companyId=${(item as any)._companyId}`);
+    }
     const result = await db.put(storeName, item);
+    if (storeName === 'inventory') {
+        console.log(`[DEBUG putToLegacyStore] put result=${result}`);
+        // Verify write: immediately read back
+        try {
+            const verify = await db.get(storeName, (item as any).id);
+            console.log(`[DEBUG putToLegacyStore] verify read:`, verify ? `found id=${verify.id}` : 'NOT FOUND');
+        } catch(e) {
+            console.log(`[DEBUG putToLegacyStore] verify error:`, e);
+        }
+    }
     return result as string;
 });
 
@@ -712,7 +811,7 @@ export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {
                 window.dispatchEvent(new CustomEvent('nexus-db-blocked'));
             },
             blocking() {
-                console.warn('[DB] CONNECTION BLOCKING - Another tab needs to upgrade. Closing connection...');
+                console.warn('[DB] CONNECTION BLOCKING - Another tab needs to upgrade. Closing connection...', new Error().stack);
                 if (dbPromise) {
                     dbPromise.then(db => db.close()).catch(() => { });
                     dbPromise = null;
@@ -720,6 +819,7 @@ export const initDB = async (): Promise<IDBPDatabase<NexusDB>> => {
             },
             terminated() {
                 logger.error('[DB] CONNECTION TERMINATED UNEXPECTEDLY');
+                console.warn('[DB] terminated callback invoked', new Error().stack);
                 dbPromise = null;
             }
         });
@@ -994,6 +1094,8 @@ export const dbService = {
     setCurrentCompanyId,
     stampAllRecordsWithCompany,
     getCurrentCompanyId,
+    get source() { return DB_SOURCE; },
+    set source(value: string) { DB_SOURCE = value; },
 
     setSyncListener(cb: (status: SyncStatus) => void) {
         onSyncStateChange = cb;
@@ -1113,7 +1215,15 @@ export const dbService = {
             try {
                 const cloudValues = await cloudDb.getAll<T>(String(storeName));
                 if (cloudValues !== null && cloudValues.length > 0) {
-                    return cloudValues;
+                    // Timestamp-aware merge: prefer the newer version of each item
+                    const localValues = await getAllFromLegacyStore<T>(storeName);
+                    const merged = timestampAwareMerge(cloudValues, localValues);
+                    if (storeName === 'inventory') {
+                        const types = new Set(merged.slice(0, 5).map((i: any) => i.type));
+                        const rawCount = merged.filter((i: any) => (i.type || i.classification) === 'Raw Material').length;
+                        console.log(`[DEBUG] merge result: total=${merged.length}, first5Types=${[...types].join(',')}, rawCount=${rawCount}, itmItem=${merged.find((i: any) => i.id === 'ITM-P726/001')?.name || 'NOT FOUND'}`);
+                    }
+                    return merged;
                 }
             } catch (err) {
                 console.warn(`[DB] Cloud-only getAll failed for ${String(storeName)}, falling back to local:`, err);
@@ -1125,10 +1235,14 @@ export const dbService = {
             try {
                 const cloudValues = await cloudDb.getAll<T>(String(storeName));
                 if (cloudValues !== null && cloudValues.length > 0) {
-                    for (const item of cloudValues) {
-                        try { await putToLegacyStore(storeName, item); } catch { }
+                    // Timestamp-aware merge: prefer the newer version of each item
+                    const localValues = await getAllFromLegacyStore<T>(storeName);
+                    const merged2 = timestampAwareMerge(cloudValues, localValues);
+                    if (storeName === 'inventory') {
+                        const rawCount = merged2.filter((i: any) => (i.type || i.classification) === 'Raw Material').length;
+                        console.log(`[DEBUG] merge2 result: total=${merged2.length}, rawCount=${rawCount}`);
                     }
-                    return cloudValues;
+                    return merged2;
                 }
             } catch (err) {
                 console.warn(`[DB] Cloud getAll failed for ${String(storeName)}, falling back to local:`, err);
@@ -1137,7 +1251,12 @@ export const dbService = {
 
         const route = getRouteDecision(storeName);
         if (!route || !isBackedStore(String(storeName))) {
+            if (storeName === 'inventory') console.log(`[DEBUG getAll] non-backed path for inventory`);
             return getAllFromLegacyStore<T>(storeName);
+        }
+
+        if (storeName === 'inventory') {
+            console.log(`[DEBUG getAll] backed path for inventory, readOrder=${JSON.stringify(route.readOrder)}`);
         }
 
         const sourceStore = storeName as BackedLegacyStoreName;
@@ -1217,13 +1336,22 @@ export const dbService = {
             (item as Record<string, unknown>)._updatedAt = new Date().toISOString();
         }
 
-        const isFromCloud = (item as Record<string, unknown>)?._cloudSource === true;
+        const raw = item as Record<string, unknown>;
+        const isFromCloud = raw._cloudSource === true;
+
+        // Always clear _cloudSource before writing to the legacy store so it
+        // cannot be inherited by a subsequent local edit. The flag is ONLY used
+        // by the sync-shortcut check above and should not persist on disk.
+        // This ensures pickNewerRecord doesn't always defer to the cloud version
+        // for items that were once synced but then edited locally.
+        delete raw._cloudSource;
+
         if (isFromCloud) {
             await putToLegacyStore(storeName, item);
-            return String((item as Record<string, unknown>)?.id ?? '');
+            return String(raw.id ?? '');
         }
 
-        const itemId = String((item as Record<string, unknown>)?.id ?? '');
+        const itemId = String(raw.id ?? '');
 
         // Always write to local cache first for immediate UI responsiveness.
         // Capture the resolved ID for return.
@@ -1247,7 +1375,9 @@ export const dbService = {
                 }
             }
             if (route.writeTargets.includes('legacy') || !persisted) {
+                console.log(`[DEBUG put] store=${storeName}, id=${itemId}, calling putToLegacyStore...`);
                 localResultId = await putToLegacyStore(storeName, item);
+                console.log(`[DEBUG put] putToLegacyStore done, result=${localResultId}`);
             }
         } else {
             localResultId = await putToLegacyStore(storeName, item);

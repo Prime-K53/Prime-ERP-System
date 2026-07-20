@@ -115,12 +115,18 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
               <div className="lg:col-span-2 space-y-8">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-center">
+                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-center">
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm text-slate-500">
                         <span>Subtotal</span>
                         <span className="font-bold">{currency}{((quotation.total || 0) - (quotation.tax || 0)).toLocaleString()}</span>
                       </div>
+                      {(quotation.discount || 0) > 0 && (
+                        <div className="flex justify-between text-sm text-rose-600">
+                          <span>Discount {quotation.discountType === 'percentage' ? `(${quotation.discount}%)` : ''}</span>
+                          <span className="font-bold">-{currency}{(quotation.discount || 0).toLocaleString()}</span>
+                        </div>
+                      )}
                       {quotation.tax && quotation.tax > 0 && (
                         <div className="flex justify-between text-sm text-slate-500">
                           <span>Tax ({quotation.taxRate}%)</span>

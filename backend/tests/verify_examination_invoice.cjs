@@ -59,7 +59,7 @@ const runTest = async () => {
     console.log('Batch Status:', invoicedBatch.status);
     console.log('Batch Invoice ID:', invoicedBatch.invoice_id);
 
-    if (invoicedBatch.status !== 'Invoiced') throw new Error('Batch status should be Invoiced');
+    if (invoicedBatch.status !== 'Completed') throw new Error('Batch status should be Completed');
     if (!invoicedBatch.invoice_id) throw new Error('Batch should have an invoice ID');
 
     // 8. Verify Invoice Record

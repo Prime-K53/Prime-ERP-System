@@ -145,7 +145,7 @@ const Orders: React.FC = () => {
     const { boms } = useProduction();
 
     const { createDeliveryNote, checkAndApplyLateFees } = useFinance();
-    const { convertQuotationToWorkOrder, convertQuotationToJobTicket } = useSales();
+    const { convertQuotationToWorkOrder, convertQuotationToJobTicket, convertOrderToJobTicket } = useSales();
     const { orders, cancelOrder, updateOrderStatus, recordPayment, createOrder, convertQuotationToOrder } = useOrders();
     const { confirm, ConfirmDialogComponent } = useConfirmDialog();
     const location = useLocation();
@@ -461,6 +461,19 @@ const Orders: React.FC = () => {
 
         return { total, paid, outstanding, overdue, annualProfit };
     }, [invoices, inventory, boms, companyConfig]);
+
+    const orderStats = useMemo(() => {
+        const allOrders = orders || [];
+        const active = allOrders.filter(o => o.status !== 'Cancelled');
+        const totalOrderValue = active.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const totalPaid = active.reduce((sum, o) => sum + (o.paidAmount || 0), 0);
+        const outstanding = totalOrderValue - totalPaid;
+        const pendingOrders = active.filter(o => o.status === 'Pending');
+        const pendingValue = pendingOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const completedCount = active.filter(o => o.status === 'Completed' || o.status === 'Paid' || o.status === 'Converted').length;
+        const orderCount = active.length;
+        return { totalOrderValue, totalPaid, outstanding, pendingValue, completedCount, orderCount };
+    }, [orders]);
 
     const dashboardData = useMemo(() => {
         const allInvs = invoices || [];
@@ -940,7 +953,14 @@ const Orders: React.FC = () => {
                     notify('This order is already fully paid.', 'info');
                     return;
                 }
-                setPaymentOrder(item);
+                navigate('/sales-flow/payments', {
+                    state: {
+                        action: 'create',
+                        customer: { name: item.customerName, id: item.customerId },
+                        orderId: item.id,
+                        subAccount: item.subAccountName || 'Main'
+                    }
+                });
             }
             if (action === 'convert_to_invoice') {
                 if (window.confirm(`Convert Order #${item.orderNumber} to an Invoice?`)) {
@@ -957,6 +977,8 @@ const Orders: React.FC = () => {
                             preserveCustomTerms: true
                         });
                         const newInvoice: Invoice = {
+                            id: '',
+                            invoiceNumber: '',
                             customerName: item.customerName,
                             customerId: item.customerId,
                             date: issuedDate,
@@ -1002,7 +1024,7 @@ const Orders: React.FC = () => {
                         const invoiceId = await addInvoice(newInvoice);
                         const orderPaidAmount = item.paidAmount || 0;
                         const orderTotal = item.totalAmount || 0;
-                        const finalOrderStatus = orderPaidAmount >= orderTotal ? 'Completed' : (orderPaidAmount > 0 ? 'Partially Paid' : 'Pending');
+                        const finalOrderStatus = 'Converted';
                         await updateOrderStatus(item.id, finalOrderStatus);
                         notify(`Order #${item.orderNumber} successfully converted to Invoice ${invoiceId}`, "success");
                         setActiveTab('Invoices');
@@ -1021,6 +1043,11 @@ const Orders: React.FC = () => {
                         notify(`Cancellation failed: ${error.message} `, "error");
                     }
                 }
+            }
+            if (action === 'convert_to_job_ticket') {
+                const ticketId = await convertOrderToJobTicket(item);
+                notify(`Order ${item.id} successfully converted to Job Ticket ${ticketId}`, "success");
+                navigate('/sales-flow/job-tickets');
             }
         }
     };
@@ -1130,6 +1157,8 @@ const Orders: React.FC = () => {
 
                             const invoiceData = {
                                 ...order,
+                                id: '',
+                                invoiceNumber: '',
                                 date: new Date().toISOString().split('T')[0],
                                 status: 'Unpaid',
                                 notes: `Converted from [Order] #[${order.orderNumber}] on [${new Date().toLocaleString()}] as accepted by [${user?.name || 'System'}]`,
@@ -1153,7 +1182,8 @@ const Orders: React.FC = () => {
                                     acceptedBy: user?.name || 'System'
                                 },
                             };
-                            await addInvoice(invoiceData);
+                            const invoiceId = await addInvoice(invoiceData);
+                            await updateOrderStatus(order.id, 'Converted');
                         }
                         setSelectedInvoiceIds([]);
                         notify(`${count} orders converted to invoices`, "success");
@@ -1400,6 +1430,34 @@ const Orders: React.FC = () => {
                                 emerald: { border: 'border-l-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
                                 indigo: { border: 'border-l-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600' },
                                 rose: { border: 'border-l-rose-500', bg: 'bg-rose-50', text: 'text-rose-600' },
+                            };
+                            const c = colorMap[item.color] || colorMap.blue;
+                            return (
+                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
+                                <div className={`p-2.5 ${c.bg} ${c.text} rounded-lg shrink-0`}>
+                                    <item.icon size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-none mb-1.5">{item.label}</p>
+                                    <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{item.value}</p>
+                                </div>
+                            </div>
+                            );
+                        })}
+                    </>
+                ) : activeView === 'Orders' ? (
+                    <>
+                        {[
+                            { label: 'Total Orders', value: `${currency}${orderStats.totalOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: TrendingUp, color: 'blue' },
+                            { label: 'Completed', value: `${orderStats.completedCount} orders`, icon: CheckCircle, color: 'emerald' },
+                            { label: 'Pending Value', value: `${currency}${orderStats.pendingValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: Clock, color: 'amber' },
+                            { label: 'Outstanding', value: `${currency}${orderStats.outstanding.toLocaleString(undefined, { maximumFractionDigits: 0 })} `, icon: Wallet, color: 'indigo' }
+                        ].map((item, idx) => {
+                            const colorMap: Record<string, { border: string, bg: string, text: string }> = {
+                                blue: { border: 'border-l-blue-500', bg: 'bg-blue-50', text: 'text-blue-600' },
+                                emerald: { border: 'border-l-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
+                                amber: { border: 'border-l-amber-500', bg: 'bg-amber-50', text: 'text-amber-600' },
+                                indigo: { border: 'border-l-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600' },
                             };
                             const c = colorMap[item.color] || colorMap.blue;
                             return (

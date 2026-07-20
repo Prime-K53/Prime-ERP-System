@@ -1854,7 +1854,7 @@ export const transactionService = {
     },
 
     async processInvoice(invoice: Invoice, performedBy?: string) {
-        return dbService.executeAtomicOperation(
+        const _processInvoiceResult = await dbService.executeAtomicOperation(
             ['invoices', 'inventory', 'ledger', 'customers', 'bomTemplates', 'marketAdjustments', 'marketAdjustmentTransactions', 'customerPayments', 'bankAccounts', 'bankTransactions', 'inventoryTransactions', 'idempotencyKeys'],
             async (tx) => {
                 await reserveIdempotencyKey(tx, 'invoice', invoice.id, invoice.idempotencyKey);
@@ -2190,6 +2190,7 @@ export const transactionService = {
                 )
             );
         }
+        return _processInvoiceResult;
     },
 
     async convertQuotationToInvoice(quotationId: string, invoiceData: Invoice) {

@@ -6,7 +6,7 @@ const WORKFLOW_VALIDATION_CODES = {
   INVOICE_NOT_ALLOWED: 'INVOICE_NOT_ALLOWED'
 };
 
-const STATUS_ORDER = ['Draft', 'Calculated', 'Approved', 'Invoiced'];
+const STATUS_ORDER = ['Draft', 'Calculated', 'Approved', 'Completed'];
 
 const { roundMoney } = require('./examinationSharedUtils.cjs');
 
@@ -27,7 +27,7 @@ const normalizeBatchStatus = (status, fallback = 'Draft') => {
   if (normalized === 'draft') return 'Draft';
   if (normalized === 'calculated') return 'Calculated';
   if (normalized === 'approved') return 'Approved';
-  if (normalized === 'invoiced') return 'Invoiced';
+  if (normalized === 'completed' || normalized === 'invoiced') return 'Completed';
   return fallback;
 };
 
@@ -42,7 +42,7 @@ const canTransitionBatchStatus = (fromStatusInput, toStatusInput) => {
 
 const assertBatchMutableForPricing = (statusInput, actionDescription = 'update pricing') => {
   const status = normalizeBatchStatus(statusInput);
-  if (status === 'Approved' || status === 'Invoiced') {
+  if (status === 'Approved' || status === 'Completed') {
     throw createWorkflowError(
       `Cannot ${actionDescription} for batch status "${statusInput}".`,
       WORKFLOW_VALIDATION_CODES.BATCH_IMMUTABLE
@@ -56,7 +56,7 @@ const resolveStatusAfterCalculation = (classCount) => {
 
 const assertCanApproveBatch = (statusInput) => {
   const status = normalizeBatchStatus(statusInput);
-  if (status === 'Approved' || status === 'Invoiced') {
+  if (status === 'Approved' || status === 'Completed') {
     throw createWorkflowError(
       'Batch is already approved or invoiced',
       WORKFLOW_VALIDATION_CODES.APPROVAL_NOT_ALLOWED
@@ -72,7 +72,7 @@ const assertCanApproveBatch = (statusInput) => {
 
 const assertCanGenerateInvoice = (statusInput) => {
   const status = normalizeBatchStatus(statusInput);
-  if (status !== 'Approved' && status !== 'Invoiced') {
+  if (status !== 'Approved' && status !== 'Completed') {
     throw createWorkflowError(
       'Batch must be approved before invoicing',
       WORKFLOW_VALIDATION_CODES.INVOICE_NOT_ALLOWED

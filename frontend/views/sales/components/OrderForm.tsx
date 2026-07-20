@@ -1118,6 +1118,22 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
             for (const d of allAppliedDiscounts) {
                 await incrementDiscountUsage(d.ruleId || d.id).catch(() => {});
             }
+
+            if (selectedCustomerObj?.referredById) {
+                import('../../../services/referralService').then(({ referralService }) =>
+                    referralService.registerReferralFromInvoice({
+                        id: formData.id,
+                        customerId: resolvedCustomerId || '',
+                        customerName: resolvedCustomerName,
+                        totalAmount: finalTotalAmount,
+                        referredById: selectedCustomerObj.referredById,
+                        referredByName: selectedCustomerObj.referredByName,
+                    }).catch(err =>
+                        console.error('[REFERRAL] register from order form (order path) failed:', err)
+                    )
+                );
+            }
+
             onCancel();
             return;
         }
@@ -1930,7 +1946,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         key={c.id}
                                         type="button"
                                         onMouseDown={e => { e.preventDefault(); selectCustomer(c.name, c.id); setCustomerSearch(''); setShowCustomerDropdown(false); }}
-                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1]/50 last:border-b-0"
+                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1]/50"
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="truncate">{c.name}</span>
@@ -1941,8 +1957,36 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             ) : null}
                                         </div>
                                     </button>
-                                )) : (
+                                )) : customerSearch.trim() ? null : (
                                     <div className="px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#666F6C]">No customers found</div>
+                                )}
+                                {customerSearch.trim() && (
+                                    <button
+                                        type="button"
+                                        onMouseDown={async e => {
+                                            e.preventDefault();
+                                            const name = customerSearch.trim();
+                                            const newCustomer: Customer = {
+                                                id: generateNextId('CUST', customers, companyConfig),
+                                                name,
+                                                email: '',
+                                                phone: '',
+                                                balance: 0,
+                                                walletBalance: 0,
+                                                creditLimit: 0,
+                                                status: 'Active',
+                                                segment: 'Individual',
+                                                paymentTerms: getDefaultPaymentTermsForSegment('Individual'),
+                                            };
+                                            await addCustomer(newCustomer);
+                                            setCustomerSearch('');
+                                            setShowCustomerDropdown(false);
+                                            selectCustomer(name, newCustomer.id);
+                                        }}
+                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#2563EB] hover:bg-[#EFF6FF] transition-colors font-medium border-t border-[#E4DFD1]/50"
+                                    >
+                                        + Add New Customer "{customerSearch.trim()}"
+                                    </button>
                                 )}
                             </div>
                         )}

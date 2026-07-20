@@ -2912,7 +2912,7 @@ const examinationService = {
     let query = `
       SELECT id, status
       FROM examination_batches
-      WHERE COALESCE(status, 'Draft') <> 'Invoiced'
+      WHERE COALESCE(status, 'Draft') <> 'Completed'
     `;
     if (companyId) {
       query += ` AND company_id = ?`;
@@ -4425,7 +4425,7 @@ const examinationService = {
       await runRun(
         'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
         [
-          String(existingInvoice.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Invoiced',
+          String(existingInvoice.status || '').toLowerCase() === 'paid' ? 'Paid' : 'Completed',
           String(linkedLogicalInvoiceId || existingInvoice.invoice_number || existingInvoice.id),
           existingInvoiceTotal,
           batchId,
@@ -4447,7 +4447,7 @@ const examinationService = {
       };
     }
 
-    if (batch.status === 'Invoiced') {
+    if (batch.status === 'Completed') {
       throw new Error('Batch is already invoiced and no linked invoice record was found');
     }
 
@@ -4607,7 +4607,7 @@ const examinationService = {
 
     await runRun(
       'UPDATE examination_batches SET status = ?, invoice_id = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
-      ['Invoiced', String(linkedLogicalInvoiceId || invoiceRow.invoice_number || invoiceId), batchTotalAmount, batchId, companyId]
+      ['Completed', String(linkedLogicalInvoiceId || invoiceRow.invoice_number || invoiceId), batchTotalAmount, batchId, companyId]
     );
 
     // Audit Log

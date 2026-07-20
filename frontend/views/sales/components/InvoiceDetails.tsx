@@ -81,7 +81,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
             if (newStatus === 'Paid' && !isPaid) {
                 // LOGIC LINK: "Force Paid" must generate financial history.
                 const paymentId = `PAY-FORCE-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-                const payment: CustomerPayment = {
+                                const payment: CustomerPayment = {
                     id: paymentId,
                     date: new Date().toISOString(),
                     customerName: invoice.customerName,
@@ -89,9 +89,8 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                     paymentMethod: 'Cash',
                     reference: `Manual Override for INV #${invoice.id}`,
                     status: 'Cleared',
-                    allocations: [{ invoiceId: invoice.id, amount: balanceDue }],
+                    allocations: [{ paymentId: paymentId, invoiceId: invoice.id, amount: balanceDue }],
                     notes: 'System forced payment override.',
-                    // Fix: Added missing reconciled property to match CustomerPayment interface
                     reconciled: false
                 };
                 await addCustomerPayment(payment);
@@ -109,7 +108,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
         const amountToAllocate = Math.min(payment.creditApplied || 0, balanceDue);
         if (amountToAllocate <= 0) return;
 
-        const newAllocation: InvoiceAllocation = { invoiceId: invoice.id, amount: amountToAllocate };
+        const newAllocation: InvoiceAllocation = { paymentId: payment.id, invoiceId: invoice.id, amount: amountToAllocate };
         const updatedPayment: CustomerPayment = { ...payment, allocations: [...(payment.allocations || []), newAllocation], creditApplied: (payment.creditApplied || 0) - amountToAllocate };
 
         try {
@@ -155,7 +154,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
 
     return (
         <div className="fixed inset-0 z-[70] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/60 font-sans text-[13px] leading-relaxed text-slate-800">
+            <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/60 font-sans text-[13.5px] leading-[1.45] text-slate-800">
 
                 <div className="px-[16px] py-[12px] border-b border-slate-100 bg-slate-50/50 flex justify-between items-start shrink-0">
                     <div>
@@ -163,10 +162,10 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                             <h2 className="text-[22px] font-semibold text-slate-800 tracking-tight">{docTitle} #{invoice.id}</h2>
                             <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-0.5 rounded-lg shadow-sm">
                                 <div className={`w-2 h-2 rounded-full ${invoice.status === 'Paid' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`}></div>
-                                <span className="text-[12.5px] font-semibold text-slate-600 tracking-wide">{invoice.status}</span>
+                                <span className="text-[13px] font-semibold text-slate-600 tracking-wide">{invoice.status}</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 text-[12.5px] font-medium text-slate-500 tracking-wide">
+                        <div className="flex items-center gap-4 text-[13px] font-medium text-slate-500 tracking-wide">
                             <button
                                 onClick={() => navigate('/sales-flow/customers', { state: { customerId: invoice.customerId } })}
                                 className="hover:text-blue-600 transition-colors flex items-center gap-1 group"
@@ -182,7 +181,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                         {!hasDeliveryNote && (
                             <button
                                 onClick={() => onAction(invoice, 'generate_dn')}
-                                className="px-[12px] py-[7px] bg-blue-600 text-white rounded-lg text-[13px] font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm active:scale-95"
+                                className="px-[10px] py-[6px] bg-blue-600 text-white rounded-lg text-[13px] font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm active:scale-95"
                             >
                                 <Truck size={16} /> Generate delivery note
                             </button>
@@ -208,15 +207,17 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
 
                 <div className="grid grid-cols-3 bg-white border-b border-slate-100 shrink-0">
                     <div className="p-4 text-center border-r border-slate-100">
-                        <p className="text-[12.5px] font-medium text-slate-500 tracking-wide mb-0.5">Gross billing</p>
+                        <p className="text-[13px] font-medium text-slate-500 tracking-wide mb-0.5">Gross billing</p>
                         <p className="text-[20px] font-semibold text-slate-800 tabular-nums">{currency}{totalAmountDisplay.toLocaleString()}</p>
                     </div>
                     <div className="p-4 text-center border-r border-slate-100">
-                        <p className="text-[12.5px] font-medium text-slate-500 tracking-wide mb-0.5">Payments</p>
-                        <p className="text-[20px] font-semibold text-emerald-600 tabular-nums">{currency}{paidAmountDisplay.toLocaleString() || '0.00'}</p>
+                        <p className="text-[13px] font-medium text-slate-500 tracking-wide mb-0.5">Discount</p>
+                        <p className="text-[20px] font-semibold text-rose-600 tabular-nums">
+                            {invoice.discount ? `${invoice.discountType === 'percentage' ? invoice.discount + '%' : currency + (invoice.discount || 0).toLocaleString()}` : '-'}
+                        </p>
                     </div>
                     <div className="p-4 text-center">
-                        <p className="text-[12.5px] font-medium text-slate-500 tracking-wide mb-0.5">Net balance</p>
+                        <p className="text-[13px] font-medium text-slate-500 tracking-wide mb-0.5">Net balance</p>
                         <p className={`text-[20px] font-semibold tabular-nums ${(balanceDue || 0) > 0.001 ? 'text-rose-600' : 'text-slate-300'}`}>{currency}{(balanceDue || 0).toLocaleString()}</p>
                     </div>
                 </div>
@@ -226,7 +227,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab as 'Overview' | 'Financials' | 'Payments' | 'Activity')}
-                            className={`px-5 py-[8px] text-[13px] font-semibold tracking-wide border-b-2 transition-all shrink-0 ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                            className={`px-4 py-[7px] text-[14px] font-semibold tracking-wide border-b-2 transition-all shrink-0 ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                         >
                             {tab}
                         </button>
@@ -241,7 +242,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                 <div className="md:col-span-2 space-y-6">
                                     {(invoice as Record<string, unknown>).isConverted && (invoice as Record<string, unknown>).conversionDetails && (
                                         <div className="bg-white p-5 rounded-[1.25rem] border border-slate-200 shadow-sm">
-                                            <h3 className="text-[12.5px] font-semibold text-slate-500 tracking-wide mb-4 flex items-center gap-2">
+                                            <h3 className="text-[13px] font-semibold text-slate-500 tracking-wide mb-4 flex items-center gap-2">
                                                 <History size={14} className="text-purple-600" /> Conversion History
                                             </h3>
                                             <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100/60">
@@ -251,17 +252,17 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                                     </div>
                                                     <div>
                                                         <p className="text-[13px] font-semibold text-slate-800">
-                                                            Converted from <span className="text-purple-700">{(invoice as Record<string, unknown>).conversionDetails.sourceType} {(invoice as Record<string, unknown>).conversionDetails.sourceNumber}</span>
+                                                            Converted from <span className="text-purple-700">{(invoice as any).conversionDetails.sourceType} {(invoice as any).conversionDetails.sourceNumber}</span>
                                                         </p>
-                                                        <div className="mt-1 flex items-center gap-3 text-[12.5px] text-slate-500">
+                                                        <div className="mt-1 flex items-center gap-3 text-[13px] text-slate-500">
                                                             <span className="flex items-center gap-1.5">
                                                                 <Clock size={12} />
-                                                                {new Date((invoice as Record<string, unknown>).conversionDetails.date as string).toLocaleString()}
+                                                                {new Date((invoice as any).conversionDetails.date).toLocaleString()}
                                                             </span>
                                                             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                                                             <span className="flex items-center gap-1.5">
                                                                 <User size={12} />
-                                                                {(invoice as Record<string, unknown>).conversionDetails.acceptedBy}
+                                                                {(invoice as any).conversionDetails.acceptedBy}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -271,16 +272,16 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                     )}
 
                                     <div className="bg-white p-5 rounded-[1.25rem] border border-slate-200 shadow-sm">
-                                        <h3 className="text-[12.5px] font-semibold text-slate-500 tracking-wide mb-4 flex items-center gap-2">
+                                        <h3 className="text-[13px] font-semibold text-slate-500 tracking-wide mb-4 flex items-center gap-2">
                                             <History size={14} className="text-blue-500" /> System audit trail
                                         </h3>
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                <span className="text-[12.5px] font-medium text-slate-500">Created on</span>
+                                                <span className="text-[13px] font-medium text-slate-500">Created on</span>
                                                 <span className="text-[13px] font-semibold text-slate-700 tabular-nums">{new Date(invoice.date).toLocaleString()}</span>
                                             </div>
                                             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                <span className="text-[12.5px] font-medium text-slate-500">Last modified</span>
+                                                <span className="text-[13px] font-medium text-slate-500">Last modified</span>
                                                 <span className="text-[13px] font-semibold text-slate-700 tabular-nums">{new Date((invoice as Record<string, unknown>).updatedAt as string || invoice.date).toLocaleString()}</span>
                                             </div>
                                         </div>
@@ -288,20 +289,20 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                 </div>
 
                                 <div className="bg-white p-5 rounded-[1.25rem] border border-slate-200 shadow-sm space-y-3">
-                                    <h3 className="text-[12.5px] font-semibold text-slate-500 tracking-wide flex items-center gap-2">
+                                    <h3 className="text-[13px] font-semibold text-slate-500 tracking-wide flex items-center gap-2">
                                         <Zap size={14} className="text-amber-500" /> Quick actions
                                     </h3>
                                     <div className="grid grid-cols-1 gap-2">
                                         <button
                                             onClick={() => navigate('/sales-flow/payments', { state: { action: 'create', customer: invoice.customerName, customerId: invoice.customerId, invoiceId: invoice.id } })}
-                                            className="w-full px-[12px] py-[7px] bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
+                                            className="w-full px-[10px] py-[6px] bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
                                         >
                                             <PaymentIcon size={14} /> Record payment
                                         </button>
                                         {!isSubscription && (
                                             <button
                                                 onClick={() => onAction(invoice, 'convert_to_recurring')}
-                                                className="w-full px-[12px] py-[7px] bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                                                className="w-full px-[10px] py-[6px] bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
                                             >
                                                 <RefreshCw size={14} /> Convert to recurring
                                             </button>
@@ -309,7 +310,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                         <button
                                             onClick={() => handleStatusOverride('Paid')}
                                             disabled={isUpdatingStatus || isPaid}
-                                            className="w-full px-[12px] py-[7px] bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full px-[10px] py-[6px] bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {isUpdatingStatus ? <RefreshCw size={12} className="animate-spin" /> : <CheckCircle size={14} />}
                                             Force paid
@@ -317,7 +318,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                         <button
                                             onClick={() => handleStatusOverride('Cancelled')}
                                             disabled={isUpdatingStatus || isCancelled}
-                                            className="w-full px-[12px] py-[7px] bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-rose-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full px-[10px] py-[6px] bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-[13px] font-semibold tracking-wide hover:bg-rose-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <Ban size={14} />
                                             Void invoice
@@ -349,31 +350,31 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                     <table className="w-full text-left text-[13px]">
                                         <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 tracking-wide">Date</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 tracking-wide">Account</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 tracking-wide">Description</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 tracking-wide text-right">Debit</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 tracking-wide text-right">Credit</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide">Date</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide">Account</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide">Description</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide text-right">Debit</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide text-right">Credit</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {ledger.filter(entry => entry.reference === invoice.id).length > 0 ? (
                                                 ledger.filter(entry => entry.reference === invoice.id).map((entry, idx) => (
                                                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                        <td className="px-6 py-4 font-semibold text-slate-600 tabular-nums">{new Date(entry.date).toLocaleDateString()}</td>
-                                                        <td className="px-6 py-4 font-semibold text-blue-600">{entry.accountName}</td>
-                                                        <td className="px-6 py-4 text-slate-500">{entry.description}</td>
-                                                        <td className="px-6 py-4 text-right font-semibold text-slate-700 tabular-nums">
+                                                        <td className="px-4 py-[7px] font-semibold text-slate-600 tabular-nums">{new Date(entry.date).toLocaleDateString()}</td>
+                                                        <td className="px-4 py-[7px] font-semibold text-blue-600">{entry.accountName}</td>
+                                                        <td className="px-4 py-[7px] text-slate-500">{entry.description}</td>
+                                                        <td className="px-4 py-[7px] text-right font-semibold text-slate-700 tabular-nums">
                                                             {entry.type === 'Debit' ? `${currency}${entry.amount.toLocaleString()}` : '-'}
                                                         </td>
-                                                        <td className="px-6 py-4 text-right font-semibold text-slate-700 tabular-nums">
+                                                        <td className="px-4 py-[7px] text-right font-semibold text-slate-700 tabular-nums">
                                                             {entry.type === 'Credit' ? `${currency}${entry.amount.toLocaleString()}` : '-'}
                                                         </td>
                                                     </tr>
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic font-medium">No ledger entries found for this invoice.</td>
+                                                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400 italic font-medium">No ledger entries found for this invoice.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -392,7 +393,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                     </h3>
                                     <button
                                         onClick={() => navigate('/sales-flow/payments', { state: { action: 'create', customer: invoice.customerName, customerId: invoice.customerId, invoiceId: invoice.id } })}
-                                        className="text-[12.5px] font-semibold text-emerald-600 uppercase flex items-center gap-1 hover:underline"
+                                        className="text-[13px] font-semibold text-emerald-600 uppercase flex items-center gap-1 hover:underline"
                                     >
                                         New Payment <ArrowRight size={12} />
                                     </button>
@@ -401,23 +402,23 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                     <table className="w-full text-left text-[13px]">
                                         <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 uppercase tracking-wide">Payment #</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 uppercase tracking-wide">Method</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 uppercase tracking-wide text-right">Allocated</th>
-                                                <th className="px-6 py-[8px] font-semibold text-slate-500 uppercase tracking-wide text-center">Status</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 uppercase tracking-wide">Payment #</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 uppercase tracking-wide">Method</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 uppercase tracking-wide text-right">Allocated</th>
+                                                <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 uppercase tracking-wide text-center">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {paymentHistory.map(payment => (
                                                 <tr key={payment.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 font-semibold text-slate-600 tabular-nums">{new Date(payment.date).toLocaleDateString()}</td>
-                                                    <td className="px-6 py-4 font-semibold text-blue-600">{payment.id}</td>
-                                                    <td className="px-6 py-4 font-semibold text-slate-700">{payment.paymentMethod}</td>
-                                                    <td className="px-6 py-4 text-right font-semibold text-emerald-600 tabular-nums">
+                                                    <td className="px-4 py-[7px] font-semibold text-slate-600 tabular-nums">{new Date(payment.date).toLocaleDateString()}</td>
+                                                    <td className="px-4 py-[7px] font-semibold text-blue-600">{payment.id}</td>
+                                                    <td className="px-4 py-[7px] font-semibold text-slate-700">{payment.paymentMethod}</td>
+                                                    <td className="px-4 py-[7px] text-right font-semibold text-emerald-600 tabular-nums">
                                                         {currency}{(payment.allocations?.find(a => a.invoiceId === invoice.id)?.amount || 0).toLocaleString()}
                                                     </td>
-                                                    <td className="px-6 py-4 text-center">
+                                                    <td className="px-4 py-[7px] text-center">
                                                         <span className={`px-2 py-0.5 rounded-md text-[12px] font-semibold uppercase tracking-tight ${payment.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700' :
                                                             payment.status === 'Bounced' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                                                             }`}>
@@ -461,7 +462,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex justify-between items-start mb-1">
-                                                            <span className="text-[12.5px] font-semibold text-slate-800 uppercase tracking-wide">{log.action} {log.entityType}</span>
+                                                            <span className="text-[13px] font-semibold text-slate-800 uppercase tracking-wide">{log.action} {log.entityType}</span>
                                                             <span className="text-[12px] font-medium text-slate-400 tabular-nums">{new Date(log.date).toLocaleString()}</span>
                                                         </div>
                                                         <p className="text-[13px] text-slate-600 leading-relaxed">{log.details}</p>
@@ -483,7 +484,7 @@ export const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice: initial
 
                 {showAllocationModal && (
                     <div className="fixed inset-0 z-[80] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm">
-                        <div className="bg-white rounded-[1.25rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 border border-slate-200/60 font-sans text-[13px] leading-relaxed text-slate-800">
+                        <div className="bg-white rounded-[1.25rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 border border-slate-200/60 font-sans text-[13.5px] leading-[1.45] text-slate-800">
                             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                                 <h3 className="font-semibold text-slate-700 flex items-center gap-2 uppercase tracking-tight text-[13.5px]"><Wallet size={18} className="text-emerald-600" /> Apply Customer Credits</h3>
                                 <button onClick={() => setShowAllocationModal(false)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors"><X size={18} /></button>

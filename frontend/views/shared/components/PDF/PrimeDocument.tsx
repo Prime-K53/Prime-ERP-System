@@ -289,7 +289,8 @@ const CleanInvoiceTemplate = ({
   const discountPercentage = discountType === 'percentage'
     ? (discountRaw > 0 ? discountRaw : subtotal > 0 ? Number(((discount / subtotal) * 100).toFixed(2)) : 0)
     : 0;
-  const discountLabel = discountType === 'percentage' && discountPercentage > 0 ? `Discount ${discountPercentage}%` : 'Discount';
+  const discountLabel = discountType === 'percentage' && discountPercentage > 0 ? `Discount (${discountPercentage}%)` : 'Discount';
+  const discountAmountText = discount > 0 ? `-${currency} ${discount.toLocaleString('en-US', {minimumFractionDigits: 2})}` : '';
   
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
   const resolvedWalletBalance = Number(dataAny.walletBalance || 0);
@@ -408,7 +409,7 @@ const CleanInvoiceTemplate = ({
             {discount > 0 && (
               <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
                 <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>{discountLabel}</Text>
-                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>-{currency} {discount.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{discountAmountText}</Text>
               </View>
             )}
             {tax > 0 && (
@@ -570,6 +571,13 @@ const ModernInvoiceTemplate = ({
   const totalAmount = Number(dataAny.totalAmount) || subtotal;
   const tax = Number(dataAny.tax) || 0;
   const discount = Number(dataAny.discount) || 0;
+  const discountType = dataAny.discountType || 'fixed';
+  const discountRaw = Number(dataAny.discountRaw || 0);
+  const discountPercentage = discountType === 'percentage'
+    ? (discountRaw > 0 ? discountRaw : subtotal > 0 ? Number(((discount / subtotal) * 100).toFixed(2)) : 0)
+    : 0;
+  const discountLabel = discountType === 'percentage' && discountPercentage > 0 ? `Discount (${discountPercentage}%)` : 'Discount';
+  const discountAmountText = discount > 0 ? `-${currency} ${discount.toLocaleString('en-US', {minimumFractionDigits: 2})}` : '';
   
   const showDueDate = templateSettings.showDueDate;
   const showInvoiceBalances = templateSettings.showOutstandingAndWalletBalances;
@@ -1074,9 +1082,6 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     0,
     Number(dataAny?.totalAmount || 0) - Number(dataAny?.amountPaid || 0)
   );
-  const discountType = dataAny.discountType || 'fixed';
-  const discountRaw = Number(dataAny.discountRaw || 0);
-  const discountLabel = discountType === 'percentage' && discountRaw > 0 ? `Discount ${discountRaw}%` : 'Discount';
   const pageStyle = {
     fontFamily: templateSettings.fontFamily,
     fontSize: templateSettings.bodyFontSize,
@@ -1344,7 +1349,11 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
               <Text style={{ flex: 1, textAlign: 'right' }}>Amount Paid</Text>
             </View>
             <View style={s.row}>
-              <Text style={{ flex: 3 }}>Payment for Invoices: {(rc.appliedInvoices || []).join(', ')}</Text>
+              <Text style={{ flex: 3 }}>
+                {(rc.appliedOrders || []).length > 0
+                  ? `Payment for Orders: ${(rc.appliedOrders || []).join(', ')}`
+                  : `Payment for Invoices: ${(rc.appliedInvoices || []).join(', ')}`}
+              </Text>
               <Text style={{ flex: 1, textAlign: 'right' }}>{currency} {formatAmount(rc.amountReceived)}</Text>
             </View>
           </View>

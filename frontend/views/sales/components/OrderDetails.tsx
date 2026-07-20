@@ -40,7 +40,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
 
     return (
         <div className="fixed inset-0 z-[70] bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/60 font-sans text-[13px] leading-relaxed text-slate-800">
+            <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200/60 font-sans text-[13.5px] leading-[1.45] text-slate-800">
                 <div className="px-[16px] py-[12px] border-b border-slate-100 bg-slate-50/50 flex justify-between items-start shrink-0">
                     <div className="flex gap-6 items-center">
                         <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
@@ -58,7 +58,7 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                     {order.status}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-4 text-[12.5px] font-medium text-slate-500 tracking-wide">
+                            <div className="flex items-center gap-4 text-[13px] font-medium text-slate-500 tracking-wide">
                                 <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">{order.customerName}</span>
                                 <span className="flex items-center gap-1.5"><Clock size={14} /> Placed {new Date(order.orderDate).toLocaleDateString()}</span>
                                 <span className="flex items-center gap-1.5"><User size={14} /> Created by {order.createdBy}</span>
@@ -85,16 +85,16 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                     {/* Main Content */}
                     <div className="flex-1 flex flex-col min-w-0 bg-white">
                         {/* Tabs */}
-                        <div className="flex px-8 border-b border-slate-100 gap-8">
+                        <div className="flex px-6 border-b border-slate-100 gap-6">
                             {(['Overview', 'Payments', 'Activity'] as const).map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`py-4 text-xs font-bold uppercase tracking-widest transition-all relative ${activeTab === tab ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                                    className={`px-4 py-[7px] text-[14px] font-semibold tracking-wide transition-all relative ${activeTab === tab ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'
                                         }`}
                                 >
                                     {tab}
-                                    {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full" />}
+                                    {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full" />}
                                 </button>
                             ))}
                         </div>
@@ -107,19 +107,19 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-slate-100/50">
-                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Qty</th>
-                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description</th>
-                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Price</th>
-                                                    <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Total</th>
+                                                    <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide text-center">Qty</th>
+                                                    <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide">Description</th>
+                                                    <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide text-right">Price</th>
+                                                    <th className="px-4 py-[7px] text-[14px] font-semibold text-slate-500 tracking-wide text-right">Total</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-200/50">
                                                 {order.items.map((item, idx) => (
                                                     <tr key={idx} className="hover:bg-white transition-colors">
-                                                        <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantity}</td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-bold text-slate-900">{item.productName}</div>
-                                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                                        <td className="px-4 py-[7px] text-center font-semibold text-slate-700 tabular-nums">{item.quantity}</td>
+                                                        <td className="px-4 py-[7px]">
+                                                            <div className="font-semibold text-slate-800">{item.productName}</div>
+                                                            <div className="text-[13px] text-slate-400 mt-0.5">
                                                                 <DocLink
                                                                     docNumber={item.productId}
                                                                     targetPage="/inventory"
@@ -128,9 +128,8 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                                                 />
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantity}</td>
-                                                        <td className="px-6 py-4 text-right font-medium text-slate-600">{currency}{item.unitPrice.toLocaleString()}</td>
-                                                        <td className="px-6 py-4 text-right font-black text-slate-900">{currency}{item.subtotal.toLocaleString()}</td>
+                                                        <td className="px-4 py-[7px] text-right font-medium text-slate-600 tabular-nums">{currency}{item.unitPrice.toLocaleString()}</td>
+                                                        <td className="px-4 py-[7px] text-right font-semibold text-slate-800 tabular-nums">{currency}{item.subtotal.toLocaleString()}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -161,6 +160,12 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                                                 <span>Subtotal</span>
                                                 <span>{currency}{((order.totalAmount || 0) - (order.tax || 0)).toLocaleString()}</span>
                                             </div>
+                                            {(order.discount || 0) > 0 && (
+                                                <div className="flex justify-between items-center text-rose-400 text-sm font-medium">
+                                                    <span>Discount {order.discountType === 'percentage' ? `(${order.discount}%)` : ''}</span>
+                                                    <span>-{currency}{(order.discount || 0).toLocaleString()}</span>
+                                                </div>
+                                            )}
                                             {order.tax && order.tax > 0 && (
                                                 <div className="flex justify-between items-center text-slate-400 text-sm font-medium">
                                                     <span>Tax ({order.taxRate}%)</span>
@@ -225,55 +230,62 @@ export const OrderDetails: React.FC<OrderDetailsProps> = ({ order: initialOrder,
                     </div>
 
                     {/* Sidebar Actions */}
-                    <div className="w-80 border-l border-slate-200 p-8 space-y-8 bg-slate-50/50 shrink-0">
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Quick Actions</h3>
+                    <div className="w-72 border-l border-slate-200 p-4 space-y-4 bg-slate-50/50 shrink-0">
+                        <div className="space-y-2">
+                            <h3 className="text-[13px] font-semibold text-slate-500 tracking-wide">Quick Actions</h3>
                             <button
                                 onClick={() => onAction(order, 'preview_pdf')}
-                                className="w-full px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                className="w-full px-[10px] py-[6px] bg-white text-slate-700 border border-slate-200 rounded-lg text-[13.5px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
-                                <Eye size={18} /> Preview Order
+                                <Eye size={16} /> Preview Order
                             </button>
                             <button
                                 onClick={() => onAction(order, 'download_pdf')}
-                                className="w-full px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                className="w-full px-[10px] py-[6px] bg-white text-slate-700 border border-slate-200 rounded-lg text-[13.5px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
-                                <Download size={18} /> Download PDF
+                                <Download size={16} /> Download PDF
                             </button>
                             <button
                                 onClick={() => window.print()}
-                                className="w-full px-4 py-3 bg-white text-slate-700 border border-slate-200 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                className="w-full px-[10px] py-[6px] bg-white text-slate-700 border border-slate-200 rounded-lg text-[13.5px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
-                                <Printer size={18} /> Print Order
+                                <Printer size={16} /> Print Order
                             </button>
                         </div>
 
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Workflow</h3>
+                        <div className="space-y-2">
+                            <h3 className="text-[13px] font-semibold text-slate-500 tracking-wide">Workflow</h3>
                             <button
                                 onClick={() => onAction(order, 'record_payment')}
                                 disabled={isCompleted || isPaid || isCancelled}
-                                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-2xl text-[13px] font-bold tracking-tight hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+                                className="w-full px-[10px] py-[6px] bg-indigo-600 text-white rounded-lg text-[13.5px] font-medium hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
                             >
-                                <DollarSign size={18} /> Record Payment
+                                <DollarSign size={16} /> Record Payment
                             </button>
                             <button
                                 onClick={() => onAction(order, 'convert_to_invoice')}
                                 disabled={isCompleted || isCancelled}
-                                className="w-full px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full px-[10px] py-[6px] bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[13.5px] font-medium hover:bg-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                <CheckCircle size={18} /> Convert to Invoice
+                                <CheckCircle size={16} /> Convert to Invoice
+                            </button>
+                            <button
+                                onClick={() => onAction(order, 'convert_to_job_ticket')}
+                                disabled={isCompleted || isCancelled}
+                                className="w-full px-[10px] py-[6px] bg-purple-50 text-purple-700 border border-purple-100 rounded-lg text-[13.5px] font-medium hover:bg-purple-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <Package size={16} /> Convert to Job Ticket
                             </button>
                         </div>
 
-                        <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 space-y-3">
-                            <h3 className="text-xs font-bold text-rose-400 uppercase tracking-widest">Danger Zone</h3>
+                        <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 space-y-2">
+                            <h3 className="text-[13px] font-semibold text-rose-500 tracking-wide">Danger Zone</h3>
                             <button
                                 onClick={() => onAction(order, 'cancel_order')}
                                 disabled={isCancelled}
-                                className="w-full px-4 py-3 bg-white text-rose-600 border border-rose-100 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+                                className="w-full px-[10px] py-[6px] bg-white text-rose-600 border border-rose-100 rounded-lg text-[13.5px] font-medium hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
                             >
-                                <X size={18} /> Cancel Order
+                                <X size={16} /> Cancel Order
                             </button>
                         </div>
                     </div>

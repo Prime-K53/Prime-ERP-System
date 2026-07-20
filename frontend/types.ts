@@ -454,7 +454,7 @@ export interface JobTicket {
   attachments?: Array<{ id: string; name: string; url: string; fileId?: string; type: string; size: number }>;
   notes?: string;
   internalNotes?: string;
-  sourceType?: 'quotation' | 'examination_batch' | 'manual';
+  sourceType?: 'quotation' | 'examination_batch' | 'order' | 'manual';
   sourceId?: string;
   linkedWorkOrderId?: string;
   batchReference?: string;

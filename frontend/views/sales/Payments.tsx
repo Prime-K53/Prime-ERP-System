@@ -6,8 +6,9 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
 import { useSales } from '../../context/SalesContext';
+import { useOrders } from '../../context/OrdersContext';
 import { OFFLINE_MODE, DEFAULT_ACCOUNTS } from '../../constants';
-import { CustomerPayment, InvoiceAllocation, Sale, Invoice, SupplierPayment, PurchaseAllocation, LedgerEntry, WalletTransaction } from '../../types';
+import { CustomerPayment, InvoiceAllocation, Sale, Invoice, SupplierPayment, PurchaseAllocation, LedgerEntry, WalletTransaction, Order, OrderPayment } from '../../types';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHighlight } from '../../hooks/useHighlight';
 import { DocLink } from '../../components/DocLink';
@@ -394,13 +395,14 @@ const CustomerPaymentDetailPanel: React.FC<{
                         <div className="space-y-3">
                             <h3 className="text-[14px] font-bold text-slate-900 flex items-center gap-2">
                                 <ArrowRight size={16} className="text-blue-500" />
-                                Invoice Allocations
+                                Document Allocations
                             </h3>
                             <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
                                 <table className="w-full text-left text-[13px]">
                                     <thead className="bg-slate-50 border-b border-slate-100">
                                         <tr>
-                                            <th className="table-header">Invoice ID</th>
+                                            <th className="table-header">Document</th>
+                                            <th className="table-header">Type</th>
                                             <th className="table-header text-right">Amount</th>
                                         </tr>
                                     </thead>
@@ -408,18 +410,30 @@ const CustomerPaymentDetailPanel: React.FC<{
                                         {(payment.allocations || []).map((a, i) => (
                                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="table-body-cell font-medium text-blue-600">#{a.invoiceId}</td>
+                                                <td className="table-body-cell">
+                                                    <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">Invoice</span>
+                                                </td>
                                                 <td className="table-body-cell text-right font-bold finance-nums">{currency}{a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         ))}
-                                        {(!payment.allocations || payment.allocations.length === 0) && (
+                                        {((payment as any).orderAllocations || []).map((a: any, i: number) => (
+                                            <tr key={`ord-${i}`} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="table-body-cell font-medium text-amber-700">#{a.orderId}</td>
+                                                <td className="table-body-cell">
+                                                    <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Order</span>
+                                                </td>
+                                                <td className="table-body-cell text-right font-bold finance-nums">{currency}{a.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        ))}
+                                        {(!payment.allocations || payment.allocations.length === 0) && (!(payment as any).orderAllocations || (payment as any).orderAllocations.length === 0) && (
                                             <tr>
-                                                <td colSpan={2} className="table-body-cell text-center text-slate-400 italic">No allocations recorded</td>
+                                                <td colSpan={3} className="table-body-cell text-center text-slate-400 italic">No allocations recorded</td>
                                             </tr>
                                         )}
                                     </tbody>
                                     <tfoot className="bg-slate-50/80 font-bold border-t border-slate-100">
                                         <tr>
-                                            <td className="table-body-cell text-slate-500">Total Allocated</td>
+                                            <td className="table-body-cell text-slate-500" colSpan={2}>Total Allocated</td>
                                             <td className="table-body-cell text-right text-slate-900 finance-nums">
                                                 {currency}{allocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
@@ -520,6 +534,7 @@ const Payments: React.FC = () => {
     const { companyConfig, notify, user } = useAuth();
     const { customerPayments, addCustomerPayment, updateCustomerPayment, deleteCustomerPayment, customers, sales } = useSales();
     const { invoices, updateInvoice } = useFinance();
+    const { orders, recordPayment: recordOrderPayment, updateOrderStatus } = useOrders();
     const { suppliers } = useProcurement();
     const { postJournalEntry, supplierPayments = [], recordSupplierPayment, updateSupplierPayment, voidSupplierPayment } = useFinance();
     const { purchases = [] } = useProcurement();
@@ -546,9 +561,12 @@ const Payments: React.FC = () => {
         customers?.forEach((c: any) => {
             if (c.name) names.add(c.name);
         });
-        // Add names from invoices/customerPayments just in case
+        // Add names from invoices/customerPayments/orders just in case
         invoices?.forEach((inv: any) => {
             if (inv.customerName) names.add(inv.customerName);
+        });
+        orders?.forEach((o: any) => {
+            if (o.customerName) names.add(o.customerName);
         });
         customerPayments?.forEach((payment: any) => {
             if (payment.customerName) names.add(payment.customerName);
@@ -595,7 +613,7 @@ const Payments: React.FC = () => {
         excessHandling: 'Change'
     });
  
-    const [allocations, setAllocations] = useState<InvoiceAllocation[]>([]);
+    const [allocations, setAllocations] = useState<Array<{ invoiceId: string; orderId?: string; amount: number; [key: string]: any }>>([]);
     const [previewState, setPreviewState] = useState<{ isOpen: boolean, data: any, type: 'RECEIPT' | 'ACCOUNT_STATEMENT' | 'POS_RECEIPT' | 'SUPPLIER_PAYMENT' }>({
         isOpen: false,
         data: null,
@@ -641,11 +659,13 @@ const Payments: React.FC = () => {
                     ? await paymentService.getCustomerOutstandingBalance(payment.customerId)
                     : 0;
 
+                const appliedOrders = (payment as any).orderAllocations?.map((a: any) => a.orderId) || [];
                 const formattedData = buildCustomerReceiptDoc({
                     payment,
                     customerName: payment.customerName,
                     currentBalance,
-                    currencySymbol: currency
+                    currencySymbol: currency,
+                    appliedOrders
                 });
                 
                 // Validate required fields
@@ -827,7 +847,7 @@ const Payments: React.FC = () => {
                     customerId,
                     subAccountName: location.state.subAccount || 'Main',
                     excessHandling: location.state.isTopUp ? 'Wallet' : 'Change',
-                    notes: location.state.isTopUp ? `Wallet Top-up for ${location.state.subAccount || 'Main'}` : (location.state.isExamInvoice ? `Payment for Examination Invoice ${location.state.invoiceId}` : ''),
+                    notes: location.state.isTopUp ? `Wallet Top-up for ${location.state.subAccount || 'Main'}` : (location.state.isExamInvoice ? `Payment for Examination Invoice ${location.state.invoiceId}` : location.state.orderId ? `Payment for Order ${location.state.orderId}` : ''),
                     amount: location.state.isExamInvoice ? location.state.amount : 0
                 }));
 
@@ -844,14 +864,19 @@ const Payments: React.FC = () => {
                         (i.customerName === customerName || i.customerId === customerId) &&
                         i.status !== 'Paid' && i.status !== 'Draft'
                     );
-                    const totalDue = unpaid.reduce((s, i) => s + (i.totalAmount - (i.paidAmount || 0)), 0);
+                    const unpaidOrders = orders.filter(o =>
+                        (o.customerName === customerName || o.customerId === customerId) &&
+                        o.status !== 'Completed' && o.status !== 'Paid' && o.status !== 'Cancelled' && o.status !== 'Converted'
+                    );
+                    const totalDue = unpaid.reduce((s, i) => s + (i.totalAmount - (i.paidAmount || 0)), 0) +
+                        unpaidOrders.reduce((s, o) => s + (o.totalAmount - (o.paidAmount || 0)), 0);
 
                     setFormData(prev => ({ ...prev, amount: totalDue }));
 
-                    const initialAllocations = unpaid.map(i => ({
-                        invoiceId: i.id,
-                        amount: i.totalAmount - (i.paidAmount || 0)
-                    }));
+                    const initialAllocations = [
+                        ...unpaid.map(i => ({ invoiceId: i.id, amount: i.totalAmount - (i.paidAmount || 0) })),
+                        ...unpaidOrders.map(o => ({ invoiceId: '', orderId: o.id, amount: o.totalAmount - (o.paidAmount || 0) }))
+                    ];
 
                     // If a specific invoiceId was provided, only allocate to that invoice
                     if (location.state.invoiceId) {
@@ -864,6 +889,21 @@ const Payments: React.FC = () => {
                             setFormData(prev => ({
                                 ...prev,
                                 amount: specificUnpaid[0].totalAmount - (specificUnpaid[0].paidAmount || 0)
+                            }));
+                        } else {
+                            setAllocations(initialAllocations);
+                        }
+                    } else if (location.state.orderId) {
+                        const specificOrder = unpaidOrders.filter(o => o.id === location.state.orderId);
+                        if (specificOrder.length > 0) {
+                            setAllocations(specificOrder.map(o => ({
+                                invoiceId: '',
+                                orderId: o.id,
+                                amount: o.totalAmount - (o.paidAmount || 0)
+                            })));
+                            setFormData(prev => ({
+                                ...prev,
+                                amount: specificOrder[0].totalAmount - (specificOrder[0].paidAmount || 0)
                             }));
                         } else {
                             setAllocations(initialAllocations);
@@ -885,7 +925,7 @@ const Payments: React.FC = () => {
                 modalOpenedRef.current = false;
             }
         };
-    }, [location, invoices]);
+    }, [location, invoices, orders]);
 
     const resetForm = () => {
         const nextId = generateNextId('pay', customerPayments, companyConfig);
@@ -932,17 +972,28 @@ const Payments: React.FC = () => {
             let finalAllocations = [...allocations];
             const paymentAmount = Number(formData.amount);
 
-            // Auto-allocate if no allocations exist but there are available invoices
-            if (finalAllocations.length === 0 && availableInvoices.length > 0 && paymentAmount > 0) {
+            // Auto-allocate if no allocations exist but there are available documents
+            if (finalAllocations.length === 0 && (availableInvoices.length > 0 || availableOrders.length > 0) && paymentAmount > 0) {
                 let remaining = paymentAmount;
-                const sorted = [...availableInvoices].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const combined = [
+                    ...availableInvoices.map(i => ({ ...i, docType: 'invoice' as const })),
+                    ...availableOrders.map(o => ({ ...o, docType: 'order' as const }))
+                ].sort((a, b) => {
+                    const da = (a as any).orderDate || (a as any).date;
+                    const db = (b as any).orderDate || (b as any).date;
+                    return new Date(da).getTime() - new Date(db).getTime();
+                });
 
-                for (const inv of sorted) {
+                for (const doc of combined) {
                     if (remaining <= 0) break;
-                    const due = inv.totalAmount - (inv.paidAmount || 0);
+                    const due = (doc as any).totalAmount - ((doc as any).paidAmount || 0);
                     const amt = Math.min(remaining, due);
                     if (amt > 0) {
-                        finalAllocations.push({ invoiceId: inv.id, amount: amt });
+                        if (doc.docType === 'invoice') {
+                            finalAllocations.push({ invoiceId: doc.id, amount: amt });
+                        } else {
+                            finalAllocations.push({ invoiceId: '', orderId: doc.id, amount: amt });
+                        }
                         remaining -= amt;
                     }
                 }
@@ -951,18 +1002,21 @@ const Payments: React.FC = () => {
             // Regenerate ID to prevent collisions (unless editing)
             const finalId = (editMode && currentId) ? currentId : generateNextId('pay', customerPayments, companyConfig);
 
-            const newPayment: CustomerPayment = {
+            const invoiceAllocations = finalAllocations.filter(a => a.invoiceId && !a.orderId && a.amount > 0);
+            const orderAllocations = finalAllocations.filter(a => a.orderId && a.amount > 0);
+            const newPayment = {
                 ...formData,
                 date: formData.date!,
                 id: finalId,
-                allocations: finalAllocations.filter(a => a.amount > 0),
+                allocations: invoiceAllocations.map(a => ({ invoiceId: a.invoiceId, amount: a.amount })),
                 amount: paymentAmount,
                 customerName: formData.customerName!,
                 paymentMethod: formData.paymentMethod!,
                 status: formData.status,
                 reconciled: formData.reconciled || false,
                 excessAmount: excessAmount > 0 ? excessAmount : undefined,
-                excessHandling: excessAmount > 0 ? formData.excessHandling : undefined
+                excessHandling: excessAmount > 0 ? formData.excessHandling : undefined,
+                orderAllocations: orderAllocations.map(a => ({ orderId: a.orderId!, amount: a.amount }))
             };
 
             if (editMode) {
@@ -984,13 +1038,31 @@ const Payments: React.FC = () => {
 
                 await updateCustomerPayment(metadataOnlyUpdate);
             } else {
-                await addCustomerPayment(newPayment);
+                await addCustomerPayment(newPayment as CustomerPayment);
+            }
+
+            // Process order allocations - record payment against each order
+            for (const alloc of orderAllocations) {
+                const order = orders.find(o => o.id === alloc.orderId);
+                if (!order) continue;
+                const newPaid = (order.paidAmount || 0) + alloc.amount;
+                const newStatus = newPaid >= order.totalAmount ? 'Paid' : 'Partially Paid';
+                await recordOrderPayment(alloc.orderId, {
+                    id: `OP-${Date.now()}-${alloc.orderId}`,
+                    orderId: alloc.orderId,
+                    amountPaid: alloc.amount,
+                    paymentDate: formData.date || new Date().toISOString(),
+                    paymentMethod: formData.paymentMethod || 'Cash',
+                    recordedBy: user?.name || 'System',
+                    reference: formData.reference || `Payment via ${finalId}`
+                });
+                await updateOrderStatus(alloc.orderId, newStatus);
             }
 
             // Generate and show receipt preview
             if (!editMode && formData.customerId) {
                 const postedPayment = await dbService.get<CustomerPayment>('customerPayments', newPayment.id);
-                await handlePreviewReceipt(postedPayment || newPayment);
+                await handlePreviewReceipt(postedPayment || newPayment as CustomerPayment);
             }
 
             // Handle Examination Invoice payment sync
@@ -1069,16 +1141,44 @@ const Payments: React.FC = () => {
         return baseInvoices;
     }, [invoices, formData.customerName, formData.subAccountName, location.state]);
 
+    const availableOrders = useMemo(() => {
+        if (!formData.customerName) return [];
+
+        const baseOrders = orders.filter(o => {
+            const customerMatch = o.customerName === formData.customerName;
+            const subAccountMatch = !formData.subAccountName ||
+                formData.subAccountName === 'Main' ||
+                o.subAccountName === formData.subAccountName;
+            const statusMatch = o.status !== 'Completed' &&
+                o.status !== 'Paid' &&
+                o.status !== 'Cancelled' &&
+                o.status !== 'Converted';
+            return customerMatch && subAccountMatch && statusMatch;
+        });
+        return baseOrders;
+    }, [orders, formData.customerName, formData.subAccountName]);
+
     const handleAutoAllocate = () => {
         let remaining = Number(formData.amount);
-        const newAllocations: InvoiceAllocation[] = [];
-        const sorted = [...availableInvoices].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const newAllocations: Array<{ invoiceId: string; orderId?: string; amount: number; [key: string]: any }> = [];
+        const combined = [
+            ...availableInvoices.map(i => ({ ...i, docType: 'invoice' as const })),
+            ...availableOrders.map(o => ({ ...o, docType: 'order' as const }))
+        ].sort((a, b) => {
+            const da = (a as any).orderDate || (a as any).date;
+            const db = (b as any).orderDate || (b as any).date;
+            return new Date(da).getTime() - new Date(db).getTime();
+        });
 
-        for (const inv of sorted) {
+        for (const doc of combined) {
             if (remaining <= 0) break;
-            const due = inv.totalAmount - (inv.paidAmount || 0);
+            const due = (doc as any).totalAmount - ((doc as any).paidAmount || 0);
             const amt = Math.min(remaining, due);
-            newAllocations.push({ invoiceId: inv.id, amount: amt });
+            if (doc.docType === 'invoice') {
+                newAllocations.push({ invoiceId: doc.id, amount: amt });
+            } else {
+                newAllocations.push({ invoiceId: '', orderId: doc.id, amount: amt });
+            }
             remaining -= amt;
         }
         setAllocations(newAllocations);
@@ -1199,23 +1299,35 @@ const Payments: React.FC = () => {
             {activeTab === 'Received' ? (
                 <>
                     {isModalOpen && (
-                        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center shrink-0 bg-white">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                                            <PaymentIcon size={13} className="text-white" />
+                        <div
+                            className="fixed inset-0 z-[100] bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300"
+                            onClick={(e) => { if (e.target === e.currentTarget) { modalOpenedRef.current = false; setIsModalOpen(false); } }}
+                        >
+                            <div className="bg-white rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.25)] w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 border border-white/20">
+                                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-gradient-to-r from-blue-50 via-white to-slate-50 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent"></div>
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-2 ring-blue-500/20">
+                                            <PaymentIcon size={18} className="text-white" />
                                         </div>
                                         <div>
-                                            <h2 className="text-[13px] font-bold text-slate-900 tracking-tight">Record Customer Payment</h2>
-                                            <p className="text-[10px] text-slate-400 font-medium">Process payment and allocate to invoices</p>
+                                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight">Record Customer Payment</h2>
+                                            <p className="text-[11px] text-slate-500 font-medium mt-0.5">Process payment and allocate to invoices or orders</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => setIsModalOpen(false)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><X size={15} /></button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            modalOpenedRef.current = false;
+                                            setIsModalOpen(false);
+                                        }}
+                                        className="w-8 h-8 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-all hover:rotate-90 duration-200"
+                                    ><X size={16} /></button>
                                 </div>
 
                                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                                    <div className="w-full md:w-[280px] bg-slate-50/80 p-3.5 border-r border-slate-200 overflow-y-auto custom-scrollbar flex flex-col gap-2.5">
+                                    <div className="w-full md:w-[320px] bg-gradient-to-b from-slate-50/90 to-slate-50/70 p-5 border-r border-slate-200/80 overflow-y-auto custom-scrollbar flex flex-col gap-3">
                                         {editMode && (
                                             <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                                                 <p className="text-[10px] font-semibold text-amber-700 flex items-center gap-1.5">
@@ -1225,11 +1337,11 @@ const Payments: React.FC = () => {
                                             </div>
                                         )}
 
-                                        <div className="space-y-2.5 flex-1">
+                                        <div className="space-y-3 flex-1">
                                             <div>
-                                                <label className="block text-[10px] font-semibold text-slate-500 mb-1">Customer</label>
+                                                <label className="block text-[10px] font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Customer</label>
                                                 <select
-                                                    className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-white text-[12px] font-medium text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                                                    className="w-full h-9 px-3 border border-slate-200 rounded-xl bg-white text-[13px] font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm"
                                                     value={formData.customerName}
                                                     disabled={editMode}
                                                     onChange={e => {
@@ -1241,6 +1353,7 @@ const Payments: React.FC = () => {
                                                             customerId: customer?.id || '',
                                                             subAccountName: 'Main'
                                                         });
+                                                        setAllocations([]);
                                                     }}
                                                 >
                                                     <option value="">-- Choose Client --</option>
@@ -1250,8 +1363,8 @@ const Payments: React.FC = () => {
                                                     const cust = customers.find((c: any) => c.name === formData.customerName);
                                                     const bal = cust?.walletBalance || 0;
                                                     return bal > 0 ? (
-                                                        <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                                                            <Wallet size={11} /> Wallet Balance: {currency}{bal.toFixed(2)}
+                                                        <p className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-lg">
+                                                            <Wallet size={12} className="text-emerald-700" /> Wallet Balance: {currency}{bal.toFixed(2)}
                                                         </p>
                                                     ) : null;
                                                 })()}
@@ -1365,7 +1478,7 @@ const Payments: React.FC = () => {
                                                 </div>
                                                 <button
                                                     onClick={handleAutoAllocate}
-                                                    disabled={editMode || !formData.amount || availableInvoices.length === 0}
+                                                    disabled={editMode || !formData.amount || (availableInvoices.length === 0 && availableOrders.length === 0)}
                                                     className="w-full mt-1.5 h-7 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-30 flex items-center justify-center gap-1"
                                                 >
                                                     <BarChart3 size={12} /> Auto-Allocate
@@ -1414,19 +1527,27 @@ const Payments: React.FC = () => {
                                                 <><PaymentIcon size={14} /> Confirm & Post Payment</>
                                             )}
                                         </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { modalOpenedRef.current = false; setIsModalOpen(false); }}
+                                            className="w-full h-9 rounded-xl font-bold text-[11px] tracking-wide transition-all bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                                        >
+                                            Cancel
+                                        </button>
                                     </div>
 
                                     <div className="flex-1 bg-white p-3.5 overflow-y-auto custom-scrollbar">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-[12px] font-bold text-slate-800">Invoice Allocations</h3>
-                                            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{availableInvoices.length} unpaid</span>
+                                            <h3 className="text-[12px] font-bold text-slate-800">Document Allocations</h3>
+                                            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{availableInvoices.length + availableOrders.length} unpaid</span>
                                         </div>
 
                                         <div className="border border-slate-200 rounded-lg overflow-hidden">
                                             <table className="w-full text-left text-[12px] border-collapse">
                                                 <thead>
                                                     <tr className="bg-slate-50 border-b border-slate-200">
-                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Invoice</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Doc #</th>
+                                                        <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Type</th>
                                                         <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Date</th>
                                                         <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide text-right">Total</th>
                                                         <th className="px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide text-right">Balance</th>
@@ -1439,10 +1560,13 @@ const Payments: React.FC = () => {
                                                         const alloc = allocations.find(a => a.invoiceId === inv.id);
 
                                                         return (
-                                                            <tr key={inv.id} className="hover:bg-blue-50/40 transition-colors">
+                                                            <tr key={`inv-${inv.id}`} className="hover:bg-blue-50/40 transition-colors">
                                                                 <td className="px-3 py-2">
                                                                     <div className="font-semibold text-blue-600 text-[12px]">#{inv.id}</div>
                                                                     {inv.subAccountName && <div className="text-[9px] text-slate-400 font-medium">{inv.subAccountName}</div>}
+                                                                </td>
+                                                                <td className="px-3 py-2">
+                                                                    <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase">Invoice</span>
                                                                 </td>
                                                                 <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(inv.date).toLocaleDateString()}</td>
                                                                 <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{inv.totalAmount.toFixed(2)}</td>
@@ -1466,8 +1590,42 @@ const Payments: React.FC = () => {
                                                             </tr>
                                                         );
                                                     })}
-                                                    {availableInvoices.length === 0 && (
-                                                        <tr><td colSpan={5} className="p-10 text-center text-slate-300 font-medium italic">No outstanding invoices for this account context.</td></tr>
+                                                    {availableOrders.map(order => {
+                                                        const due = order.totalAmount - (order.paidAmount || 0);
+                                                        const alloc = allocations.find(a => a.orderId === order.id);
+
+                                                        return (
+                                                            <tr key={`ord-${order.id}`} className="hover:bg-amber-50/40 transition-colors">
+                                                                <td className="px-3 py-2">
+                                                                    <div className="font-semibold text-amber-700 text-[12px]">#{order.orderNumber || order.id}</div>
+                                                                </td>
+                                                                <td className="px-3 py-2">
+                                                                    <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Order</span>
+                                                                </td>
+                                                                <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(order.orderDate || order.date).toLocaleDateString()}</td>
+                                                                <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{order.totalAmount.toFixed(2)}</td>
+                                                                <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toFixed(2)}</td>
+                                                                <td className="px-3 py-2 text-right">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="w-20 h-7 px-1.5 border border-slate-200 rounded-md text-right font-semibold text-amber-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none finance-nums text-[12px] bg-white transition-all"
+                                                                        value={alloc?.amount || ''}
+                                                                        disabled={editMode}
+                                                                        onChange={e => {
+                                                                            const val = parseFloat(e.target.value) || 0;
+                                                                            setAllocations(prev => {
+                                                                                const filtered = prev.filter(a => a.orderId !== order.id);
+                                                                                return [...filtered, { invoiceId: '', orderId: order.id, amount: val }];
+                                                                            });
+                                                                        }}
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {availableInvoices.length === 0 && availableOrders.length === 0 && (
+                                                        <tr><td colSpan={6} className="p-10 text-center text-slate-300 font-medium italic">No outstanding invoices or orders for this account context.</td></tr>
                                                     )}
                                                 </tbody>
                                             </table>
@@ -1835,7 +1993,7 @@ const Payments: React.FC = () => {
                                                                         const val = parseFloat(e.target.value) || 0;
                                                                         setSupplierAllocations(prev => {
                                                                             const filtered = prev.filter(a => a.purchaseId !== bill.id);
-                                                                            if (val > 0) return [...filtered, { purchaseId: bill.id, amount: val }];
+                                                                            if (val > 0) return [...filtered, { purchaseId: bill.id, amount: val } as unknown as PurchaseAllocation];
                                                                             return filtered;
                                                                         });
                                                                     }}

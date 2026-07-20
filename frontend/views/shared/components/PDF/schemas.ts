@@ -91,6 +91,7 @@ export const ReceiptSchema = z.object({
   changeGiven: z.number().optional(),
   paymentMethod: z.string(),
   appliedInvoices: z.array(z.string()), // ["INV-001", "INV-002"] 
+  appliedOrders: z.array(z.string()).optional(), // ["ORD-001", "ORD-002"]
   invoiceTotal: z.number().optional(), // Sum of total amount of all applied invoices
   paymentStatus: z.enum(['PARTIALLY PAID', 'PAID', 'OVERPAID']).optional(),
   balanceDue: z.number().optional(), // Remaining balance if partially paid
