@@ -1303,8 +1303,9 @@ const Orders: React.FC = () => {
                         setSelectedInvoiceIds([]);
                     } catch (error: any) {
                         notify(`Bulk cancel failed: ${error.message} `, "error");
+                    }
                 }
-            }
+            });
         } else if (action === 'bulk_email') {
             notify(`Drafting communications for ${selectedInvoiceIds.length} recipients...`, "info");
             // In a real app, this would open a bulk email composer or trigger a background job

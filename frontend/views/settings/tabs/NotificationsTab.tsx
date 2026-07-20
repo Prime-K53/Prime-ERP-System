@@ -245,7 +245,7 @@ export const NotificationsTab: React.FC<NotificationsTabProps> = ({ config, setC
           confirmText={confirmState.confirmText}
           type={confirmState.type || 'question'}
         />
-      </div>
+      </section>
     </div>
   );
 };

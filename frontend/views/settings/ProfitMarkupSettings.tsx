@@ -566,35 +566,6 @@ const ProfitMarkupSettings: React.FC = () => {
         }
       }
     });
-          } else {
-            await apiFetch('/profit-margins', {
-              method: 'POST',
-              body: JSON.stringify({ scope: 'global', scope_ref_id: null, margin_type: globalType, margin_value: val, is_active: true, reason: globalReason || 'Initial global margin' }),
-            });
-          }
-          toast('Global margin saved', 'success');
-          await load(); // load() will also update the cache
-        } catch (err: any) {
-          // Offline: persist the change locally so pricing still works
-          const cached = readCachedMarginSettings();
-          const idx = cached.findIndex(s => s.scope === 'global');
-          if (idx >= 0) {
-            cached[idx] = { ...cached[idx], ...offlineRecord };
-          } else {
-            cached.push(offlineRecord);
-          }
-          cacheMarginSettings(cached);
-          // Also write to IndexedDB so cloud sync can propagate it
-          try {
-            await dbService.put('profitMarginSettings', offlineRecord);
-          } catch { /* best-effort */ }
-          setSettings(cached);
-          toast('Saved locally (backend offline — will sync when reconnected)', 'info');
-        } finally {
-          setSavingGlobal(false);
-        }
-      }
-    });
   };
 
   // ── Toggle active ──────────────────────────────────────────────────────────

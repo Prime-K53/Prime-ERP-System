@@ -581,20 +581,19 @@ const ServiceRecipeEditorPage: React.FC = () => {
             </div>
         </div>
 
-        <ConfirmDialog
-          open={confirmState.open}
-          onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
-          onConfirm={() => {
-            confirmState.onConfirm?.();
-            setConfirmState(c => ({ ...c, open: false }));
-          }}
-          onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
-          title={confirmState.title}
-          message={confirmState.message}
-          confirmText={confirmState.confirmText}
-          type={confirmState.type || 'question'}
-        />
-    </div>
+            <ConfirmDialog
+              open={confirmState.open}
+              onOpenChange={(open) => !open && setConfirmState(c => ({ ...c, open: false }))}
+              onConfirm={() => {
+                confirmState.onConfirm?.();
+                setConfirmState(c => ({ ...c, open: false }));
+              }}
+              onCancel={() => setConfirmState(c => ({ ...c, open: false }))}
+              title={confirmState.title}
+              message={confirmState.message}
+              confirmText={confirmState.confirmText}
+              type={confirmState.type || 'question'}
+            />
     </div>
   );
 };
