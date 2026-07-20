@@ -85,8 +85,8 @@ const GoodsReceived: React.FC = () => {
 
                   const grnItems = (extracted.items || []).map((item: any) => {
                       const matchedInv = (inventory || []).find(i => 
-                          i.name.toLowerCase().includes(item.name.toLowerCase()) ||
-                          item.name.toLowerCase().includes(i.name.toLowerCase())
+                          (i.name || '').toLowerCase().includes((item.name || '').toLowerCase()) ||
+                          (item.name || '').toLowerCase().includes((i.name || '').toLowerCase())
                       );
 
                       return {
@@ -106,7 +106,7 @@ const GoodsReceived: React.FC = () => {
                       id: '',
                       purchaseOrderId: matchingPO ? matchingPO.id : (extracted.purchaseOrderId || 'MANUAL'),
                       date: extracted.date || new Date().toISOString().split('T')[0],
-                      supplierId: matchingPO ? matchingPO.supplierId : (suppliers.find(s => s.name.toLowerCase().includes(extracted.supplierName?.toLowerCase()))?.id || 'UNKNOWN'),
+                      supplierId: matchingPO ? matchingPO.supplierId : (suppliers.find(s => (s.name || '').toLowerCase().includes((extracted.supplierName || '').toLowerCase()))?.id || 'UNKNOWN'),
                       supplierName: extracted.supplierName || 'Unknown Supplier',
                       status: 'Draft',
                       items: grnItems,

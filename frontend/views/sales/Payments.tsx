@@ -1767,7 +1767,7 @@ const Payments: React.FC = () => {
                                 <tbody className="divide-y divide-slate-100/50">
                                     {supplierPayments
                                         .filter(p =>
-                                            suppliers.find(s => s.id === p.supplierId)?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                            (suppliers.find(s => s.id === p.supplierId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                                             p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                             p.reference?.toLowerCase().includes(searchTerm.toLowerCase())
                                         )

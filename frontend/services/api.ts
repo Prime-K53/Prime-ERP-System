@@ -41,8 +41,12 @@ const apiClient = axios.create({
   headers: {}
 });
 
-// Attach auth headers from session on every request
+// Intercept non-GET requests in local-first mode to prevent CORS errors
 apiClient.interceptors.request.use((config) => {
+  if (shouldPreferLocalReadModels() && config.method && config.method.toLowerCase() !== 'get') {
+    return Promise.reject({ __localOnly: true, message: 'Skipped (local-first mode)', config });
+  }
+  // Attach auth headers from session on every request
   try {
     const raw = sessionStorage.getItem('nexus_user');
     if (raw) {
@@ -2291,7 +2295,8 @@ export const api = {
         const response = await apiClient.delete('/system/workspace');
         return response.data;
       }
-      const resp = await fetch('http://127.0.0.1:3000/api/system/workspace', {
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const resp = await fetch(`${backendUrl}/api/system/workspace`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });

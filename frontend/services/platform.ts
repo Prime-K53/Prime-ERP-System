@@ -47,6 +47,13 @@ const blobUrls = new Set<string>();
 
 const getRuntimeBackendUrl = () => {
   try {
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (envUrl) return envUrl;
+  } catch {
+    // ignore
+  }
+
+  try {
     const urlParams = new URLSearchParams(window.location.search);
     const override = String(urlParams.get('backend') || '').trim();
     if (override) return override;

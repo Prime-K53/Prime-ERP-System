@@ -363,32 +363,22 @@ export const cloudDb = {
         .update(p)
         .eq('id', id);
 
-      // Try upsert first
+      // Use upsert (handles both insert and update for existing rows)
       const { error: uErr } = await doUpsert(payload);
       if (!uErr) {
         setActiveCompanyId(id);
         return id;
       }
 
-      // Fallback: insert
-      const { error: iErr } = await doInsert(payload);
-      if (!iErr) {
+      // If upsert failed, try update directly (row may exist but upsert blocked by RLS)
+      const { error: updErr } = await doUpdate(payload);
+      if (!updErr) {
         setActiveCompanyId(id);
         return id;
       }
 
-      // Fallback: update (if insert hit duplicate key 23505)
-      if (String(iErr.code) === '23505') {
-        const { error: updErr } = await doUpdate(payload);
-        if (!updErr) {
-          setActiveCompanyId(id);
-          return id;
-        }
-      }
-
       // If the error mentions the "data" JSONB column, retry without it
-      const finalErr = uErr || iErr;
-      const msg = ((finalErr?.message || '') + (finalErr?.details || '')).toLowerCase();
+      const msg = ((uErr?.message || '') + (uErr?.details || '')).toLowerCase();
       if (msg.includes('column "data"')) {
         logger.warn('[CloudDB] Retrying company creation without data column');
         const slim = { id: payload.id, company_name: payload.company_name, updated_at: payload.updated_at };
@@ -397,14 +387,14 @@ export const cloudDb = {
           setActiveCompanyId(id);
           return id;
         }
-        const { error: siErr } = await doInsert(slim);
-        if (!siErr) {
+        const { error: suErr2 } = await doUpdate(slim);
+        if (!suErr2) {
           setActiveCompanyId(id);
           return id;
         }
       }
 
-      throw finalErr || new Error('Failed to create or update company');
+      throw uErr || new Error('Failed to create or update company');
     });
   },
 
@@ -732,7 +722,7 @@ export const cloudDb = {
 
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `${companyId}/${folder}/${crypto.randomUUID()}-${safeName}`;
-      const { error } = await supabase.storage
+      const { data: uploadData, error } = await supabase.storage
         .from(FILE_BUCKET)
         .upload(path, file, {
           cacheControl: '3600',
@@ -740,7 +730,14 @@ export const cloudDb = {
           upsert: false,
         });
 
-      if (error) throw error;
+      if (error) {
+        if (String(error.message || error.statusCode || '').includes('bucket')) {
+          logger.error(`[CloudDB] Storage bucket '${FILE_BUCKET}' not found. Create it in Supabase Dashboard → Storage.`, error);
+        } else {
+          logger.error(`[CloudDB] File upload failed for ${path}`, error);
+        }
+        throw error;
+      }
       const result = `storage:${FILE_BUCKET}:${path}`;
 
       // Record idempotency

@@ -104,9 +104,9 @@ const Subcontracting: React.FC = () => {
     };
 
     const filteredSubcontracts = (subcontractOrders || []).filter(o => 
-        o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.operationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.supplierId.toLowerCase().includes(searchTerm.toLowerCase())
+        (o.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.operationName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.supplierId || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

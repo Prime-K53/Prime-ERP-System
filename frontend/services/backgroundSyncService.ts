@@ -89,7 +89,12 @@ async function processBatch(batchSize: number = 10): Promise<BatchResult> {
       if (item.operation === 'delete') {
         await cloudDb.delete(table, item.recordId!, item.operationId);
       } else if (item.fileRef) {
-        await cloudDb.uploadFile(table, item.recordId!, clientData, item.fileRef, item.operationId);
+        const { openDB } = await import('idb');
+        const localDb = await openDB('nexus-db', 1);
+        const fileRecord = await localDb.get('files', item.fileRef);
+        if (fileRecord?.blob) {
+          await cloudDb.uploadFile(fileRecord.blob as File, 'documents', item.operationId);
+        }
       } else {
         await cloudDb.put(table, clientData, item.operationId);
       }

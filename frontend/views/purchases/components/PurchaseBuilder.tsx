@@ -103,8 +103,8 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
     const filteredSuppliers = useMemo(() => {
         if (!supplierSearch) return suppliers;
         return suppliers.filter(s => 
-            s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-            s.email?.toLowerCase().includes(supplierSearch.toLowerCase())
+            (s.name || '').toLowerCase().includes(supplierSearch.toLowerCase()) ||
+            (s.email || '').toLowerCase().includes(supplierSearch.toLowerCase())
         );
     }, [suppliers, supplierSearch]);
 
@@ -138,8 +138,8 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
     // Requirement: Hide products and services. Only allow materials/stationery for Bills/Purchases.
     const availableItems = inventory.filter(i => 
         (i.type === 'Raw Material' || i.type === 'Stationery') &&
-        (i.name.toLowerCase().includes(searchItem.toLowerCase()) || 
-        i.sku.toLowerCase().includes(searchItem.toLowerCase()))
+        ((i.name || '').toLowerCase().includes(searchItem.toLowerCase()) || 
+        (i.sku || '').toLowerCase().includes(searchItem.toLowerCase()))
     );
 
     const addItemToPO = (item: Item, qty: number = 10, cost?: number) => {
@@ -207,7 +207,7 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
                         // Match Supplier - AI returns clientName as the entity on the doc
                         const supplierName = extracted.supplierName || extracted.clientName;
                         if (supplierName) {
-                            const match = suppliers.find(s => s.name.toLowerCase().includes(supplierName.toLowerCase()));
+                            const match = suppliers.find(s => (s.name || '').toLowerCase().includes((supplierName || '').toLowerCase()));
                             if (match) {
                                 setSelectedSupplierId(match.id);
                                 setSupplierSearch(match.name);
@@ -224,7 +224,7 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
                             // Fuzzy Match Logic (Simple includes for now)
                             // Use desc or name from AI extraction
                             const itemName = scanItem.desc || scanItem.name || "";
-                            const matchedInv = inventory.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()));
+                            const matchedInv = inventory.find(i => (i.name || '').toLowerCase().includes(itemName.toLowerCase()));
                             
                             // Check if matched item is allowed (Material/Stationery)
                             if (matchedInv && (matchedInv.type === 'Raw Material' || matchedInv.type === 'Stationery')) {
@@ -407,7 +407,7 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
                                                     </button>
                                                 );
                                             })}
-                                            {supplierSearch && !filteredSuppliers.some(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase())) && (
+                                            {supplierSearch && !filteredSuppliers.some(s => (s.name || '').toLowerCase().includes(supplierSearch.toLowerCase())) && (
                                                 <button
                                                     onClick={() => {
                                                         setIsSupplierModalOpen(true);
