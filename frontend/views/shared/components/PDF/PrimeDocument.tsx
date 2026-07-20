@@ -482,11 +482,7 @@ const CleanInvoiceTemplate = ({
               fontScale={fontScale} 
             />
           ) : null}
-          {(!config?.vat?.enabled) && (
-            <View>
-               <Text style={{ fontSize: 9 * fontScale, color: '#94a3b8', fontStyle: 'italic' }}>* Not VAT registered</Text>
-            </View>
-          )}
+
         </View>
 
         {/* Use the standard Security Footer at bottom */}
@@ -1930,12 +1926,7 @@ if (type === 'POS_RECEIPT') {
                   </View>
                 )}
 
-                {/* Tax Note - Only show if VAT is NOT enabled */}
-                {(!config?.vat?.enabled) && (
-                  <View style={{ marginTop: 20, paddingTop: 10 }}>
-                    <Text style={{ fontSize: scaledFont(9), color: '#64748b', fontStyle: 'italic' }}>* Not VAT registered</Text>
-                  </View>
-                )}
+
               </View>
             )}
 
