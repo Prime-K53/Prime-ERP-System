@@ -96,7 +96,7 @@ export const docStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginTop: 15,
-    marginBottom: 40,
+    marginBottom: 20,
   },
   summaryLeft: {
     flexDirection: 'column',
@@ -146,10 +146,10 @@ export const docStyles = StyleSheet.create({
 
   // 5. Movable Company Section (Moves with items)
   footerContainer: {
-    marginTop: 20,
+    marginTop: 10,
     textAlign: 'center',
     alignItems: 'center',
-    paddingBottom: 60, // Space to prevent overlap with static footer
+    paddingBottom: 35,
   },
   thankYouText: {
     fontSize: 12,
@@ -197,15 +197,16 @@ export const docStyles = StyleSheet.create({
     left: 40,
     right: 40,
     borderTopWidth: 0.5,
-    borderColor: '#eee',
-    paddingTop: 8,
+    borderColor: '#e2e8f0',
+    paddingTop: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   securityFooterText: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 8,
   },
   securityFooterLine: {
     fontSize: 8,
@@ -213,19 +214,13 @@ export const docStyles = StyleSheet.create({
     lineHeight: 1.2,
   },
   securityQrPanel: {
-    width: 104,
+    width: 60,
     alignItems: 'center',
-    borderWidth: 0.5,
-    borderColor: '#dbe2ea',
-    borderRadius: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
   },
   securityQrImage: {
-    width: 56,
-    height: 56,
-    marginBottom: 3,
+    width: 50,
+    height: 50,
   },
   tableSectionTight: {
     marginTop: 14,

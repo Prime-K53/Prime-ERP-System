@@ -197,28 +197,28 @@ const SecurityFooter = ({
       <View style={s.securityFooterText}>
         <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine1}</Text>
         <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine2}</Text>
+        {createdOn && (
+          <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 9 * fontScale, lineHeight: 1.3, color: '#94a3b8' }]}>
+            Ref: {documentNumber} | By: {createdBy} | {createdOn}
+          </Text>
+        )}
       </View>
 
       <View
         style={[
           s.securityQrPanel,
           {
-            width: footerQrSize,
-            alignItems: 'flex-end',
-            borderTopWidth: 0,
-            borderRightWidth: 0,
-            borderBottomWidth: 0,
-            borderLeftWidth: 0,
+            width: footerQrSize + 8,
+            alignItems: 'center',
+            borderWidth: 0,
             backgroundColor: 'transparent',
-            paddingTop: 0,
-            paddingRight: 0,
-            paddingBottom: 0,
-            paddingLeft: 0,
+            paddingVertical: 0,
+            paddingHorizontal: 0,
           },
         ]}
       >
         {!!qrCodeDataUrl ? (
-          <Image src={qrCodeDataUrl} style={[s.securityQrImage, { width: footerQrSize, height: footerQrSize, marginBottom: 0 }]} />
+          <Image src={qrCodeDataUrl} style={{ width: footerQrSize, height: footerQrSize }} />
         ) : null}
       </View>
     </View>
@@ -1723,7 +1723,7 @@ if (type === 'POS_RECEIPT') {
             {/* Conversion Details Box */}
             {/* Conversion / Acceptance Details Box */}
             {('isConverted' in data && !!data.isConverted) && (!!conversionDetails || type === 'QUOTATION') && (
-              <View style={[s.conversionBox, { marginLeft: 20 }]}>
+              <View wrap={false} style={[s.conversionBox, { marginLeft: 20 }]}>
                 <Text style={s.conversionTitle}>{type === 'QUOTATION' ? 'Acceptance Details' : 'Conversion History'}</Text>
                 {type === 'QUOTATION' && 'date' in data ? (
                   <>
@@ -1833,7 +1833,7 @@ if (type === 'POS_RECEIPT') {
 
                             {type === 'QUOTATION' && (
                               <View style={s.totalRow}>
-                                <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount</Text>
+                                <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount:</Text>
                                 <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(displayTotal)}</Text>
                               </View>
                             )}
@@ -1889,7 +1889,7 @@ if (type === 'POS_RECEIPT') {
                 })()}
 
                   {/* Thank You Note */}
-                  <View style={{ marginTop: 15, alignItems: 'center' }}>
+                  <View wrap={false} style={{ marginTop: 15, alignItems: 'center' }}>
                     <Text style={{ fontSize: scaledFont(12), color: '#334155' }}>
                       Thank you for choosing <Text style={{ fontWeight: 'bold' }}>{companyName}</Text>
                     </Text>
@@ -1897,7 +1897,7 @@ if (type === 'POS_RECEIPT') {
 
                 {/* Quotation Note */}
                 {type === 'QUOTATION' && (
-                  <View style={{ marginTop: 15, padding: 8, backgroundColor: '#f0f9ff', borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0ea5e9' }}>
+                  <View wrap={false} style={{ marginTop: 15, padding: 8, backgroundColor: '#f0f9ff', borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0ea5e9' }}>
                     <Text style={{ fontSize: scaledFont(9), color: '#0369a1', lineHeight: 1.4 }}>
                       Note: Acceptance of this quotation converts it into a formal Sales Order subject to our standard terms and conditions.
                     </Text>
