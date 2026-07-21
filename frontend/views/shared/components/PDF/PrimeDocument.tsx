@@ -1313,6 +1313,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
 
   if (type === 'RECEIPT') {
     const rc = data as ReceiptDoc;
+    const isPartial = rc.paymentStatus === 'PARTIALLY PAID' || (rc.balanceDue && rc.balanceDue > 0);
     const isOverpaid = rc.paymentStatus === 'OVERPAID';
     const overpaymentAmount = rc.overpaymentAmount || rc.walletDeposit || 0;
 

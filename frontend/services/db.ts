@@ -510,6 +510,10 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
         const matchCid = filtered.filter((i: any) => i._companyId).length;
         console.log(`[DEBUG] getAllFromLegacyStore filter: total=${items.length}, has_companyId=${hasCid}, match_cid=${matchCid}, after_filter=${filtered.length}`);
     }
+    if (filtered.length === 0 && items.length > 0) {
+        console.warn(`[DB] getAllFromLegacyStore: all ${items.length} items filtered out for store "${storeName}" with companyId "${cid}". Returning all items as fallback to prevent data loss.`);
+        return items;
+    }
     return filtered;
 });
 
@@ -523,7 +527,10 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
     const cid = await getCurrentCompanyId();
     if (!cid) return record;
     const recordCompany = (record as Record<string, unknown>)?._companyId;
-    if (recordCompany && recordCompany !== cid) return undefined;
+    if (recordCompany && recordCompany !== cid) {
+        console.warn(`[DB] getFromLegacyStore: record ${id} in store "${storeName}" has companyId "${recordCompany}" which doesn't match current "${cid}". Returning record as fallback to prevent data loss.`);
+        return record;
+    }
     return record;
 });
 
