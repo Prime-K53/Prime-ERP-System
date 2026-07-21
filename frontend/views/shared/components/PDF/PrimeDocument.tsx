@@ -422,9 +422,9 @@ const CleanInvoiceTemplate = ({
             ) : null}
             
             {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
-              <View style={{ flexDirection: 'row', paddingVertical: 6, borderTopWidth: 1, borderColor: '#e2e8f0', marginTop: 4 }}>
-                <Text style={{ flex: 1, fontSize: 11 * fontScale, fontWeight: 'bold', color: '#1e293b' }}>Total Amount</Text>
-                <Text style={{ flex: 1, fontSize: 11 * fontScale, fontWeight: 'bold', color: '#1e293b', textAlign: 'right' }}>{currency} {(totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+              <View style={{ alignSelf: 'flex-end', width: 220, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1, borderColor: '#e2e8f0', marginTop: 4 }}>
+                <Text style={{ fontSize: 11 * fontScale, fontWeight: 'bold', color: '#1e293b' }}>Total Amount</Text>
+                <Text style={{ fontSize: 11 * fontScale, fontWeight: 'bold', color: '#1e293b', textAlign: 'right' }}>{currency} {(totalAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
               </View>
             )}
             

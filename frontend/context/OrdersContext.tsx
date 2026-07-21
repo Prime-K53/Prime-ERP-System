@@ -69,6 +69,11 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const handleConvertQuotationToOrder = async (quotation: Quotation): Promise<string> => {
     try {
+      const existingOrder = orders.find(o => o.quotationId === quotation.id);
+      if (existingOrder) {
+        notify('This quotation has already been converted to an order', 'warning');
+        return existingOrder.id;
+      }
       const orderNumber = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
       const conversionDate = new Date().toLocaleDateString();
       const acceptedBy = quotation.customerName || 'Customer';

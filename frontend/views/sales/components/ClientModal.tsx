@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Save, User, MapPin, CreditCard, FileText, Building, Truck, Plus, Trash2, Wallet, Users, AlertTriangle, CheckCircle2, Factory, Search } from 'lucide-react';
+import { X, Save, User, MapPin, CreditCard, FileText, Building, Truck, Plus, Trash2, Wallet, Users, AlertTriangle, CheckCircle2, Factory, Search } from 'lucide-react';
 import { Customer } from '../../../types';
 import { getDefaultPaymentTermsForSegment } from '../../../utils/helpers';
 import { useAuth } from '../../../context/AuthContext';

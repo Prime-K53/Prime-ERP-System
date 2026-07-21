@@ -1,5 +1,5 @@
 import { Referral, ReferralReward, ReferralSettings, DEFAULT_REFERRAL_SETTINGS } from '../types/referral'
-import { referralApiClient } from './referralApiClient'
+import { dbService } from './db'
 
 const getCompanyConfig = () => {
   const saved = localStorage.getItem('nexus_company_config')
@@ -23,14 +23,24 @@ function generateReferralCode(): string {
   return code
 }
 
+function generateId(): string {
+  return `ref-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export const referralService = {
   async registerReferral(customerId: string, referredById: string, referredByName?: string, actorId?: string): Promise<Referral> {
-    const result = await referralApiClient.register({
-      customer_id: customerId,
-      referred_by_id: referredById,
-      referred_by_name: referredByName,
-    })
-    return result as Referral
+    const referral: Referral = {
+      id: generateId(),
+      customerId,
+      referredById,
+      referredByName,
+      referralCode: generateReferralCode(),
+      status: 'active',
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    await dbService.put('referrals', referral);
+    return referral;
   },
 
   async registerReferralFromInvoice(invoice: {
@@ -47,64 +57,84 @@ export const referralService = {
     const settings = getReferralSettings()
     if (!settings.enabled) return null
 
-    const result = await referralApiClient.register({
-      customer_id: invoice.customerId,
-      referred_by_id: invoice.referredById,
-      referred_by_name: invoice.referredByName,
-      pending_invoice_id: invoice.id,
-      pending_invoice_amount: invoice.totalAmount,
-    } as any)
-    return result as Referral
+    const referral: Referral = {
+      id: generateId(),
+      customerId: invoice.customerId,
+      referredById: invoice.referredById,
+      referredByName: invoice.referredByName,
+      referralCode: generateReferralCode(),
+      status: 'active',
+      date: new Date().toISOString(),
+      pendingInvoiceId: invoice.id,
+      pendingInvoiceAmount: invoice.totalAmount,
+      createdAt: new Date().toISOString(),
+    };
+    await dbService.put('referrals', referral);
+    return referral;
   },
 
   async getReferralsByCustomer(customerId: string): Promise<Referral[]> {
-    const result = await referralApiClient.getAll({ customer_id: customerId })
-    return (result.referrals || []) as Referral[]
+    const all = await dbService.getAll<Referral>('referrals');
+    return all.filter(r => r.customerId === customerId);
   },
 
   async getReferralsByReferrer(referredById: string): Promise<Referral[]> {
-    const result = await referralApiClient.getAll({ referred_by_id: referredById })
-    return (result.referrals || []) as Referral[]
+    const all = await dbService.getAll<Referral>('referrals');
+    return all.filter(r => r.referredById === referredById);
   },
 
   async getReferralByCode(code: string): Promise<Referral | undefined> {
-    const result = await referralApiClient.getAll({ referral_code: code, status: 'active' })
-    return (result.referrals || [])[0]
+    const all = await dbService.getAll<Referral>('referrals');
+    return all.find(r => r.referralCode === code && r.status === 'active');
   },
 
   async getAllReferrals(params?: { status?: string; search?: string; page?: number; limit?: number }): Promise<Referral[]> {
-    const result = await referralApiClient.getAll(params)
-    return (result.referrals || []) as Referral[]
+    let all = await dbService.getAll<Referral>('referrals');
+    if (params?.status) all = all.filter(r => r.status === params.status);
+    if (params?.search) {
+      const s = params.search.toLowerCase();
+      all = all.filter(r =>
+        r.referredByName?.toLowerCase().includes(s) ||
+        r.referralCode?.toLowerCase().includes(s) ||
+        r.customerId?.toLowerCase().includes(s)
+      );
+    }
+    return all;
   },
 
   async getPendingRewards(): Promise<ReferralReward[]> {
-    const result = await referralApiClient.getPendingRewards()
-    return (result || []) as ReferralReward[]
+    const all = await dbService.getAll<ReferralReward>('referralRewards');
+    return all.filter(r => r.status === 'pending');
   },
 
   async getRewardsByCustomer(customerId: string): Promise<ReferralReward[]> {
-    const result = await referralApiClient.getRewards()
-    return (result.rewards || []).filter((r: any) => r.customerId === customerId) as ReferralReward[]
+    const all = await dbService.getAll<ReferralReward>('referralRewards');
+    return all.filter(r => r.customerId === customerId);
   },
 
   async getRewardsByReferral(referralId: string): Promise<ReferralReward[]> {
-    const result = await referralApiClient.getRewards({ referral_id: referralId })
-    return (result.rewards || []) as ReferralReward[]
+    const all = await dbService.getAll<ReferralReward>('referralRewards');
+    return all.filter(r => r.referralId === referralId);
   },
 
   async approveReward(rewardId: string, approvedBy: string): Promise<ReferralReward> {
-    const result = await referralApiClient.approveReward(rewardId, approvedBy)
-    return result as ReferralReward
+    const reward = await dbService.get<ReferralReward>('referralRewards', rewardId);
+    if (!reward) throw new Error('Reward not found');
+    const updated = { ...reward, status: 'approved' as const, approvedAt: new Date().toISOString(), approvedBy, updatedAt: new Date().toISOString() };
+    await dbService.put('referralRewards', updated);
+    return updated;
   },
 
   async rejectReward(rewardId: string, reason: string, rejectedBy?: string): Promise<ReferralReward> {
-    const result = await referralApiClient.rejectReward(rewardId, reason, rejectedBy)
-    return result as ReferralReward
+    const reward = await dbService.get<ReferralReward>('referralRewards', rewardId);
+    if (!reward) throw new Error('Reward not found');
+    const updated = { ...reward, status: 'cancelled' as const, cancelReason: reason, cancelledBy: rejectedBy, cancelledAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    await dbService.put('referralRewards', updated);
+    return updated;
   },
 
   async getAllRewards(): Promise<ReferralReward[]> {
-    const result = await referralApiClient.getRewards()
-    return (result.rewards || []) as ReferralReward[]
+    return dbService.getAll<ReferralReward>('referralRewards');
   },
 
   async processInvoiceReward(invoice: {
@@ -131,23 +161,45 @@ export const referralService = {
       referral = await this.registerReferral(invoice.customerId, invoice.referredBy, invoice.referredByName)
     }
 
-    const result = await referralApiClient.createReward({
-      referral_id: referral.id,
-      invoice_id: invoice.id,
-      invoice_amount: invoice.totalAmount,
-      customer_id: invoice.referredBy,
-    })
-    return result as ReferralReward
+    const rewardAmount = settings.rewardType === 'percentage'
+      ? invoice.totalAmount * (settings.rewardPercentage / 100)
+      : settings.rewardValue;
+
+    const reward: ReferralReward = {
+      id: generateId(),
+      referralId: referral.id,
+      customerId: invoice.referredBy,
+      invoiceId: invoice.id,
+      invoiceAmount: invoice.totalAmount,
+      amount: Math.min(rewardAmount, settings.maxRewardAmount || rewardAmount),
+      status: settings.requireApproval ? 'pending' : 'approved',
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    await dbService.put('referralRewards', reward);
+
+    if (referral.pendingInvoiceId) {
+      const updated = { ...referral, status: 'converted' as const, convertedAt: new Date().toISOString(), convertedInvoiceId: invoice.id };
+      await dbService.put('referrals', updated);
+    }
+
+    return reward;
   },
 
   async expireReferral(referralId: string): Promise<Referral> {
-    const result = await referralApiClient.expire(referralId)
-    return result as Referral
+    const referral = await dbService.get<Referral>('referrals', referralId);
+    if (!referral) throw new Error('Referral not found');
+    const updated = { ...referral, status: 'expired' as const, updatedAt: new Date().toISOString() };
+    await dbService.put('referrals', updated);
+    return updated;
   },
 
   async cancelReferral(referralId: string, cancelledBy?: string, reason?: string): Promise<Referral> {
-    const result = await referralApiClient.cancel(referralId, reason)
-    return result as Referral
+    const referral = await dbService.get<Referral>('referrals', referralId);
+    if (!referral) throw new Error('Referral not found');
+    const updated = { ...referral, status: 'cancelled' as const, notes: reason, updatedAt: new Date().toISOString() };
+    await dbService.put('referrals', updated);
+    return updated;
   },
 
   async checkAndExpireReferrals(): Promise<number> {
@@ -173,59 +225,119 @@ export const referralService = {
 
   // Analytics
   async getAnalytics(params?: { period?: string; period_start?: string; period_end?: string }): Promise<any> {
-    return referralApiClient.getAnalytics(params);
+    const allReferrals = await dbService.getAll<Referral>('referrals');
+    const allRewards = await dbService.getAll<ReferralReward>('referralRewards');
+    const active = allReferrals.filter(r => r.status === 'active');
+    const converted = allReferrals.filter(r => r.status === 'converted');
+    const totalRewards = allRewards.reduce((s, r) => s + r.amount, 0);
+    const approvedRewards = allRewards.filter(r => r.status === 'approved').reduce((s, r) => s + r.amount, 0);
+    const paidRewards = allRewards.filter(r => r.status === 'paid').reduce((s, r) => s + r.amount, 0);
+    const pendingRewards = allRewards.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0);
+    const revenueAttributed = converted.reduce((s, r) => s + (r.pendingInvoiceAmount || 0), 0);
+
+    return {
+      totalReferrals: allReferrals.length,
+      activeReferrals: active.length,
+      convertedReferrals: converted.length,
+      totalRewardsAmount: totalRewards,
+      approvedRewardsAmount: approvedRewards,
+      paidRewardsAmount: paidRewards,
+      pendingRewardsAmount: pendingRewards,
+      reversedRewardsAmount: 0,
+      averageRewardAmount: allRewards.length > 0 ? totalRewards / allRewards.length : 0,
+      conversionRate: allReferrals.length > 0 ? (converted.length / allReferrals.length) * 100 : 0,
+      revenueAttributed,
+      roi: revenueAttributed > 0 ? ((revenueAttributed - totalRewards) / revenueAttributed) * 100 : 0,
+      period: params?.period || 'monthly',
+      periodStart: params?.period_start || '',
+      periodEnd: params?.period_end || '',
+      generatedAt: new Date().toISOString(),
+    };
   },
 
   async getAnalyticsHistory(params?: { period?: string; period_start?: string; period_end?: string }): Promise<any[]> {
-    return referralApiClient.getAnalyticsHistory(params);
+    return dbService.getAll<any>('referralAnalytics');
   },
 
   // Campaigns
   async getAllCampaigns(params?: { status?: string }): Promise<any[]> {
-    return referralApiClient.getCampaigns(params);
+    let all = await dbService.getAll<any>('referralCampaigns');
+    if (params?.status) all = all.filter(c => c.status === params.status);
+    return all;
   },
 
   async createCampaign(data: any): Promise<any> {
-    return referralApiClient.createCampaign(data);
+    const campaign = { ...data, id: generateId(), createdAt: new Date().toISOString() };
+    await dbService.put('referralCampaigns', campaign);
+    return campaign;
   },
 
   async updateCampaign(id: string, data: any): Promise<any> {
-    return referralApiClient.updateCampaign(id, data);
+    const existing = await dbService.get<any>('referralCampaigns', id);
+    const updated = { ...existing, ...data, id, updatedAt: new Date().toISOString() };
+    await dbService.put('referralCampaigns', updated);
+    return updated;
   },
 
   async updateCampaignStatus(id: string, status: string): Promise<any> {
-    return referralApiClient.updateCampaignStatus(id, status);
+    const existing = await dbService.get<any>('referralCampaigns', id);
+    const updated = { ...existing, status, updatedAt: new Date().toISOString() };
+    await dbService.put('referralCampaigns', updated);
+    return updated;
   },
 
   // Reversals
   async getAllReversals(params?: { page?: number; limit?: number; status?: string }): Promise<any[]> {
-    const result = await referralApiClient.getReversals(params);
-    return (result.reversals || []) as any[];
+    let all = await dbService.getAll<any>('referralReversals');
+    if (params?.status) all = all.filter(r => r.status === params.status);
+    return all;
   },
 
   async createReversal(data: { reward_id: string; reason: string; notes?: string }): Promise<any> {
-    return referralApiClient.createReversal(data);
+    const reversal = {
+      id: generateId(),
+      rewardId: data.reward_id,
+      reason: data.reason,
+      notes: data.notes,
+      status: 'pending' as const,
+      requestedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    await dbService.put('referralReversals', reversal);
+    return reversal;
   },
 
   async approveReversal(id: string, approvedBy: string, notes?: string): Promise<any> {
-    return referralApiClient.approveReversal(id, approvedBy, notes);
+    const existing = await dbService.get<any>('referralReversals', id);
+    const updated = { ...existing, status: 'approved' as const, approvedBy, approvedAt: new Date().toISOString(), notes: notes || existing.notes, updatedAt: new Date().toISOString() };
+    await dbService.put('referralReversals', updated);
+    return updated;
   },
 
   async rejectReversal(id: string, reason: string, rejectedBy?: string, notes?: string): Promise<any> {
-    return referralApiClient.rejectReversal(id, reason, rejectedBy, notes);
+    const existing = await dbService.get<any>('referralReversals', id);
+    const updated = { ...existing, status: 'rejected' as const, rejectReason: reason, rejectedBy, rejectedAt: new Date().toISOString(), notes: notes || existing.notes, updatedAt: new Date().toISOString() };
+    await dbService.put('referralReversals', updated);
+    return updated;
   },
 
   // Settings
   async getSettings(): Promise<any> {
-    return referralApiClient.getSettings();
+    const stored = await dbService.get<any>('settings', 'referral_settings');
+    const defaults = getReferralSettings();
+    return stored ? { ...defaults, ...stored.value } : defaults;
   },
 
   async updateSettings(settings: any): Promise<any> {
-    return referralApiClient.updateSettings(settings);
+    await dbService.put('settings', { id: 'referral_settings', value: settings });
+    return settings;
   },
 
   // Audit Logs
   async getAuditLogs(params?: { page?: number; limit?: number; entity_type?: string; entity_id?: string }): Promise<any> {
-    return referralApiClient.getAuditLogs(params);
+    let all = await dbService.getAll<any>('referralAuditLogs');
+    if (params?.entity_type) all = all.filter(l => l.entityType === params.entity_type);
+    if (params?.entity_id) all = all.filter(l => l.entityId === params.entity_id);
+    return { logs: all, total: all.length };
   },
 }

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { logger } from '@/services/logger';
 import { 
-  Search, AlertTriangle, Plus, Minus, 
+  Search, AlertTriangle, Plus, Minus, X,
   ChevronRight, Info, CheckCircle2, ShoppingCart, FileText, RefreshCw 
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/Dialog';

@@ -685,6 +685,10 @@ const Orders: React.FC = () => {
         }
 
         if (action === 'convert_to_order' && activeView === 'Quotations') {
+            if (item.status === 'Converted') {
+                notify('This quotation has already been converted to an order.', 'warning');
+                return;
+            }
             const confirmed = await confirm({
                 title: 'Convert to Order',
                 message: "Convert this quotation to an active order? This will mark the quotation as 'Converted'.",

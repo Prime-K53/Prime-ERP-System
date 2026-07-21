@@ -1194,9 +1194,9 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                 )}
 
                 <button
-                    disabled={quote.status === 'Pending Approval'}
+                    disabled={quote.status === 'Pending Approval' || quote.status === 'Converted'}
                     onClick={() => { setOpenMenuId(null); props.onAction && props.onAction(quote, 'convert_to_order'); }}
-                    className={`w-full text-left px-4 py-2 text-xs font-bold flex items-center gap-3 transition-colors ${quote.status === 'Pending Approval' ? 'text-slate-400 cursor-not-allowed opacity-50' : 'text-blue-600 hover:bg-blue-50'}`}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold flex items-center gap-3 transition-colors ${quote.status === 'Pending Approval' || quote.status === 'Converted' ? 'text-slate-400 cursor-not-allowed opacity-50' : 'text-blue-600 hover:bg-blue-50'}`}
                 >
                     <Package size={14} /> Convert to Order
                 </button>
