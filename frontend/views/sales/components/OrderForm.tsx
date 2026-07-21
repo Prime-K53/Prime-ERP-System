@@ -2623,7 +2623,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </div>
                             <div>
                                 <div className="summary-card" style={{background:"#FBF8F2",border:"1.5px solid #0F3D3E",borderRadius:"10px",padding:"12px 14px",position:"relative"}}>
-                                    <span style={{position:"absolute",top:"8px",right:"10px",fontFamily:"JetBrains Mono,monospace",fontSize:"9px",fontWeight:"700",letterSpacing:"2px",color:"#93C5FD"}}>COPY</span>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
                                         <span style={{fontSize:"10px",fontWeight:"600",textTransform:"uppercase",letterSpacing:"0.5px",color:"#2563EB"}}>Round Up</span>
                                         <div className="flex items-center gap-[4px]">
