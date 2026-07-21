@@ -2075,9 +2075,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 className="w-[30px] h-[30px] rounded-[8px] border border-[#E4DFD1] bg-[#FEFDFB] text-[#666F6C] text-[15px] flex items-center justify-center cursor-pointer hover:border-[#93C5FD] hover:text-[#2563EB] transition-colors">
                                 ✕
                             </button>
-                            <span className="inline-flex items-center gap-1 px-[7px] py-[3px] text-[10px] font-['JetBrains_Mono',monospace] tracking-[0.3px] font-semibold text-[#B8863B] bg-[rgba(184,134,59,0.08)] border border-[rgba(184,134,59,0.2)] rounded-[4px] uppercase">
-                                Draft
-                            </span>
                         </div>
                     </div>
 
@@ -2138,7 +2135,6 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <div className="flex items-center gap-[6px] px-[2px] mb-[11px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
                                 className="group inline-flex items-center gap-[6px] px-[10px] py-[5px] text-[11px] font-semibold text-[#666F6C] bg-white border border-[#E4DFD1] rounded-[6px] hover:border-[#93C5FD] hover:text-[#2563EB] transition-all duration-200">
-                                <Copy size={13} className="shrink-0 text-[#B8863B] group-hover:text-[#2563EB] group-hover:scale-110 transition-all" />
                                 <span>Photocopy</span>
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
