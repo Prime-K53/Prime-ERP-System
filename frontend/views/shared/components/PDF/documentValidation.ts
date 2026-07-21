@@ -119,8 +119,8 @@ export const validateDocumentData = (type: DocType | string, data: any): Validat
   }
 
   if (type === 'PO') {
-    const r1 = requireFields(data, ['supplierName'], 'Purchase Order', ['Supplier name']);
-    if (r1) return { valid: false, error: r1 };
+    const poName = data.supplierName || data.vendorName || data.supplier_name || data.vendor_name;
+    if (!poName) return { valid: false, error: 'Purchase Order is missing required field: Supplier name' };
     if (!resolveDocumentNumber(data)) return { valid: false, error: 'Purchase Order is missing a document number' };
     if (resolveAmount(data) === undefined) return { valid: false, error: 'Purchase Order is missing a total amount' };
     const r2 = checkArray(data, 'items', 'Purchase Order', 'line items');
