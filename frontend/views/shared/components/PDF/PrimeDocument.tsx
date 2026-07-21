@@ -177,13 +177,10 @@ const SecurityFooter = ({
     || data.reportName
     || 'N/A'
   ).trim() || 'N/A';
-  const createdBy = String(
-    data?.createdByName
-    || data?.createdBy
-    || data?.created_by
-    || data?.cashierName
-    || 'System User'
-  ).trim() || 'System User';
+  const rawCreatedBy = data?.createdByName || data?.createdBy || data?.created_by || data?.cashierName || '';
+  const createdBy = String(rawCreatedBy).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(createdBy);
+  const displayCreatedBy = createdBy && !isUuid ? createdBy : 'System User';
   const createdOn = formatSecurityTimestamp(
     String(data?.createdAtIso
     || data?.createdAt
@@ -191,24 +188,20 @@ const SecurityFooter = ({
     || data?.date || '')
   );
   const qrCodeDataUrl = resolvePdfQrCodeSource(String(data?.securityQrCodeDataUrl || '').trim());
+  const qrLabel = `#${documentNumber}`;
 
   return (
     <View style={s.securityFooter} fixed>
       <View style={s.securityFooterText}>
         <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine1}</Text>
         <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine2}</Text>
-        {createdOn && (
-          <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 9 * fontScale, lineHeight: 1.3, color: '#94a3b8' }]}>
-            Ref: {documentNumber} | By: {createdBy} | {createdOn}
-          </Text>
-        )}
       </View>
 
       <View
         style={[
           s.securityQrPanel,
           {
-            width: footerQrSize + 8,
+            width: footerQrSize + 16,
             alignItems: 'center',
             borderWidth: 0,
             backgroundColor: 'transparent',
@@ -220,6 +213,9 @@ const SecurityFooter = ({
         {!!qrCodeDataUrl ? (
           <Image src={qrCodeDataUrl} style={{ width: footerQrSize, height: footerQrSize }} />
         ) : null}
+        <Text style={{ fontSize: 6.5 * fontScale, color: '#64748b', marginTop: 2, textAlign: 'center', lineHeight: 1.2 }}>
+          {qrLabel}
+        </Text>
       </View>
     </View>
   );
