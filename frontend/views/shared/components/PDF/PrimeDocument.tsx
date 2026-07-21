@@ -1313,10 +1313,8 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
 
   if (type === 'RECEIPT') {
     const rc = data as ReceiptDoc;
-    const isPartial = rc.paymentStatus === 'PARTIALLY PAID';
     const isOverpaid = rc.paymentStatus === 'OVERPAID';
     const overpaymentAmount = rc.overpaymentAmount || rc.walletDeposit || 0;
-    const isFullyPaid = rc.paymentStatus === 'PAID' || (!isPartial && !isOverpaid);
 
     return (
       <Document title={`Payment Receipt - ${rc.receiptNumber}`} author={companyName}>
@@ -1358,13 +1356,11 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
                 ) : null}
               </View>
             </View>
-            {(isFullyPaid || isOverpaid) && (
-              <View style={[s.statusBox, { borderLeftColor: '#10b981' }]}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#059669' }}>
-                  PAID
-                </Text>
-              </View>
-            )}
+            <View style={[s.statusBox, { borderLeftColor: '#10b981' }]}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#059669' }}>
+                PAID
+              </Text>
+            </View>
           </View>
 
           <View style={{ marginTop: 5, padding: 15, backgroundColor: '#f8fafc', borderRadius: 8 }}>
