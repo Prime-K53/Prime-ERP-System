@@ -29,12 +29,12 @@ export const RowIndicators: React.FC<Props> = ({ item }) => {
     { icon: <Archive size={12} />, label: 'Inactive', show: status === 'Inactive', color: '#94A3B8' },
     { icon: <Package size={12} />, label: 'Recipe Missing', show: (item.productType === 'MANUFACTURED' || t.printingServiceType) && !item.serviceRecipeId, color: '#DC2626' },
     { icon: <Layers size={12} />, label: 'Supplier Missing', show: !item.preferredSupplierId, color: '#D97706' },
-    { icon: <Hash size={12} />, label: 'Lot Tracking', show: t.lotTracking || t.trackLot, color: '#2563EB' },
-    { icon: <Hash size={12} />, label: 'Serial Tracking', show: t.serialTracking || t.trackSerial, color: '#2563EB' },
-    { icon: <Thermometer size={12} />, label: 'Temp. Controlled', show: t.temperatureControlled || t.hazardous, color: '#DC2626' },
-    { icon: <Beaker size={12} />, label: 'Batch Controlled', show: t.batchTracking || t.batchControlled, color: '#2563EB' },
-    { icon: <Layers size={12} />, label: 'Has Variants', show: t.variants?.length > 0, color: '#2563EB' },
-    { icon: <Printer size={12} />, label: 'Printing Service', show: t.printingServiceType, color: '#2563EB' },
+    { icon: <Hash size={12} />, label: 'Lot Tracking', show: !!(t.lotTracking || t.trackLot), color: '#2563EB' },
+    { icon: <Hash size={12} />, label: 'Serial Tracking', show: !!(t.serialTracking || t.trackSerial), color: '#2563EB' },
+    { icon: <Thermometer size={12} />, label: 'Temp. Controlled', show: !!(t.temperatureControlled || t.hazardous), color: '#DC2626' },
+    { icon: <Beaker size={12} />, label: 'Batch Controlled', show: !!(t.batchTracking || t.batchControlled), color: '#2563EB' },
+    { icon: <Layers size={12} />, label: 'Has Variants', show: !!(t.variants?.length > 0), color: '#2563EB' },
+    { icon: <Printer size={12} />, label: 'Printing Service', show: !!t.printingServiceType, color: '#2563EB' },
   ];
 
   return (

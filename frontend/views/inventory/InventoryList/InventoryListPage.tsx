@@ -703,7 +703,7 @@ const handleProduce = useCallback((item: Item) => {
                     </thead>
                     <tbody>
                       {searchFiltered.map((p) => {
-                        const variants = ((p as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+                        const variants = ((p as any).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
                         const hasVariants = variants.length > 0;
                         const isExpanded = expandedItems.has(p.id);
                         const parentCp = p.costPrice || p.cost || 0;
@@ -898,7 +898,7 @@ const handleProduce = useCallback((item: Item) => {
                     </thead>
                     <tbody>
                       {searchFiltered.map((p) => {
-                        const variants = ((p as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+                        const variants = ((p as any).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
                         const hasVariants = variants.length > 0;
                         const isExpanded = expandedItems.has(p.id);
                         const parentCp = p.costPrice || p.cost || 0;

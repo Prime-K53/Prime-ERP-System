@@ -1062,31 +1062,30 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
         </div>
       </div>
       <div style={s.section}>
-        <p style={s.sectionTitle}>Cost per Unit</p>
-        <div style={s.grid2}>
+        <p style={s.sectionTitle}>Cost Summary</p>
+        <div style={s.costStrip}>
+          <div style={s.costItem}><div style={s.costItemK}>Cost / {rawBuyUnit}</div><div style={s.costItemV}>{formatCurrency(rawBuyCost, currencySymbol)}</div></div>
+          <div style={s.costItem}><div style={s.costItemK}>Cost / {rawUseUnit}</div><div style={{ ...s.costItemV, color: VAR_STYLES.ink700 }}>{formatCurrency(rawUnitCost, currencySymbol)}</div></div>
+          <div style={s.costItem}><div style={s.costItemK}>Conversion</div><div style={s.costItemV}>1:{rawConvRate}</div></div>
+          <div style={s.costItem}><div style={s.costItemK}>Feeds Into</div><div style={{ ...s.costItemV, fontSize: 12, fontWeight: 600, color: '#2563EB' }}>BOM Costing</div></div>
+        </div>
+        <div style={{ marginTop: 14 }}>
           <Field label={`Cost per ${rawBuyUnit}`} hint="What your supplier charges per buying unit">
             <div style={s.prefixInput}>
               <span style={s.prefixSpan}>{currencySymbol}</span>
               <input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={rawBuyCost} onChange={e => setRawBuyCost(Number(e.target.value) || 0)} />
             </div>
           </Field>
-          <Field label={`Cost per ${rawUseUnit}`}>
-            <input type="text" readOnly style={{ ...s.input, ...s.mono, background: VAR_STYLES.paper, color: VAR_STYLES.ink700, fontWeight: 700 }} value={formatCurrency(rawUnitCost, currencySymbol)} />
-            <p style={s.fieldHint}>This is what feeds into every BOM</p>
-          </Field>
         </div>
       </div>
       <div style={s.section}>
         <p style={s.sectionTitle}>Stock &amp; Reorder</p>
-        <div style={s.grid3}>
+        <div style={s.grid2}>
           <Field label={`Stock on Hand (${rawUseUnit}s)`}>
             <input type="number" style={{ ...s.input, ...s.mono }} value={rawStock} onChange={e => setRawStock(Number(e.target.value) || 0)} />
           </Field>
           <Field label={`Reorder Level (${rawUseUnit}s)`} hint="Triggers a low-stock alert below this quantity">
             <input type="number" style={{ ...s.input, ...s.mono }} value={rawReorder} onChange={e => setRawReorder(Number(e.target.value) || 0)} />
-          </Field>
-          <Field label="Preferred Supplier">
-            <input type="text" style={s.input} value={rawSupplier} onChange={e => setRawSupplier(e.target.value)} placeholder="e.g. Kaziboni Stationers" />
           </Field>
         </div>
         <div style={{ marginTop: 14 }}>
@@ -1094,6 +1093,12 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
             <input type="text" style={s.input} value={rawLocation} onChange={e => setRawLocation(e.target.value)} placeholder="e.g. Warehouse A, Shelf 3" />
           </Field>
         </div>
+      </div>
+      <div style={s.section}>
+        <p style={s.sectionTitle}>Supplier</p>
+        <Field label="Preferred Supplier">
+          <input type="text" style={s.input} value={rawSupplier} onChange={e => setRawSupplier(e.target.value)} placeholder="e.g. Kaziboni Stationers" />
+        </Field>
       </div>
     </div>
   );

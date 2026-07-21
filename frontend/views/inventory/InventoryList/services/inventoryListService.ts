@@ -33,13 +33,12 @@ export function calculateStats(items: Item[]): InventoryStats {
 
   for (const item of items) {
     const type = item.type || item.classification || '';
-    const role = (item as Item & Record<string, unknown>).inventoryRole || '';
     const stock = item.stock || 0;
     const costPrice = item.costPrice || item.cost || item.cost_price || 0;
     const reserved = item.reserved || 0;
     const minStock = item.minStockLevel || item.reorderPoint || 0;
 
-    if (type === 'Raw Material' || role === 'raw_material') {
+    if (type === 'Raw Material' || item.resourceSubtype === 'raw_material') {
       rawMaterials++;
       if (minStock > 0 && stock > 0 && stock <= minStock) lowStockMaterials++;
     }
@@ -47,8 +46,7 @@ export function calculateStats(items: Item[]): InventoryStats {
 
     const val = stock * costPrice;
     inventoryValue += val;
-    // bucket by classification for refined KPIs
-    if (type === 'Raw Material' || role === 'raw_material') rawValue += val;
+    if (type === 'Raw Material' || item.resourceSubtype === 'raw_material') rawValue += val;
     else if (type === 'Product') productValue += val;
     else if (type === 'Stationery') stationeryValue += val;
 
@@ -108,7 +106,7 @@ export function getItemMargin(item: Item): number {
 
 export function exportItemsToCSV(items: Item[]): void {
   const data = items.map(item => {
-    const variants = ((item as Record<string, unknown>).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
+    const variants = ((item as any).variants || []).filter((v: unknown) => v && typeof v === 'object' && Object.keys(v as object).length > 0);
     const variantLabel = variants.length > 0 ? `${variants.length} variant${variants.length !== 1 ? 's' : ''}` : 'standard';
     return {
       Name: item.name,

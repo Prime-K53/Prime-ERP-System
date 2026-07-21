@@ -260,8 +260,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ item, onBack, onEdit, o
             id,
             date: new Date().toISOString(),
             supplierId: item.preferredSupplierId || 'SUP-0001',
-            items: [{ itemId: item.id, name: item.name, quantity: item.minStockLevel || 100, cost: item.cost || 0, receivedQty: 0 }],
-            total: (item.cost || 0) * (item.minStockLevel || 100),
+            items: [{ id: item.id, itemId: item.id, name: item.name, quantity: item.minStockLevel || 100, price: item.cost || 0, cost: item.cost || 0, receivedQty: 0 }],
+            totalAmount: (item.cost || 0) * (item.minStockLevel || 100),
             status: 'Draft'
         });
         notify(`Draft PO ${id} created for ${item.name}`, 'success');
