@@ -285,7 +285,13 @@ export const ServiceCalculatorModal: React.FC<{
             }
 
             if (toner) {
-                tonerCostPerPage = Number(toner.cost_price || toner.cost_per_unit || toner.cost || 0) / 20000;
+                const perUnitCost = Number(toner.cost_per_unit || 0);
+                if (perUnitCost > 0) {
+                    tonerCostPerPage = perUnitCost;
+                } else {
+                    const tonerRate = Number(toner.conversionRate || toner.conversion_rate || 20000);
+                    tonerCostPerPage = tonerRate > 0 ? Number(toner.cost_price || toner.cost || 0) / tonerRate : 0;
+                }
                 tonerCost = Number(((pages * copies) * tonerCostPerPage).toFixed(2));
             } else if (Number(sp.tonerCost) > 0) {
                 tonerCostPerPage = Number(sp.tonerCost);
@@ -319,7 +325,15 @@ export const ServiceCalculatorModal: React.FC<{
         }
         if (sp.tonerItemId) {
             const tn = inventory.find((i: any) => i.id === sp.tonerItemId);
-            if (tn) tc = Number((totalPages * (Number(tn.cost_price || tn.cost_per_unit || tn.cost || 0) / 20000)).toFixed(2));
+            if (tn) {
+                const tnPerUnit = Number(tn.cost_per_unit || 0);
+                if (tnPerUnit > 0) {
+                    tc = Number((totalPages * tnPerUnit).toFixed(2));
+                } else {
+                    const tnRate = Number(tn.conversionRate || tn.conversion_rate || 20000);
+                    tc = Number((totalPages * (tnRate > 0 ? Number(tn.cost_price || tn.cost || 0) / tnRate : 0)).toFixed(2));
+                }
+            }
         } else if (Number(sp.tonerCost) > 0) {
             tc = Number((totalPages * Number(sp.tonerCost)).toFixed(2));
         }
@@ -378,18 +392,10 @@ export const ServiceCalculatorModal: React.FC<{
                                 <input type="number" min={1} value={pages} onChange={e => setPages(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
                                     style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, fontFamily: "inherit", color: ink900, width: '100%', background: 'transparent', outline: 'none' }} />
                             </div>
-                            <div style={{ flex: 1, padding: '8px 10px', borderRight: `1px solid ${line}` }}>
+                            <div style={{ flex: 1, padding: '8px 10px', background: canvas, textAlign: 'center' }}>
                                 <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Copies</div>
                                 <input type="number" min={1} value={copies} onChange={e => setCopies(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                                    style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, fontFamily: "inherit", color: ink900, width: '100%', background: 'transparent', outline: 'none' }} />
-                            </div>
-                            <div style={{ flex: '0 0 56px', padding: '8px 10px', borderRight: `1px solid ${line}`, background: canvas, textAlign: 'center' }}>
-                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Sheets</div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: ink700 }}>{Math.ceil(pages / 2)}</div>
-                            </div>
-                            <div style={{ flex: '0 0 56px', padding: '8px 10px', background: canvas, textAlign: 'center' }}>
-                                <div style={{ fontFamily: "inherit", fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Total</div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: ink700 }}>{pages * copies}<span style={{ fontSize: 10, color: ink500, fontWeight: 400 }}>pg</span></div>
+                                    style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, fontFamily: "inherit", color: ink900, width: '100%', background: 'transparent', outline: 'none', textAlign: 'center' }} />
                             </div>
                         </div>
 

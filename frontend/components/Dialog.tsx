@@ -73,7 +73,7 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, chi
               )}
             </DialogHeader>
           )}
-          <div className="p-6">
+          <div className="p-4">
             {children}
           </div>
         </DialogContent>
@@ -89,15 +89,15 @@ const DialogContent: React.FC<DivProps> = ({ className = '', children, ...props 
 );
 
 const DialogHeader: React.FC<DivProps> = ({ className = '', ...props }) => (
-  <div className={`relative px-8 py-6 border-b border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white/50 ${className}`} {...props} />
+  <div className={`relative px-4 py-2.5 border-b border-slate-200/60 bg-gradient-to-r from-slate-50/50 to-white/50 ${className}`} {...props} />
 );
 
 const DialogTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ className = '', ...props }) => (
-  <h3 className={`text-xl font-semibold text-slate-900 tracking-tight ${className}`} {...props} />
+  <h3 className={`text-xl font-semibold text-slate-800 ${className}`} {...props} />
 );
 
 const DialogFooter: React.FC<DivProps> = ({ className = '', ...props }) => (
-  <div className={`px-8 py-6 border-t border-slate-200/60 bg-gradient-to-r from-white/50 to-slate-50/50 flex justify-end gap-3 ${className}`} {...props} />
+  <div className={`px-4 py-2.5 border-t border-slate-200/60 bg-gradient-to-r from-white/50 to-slate-50/50 flex justify-end gap-3 ${className}`} {...props} />
 );
 
 export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter };

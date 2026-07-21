@@ -135,51 +135,51 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
     return (
         <Dialog open={isOpen} onClose={onClose} title="Smart Stock Adjust">
             {step === 'applying' ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                    <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-4" />
-                    <p className="text-lg font-bold text-slate-800 mb-2">Applying Stock Adjustments</p>
-                    <p className="text-sm text-slate-500">Updating stock levels in inventory records...</p>
+                <div className="flex flex-col items-center justify-center py-8 font-sans">
+                    <Loader2 className="w-14 h-14 text-indigo-600 animate-spin mb-3" />
+                    <p className="text-base font-semibold text-slate-800 mb-1">Applying Stock Adjustments</p>
+                    <p className="text-[13px] text-slate-500">Updating stock levels in inventory records...</p>
                 </div>
             ) : step === 'success' ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                        <CheckCircle className="w-10 h-10 text-green-600" />
+                <div className="flex flex-col items-center justify-center py-8 font-sans">
+                    <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                        <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
-                    <p className="text-lg font-bold text-slate-800 mb-2">Stock Adjustments Applied</p>
-                    <p className="text-sm text-slate-500">Inventory stock levels have been updated</p>
+                    <p className="text-base font-semibold text-slate-800 mb-1">Stock Adjustments Applied</p>
+                    <p className="text-[13px] text-slate-500">Inventory stock levels have been updated</p>
                 </div>
             ) : (
-                <div className="overflow-y-auto max-h-[65vh] pr-1 space-y-6">
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-2xl border border-blue-200/50">
-                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-tight mb-1">
+                <div className="overflow-y-auto max-h-[65vh] pr-1 space-y-4 font-sans leading-[1.45] text-[13.5px]">
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3 rounded-xl border border-blue-200/50">
+                            <div className="text-xs font-semibold text-blue-600 uppercase mb-0.5">
                                 Selected Items
                             </div>
-                            <div className="text-2xl font-black text-blue-900">{selectedItems.length}</div>
+                            <div className="text-xl font-semibold text-blue-800 tabular-nums">{selectedItems.length}</div>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-2xl border border-purple-200/50">
-                            <div className="text-[10px] font-bold text-purple-600 uppercase tracking-tight mb-1">
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 p-3 rounded-xl border border-purple-200/50">
+                            <div className="text-xs font-semibold text-purple-600 uppercase mb-0.5">
                                 Operation
                             </div>
-                            <div className="text-lg font-black text-purple-900">{formatTypeLabel(adjustmentType)}</div>
+                            <div className="text-sm font-semibold text-purple-800">{formatTypeLabel(adjustmentType)}</div>
                         </div>
-                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-4 rounded-2xl border border-indigo-200/50">
-                            <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-tight mb-1">
+                        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-3 rounded-xl border border-indigo-200/50">
+                            <div className="text-xs font-semibold text-indigo-600 uppercase mb-0.5">
                                 Net Change
                             </div>
-                            <div className="text-2xl font-black text-indigo-900">{projectedNetChange.toFixed(2)}</div>
+                            <div className="text-xl font-semibold text-indigo-800 tabular-nums">{projectedNetChange.toFixed(2)}</div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Warehouse</label>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Warehouse</label>
                             <div className="relative">
-                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                                 <select
                                     value={selectedWarehouse}
                                     onChange={(e) => setSelectedWarehouse(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm appearance-none bg-white"
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-[13px] appearance-none bg-white"
                                 >
                                     {warehouses.length > 0 ? (
                                         warehouses.map(wh => (
@@ -192,65 +192,65 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
                             </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Quantity</label>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Quantity</label>
                             <input
                                 type="number"
                                 min="0"
                                 value={Number.isNaN(quantity) ? 0 : quantity}
                                 onChange={(e) => setQuantity(Number(e.target.value))}
-                                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold"
+                                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-[13px] font-semibold tabular-nums"
                                 placeholder="0"
                             />
                         </div>
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Adjustment Type</label>
-                        <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Adjustment Type</label>
+                        <div className="flex p-0.5 bg-slate-100 rounded-lg gap-0.5">
                             {(['ADD', 'REMOVE', 'SET'] as const).map((type) => (
                                 <button
                                     key={type}
                                     type="button"
                                     onClick={() => setAdjustmentType(type)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md transition-all text-sm font-medium ${adjustmentType === type
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md transition-all text-[13px] font-medium ${adjustmentType === type
                                         ? 'bg-white text-indigo-600 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                         }`}
                                 >
-                                    {type === 'ADD' && <TrendingUp size={16} />}
-                                    {type === 'REMOVE' && <TrendingDown size={16} />}
-                                    {type === 'SET' && <RefreshCw size={16} />}
+                                    {type === 'ADD' && <TrendingUp size={14} />}
+                                    {type === 'REMOVE' && <TrendingDown size={14} />}
+                                    {type === 'SET' && <RefreshCw size={14} />}
                                     {type}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Reason (Optional)</label>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Reason (Optional)</label>
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-[13px]"
                             rows={2}
                             placeholder="e.g., Cycle count correction, damaged stock write-off..."
                         />
                     </div>
 
                     {items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <AlertCircle className="w-12 h-12 text-amber-500 mb-4" />
-                            <p className="text-lg font-bold text-slate-800 mb-2">No Inventory Items</p>
-                            <p className="text-sm text-slate-500 max-w-md">Create inventory items before using Smart Adjust.</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <AlertCircle className="w-10 h-10 text-amber-500 mb-3" />
+                            <p className="text-base font-semibold text-slate-800 mb-1">No Inventory Items</p>
+                            <p className="text-[13px] text-slate-500 max-w-md">Create inventory items before using Smart Adjust.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Select Items</h3>
+                                <h3 className="text-sm font-semibold text-slate-700">Select Items</h3>
                                 <button
                                     type="button"
                                     onClick={toggleSelectAll}
-                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                                 >
                                     {selectedItems.length === items.length ? 'Clear All' : 'Select All'}
                                 </button>
@@ -263,40 +263,40 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
                                     <div
                                         key={`${item.id}-${idx}`}
                                         onClick={() => toggleItem(item.id)}
-                                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSelected
+                                        className={`p-3 rounded-xl border cursor-pointer transition-all ${isSelected
                                             ? 'border-indigo-500 bg-indigo-50'
                                             : 'border-slate-200 bg-white hover:border-slate-300'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h4 className="font-bold text-slate-800">{item.name}</h4>
-                                                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase">{item.sku}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <h4 className="font-semibold text-slate-800 truncate">{item.name}</h4>
+                                                    <span className="shrink-0 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs font-medium uppercase">{item.sku}</span>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-xs">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Package size={14} className="text-indigo-600" />
-                                                        <span className="font-bold text-slate-700">Current: {item.stock} {item.unit}</span>
+                                                <div className="flex items-center gap-3 text-[13px]">
+                                                    <div className="flex items-center gap-1">
+                                                        <Package size={13} className="text-indigo-600 shrink-0" />
+                                                        <span className="font-medium text-slate-700 tabular-nums">Current: {item.stock} {item.unit}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5">
+                                                    <div className="flex items-center gap-1">
                                                         {change >= 0 ? (
-                                                            <TrendingUp size={14} className="text-green-600" />
+                                                            <TrendingUp size={13} className="text-green-600 shrink-0" />
                                                         ) : (
-                                                            <TrendingDown size={14} className="text-red-600" />
+                                                            <TrendingDown size={13} className="text-red-600 shrink-0" />
                                                         )}
-                                                        <span className={`${resultingStock < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                                                        <span className={`tabular-nums ${resultingStock < 0 ? 'text-red-600' : 'text-slate-600'}`}>
                                                             New: {resultingStock.toFixed(2)} {item.unit}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected
+                                            <div className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${isSelected
                                                 ? 'bg-indigo-600 border-indigo-600'
                                                 : 'border-slate-300'
                                                 }`}>
                                                 {isSelected && (
-                                                    <CheckCircle size={14} className="text-white" />
+                                                    <CheckCircle size={12} className="text-white" />
                                                 )}
                                             </div>
                                         </div>
@@ -306,7 +306,7 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
                         </div>
                     )}
                     {projectedNegativeStock && (
-                        <p className="mt-4 text-xs text-amber-600 flex items-center gap-1 font-medium">
+                        <p className="text-xs text-amber-600 flex items-center gap-1 font-medium">
                             <AlertCircle size={12} />
                             One or more selected items will result in negative stock.
                         </p>
@@ -316,27 +316,27 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
 
             {step === 'preview' && items.length > 0 && (
                 <DialogFooter>
-                    <div className="text-sm mr-auto">
-                        <p className="font-bold text-slate-800">
+                    <div className="text-[13px] mr-auto">
+                        <p className="font-semibold text-slate-800 tabular-nums">
                             {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-[13px] text-slate-500 tabular-nums">
                             Net stock change: {projectedNetChange.toFixed(2)}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
                         disabled={applying}
-                        className="px-6 py-3 border border-slate-200 rounded-xl font-medium text-slate-700 hover:bg-white transition-all disabled:opacity-50"
+                        className="px-3 py-1.5 border border-slate-200 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 text-[13px]"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleApplyAdjustments}
                         disabled={applying || selectedItems.length === 0 || !hasValidQuantity}
-                        className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow disabled:opacity-50 disabled:cursor-not-allowed text-[13px]"
                     >
-                        <Sparkles size={16} />
+                        <Sparkles size={14} />
                         Apply Stock Adjustments
                     </button>
                 </DialogFooter>

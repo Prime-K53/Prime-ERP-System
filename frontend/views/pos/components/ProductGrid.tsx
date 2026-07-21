@@ -202,6 +202,11 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
 
     const renderItems = (items: Item[]) => {
         const price = (item: Item) => resolveStoredSellingPrice(item) || 0;
+        const lowestVariantPrice = (item: Item) => {
+            if (!item.variants || item.variants.length === 0) return 0;
+            const prices = item.variants.map(v => Number(resolveStoredSellingPrice(v) || 0));
+            return Math.min(...prices);
+        };
 
         if (viewMode === 'List') {
             return (
@@ -247,7 +252,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                             </div>
                             <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: INK, fontFamily: "'JetBrains Mono',monospace" }}>
                                 {item.isVariantParent ? (
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', background: B7, color: '#fff', borderRadius: 4 }}>View</span>
+                                    <>From&nbsp;{currency}{formatNumber(lowestVariantPrice(item))} <span style={{ fontSize: 9, color: SOFT }}>▼</span></>
                                 ) : (
                                     `${currency}${formatNumber(price(item))}`
                                 )}
@@ -338,7 +343,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ inventory, addToCart, 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 6, borderTop: `1px solid ${LINE}` }}>
                     <div>
                         {item.isVariantParent ? (
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', background: B7, color: '#fff', borderRadius: 5, cursor: 'pointer' }}>View</span>
+                            <span style={{ fontSize: viewMode === 'Small' ? 11 : 13, fontWeight: 700, color: INK }}>
+                                From&nbsp;{currency}{formatNumber(lowestVariantPrice(item))} <span style={{ fontSize: 9, color: SOFT }}>▼</span>
+                            </span>
                         ) : (
                             <span style={{ fontSize: viewMode === 'Small' ? 11 : 13, fontWeight: 700, color: INK }}>
                                 {currency}{formatNumber(price(item))}

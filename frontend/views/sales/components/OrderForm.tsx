@@ -2176,10 +2176,8 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         ) : (
                                             filteredInventory.map(item => {
                                                 const hasVariants = item.variants && item.variants.length > 0;
-                                                const prices = hasVariants ? item.variants.map((v: any) => Number(v.price || v.selling_price || 0)) : [];
-                                                const minPrice = hasVariants ? Math.min(...prices) : 0;
-                                                const maxPrice = hasVariants ? Math.max(...prices) : 0;
-                                                const isPriceRange = hasVariants && minPrice !== maxPrice;
+                                                const variantPrices = hasVariants ? item.variants.map((v: any) => Number(resolveStoredSellingPrice(v) || 0)) : [];
+                                                const minPrice = hasVariants ? Math.min(...variantPrices) : 0;
                                                 const stock = item.stock || 0;
                                                 const isStockTracked = item.type === 'Stationery' || item.type === 'Raw Material';
                                                 return (
@@ -2197,12 +2195,12 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                             <div className="text-[9px] text-[#666F6C] font-['JetBrains_Mono',monospace]">{item.sku || 'NO-SKU'}</div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[12px] font-semibold text-[#23282A]">
-                                                                {isPriceRange
-                                                                    ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}`
-                                                                    : `${currency}${Number((hasVariants ? minPrice : item.price) || 0).toLocaleString()}`
+                                                        <div className="text-[12px] font-semibold text-[#23282A]">
+                                                                {hasVariants
+                                                                    ? <><span className="text-[10px] font-normal text-[#666F6C]">From </span>{currency}{minPrice.toLocaleString()} <span className="text-[9px] text-[#666F6C]">▼</span></>
+                                                                    : `${currency}${Number(item.price || 0).toLocaleString()}`
                                                                 }
-                                                            </div>
+                                                        </div>
                                                             {isStockTracked && (
                                                                 <div className={`text-[9px] ${stock < 10 ? 'text-red-500 font-medium' : 'text-[#666F6C]'} font-['JetBrains_Mono',monospace]`}>
                                                                     {stock} left

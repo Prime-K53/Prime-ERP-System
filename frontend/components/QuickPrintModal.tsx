@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Copy, Printer, Calculator, FileText, TrendingUp, Sparkles, Package } from 'lucide-react';
-import { Dialog, DialogHeader, DialogTitle, DialogFooter } from './Dialog';
+import { Copy, Printer, Sparkles } from 'lucide-react';
+import { Dialog } from './Dialog';
 
 interface QuickPrintModalProps {
   open: boolean;
@@ -19,24 +19,18 @@ interface QuickPrintModalProps {
 }
 
 const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
-  open,
-  onClose,
-  type,
-  pricePerPage,
-  costPerPage,
-  currency,
-  onConfirm,
-  pinningItem,
-  staplePrice
+  open, onClose, type, pricePerPage, costPerPage, currency,
+  onConfirm, pinningItem, staplePrice
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [pagesPerCopy, setPagesPerCopy] = useState(1);
   const [enableStapling, setEnableStapling] = useState(false);
+  const [pricingMethod, setPricingMethod] = useState<'per_page' | 'per_sheet'>(type === 'photocopy' ? 'per_sheet' : 'per_page');
 
   const totalPages = quantity * pagesPerCopy;
   const totalSheets = type === 'photocopy' ? quantity * Math.ceil(pagesPerCopy / 2) : totalPages;
-  const printTotal = totalSheets * pricePerPage;
-  const materialCost = costPerPage ? totalPages * costPerPage : 0;
+  const printTotal = (pricingMethod === 'per_page' ? totalPages : totalSheets) * pricePerPage;
+  const materialCost = costPerPage ? (pricingMethod === 'per_page' ? totalPages : totalSheets) * costPerPage : 0;
 
   const effectiveStaplePrice = useMemo(() => {
     if (typeof staplePrice === 'number' && staplePrice > 0) return staplePrice;
@@ -52,6 +46,8 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
   }, [quantity, enableStapling, effectiveStaplePrice]);
 
   const finalTotal = printTotal + pinningCost;
+  const profit = finalTotal - materialCost;
+  const profitMarginPct = materialCost > 0 ? ((profit / materialCost) * 100).toFixed(1) : '—';
 
   const handleConfirm = () => {
     if (pinningCost > 0) {
@@ -62,148 +58,182 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
     setQuantity(1);
     setPagesPerCopy(1);
     setEnableStapling(false);
+    setPricingMethod(type === 'photocopy' ? 'per_sheet' : 'per_page');
     onClose();
   };
 
   if (!open) return null;
 
-  const cardClass = 'bg-white shadow-sm rounded-xl p-5';
-  const inputClass = 'w-full px-3 py-2 rounded-lg border border-[#E2DED3] text-sm focus:outline-none transition-all duration-150';
-  const premiumCard = `${cardClass} backdrop-blur-sm border border-[#E2DED3]/80 hover:border-[#D4CFC2]/80 transition-all duration-200`;
-  const premiumInput = `${inputClass} bg-white/80 backdrop-blur-sm border-[#E2DED3]/80 focus:border-[#5FA8A0] focus:ring-2 focus:ring-[#5FA8A0]/20 tabular-nums`;
-  const premiumLabel = 'block text-xs font-semibold text-[#2C6F67] mb-1.5 flex items-center gap-1.5';
-  const toggleActiveBg = 'bg-[#3D8B82]';
-  const toggleInactiveBg = 'bg-[#D4CFC2]';
   const isPhotocopy = type === 'photocopy';
-  const accentGradient = isPhotocopy ? 'from-[#3D8B82] to-[#2C6F67]' : 'from-[#2C6F67] to-[#183F3B]';
-  const iconBg = isPhotocopy ? 'bg-[#F0F7F6] text-[#2C6F67]' : 'bg-[#F0F7F6] text-[#2C6F67]';
   const Icon = isPhotocopy ? Copy : Printer;
+  const ink900 = '#16191c', ink700 = '#3a4046', ink500 = '#6b7178', ink300 = '#aeb3b8', line = '#e7e5e1', canvas = '#eeece7', amber = '#b8742f', good = '#3f7d52', goodTint = '#eef6ef';
 
-  const renderCardHeader = (icon: React.ReactNode, title: string, badge?: string, gradient = 'from-[#2C6F67] to-[#183F3B]') => (
-    <div className={`flex items-center gap-3 mb-4 p-3 -m-5 -mt-5 mb-5 bg-gradient-to-r ${gradient} rounded-t-xl text-white`}>
-      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
-        {icon}
-      </div>
-      <h4 className="text-sm font-bold">{title}</h4>
-      {badge && <span className="ml-auto text-[10px] bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">{badge}</span>}
-    </div>
-  );
+  const fc = (v: number) => `${currency}${v.toFixed(2)}`;
 
   return (
     <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogHeader className="flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: '1px solid #E2DED3', background: 'white' }}>
-        <div className="flex items-center gap-3">
-          <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center ${iconBg}`}>
-            <Icon className="w-[18px] h-[18px]" />
-          </div>
-          <div>
-            <DialogTitle style={{ fontSize: 20, color: '#23282A', margin: 0, lineHeight: 1.4 }}>
-              {isPhotocopy ? 'Quick Photocopy' : 'Type & Printing'}
-            </DialogTitle>
-            <p style={{ fontSize: 13, color: '#8A8578', margin: 0, lineHeight: 1.45 }}>
-              {currency}{pricePerPage} per {isPhotocopy ? 'sheet' : 'page'}
-            </p>
-          </div>
-        </div>
-        <button type="button" onClick={onClose} style={{ color: '#B8B2A2', padding: 6 }} aria-label="Close modal">
-          <X className="w-5 h-5" />
-        </button>
-      </DialogHeader>
+      <div className="-m-4">
 
-      <div className="space-y-4">
-        <div className={premiumCard}>
-          {renderCardHeader(<Calculator size={15} className="text-white" />, 'Order Details', isPhotocopy ? 'Double-sided' : 'Single-sided', accentGradient)}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={premiumLabel}><FileText size={12} /> Pages per Copy</label>
-              <input type="number" min={1} value={pagesPerCopy} onChange={(e) => setPagesPerCopy(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px 14px 20px', borderBottom: `1px solid ${line}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: canvas, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ink700 }}>
+              <Icon size={18} />
             </div>
             <div>
-              <label className={premiumLabel}><Package size={12} /> Number of Copies</label>
-              <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className={premiumInput} />
+              <div style={{ fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: amber, marginBottom: 4 }}>
+                {isPhotocopy ? 'Photocopy Service' : 'Printing Service'}
+              </div>
+              <div style={{ fontSize: 19, color: ink900, lineHeight: 1.1, fontWeight: 700 }}>
+                {isPhotocopy ? 'Quick Photocopy' : 'Type & Printing'}
+              </div>
+              <div style={{ fontSize: 12.5, color: ink500, marginTop: 3 }}>
+                {fc(pricePerPage)} per {pricingMethod === 'per_page' ? 'page' : 'sheet'}
+              </div>
             </div>
           </div>
+          <button onClick={onClose} style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', color: ink500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: 2 }}
+            onMouseOver={e => { e.currentTarget.style.background = canvas; e.currentTarget.style.color = ink900; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ink500; }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
-        {effectiveStaplePrice !== null && (
-          <div className={premiumCard}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-[#F7EFDF] text-[#B8863B]">
-                  <Package size={14} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#23282A]">Stapling</p>
-                  <p className="text-[11px] text-[#8A8578]">{currency}{effectiveStaplePrice.toFixed(2)} per copy</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={enableStapling} onChange={e => setEnableStapling(e.target.checked)} className="sr-only peer" />
-                <div className={`w-10 h-5 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#87C1BB] rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${enableStapling ? toggleActiveBg : toggleInactiveBg}`} />
-              </label>
-            </div>
-            {enableStapling && (
-              <div className="mt-3 pt-3 border-t border-[#F0EFE8]">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#8A8578]">Stapling ({currency}{effectiveStaplePrice.toFixed(2)} × {quantity} copies)</span>
-                  <span className="font-mono font-medium text-[#23282A]">{currency}{pinningCost.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Two-column body */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr' }}>
+          {/* Left column — Inputs */}
+          <div className="custom-scrollbar" style={{ padding: '16px 20px', maxHeight: '64vh', overflowY: 'auto' }}>
 
-        <div className={premiumCard}>
-          {renderCardHeader(<TrendingUp size={15} className="text-white" />, 'Cost Summary', undefined, 'from-[#2C6F67] to-[#183F3B]')}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#8A8578]">Total {isPhotocopy ? 'Sheets' : 'Pages'}</span>
-              <span className="font-mono font-medium text-[#23282A] tabular-nums">{isPhotocopy ? totalSheets : totalPages}</span>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Quantities</div>
+            <div style={{ display: 'flex', border: `1px solid ${line}`, borderRadius: 10, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ flex: 1, padding: '8px 10px', borderRight: `1px solid ${line}` }}>
+                <div style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Pages per Copy</div>
+                <input type="number" min={1} value={pagesPerCopy}
+                  onChange={e => setPagesPerCopy(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                  style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: ink900, width: '100%', background: 'transparent', outline: 'none' }} />
+              </div>
+              <div style={{ flex: 1, padding: '8px 10px', background: canvas, textAlign: 'center' }}>
+                <div style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 3 }}>Copies</div>
+                <input type="number" min={1} value={quantity}
+                  onChange={e => setQuantity(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                  style={{ border: 'none', padding: 0, fontSize: 14, fontWeight: 700, color: ink900, width: '100%', background: 'transparent', outline: 'none', textAlign: 'center' }} />
+              </div>
             </div>
-            {isPhotocopy && (
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#8A8578]">Total Pages <span className="text-[10px] text-[#B8B2A2]">(toner basis)</span></span>
-                <span className="font-mono font-medium text-[#6B6659] tabular-nums">{totalPages}</span>
+
+            <div style={{ fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Pricing Method</div>
+            <div style={{ display: 'flex', border: `1px solid ${line}`, borderRadius: 10, overflow: 'hidden', marginBottom: 14 }}>
+              <button type="button" onClick={() => setPricingMethod('per_page')}
+                style={{ flex: 1, padding: '8px 10px', border: 'none', cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: pricingMethod === 'per_page' ? ink900 : '#fff', color: pricingMethod === 'per_page' ? '#fff' : ink700, transition: 'all .12s' }}>
+                Per Page
+              </button>
+              <button type="button" onClick={() => setPricingMethod('per_sheet')}
+                style={{ flex: 1, padding: '8px 10px', border: 'none', cursor: 'pointer', textAlign: 'center', fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: pricingMethod === 'per_sheet' ? ink900 : '#fff', color: pricingMethod === 'per_sheet' ? '#fff' : ink700, transition: 'all .12s' }}>
+                Per Sheet
+              </button>
+            </div>
+
+            {effectiveStaplePrice !== null && (
+              <>
+                <div style={{ fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Finishing Options</div>
+                <button type="button" onClick={() => setEnableStapling(!enableStapling)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', background: enableStapling ? '#fbf2e6' : canvas, transition: 'all .12s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: enableStapling ? amber : ink300 }}></div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: ink900 }}>Stapling</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: enableStapling ? amber : ink500 }}>{fc(effectiveStaplePrice)}/copy</span>
+                </button>
+                {enableStapling && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', fontSize: 12.5 }}>
+                    <span style={{ color: ink500 }}>Stapling ({fc(effectiveStaplePrice)} × {quantity})</span>
+                    <span style={{ fontWeight: 600, color: ink900 }}>{fc(pinningCost)}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+
+          {/* Vertical divider */}
+          <div style={{ background: line }}></div>
+
+          {/* Right column — Costing */}
+          <div className="custom-scrollbar" style={{ padding: '16px 20px', maxHeight: '64vh', overflowY: 'auto' }}>
+            <div style={{ fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 9 }}>Cost Breakdown</div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+              <span style={{ color: ink500 }}>Total {pricingMethod === 'per_page' ? 'Pages' : 'Sheets'}</span>
+              <span style={{ fontWeight: 600, color: ink900 }}>{pricingMethod === 'per_page' ? totalPages : totalSheets}</span>
+            </div>
+            {pricingMethod !== 'per_page' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                <span style={{ color: ink500 }}>Total Pages <span style={{ fontSize: 10, color: ink300 }}>(toner basis)</span></span>
+                <span style={{ fontWeight: 600, color: ink500 }}>{totalPages}</span>
               </div>
             )}
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-[#8A8578]">{isPhotocopy ? 'Sheet' : 'Page'} Cost</span>
-              <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{printTotal.toFixed(2)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+              <span style={{ color: ink500 }}>{pricingMethod === 'per_page' ? 'Page' : 'Sheet'} Cost</span>
+              <span style={{ fontWeight: 600, color: ink900 }}>{fc(printTotal)}</span>
             </div>
+
             {costPerPage ? (
               <>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-[#8A8578]">Toner Cost ({currency}{costPerPage.toFixed(2)}/pg)</span>
-                  <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{materialCost.toFixed(2)}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                  <span style={{ color: ink500 }}>Toner Cost ({fc(costPerPage)}/pg)</span>
+                  <span style={{ fontWeight: 600, color: ink900 }}>{fc(materialCost)}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-medium text-[#2C6F67]">Estimated Profit</span>
-                  <span className="font-mono font-medium text-[#2C6F67] tabular-nums">+{currency}{(finalTotal - materialCost).toFixed(2)}</span>
+                <div style={{ borderTop: `1px dashed ${line}`, margin: '4px 0' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                  <span style={{ color: ink500 }}>Cost Price</span>
+                  <span style={{ fontWeight: 600, color: ink900 }}>{fc(materialCost)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                  <span style={{ color: ink500 }}>Selling Price</span>
+                  <span style={{ fontWeight: 600, color: ink900 }}>{fc(printTotal)}</span>
+                </div>
+                {enableStapling && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', fontSize: 12.5 }}>
+                    <span style={{ color: ink500 }}>Stapling</span>
+                    <span style={{ fontWeight: 600, color: ink900 }}>{fc(pinningCost)}</span>
+                  </div>
+                )}
+                <div style={{ background: goodTint, borderRadius: 8, padding: '9px 12px', marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 11.5, color: good, fontWeight: 700 }}>
+                    Profit <span>+{fc(profit)}</span>
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: good, background: '#fff', padding: '3px 9px', borderRadius: 999 }}>{profitMarginPct}% margin</div>
                 </div>
               </>
             ) : null}
-            {enableStapling && (
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#8A8578]">Stapling</span>
-                <span className="font-mono font-medium text-[#23282A] tabular-nums">{currency}{pinningCost.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center pt-2 border-t border-[#E2DED3]">
-              <span className="text-sm font-semibold text-[#23282A]">Total</span>
-              <span className="font-mono font-bold text-[#2C6F67] tabular-nums" style={{ fontSize: 18 }}>{currency}{finalTotal.toFixed(2)}</span>
-            </div>
           </div>
         </div>
-      </div>
 
-      <DialogFooter className="flex items-center justify-between" style={{ borderTop: '1px solid #E2DED3' }}>
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-[#E2DED3] text-xs font-medium text-[#6B6659] hover:bg-[#F8F7F2] hover:border-[#D4CFC2] transition-all">
-          Cancel
-        </button>
-        <button type="button" onClick={handleConfirm} className="px-4 py-2 bg-gradient-to-br from-[#2C6F67] to-[#183F3B] text-white rounded-lg text-xs font-semibold hover:shadow-[0_4px_14px_rgba(44,111,103,0.35)] transition-all shadow-[0_4px_14px_rgba(44,111,103,0.25)] flex items-center gap-2">
-          <Sparkles size={13} /> Add to Cart
-        </button>
-      </DialogFooter>
+        {/* Footer */}
+        <div style={{ padding: '14px 20px 18px 20px', borderTop: `1px solid ${line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500 }}>Total Due</div>
+            <div style={{ fontSize: 23, color: ink900, lineHeight: 1.15, fontWeight: 700 }}>{fc(finalTotal)}</div>
+            <div style={{ fontSize: 10, color: ink500 }}>
+              {totalPages} page{totalPages !== 1 ? 's' : ''} · {totalSheets} sheet{totalSheets !== 1 ? 's' : ''} · {fc(quantity > 0 ? finalTotal / quantity : 0)}/copy
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={onClose}
+              style={{ border: `1px solid ${line}`, borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: '#fff', color: ink700, whiteSpace: 'nowrap', transition: 'all .15s' }}
+              onMouseOver={e => e.currentTarget.style.background = canvas}
+              onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+              Cancel
+            </button>
+            <button onClick={handleConfirm}
+              style={{ border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: ink900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: "inherit" }}
+              onMouseOver={e => e.currentTarget.style.background = '#000'}
+              onMouseOut={e => e.currentTarget.style.background = ink900}>
+              <Sparkles size={14} /> Add to Cart
+            </button>
+          </div>
+        </div>
+
+      </div>
     </Dialog>
   );
 };
