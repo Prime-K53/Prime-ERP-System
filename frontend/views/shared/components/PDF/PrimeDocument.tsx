@@ -472,7 +472,7 @@ const CleanInvoiceTemplate = ({
         })()}
 
         {/* Footer info (Notes etc) */}
-        <View style={{ marginTop: 40, flex: 1 }}>
+        <View wrap={false} style={{ marginTop: 15, flex: 1 }}>
           {templateSettings.showPaymentTerms ? (
             <InvoiceInfoPanel 
               type="payment_terms" 
@@ -482,7 +482,6 @@ const CleanInvoiceTemplate = ({
               fontScale={fontScale} 
             />
           ) : null}
-
         </View>
 
         {/* Use the standard Security Footer at bottom */}
@@ -741,7 +740,7 @@ const ModernInvoiceTemplate = ({
         })()}
 
         {/* Footer info (QR and Signature) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 40, flex: 1 }}>
+        <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 15, flex: 1, gap: 20 }}>
           <View style={{ flexDirection: 'column', flex: 1 }}>
             {templateSettings.showPaymentTerms ? (
               <InvoiceInfoPanel 
@@ -753,11 +752,11 @@ const ModernInvoiceTemplate = ({
               />
             ) : null}
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 'auto' }}>
-              <View style={{ marginRight: 15 }}>
-                {renderQrImage(qrCodeDataUrl, 64) || <View style={{ width: 64, height: 64, backgroundColor: '#eeeeee' }} />}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 10, gap: 12 }}>
+              <View>
+                {renderQrImage(qrCodeDataUrl, 56) || <View style={{ width: 56, height: 56, backgroundColor: '#eeeeee' }} />}
               </View>
-              <View style={{ justifyContent: 'center' }}>
+              <View style={{ justifyContent: 'center', flex: 1 }}>
                 <Text style={{ fontWeight: 'bold', fontSize: 11 * fontScale, color: '#111111', marginBottom: 4 }}>More Info:</Text>
                 {companyPhone !== 'N/A' && <Text style={{ fontSize: 10 * fontScale, color: '#333333', marginBottom: 2 }}>{companyPhone}</Text>}
                 {companyEmail !== 'N/A' && <Text style={{ fontSize: 10 * fontScale, color: '#333333' }}>{companyEmail}</Text>}
@@ -766,11 +765,16 @@ const ModernInvoiceTemplate = ({
           </View>
 
           <View style={{ alignItems: 'center', minWidth: 160 }}>
-            <Text style={{ fontSize: 11 * fontScale, color: '#222222', marginBottom: 10 }}>{showDueDate && dueDate ? `Due Date: ${formatDateOnly(dueDate)}` : `Date: ${invoiceDate}`}</Text>
-            <View style={{ width: '100%', height: 40, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{fontFamily: templateSettings.fontFamily, fontStyle: 'italic', fontSize: 26, color: '#111111'}}>{companyName.split(' ')[0]}</Text>
+            <Text style={{ fontSize: 11 * fontScale, color: '#222222', marginBottom: 8 }}>{showDueDate && dueDate ? `Due Date: ${formatDateOnly(dueDate)}` : `Date: ${invoiceDate}`}</Text>
+            <View style={{ width: '100%', height: 30, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{fontFamily: templateSettings.fontFamily, fontStyle: 'italic', fontSize: 22, color: '#111111'}}>{companyName.split(' ')[0]}</Text>
             </View>
-            <View style={{ width: '100%', height: 1.5, backgroundColor: '#444444', marginTop: 10, marginBottom: 8 }} />
+            <View style={{ width: '100%', height: 1.5, backgroundColor: '#444444', marginTop: 8, marginBottom: 4 }} />
+            {dataAny.createdAtIso || dataAny.createdAt ? (
+              <Text style={{ fontSize: 8 * fontScale, color: '#666666' }}>
+                Ref: {String(dataAny.invoiceNumber || dataAny.orderNumber || dataAny.number || 'N/A')}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -986,16 +990,16 @@ const ProfessionalInvoiceTemplate = ({
         </View>
 
         {/* Bottom Row */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 15, paddingTop: 20, borderTopWidth: 0.5, borderTopColor: '#eeeeee', flex: 1 }}>
+        <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 10, paddingTop: 15, borderTopWidth: 0.5, borderTopColor: '#eeeeee', flex: 1, gap: 20 }}>
           <View style={{ flex: 1 }}>
             {!!dataAny.notes && (
-              <View style={{ marginBottom: 20 }}>
+              <View wrap={false} style={{ marginBottom: 15 }}>
                 <Text style={{ fontSize: 9 * fontScale, fontWeight: 'bold', color: '#999999', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 1 }}>Notes</Text>
                 <Text style={{ fontSize: 10 * fontScale, color: '#444444', lineHeight: 1.4 }}>{String(dataAny.notes)}</Text>
               </View>
             )}
 
-            <View style={{ marginTop: 'auto' }}>
+            <View style={{ marginTop: 10 }}>
               <Text style={{ fontStyle: 'italic', fontSize: 15 * fontScale, color: '#555555', marginBottom: 4, fontFamily: templateSettings.fontFamily }}>{companyName}</Text>
               <Text style={{ fontWeight: 'bold', fontSize: 10 * fontScale, color: '#111111' }}>{companyName}</Text>
               <Text style={{ fontSize: 9 * fontScale, color: accentColor, letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 }}>Authorized Signatory</Text>
@@ -1004,17 +1008,17 @@ const ProfessionalInvoiceTemplate = ({
 
            <View style={{ flex: 1, alignItems: 'flex-end', textAlign: 'right' }}>
               {templateSettings.showPaymentTerms && config?.transactionSettings?.defaultPaymentTermsDays !== undefined && (
-                <View style={{ marginBottom: 12 }}>
+                <View wrap={false} style={{ marginBottom: 10 }}>
                   <Text style={{ fontSize: 9 * fontScale, fontWeight: 'bold', color: '#999999', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>Payment Method / Terms</Text>
                   <Text style={{ fontSize: 9 * fontScale, color: '#666666', lineHeight: 1.6 }}>{getDefaultPaymentTermsLabel(config)}</Text>
                 </View>
               )}
               
               <View>
-               <Text style={{ fontSize: 9 * fontScale, color: '#aaaaaa', lineHeight: 1.5, maxWidth: 200, marginTop: 6 }}>
+               <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, maxWidth: 200, marginTop: 4 }}>
                    This is a computer-generated document. No signature required, For enquiries contact:
                  </Text>
-                 <Text style={{ fontSize: 9 * fontScale, color: '#aaaaaa', lineHeight: 1.5, maxWidth: 200, marginTop: 2 }}>
+                 <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, maxWidth: 200, marginTop: 1 }}>
                    {`${companyName}, ${companyAddress}, Phone ${companyPhone}`}
                 </Text>
              </View>
@@ -2225,7 +2229,7 @@ if (type === 'POS_RECEIPT') {
               </View>
             </View>
 
-              <View style={{ marginTop: 15, alignItems: 'center' }}>
+              <View wrap={false} style={{ marginTop: 12, alignItems: 'center' }}>
                 <Text style={{ fontSize: scaledFont(12), color: '#334155' }}>
                   Thank you for choosing <Text style={{ fontWeight: 'bold' }}>{companyName}</Text>
                 </Text>
