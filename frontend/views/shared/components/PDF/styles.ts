@@ -66,12 +66,12 @@ export const docStyles = StyleSheet.create({
 
   // 2. Billing Section
   billingSection: {
-    marginBottom: 30,
+    marginBottom: 18,
     flexDirection: 'row',
     lineHeight: 1.125,
   },
   recipientSectionTight: {
-    marginBottom: 21,
+    marginBottom: 14,
   },
 
   // 3. Table Rows
@@ -95,8 +95,8 @@ export const docStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginTop: 15,
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 15,
   },
   summaryLeft: {
     flexDirection: 'column',
@@ -223,7 +223,7 @@ export const docStyles = StyleSheet.create({
     height: 50,
   },
   tableSectionTight: {
-    marginTop: 14,
+    marginTop: 6,
   },
   securityQrLabel: {
     fontSize: 7,
