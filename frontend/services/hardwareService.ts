@@ -317,11 +317,11 @@ class HardwareService {
     await this.device.transferOut(this.endpointOut, buffer);
   }
 
-  public async printReceipt(sale: Sale, config: CompanyConfig) {
+  public async printReceipt(sale: Sale, config: CompanyConfig, cashierName?: string) {
     const legacyFooterMessage = typeof config.footer === 'string' ? config.footer : undefined;
     const receipt = buildPosReceiptDoc({
       sale,
-      cashierName: sale.cashierId || 'Cashier',
+      cashierName: cashierName || sale.cashierId || 'Cashier',
       customerName: sale.customerName || 'Walk-in Customer',
       footerMessage: config.transactionSettings?.pos?.receiptFooter || legacyFooterMessage
     });

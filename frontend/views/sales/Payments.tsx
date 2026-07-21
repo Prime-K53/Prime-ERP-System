@@ -531,7 +531,7 @@ const CustomerPaymentDetailPanel: React.FC<{
 
 const Payments: React.FC = () => {
     const { refreshAllData } = useData();
-    const { companyConfig, notify, user } = useAuth();
+    const { companyConfig, notify, user, allUsers } = useAuth();
     const { customerPayments, addCustomerPayment, updateCustomerPayment, deleteCustomerPayment, customers, sales } = useSales();
     const { invoices, updateInvoice } = useFinance();
     const { orders, recordPayment: recordOrderPayment, updateOrderStatus } = useOrders();
@@ -630,9 +630,11 @@ const Payments: React.FC = () => {
             const linkedSale = payment.reference ? sales.find(s => s.id === payment.reference) : null;
 
             if (linkedSale) {
+                const cashierUser = allUsers?.find(u => u.id === linkedSale.cashierId);
+                const resolvedCashierName = cashierUser?.name || cashierUser?.fullName || cashierUser?.username || user?.name || 'Cashier';
                 const previewData = buildPosReceiptDoc({
                     sale: linkedSale,
-                    cashierName: linkedSale.cashierId || 'Cashier',
+                    cashierName: resolvedCashierName,
                     customerName: linkedSale.customerName || 'Walk-in Customer',
                     footerMessage: companyConfig.transactionSettings?.pos?.receiptFooter || companyConfig.receiptFooter || ''
                 });

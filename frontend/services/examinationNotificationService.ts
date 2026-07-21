@@ -10,6 +10,7 @@ const HEAVY_REQUEST_TIMEOUT_MS = 180000;
 const FALLBACK_CANDIDATE_TIMEOUT_MS = 12000;
 const BACKEND_RETRY_COOLDOWN_MS = 60000;
 const PASSWORD_BYPASS_USER_ID = 'USR-PASSWORD-BYPASS';
+const loggedLocalNotificationStores = new Set<string>();
 
 const EXAM_BACKEND_URL = (import.meta as any)?.env?.VITE_EXAM_BACKEND_URL;
 
@@ -29,7 +30,10 @@ const getLocalNotificationsForUser = async (
   } catch {
     localNotifications = await dbService.getAll<ExaminationBatchNotification>('examinationBatchNotifications');
   }
-  logger.debug('[NotificationService] Using cached notifications from local storage');
+  if (!loggedLocalNotificationStores.has(userId)) {
+    loggedLocalNotificationStores.add(userId);
+    logger.debug('[NotificationService] Using cached notifications from local storage');
+  }
   return (localNotifications || [])
     .filter(n => n.user_id === userId)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

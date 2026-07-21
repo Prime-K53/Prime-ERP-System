@@ -4,7 +4,7 @@ import {
   X, CheckCircle, Clock, DollarSign, Printer, Edit2, Download,
   FileText, ArrowRight, History, Trash2,
   AlertTriangle, Send, Eye, Briefcase, Package, RefreshCw,
-  TrendingUp, Percent
+  TrendingUp, Percent, Copy
 } from 'lucide-react';
 import { Quotation } from '../../../types';
 import { useAuth } from '../../../context/AuthContext';
@@ -253,6 +253,13 @@ export const QuotationDetails: React.FC<QuotationDetailsProps> = ({ quotation: i
                     className="w-full px-4 py-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-rose-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <Printer size={18} /> Convert to Job Ticket
+                  </button>
+
+                  <button
+                    onClick={() => onAction(quotation, 'duplicate_exact')}
+                    className="w-full px-4 py-3 bg-purple-50 text-purple-700 border border-purple-100 rounded-2xl text-[13px] font-bold tracking-tight hover:bg-purple-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Copy size={18} /> Duplicate Quotation
                   </button>
                 </div>
 

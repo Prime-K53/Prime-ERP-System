@@ -827,6 +827,7 @@ const Orders: React.FC = () => {
             }
             if (action === 'email_now') openEmailModal(item, 'Quotation', false);
             if (action === 'duplicate_exact') {
+                const isExaminationQuotation = String(item?.quotationType || '').toLowerCase() === 'examination';
                 const baseData = {
                     ...item,
                     id: '',
@@ -835,7 +836,11 @@ const Orders: React.FC = () => {
                     isPriceLocked: false,
                     linkedBatchId: '',
                     linkedBatchName: '',
-                    approvedAt: undefined
+                    approvedAt: undefined,
+                    examinationDetails: isExaminationQuotation ? undefined : item.examinationDetails,
+                    notes: item.notes
+                        ? `${item.notes}\n[Duplicated from Quotation #${item.id} on ${new Date().toLocaleDateString()}]`
+                        : `Duplicated from Quotation #${item.id} on ${new Date().toLocaleDateString()}`
                 };
                 addQuotation(baseData);
                 notify("Quotation duplicated successfully", "success");

@@ -1216,6 +1216,13 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                     <Briefcase size={14} /> Convert to Work Order
                 </button>
 
+                <button
+                    onClick={() => { setOpenMenuId(null); props.onAction && props.onAction(quote, 'duplicate_exact'); }}
+                    className="w-full text-left px-4 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50 flex items-center gap-3 transition-colors"
+                >
+                    <Copy size={14} /> Duplicate
+                </button>
+
                 <div className="my-1 border-t border-slate-200"></div>
                 <button onClick={() => { setOpenMenuId(null); props.onDelete(quote.id); }} className="w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"><Trash2 size={14} /> Delete</button>
             </div>

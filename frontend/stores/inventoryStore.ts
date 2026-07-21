@@ -42,12 +42,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   fetchInventory: async (silent = false) => {
     if (!silent) set({ isLoading: true, error: null });
     try {
-      console.log(`[DEBUG fetchInventory] silent=${silent}, current inventory in state: ${get().inventory.length} items`);
       const [loadedItems, loadedWarehouses] = await Promise.all([
         dbService.getAll<Item>('inventory'),
         dbService.getAll<Warehouse>('warehouses')
       ]);
-      console.log(`[DEBUG fetchInventory] loadedItems count: ${loadedItems.length}`);
 
       const seedIds = new Set(SEED_ITEM_IDS);
       const normalizedItems = loadedItems.map((item) => {
@@ -61,19 +59,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       });
 
       if (loadedItems.length === 0) {
-        console.log('[DEBUG fetchInventory] loadedItems is EMPTY - entering seed path');
         const items = normalizedItems.length > 0 ? normalizedItems : SEED_ITEMS.map(i => ({ ...normalizeStoredPricing(i), isSeed: (SEED_ITEM_IDS as readonly string[]).includes(i.id) }));
         if (items.length > 0) {
           for (const item of items) await dbService.put('inventory', item);
           set({ inventory: items });
-          console.log(`[DEBUG fetchInventory] seeded with ${items.length} items`);
         } else {
           set({ inventory: [] });
-          console.log('[DEBUG fetchInventory] set inventory to []');
         }
       } else {
         set({ inventory: normalizedItems });
-        console.log(`[DEBUG fetchInventory] set inventory to ${normalizedItems.length} items`);
       }
 
       if (loadedWarehouses.length === 0) {

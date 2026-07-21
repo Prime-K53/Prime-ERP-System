@@ -193,7 +193,7 @@ async function stampAllRecordsWithCompany(companyId: string): Promise<void> {
       let cursor = await objectStore.openCursor();
       while (cursor) {
         const record = cursor.value as Record<string, unknown>;
-        if (!record._companyId) {
+        if (record._companyId !== companyId) {
           record._companyId = companyId;
           await cursor.update(record);
           totalStamped++;
@@ -407,10 +407,6 @@ const timestampAwareMerge = <T>(cloudValues: T[], localValues: T[]): T[] => {
         const candidate = row as Record<string, unknown>;
         const key = String(candidate?.id ?? candidate?.key ?? '');
         if (!key) { passthrough.push(row); continue; }
-        if (key === 'ITM-P726/001') {
-            const existing = cloudMap.get(key) as Record<string, unknown> || {};
-            console.log(`[DEBUG] merge ITM-P726/001: cloud _updatedAt=${existing._updatedAt} updated_at=${existing.updated_at} _cloudSource=${existing._cloudSource} | local _updatedAt=${candidate._updatedAt} updated_at=${candidate.updated_at} _cloudSource=${candidate._cloudSource}`);
-        }
         if (cloudMap.has(key)) {
             cloudMap.set(key, pickNewerRecord(cloudMap.get(key)!, row));
         } else {
@@ -496,22 +492,14 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
         const item = await db.get(storeName, key);
         if (item !== undefined) items.push(item);
     }
-    if (storeName === 'inventory') {
-        console.log(`[DEBUG] inventory getAllKeys+get: total=${items.length}, keys=`, keys);
-    }
     const cid = await getCurrentCompanyId();
     if (!cid) return items;
+    if (LOCAL_ONLY_STORES.has(String(storeName))) return items;
     const filtered = items.filter((item: any) => {
         const recordCompany = item?._companyId;
         return !recordCompany || recordCompany === cid;
     });
-    if (storeName === 'inventory') {
-        const hasCid = items.filter((i: any) => i._companyId).length;
-        const matchCid = filtered.filter((i: any) => i._companyId).length;
-        console.log(`[DEBUG] getAllFromLegacyStore filter: total=${items.length}, has_companyId=${hasCid}, match_cid=${matchCid}, after_filter=${filtered.length}`);
-    }
     if (filtered.length === 0 && items.length > 0) {
-        console.warn(`[DB] getAllFromLegacyStore: all ${items.length} items filtered out for store "${storeName}" with companyId "${cid}". Returning all items as fallback to prevent data loss.`);
         return items;
     }
     return filtered;
@@ -528,7 +516,6 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
     if (!cid) return record;
     const recordCompany = (record as Record<string, unknown>)?._companyId;
     if (recordCompany && recordCompany !== cid) {
-        console.warn(`[DB] getFromLegacyStore: record ${id} in store "${storeName}" has companyId "${recordCompany}" which doesn't match current "${cid}". Returning record as fallback to prevent data loss.`);
         return record;
     }
     return record;
@@ -1225,11 +1212,6 @@ export const dbService = {
                     // Timestamp-aware merge: prefer the newer version of each item
                     const localValues = await getAllFromLegacyStore<T>(storeName);
                     const merged = timestampAwareMerge(cloudValues, localValues);
-                    if (storeName === 'inventory') {
-                        const types = new Set(merged.slice(0, 5).map((i: any) => i.type));
-                        const rawCount = merged.filter((i: any) => (i.type || i.classification) === 'Raw Material').length;
-                        console.log(`[DEBUG] merge result: total=${merged.length}, first5Types=${[...types].join(',')}, rawCount=${rawCount}, itmItem=${merged.find((i: any) => i.id === 'ITM-P726/001')?.name || 'NOT FOUND'}`);
-                    }
                     return merged;
                 }
             } catch (err) {
@@ -1245,10 +1227,6 @@ export const dbService = {
                     // Timestamp-aware merge: prefer the newer version of each item
                     const localValues = await getAllFromLegacyStore<T>(storeName);
                     const merged2 = timestampAwareMerge(cloudValues, localValues);
-                    if (storeName === 'inventory') {
-                        const rawCount = merged2.filter((i: any) => (i.type || i.classification) === 'Raw Material').length;
-                        console.log(`[DEBUG] merge2 result: total=${merged2.length}, rawCount=${rawCount}`);
-                    }
                     return merged2;
                 }
             } catch (err) {
@@ -1258,7 +1236,6 @@ export const dbService = {
 
         const route = getRouteDecision(storeName);
         if (!route || !isBackedStore(String(storeName))) {
-            if (storeName === 'inventory') console.log(`[DEBUG getAll] non-backed path for inventory`);
             return getAllFromLegacyStore<T>(storeName);
         }
 

@@ -1540,7 +1540,11 @@ if (type === 'POS_RECEIPT') {
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 * scale }}>
                 <Text style={{ fontSize: baseFontSize, color: '#666' }}>Cashier:</Text>
-                <Text style={{ fontSize: baseFontSize }}>{r.cashierName}</Text>
+                <Text style={{ fontSize: baseFontSize }}>{(() => {
+                  const cashier = String(r.cashierName || '').trim();
+                  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cashier);
+                  return cashier && !isUuid ? cashier : 'System User';
+                })()}</Text>
               </View>
               {!!r.customerName && (
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
