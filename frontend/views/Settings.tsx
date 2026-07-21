@@ -1578,21 +1578,7 @@ const Settings: React.FC = () => {
                                                 />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="settings-label">Photocopy Cost per Page ({currency})</label>
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
-                                                <input
-                                                    type="number"
-                                                    className="settings-input pl-10 bg-slate-50 text-slate-500"
-                                                    placeholder="Auto-calculated"
-                                                    value={calculatePhotocopyCostPerPage(inventory)}
-                                                    readOnly
-                                                    tabIndex={-1}
-                                                />
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Paper + toner cost per page. Auto-calculated from inventory item costs.</p>
-                                        </div>
+
                                         <div>
                                             <label className="settings-label">Type & Printing Price ({currency})</label>
                                             <div className="relative">
@@ -1606,35 +1592,8 @@ const Settings: React.FC = () => {
                                                 />
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="settings-label">Type & Printing Cost per Page ({currency})</label>
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
-                                                <input
-                                                    type="number"
-                                                    className="settings-input pl-10 bg-slate-50 text-slate-500"
-                                                    placeholder="Auto-calculated"
-                                                    value={calculateTypePrintingCostPerPage(inventory)}
-                                                    readOnly
-                                                    tabIndex={-1}
-                                                />
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Material + labor cost per page. Auto-calculated from inventory item costs.</p>
-                                        </div>
-                                        <div>
-                                            <label className="settings-label">Stapling Price per Copy ({currency})</label>
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-300 text-xs">{currency}</span>
-                                                <input
-                                                    type="number"
-                                                    className="settings-input pl-10"
-                                                    placeholder="e.g. 20"
-                                                    value={config.transactionSettings?.pos?.staplePrice || 0}
-                                                       onChange={e => setConfig({ ...config, transactionSettings: { ...config.transactionSettings, pos: { ...config.transactionSettings?.pos, staplePrice: parseFloat(e.target.value) || 0 } } })}
-                                                />
-                                            </div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Price added automatically per copy (no separate line item shown).</p>
-                                        </div>
+
+
                                     </div>
                                 </section>
 
