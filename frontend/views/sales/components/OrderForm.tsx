@@ -127,6 +127,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const [showAiSuggestions, setShowAiSuggestions] = useState(false);
     const [aiFraudFlags, setAiFraudFlags] = useState<AIFraudFlag[]>([]);
     const [showAiFraud, setShowAiFraud] = useState(false);
+    const [showAiGenerator, setShowAiGenerator] = useState(false);
     const [aiDiscountSuggestion, setAiDiscountSuggestion] = useState<any>(null);
     const [aiGeneratingDesc, setAiGeneratingDesc] = useState(false);
 
@@ -225,7 +226,11 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     const customerSubAccounts = useMemo(() => {
         if (!formData.customerName) return [];
 
-        const profileSubs = selectedCustomerObj?.subAccounts || [];
+        const profileSubs: Array<{ name: string; accountNumber: string; walletBalance: number }> = (selectedCustomerObj?.subAccounts || []).map((s: string) => ({
+            name: s,
+            accountNumber: s === 'Main' ? (selectedCustomerObj as any)?.accountNumber || '' : '',
+            walletBalance: 0,
+        }));
 
         const transactionSubNames = new Set<string>();
         invoices.filter(i => i.customerName === formData.customerName).forEach(i => {
@@ -777,7 +782,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
     useEffect(() => {
         if (!initialData) {
             let key = 'invoice';
-            let collection = invoices;
+            let collection: any[] = invoices;
 
             if (type === 'Quotation') {
                 key = 'quotation';
@@ -1050,7 +1055,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 return;
             }
 
-            const orderItems: OrderItem[] = processedItems.map((item: any) => ({
+            const orderItems = processedItems.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
                 orderId: formData.id,
                 productId: item.id,
@@ -1071,11 +1076,12 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 productionCostSnapshot: item.productionCostSnapshot,
                 variantId: item.parentId ? item.id : item.variantId,
                 parentId: item.parentId,
-                serviceDetails: item.serviceDetails
-            }));
+                serviceDetails: item.serviceDetails,
+                price: item.price,
+            })) as OrderItem[];
 
             const paidAmount = andPay ? finalTotalAmount : 0;
-            const payments: OrderPayment[] = andPay ? [{
+            const payments = andPay ? [{
                 id: `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                 orderId: formData.id,
                 amountPaid: finalTotalAmount,
@@ -1083,7 +1089,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 paymentMethod: formData.paymentMethod,
                 recordedBy: user?.name || user?.username || 'System',
                 reference: `Initial payment for Order #${formData.id}`
-            }] : [];
+            }] : [] as OrderPayment[];
 
             await createOrder({
                 id: formData.id,
@@ -1092,7 +1098,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({ type, initialData, onSave,
                 customerName: resolvedCustomerName,
                 orderDate: formData.date,
                 status: asDraft ? 'Pending' : (formData.status === 'Draft' ? 'Pending' : formData.status),
-                items: orderItems,
+                items: orderItems as any,
                 totalAmount: finalTotalAmount,
                 paidAmount: paidAmount,
                 discount: totalDiscount,
@@ -1320,7 +1326,7 @@ const handleAddItem = async (item: Item) => {
                 customerPriceAdjusted,
                 customerPricingTier: tier?.id || '',
                 customerPricingSegment: segment,
-                adjustmentSnapshots: pricing.adjustmentSnapshots,
+                adjustmentSnapshots: pricing.adjustmentSnapshots as any,
                 adjustmentTotal: pricing.adjustmentTotal,
                 pagesOverride: item.pages
             };
@@ -1860,7 +1866,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
         }
 
         const adj = selectedAdjustment;
-        const isPercent = adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT' || adj.type === 'percentage';
+        const isPercent = adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT';
         const adjValue = isPercent ? (adj.value || adj.percentage || 0) : (adj.value || 0);
 
         setFormData((prev: any) => ({
@@ -1921,7 +1927,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                     <div className="font-['JetBrains_Mono',monospace] text-[13px] text-[#666F6C] tracking-[0.5px] mb-[12px]">#{formData.id}</div>
 
                     {formData.status && (
-                        <div className="self-start border-[2.5px] border-[#B8863B] text-[#B8863B] font-['JetBrains_Mono',monospace] text-[12.5px] font-bold tracking-[2px] uppercase px-[14px] py-[6px] rounded-[6px] -rotate-6 mb-[12px] bg-[rgba(184,134,59,0.08)]">
+                        <div className="self-start border-[2.5px] border-[#B8863B] text-[#B8863B] text-[12.5px] font-bold tracking-[2px] uppercase px-[14px] py-[6px] rounded-[6px] -rotate-6 mb-[12px] bg-[rgba(184,134,59,0.08)]">
                             {formData.status}
                         </div>
                     )}
@@ -1936,7 +1942,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                 onFocus={() => setShowCustomerDropdown(true)}
                                 onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
                                 placeholder="Search customer..."
-                                className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors placeholder:text-[#666F6C] pr-8"
+                                className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors placeholder:text-[#666F6C] pr-8"
                             />
                             <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666F6C]" />
                         </div>
@@ -1947,7 +1953,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         key={c.id}
                                         type="button"
                                         onMouseDown={e => { e.preventDefault(); selectCustomer(c.name, c.id); setCustomerSearch(''); setShowCustomerDropdown(false); }}
-                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1]/50"
+                                        className="w-full text-left px-[10px] py-[8px] text-[13px] text-[#23282A] hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1]/50"
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="truncate">{c.name}</span>
@@ -1959,7 +1965,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                         </div>
                                     </button>
                                 )) : customerSearch.trim() ? null : (
-                                    <div className="px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#666F6C]">No customers found</div>
+                                    <div className="px-[10px] py-[8px] text-[13px] text-[#666F6C]">No customers found</div>
                                 )}
                                 {customerSearch.trim() && (
                                     <button
@@ -1984,7 +1990,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                             setShowCustomerDropdown(false);
                                             selectCustomer(name, newCustomer.id);
                                         }}
-                                        className="w-full text-left px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#2563EB] hover:bg-[#EFF6FF] transition-colors font-medium border-t border-[#E4DFD1]/50"
+                                        className="w-full text-left px-[10px] py-[8px] text-[13px] text-[#2563EB] hover:bg-[#EFF6FF] transition-colors font-medium border-t border-[#E4DFD1]/50"
                                     >
                                         + Add New Customer "{customerSearch.trim()}"
                                     </button>
@@ -1997,14 +2003,14 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Voucher Date</label>
                         <input type="date" value={formData.date}
                             onChange={e => handleVoucherDateChange(e.target.value)}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Due Date</label>
                         <input type="date" value={formData.dueDate}
                             onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors [color-scheme:dark]" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
@@ -2012,13 +2018,13 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <input type="text" placeholder="Reference..."
                             value={formData.referenceDoc || ''}
                             onChange={e => setFormData({ ...formData, referenceDoc: e.target.value })}
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none placeholder:text-[#666F6C] focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors" />
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none placeholder:text-[#666F6C] focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors" />
                     </div>
 
                     <div className="docket-field mb-[10px]">
                         <label className="block text-[10px] font-bold tracking-[0.8px] uppercase text-[#666F6C] mb-[3px]">Invoice Status</label>
-                        <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type} readOnly
-                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none transition-colors">
+                        <select value={type === 'Invoice' ? 'Invoice' : type === 'Quotation' ? 'Quotation' : type}
+                            className="w-full bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none transition-colors">
                             <option className="text-[#23282A]">{type === 'Invoice' ? 'Sales Invoice' : type === 'Quotation' ? 'Quotation' : type}</option>
                             <option className="text-[#23282A]">Proforma</option>
                             <option className="text-[#23282A]">Credit Note</option>
@@ -2030,7 +2036,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                         <div className="flex gap-[6px]">
                             <select value={formData.salesAccountId}
                                 onChange={e => setFormData({ ...formData, salesAccountId: e.target.value })}
-                                className="flex-1 bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] font-['JetBrains_Mono',monospace] text-[12.5px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors">
+                                className="flex-1 bg-white border border-[#E4DFD1] rounded-[7px] px-[10px] py-[8px] text-[13px] text-[#23282A] outline-none focus:border-[#2563EB] focus:bg-[#EFF6FF] transition-colors">
                                 {revenueAccounts.map(acc => (
                                     <option key={acc.id} value={acc.id} className="text-[#23282A]">{acc.name}</option>
                                 ))}
@@ -2125,23 +2131,28 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             );
                         })()}
 
-                        <div className="text-[11px] font-['JetBrains_Mono',monospace] font-semibold text-[#666F6C] uppercase tracking-[0.6px] px-[2px] py-[4px]">
+                        <div className="text-[11px] font-bold text-[#666F6C] uppercase tracking-[0.6px] px-[2px] py-[4px]">
                             Line Items
                         </div>
 
-                        <div className="flex items-center gap-[10px] px-[2px] mb-[11px]">
+                        <div className="flex items-center gap-[6px] px-[2px] mb-[11px]">
                             <button type="button" onClick={() => handleQuickService('Photocopy')}
-                                className="group inline-flex items-center gap-[8px] px-[12px] py-[6px] text-[11px] font-semibold text-white bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] border border-[rgba(37,99,235,0.3)] rounded-[8px] hover:from-[#1D4ED8] hover:to-[#1E40AF] hover:shadow-[0_4px_12px_-4px_rgba(37,99,235,0.4)] transition-all duration-200">
-                                <Copy size={14} className="shrink-0 opacity-90 group-hover:scale-110 transition-transform" />
+                                className="group inline-flex items-center gap-[6px] px-[10px] py-[5px] text-[11px] font-semibold text-[#666F6C] bg-white border border-[#E4DFD1] rounded-[6px] hover:border-[#93C5FD] hover:text-[#2563EB] transition-all duration-200">
+                                <Copy size={13} className="shrink-0 text-[#B8863B] group-hover:text-[#2563EB] group-hover:scale-110 transition-all" />
                                 <span>Photocopy</span>
-                                <kbd className="px-[4px] py-[1px] text-[9px] font-['JetBrains_Mono',monospace] font-medium text-[rgba(255,255,255,0.85)] bg-[rgba(255,255,255,0.15)] border border-[rgba(255,255,255,0.2)] rounded-[3px] leading-none">F10</kbd>
                             </button>
                             <button type="button" onClick={() => handleQuickService('Printing')}
-                                className="group inline-flex items-center gap-[8px] px-[12px] py-[6px] text-[11px] font-semibold text-white bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] border border-[rgba(124,58,237,0.3)] rounded-[8px] hover:from-[#6D28D9] hover:to-[#5B21B6] hover:shadow-[0_4px_12px_-4px_rgba(124,58,237,0.4)] transition-all duration-200">
-                                <Printer size={14} className="shrink-0 opacity-90 group-hover:scale-110 transition-transform" />
+                                className="group inline-flex items-center gap-[6px] px-[10px] py-[5px] text-[11px] font-semibold text-[#666F6C] bg-white border border-[#E4DFD1] rounded-[6px] hover:border-[#93C5FD] hover:text-[#2563EB] transition-all duration-200">
+                                <Printer size={13} className="shrink-0 text-[#B8863B] group-hover:text-[#2563EB] group-hover:scale-110 transition-all" />
                                 <span>Type &amp; Print</span>
-                                <kbd className="px-[4px] py-[1px] text-[9px] font-['JetBrains_Mono',monospace] font-medium text-[rgba(255,255,255,0.85)] bg-[rgba(255,255,255,0.15)] border border-[rgba(255,255,255,0.2)] rounded-[3px] leading-none">F11</kbd>
                             </button>
+                            {(type === 'Quotation' || type === 'Invoice') && (
+                                <button type="button" onClick={() => setShowAiGenerator(!showAiGenerator)}
+                                    className={`group inline-flex items-center gap-[6px] px-[10px] py-[5px] text-[11px] font-semibold border rounded-[6px] transition-all duration-200 ${showAiGenerator ? 'text-[#2563EB] bg-[#EFF6FF] border-[#2563EB]' : 'text-[#666F6C] bg-white border-[#E4DFD1] hover:border-[#93C5FD] hover:text-[#2563EB]'}`}>
+                                    <Sparkles size={13} className={`shrink-0 transition-transform ${showAiGenerator ? 'text-[#2563EB]' : 'text-[#B8863B] group-hover:scale-110'}`} />
+                                    <span>AI {type === 'Invoice' ? 'Invoice' : 'Quote'}</span>
+                                </button>
+                            )}
                         </div>
 
                         <div className="search-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"8px"}}>
@@ -2263,7 +2274,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                             </a>
                         </div>
 
-                        {(type === 'Quotation' || type === 'Invoice') && (
+                        {(type === 'Quotation' || type === 'Invoice') && showAiGenerator && (
                             <div className="mb-4">
                                 <AIGeneratorCard
                                     type={type}
@@ -2411,11 +2422,11 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                     </colgroup>
                                     <thead>
                                         <tr className="text-[10.5px] font-bold text-[#0F3D3E] uppercase tracking-[0.7px] bg-[#EFF6FF]">
-                                            <th className="px-[16px] py-[8px] text-left border-b border-[#E4DFD1]">Item</th>
-                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E4DFD1]">Qty</th>
-                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E4DFD1]">Price</th>
-                                            <th className="px-[16px] py-[8px] text-right border-b border-[#E4DFD1]">Amount</th>
-                                            <th className="px-[16px] py-[8px] text-center border-b border-[#E4DFD1]"></th>
+                                            <th className="px-[12px] py-[6px] text-left border-b border-[#E4DFD1]">Item</th>
+                                            <th className="px-[12px] py-[6px] text-center border-b border-[#E4DFD1]">Qty</th>
+                                            <th className="px-[12px] py-[6px] text-right border-b border-[#E4DFD1]">Price</th>
+                                            <th className="px-[12px] py-[6px] text-right border-b border-[#E4DFD1]">Amount</th>
+                                            <th className="px-[12px] py-[6px] text-center border-b border-[#E4DFD1]"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#E4DFD1]">
@@ -2433,7 +2444,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 const qty = Number(item.quantity) || 0;
                                                 return (
                                                     <tr key={idx} className="hover:bg-[#EFF6FF] transition-colors border-b border-[#E4DFD1] last:border-b-0">
-                                                        <td className="px-[16px] py-[8px] text-[13px] text-[#23282A] font-medium flex items-center gap-[6px]">
+                                                        <td className="px-[12px] py-[4px] text-[13px] text-[#23282A] font-medium flex items-center gap-[6px]">
                                                             {invItem?.image ? (
                                                                 <button onClick={e => { e.stopPropagation(); setPhotoViewItem(invItem); }} className="shrink-0 w-7 h-7 rounded border border-blue-200 bg-blue-50 hover:border-blue-400 hover:shadow-sm transition-all flex items-center justify-center" title="View Details">
                                                                     <Package size={14} className="text-blue-600"/>
@@ -2445,7 +2456,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                             )}
                                                             <span>{item.name || invItem?.name || item.productName || 'Item'}</span>
                                                         </td>
-                                                        <td className="px-3 py-2 text-center text-sm text-slate-800">
+                                                        <td className="px-2 py-1 text-center text-sm text-slate-800">
                                                             {item.id?.startsWith('QUICK-')
                                                                 ? `${item.serviceDetails?.pages || item.pages || 0} pages`
                                                                 : <input
@@ -2457,7 +2468,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     disabled={isPriceLocked}
                                                                 />}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-sm text-slate-800">
+                                                        <td className="px-2 py-1 text-right text-sm text-slate-800">
                                                             {item.id?.startsWith('QUICK-')
                                                                 ? (() => { const sheets = Math.ceil((item.serviceDetails?.pages || 1) / 2) * (item.serviceDetails?.copies || 1); return `${currency}${((item.price || 0) / sheets).toFixed(2)}/sheet`; })()
                                                                 : <input
@@ -2473,10 +2484,10 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                                     disabled={isPriceLocked}
                                                                 />}
                                                         </td>
-                                                        <td className="px-3 py-2 text-right text-sm font-semibold text-indigo-700">
+                                                        <td className="px-2 py-1 text-right text-sm font-semibold text-indigo-700">
                                                             {currency}{((Number(item.price) || 0) * qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                         </td>
-                                                        <td className="px-3 py-2 text-center">
+                                                        <td className="px-2 py-1 text-center">
                                                             <button
                                                                 onClick={() => handleRemoveItem(idx)}
                                                                 disabled={isPriceLocked}
@@ -2554,7 +2565,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                 value={formData.otherChargesAdjustment}
                                                 onChange={e => {
                                                     const adj = activeMarketAdjustments.find((a: any) => a.id === e.target.value);
-                                                    const val = adj ? (adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT' || adj.type === 'percentage' ? (adj.value || adj.percentage || 0) : 0) : 0;
+                                                    const val = adj ? (adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT' ? (adj.value || adj.percentage || 0) : 0) : 0;
                                                     setFormData({ ...formData, otherChargesAdjustment: e.target.value, otherChargesPercent: val });
                                                 }}
                                             >
@@ -2563,7 +2574,7 @@ const handleVariantSelect = async (variant: ProductVariant) => {
                                                     <option value="" disabled>No adjustments available</option>
                                                 )}
                                                 {activeMarketAdjustments.map((adj: any) => {
-                                                    const isPercent = adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT' || adj.type === 'percentage';
+                                                    const isPercent = adj.type?.toUpperCase() === 'PERCENTAGE' || adj.type?.toUpperCase() === 'PERCENT';
                                                     const val = isPercent ? (adj.value || adj.percentage || 0) : (adj.value || 0);
                                                     return (
                                                         <option key={adj.id} value={adj.id}>
