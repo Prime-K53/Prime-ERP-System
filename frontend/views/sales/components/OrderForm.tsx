@@ -89,7 +89,8 @@ const getDefaultRecurringNextRunDate = (frequency = 'Monthly', fromDate?: string
 };
 
 const normalizeRecurringStatus = (status?: string) => {
-    if (!status || !RECURRING_STATUSES.includes(status as typeof RECURRING_STATUSES[number])) {
+    if (!status) return 'Draft';
+    if (!RECURRING_STATUSES.includes(status as typeof RECURRING_STATUSES[number])) {
         console.warn(`Unknown recurring status "${status}" — defaulting to Draft`);
         return 'Draft';
     }

@@ -119,7 +119,7 @@ export const validateDocumentData = (type: DocType | string, data: any): Validat
   }
 
   if (type === 'PO') {
-    const poName = data.supplierName || data.vendorName || data.supplier_name || data.vendor_name;
+    const poName = data.supplierName || data.vendorName || data.supplier_name || data.vendor_name || data.supplierId || data.vendorId || data.supplier_id || data.vendor_id || data.customerName || data.customer_name || data.clientName || data.client_name || data.schoolName || data.school_name;
     if (!poName) return { valid: false, error: 'Purchase Order is missing required field: Supplier name' };
     if (!resolveDocumentNumber(data)) return { valid: false, error: 'Purchase Order is missing a document number' };
     if (resolveAmount(data) === undefined) return { valid: false, error: 'Purchase Order is missing a total amount' };

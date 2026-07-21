@@ -31,6 +31,7 @@ const Referrals: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<string>('All')
+  const [approvalFilter, setApprovalFilter] = useState<'pending' | 'approved'>('pending')
   const [newCampaign, setNewCampaign] = useState({
     name: '', description: '', startDate: '', endDate: '',
     rewardType: 'percentage' as 'fixed' | 'percentage' | 'hybrid',
@@ -475,43 +476,88 @@ const Referrals: React.FC = () => {
               </div>
             </>
           ) : activeView === 'approvals' ? (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="font-bold text-slate-900">Reward Approval Queue</h3>
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setApprovalFilter('pending')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${approvalFilter === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Pending ({stats.pendingRewards})</button>
+                <button onClick={() => setApprovalFilter('approved')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${approvalFilter === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Approved & Paid</button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
-                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
-                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
-                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
-                      <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {rewards.length === 0 ? (
-                      <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic">No pending rewards.</td></tr>
-                    ) : (
-                      rewards.map((r) => (
-                        <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-3 py-2 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
-                          <td className="px-3 py-2 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono text-xs">#{r.invoiceId.slice(-8)}</td>
-                          <td className="px-3 py-2 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => handleApprove(r.id)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors" title="Approve"><CheckCircle size={18} /></button>
-                              <button onClick={() => handleReject(r.id)} className="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors" title="Reject"><XCircle size={18} /></button>
-                            </div>
-                          </td>
+
+              {approvalFilter === 'pending' ? (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
+                    <h3 className="font-bold text-slate-900">Reward Approval Queue</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest text-right">Actions</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {rewards.length === 0 ? (
+                          <tr><td colSpan={5} className="px-6 py-10 text-center text-slate-400 italic">No pending rewards.</td></tr>
+                        ) : (
+                          rewards.map((r) => (
+                            <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-3 py-2 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
+                              <td className="px-3 py-2 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
+                              <td className="px-3 py-2 text-slate-500 font-mono text-xs">#{r.invoiceId?.slice(-8) || '-'}</td>
+                              <td className="px-3 py-2 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button onClick={() => handleApprove(r.id)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors" title="Approve"><CheckCircle size={18} /></button>
+                                  <button onClick={() => handleReject(r.id)} className="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors" title="Reject"><XCircle size={18} /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
+                    <h3 className="font-bold text-slate-900">Approved Referrals</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Date</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Customer</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Invoice</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Amount</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Status</th>
+                          <th className="px-3 py-2 font-bold text-slate-500 uppercase text-[10px] tracking-widest">Approved</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {allRewards.filter(r => r.status === 'approved' || r.status === 'paid').length === 0 ? (
+                          <tr><td colSpan={6} className="px-6 py-10 text-center text-slate-400 italic">No approved rewards yet.</td></tr>
+                        ) : (
+                          allRewards.filter(r => r.status === 'approved' || r.status === 'paid').map((r) => (
+                            <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-3 py-2 text-slate-500">{new Date(r.date).toLocaleDateString()}</td>
+                              <td className="px-3 py-2 font-bold text-slate-900">{customers.find(c => c.id === r.customerId)?.name || r.customerId}</td>
+                              <td className="px-3 py-2 text-slate-500 font-mono text-xs">#{r.invoiceId?.slice(-8) || '-'}</td>
+                              <td className="px-3 py-2 font-black text-emerald-600">{currency}{r.amount.toLocaleString()}</td>
+                              <td className="px-3 py-2"><span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${r.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{r.status}</span></td>
+                              <td className="px-3 py-2 text-slate-500 text-xs">{r.approvedAt ? new Date(r.approvedAt).toLocaleDateString() : '-'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           ) : activeView === 'analytics' ? (
             <div className="space-y-6">

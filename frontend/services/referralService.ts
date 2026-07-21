@@ -1,5 +1,6 @@
 import { Referral, ReferralReward, ReferralSettings, DEFAULT_REFERRAL_SETTINGS } from '../types/referral'
 import { dbService } from './db'
+import { paymentService } from './paymentService'
 
 const getCompanyConfig = () => {
   const saved = localStorage.getItem('nexus_company_config')
@@ -56,6 +57,14 @@ export const referralService = {
 
     const settings = getReferralSettings()
     if (!settings.enabled) return null
+
+    const all = await dbService.getAll<Referral>('referrals')
+    const existing = all.find(r =>
+      r.pendingInvoiceId === invoice.id &&
+      r.customerId === invoice.customerId &&
+      r.referredById === invoice.referredById
+    )
+    if (existing) return existing
 
     const referral: Referral = {
       id: generateId(),
@@ -122,6 +131,11 @@ export const referralService = {
     if (!reward) throw new Error('Reward not found');
     const updated = { ...reward, status: 'approved' as const, approvedAt: new Date().toISOString(), approvedBy, updatedAt: new Date().toISOString() };
     await dbService.put('referralRewards', updated);
+    try {
+      await paymentService.updateCustomerWallet(reward.customerId, reward.amount);
+    } catch (walletErr) {
+      console.error(`[Referrals] Failed to credit wallet for customer ${reward.customerId}:`, walletErr);
+    }
     return updated;
   },
 
@@ -235,6 +249,26 @@ export const referralService = {
     const pendingRewards = allRewards.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0);
     const revenueAttributed = converted.reduce((s, r) => s + (r.pendingInvoiceAmount || 0), 0);
 
+    const referrerMap = new Map<string, { customerName: string; referralCount: number; rewardsAmount: number }>()
+    for (const ref of allReferrals) {
+      if (ref.referredById) {
+        const existing = referrerMap.get(ref.referredById) || { customerName: ref.referredByName || '', referralCount: 0, rewardsAmount: 0 }
+        existing.referralCount++
+        referrerMap.set(ref.referredById, existing)
+      }
+    }
+    for (const rew of allRewards) {
+      const ref = allReferrals.find(r => r.id === rew.referralId)
+      if (ref?.referredById && referrerMap.has(ref.referredById)) {
+        referrerMap.get(ref.referredById)!.rewardsAmount += rew.amount
+      }
+    }
+
+    const topReferrers = Array.from(referrerMap.entries())
+      .map(([customerId, data]) => ({ customerId, ...data }))
+      .sort((a, b) => b.referralCount - a.referralCount)
+      .slice(0, 10)
+
     return {
       totalReferrals: allReferrals.length,
       activeReferrals: active.length,
@@ -248,6 +282,7 @@ export const referralService = {
       conversionRate: allReferrals.length > 0 ? (converted.length / allReferrals.length) * 100 : 0,
       revenueAttributed,
       roi: revenueAttributed > 0 ? ((revenueAttributed - totalRewards) / revenueAttributed) * 100 : 0,
+      topReferrers,
       period: params?.period || 'monthly',
       periodStart: params?.period_start || '',
       periodEnd: params?.period_end || '',

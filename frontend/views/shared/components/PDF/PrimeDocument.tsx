@@ -378,6 +378,48 @@ const CleanInvoiceTemplate = ({
         </View>
 
         {/* Totals Section */}
+        {type === 'PO' ? (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 }}>
+            <View style={{ minWidth: 220 }}>
+              <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
+                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>Subtotal</Text>
+                <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{currency} {subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+              </View>
+              {discount > 0 && (
+                <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>{discountLabel}</Text>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{discountAmountText}</Text>
+                </View>
+              )}
+              {tax > 0 && (
+                <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>Tax</Text>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{currency} {tax.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+                </View>
+              )}
+              {dataAny.roundingDifference ? (
+                <View style={{ flexDirection: 'row', paddingVertical: 4 }}>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>Rounding{dataAny.roundingMethod ? ` (${dataAny.roundingMethod})` : ''}</Text>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{currency} {Number(dataAny.roundingDifference).toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+                </View>
+              ) : null}
+              {type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
+                <View style={{ flexDirection: 'row', paddingVertical: 4, marginTop: 4, borderTopWidth: 1, borderColor: '#e2e8f0', paddingTop: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#475569' }}>Amount Paid</Text>
+                  <Text style={{ flex: 1, fontSize: 10 * fontScale, color: '#1e293b', fontWeight: 'bold', textAlign: 'right' }}>{currency} {amountPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}</Text>
+                </View>
+              )}
+              {type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
+                <View style={{ flexDirection: 'row', paddingVertical: 8, backgroundColor: accentColor + '15', marginTop: 8, borderRadius: 4, paddingHorizontal: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 11 * fontScale, fontWeight: 'bold', color: accentColor }}>Balance Due</Text>
+                  <Text style={{ fontSize: 11 * fontScale, fontWeight: 'bold', color: accentColor, textAlign: 'right' }}>
+                    {currency} {(totalAmount - amountPaid).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        ) : (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
           <View style={{ flex: 1.5, paddingRight: 40 }}>
              {/* Notes region */}
@@ -447,6 +489,8 @@ const CleanInvoiceTemplate = ({
             )}
           </View>
         </View>
+        )
+        }
 
         {/* Outstanding Balance Statement */}
         {type === 'INVOICE' && showInvoiceBalances && Number(dataAny?.totalCustomerOutstanding || 0) > 0 && (() => {
@@ -1787,7 +1831,8 @@ if (type === 'POS_RECEIPT') {
                 <View
                   style={[
                     s.summaryContainer,
-                    type === 'QUOTATION' ? { justifyContent: 'flex-end' } : null
+                    type === 'QUOTATION' ? { justifyContent: 'flex-end' } : null,
+                    type === 'PO' ? { justifyContent: 'flex-end' } : null,
                   ]}
                 >
                   {/* Left Side: Invoice Status for INVOICE/ORDER types */}
@@ -1850,8 +1895,8 @@ if (type === 'POS_RECEIPT') {
                         );
                       })()}
 
-                      {/* Total before payments - Hidden on Invoices, Orders, and Quotations */}
-                      {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && (
+                      {/* Total before payments - Hidden on Invoices, Orders, Quotations, and POs */}
+                      {type !== 'INVOICE' && type !== 'ORDER' && type !== 'QUOTATION' && type !== 'SUBSCRIPTION' && type !== 'PO' && (
                       <View style={s.summaryRow}>
                         <Text style={{ fontWeight: 'bold' }}>Total Amount</Text>
                         <Text style={{ textAlign: 'right' }}>{currency} {formatAmount('totalAmount' in data ? data.totalAmount : 0)}</Text>
@@ -1866,10 +1911,10 @@ if (type === 'POS_RECEIPT') {
                         </View>
                       )}
                     </View>
-                  </View>
-                </View>
+          </View>
+        </View>
 
-                {/* Outstanding Balance Statement */}
+        {/* Outstanding Balance Statement */}
                 {type === 'INVOICE' && showInvoiceBalances && Number(dataAny?.totalCustomerOutstanding || 0) > 0 && (() => {
                   const totalOutstanding = Number(dataAny.totalCustomerOutstanding || 0);
                   const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });

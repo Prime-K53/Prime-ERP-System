@@ -15,6 +15,10 @@ export function KeyboardProvider({ children }: Props) {
   const shortcutsRef = useRef<Map<string, ShortcutDef>>(new Map());
 
   const registerShortcut = useCallback((shortcut: ShortcutDef): (() => void) => {
+    if (!shortcut.key) {
+      console.warn(`[Keyboard] Shortcut "${shortcut.id}" registered without a key — ignoring`);
+      return () => {};
+    }
     shortcutsRef.current.set(shortcut.id, shortcut);
     return () => {
       shortcutsRef.current.delete(shortcut.id);

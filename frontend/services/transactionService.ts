@@ -3924,13 +3924,21 @@ export const transactionService = {
     },
 
     async updateReservedStock(itemId: string, reservedChange: number, variantId?: string) {
+        if (!itemId) {
+            logger.debug(`[Inventory] Skipping reserved stock update: no item ID provided`);
+            return { success: false, error: 'No item ID' };
+        }
+        const cloudItem = await dbService.get<Item>('inventory', itemId);
+        if (cloudItem) {
+            await dbService.put('inventory', cloudItem);
+        }
         return dbService.executeAtomicOperation(
             ['inventory'],
             async (tx) => {
                 const store = tx.objectStore('inventory');
                 const item = await store.get(itemId);
                 if (!item) {
-                    logger.warn(`[Inventory] Cannot update reserved stock: item ${itemId} not found in local DB`);
+                    logger.warn(`[Inventory] Cannot update reserved stock: item ${itemId} not found`);
                     return { success: false, error: 'Item not found' };
                 }
 
