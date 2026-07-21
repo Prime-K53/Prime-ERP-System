@@ -17,7 +17,6 @@ interface Props {
 export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose }) => {
   const { companyConfig } = useAuth();
   const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
-  const [showPrice, setShowPrice] = useState(true);
   const [showName, setShowName] = useState(true);
   const [showSKU, setShowSKU] = useState(true);
   const [qrDataUrls, setQrDataUrls] = useState<Record<string, string>>({});
@@ -80,7 +79,6 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
         {[
           { key: 'name', label: 'Name', state: showName, set: setShowName },
           { key: 'sku', label: 'SKU', state: showSKU, set: setShowSKU },
-          { key: 'price', label: 'Price', state: showPrice, set: setShowPrice },
         ].map(cfg => (
           <label key={cfg.key} className="flex items-center gap-1.5 text-xs font-medium cursor-pointer" style={{ color: '#3B453F' }}>
             <input type="checkbox" checked={cfg.state} onChange={e => cfg.set(e.target.checked)} style={{ accentColor: '#128C72' }} /> {cfg.label}
@@ -105,7 +103,6 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
               {mode === 'label' && renderBarcode(item)}
               {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2 mt-1" style={{ color: '#16201B' }}>{item.name}</div>}
               {showSKU && <div className="text-[7px] font-mono mt-0.5" style={{ color: '#9CA59E' }}>{item.sku}</div>}
-              {showPrice && <div className="text-[10px] font-bold mt-0.5" style={{ color: '#128C72' }}>{currency}{(item.sellingPrice || item.price || 0).toFixed(2)}</div>}
             </div>
           ))}
         </div>

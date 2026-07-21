@@ -29,7 +29,7 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
 
   const totalPages = quantity * pagesPerCopy;
   const totalSheets = type === 'photocopy' ? quantity * Math.ceil(pagesPerCopy / 2) : totalPages;
-  const printTotal = (pricingMethod === 'per_page' ? totalPages : totalSheets) * pricePerPage;
+  const printTotal = (type === 'photocopy' ? totalSheets : (pricingMethod === 'per_page' ? totalPages : totalSheets)) * pricePerPage;
   const materialCost = costPerPage ? (pricingMethod === 'per_page' ? totalPages : totalSheets) * costPerPage : 0;
 
   const effectiveStaplePrice = useMemo(() => {
@@ -88,7 +88,7 @@ const QuickPrintModal: React.FC<QuickPrintModalProps> = ({
                 {isPhotocopy ? 'Quick Photocopy' : 'Type & Printing'}
               </div>
               <div style={{ fontSize: 12.5, color: ink500, marginTop: 3 }}>
-                {fc(pricePerPage)} per {pricingMethod === 'per_page' ? 'page' : 'sheet'}
+                {fc(pricePerPage)} per {type === 'photocopy' ? 'sheet' : (pricingMethod === 'per_page' ? 'page' : 'sheet')}
               </div>
             </div>
           </div>

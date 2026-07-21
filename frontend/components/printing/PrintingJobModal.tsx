@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Save, ShoppingCart, FileText, Hash, Layers,
-  Printer, Book, Image, Palette, Scissors, Wrench, Package,
+  Save, ShoppingCart,   FileText, Hash, Layers,
+  Printer, Book, Palette, Scissors, Wrench, Package,
   DollarSign, AlertCircle,
   CheckCircle, Upload, Star
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import { formatNumber } from '../../utils/helpers';
 import { Dialog } from '../Dialog';
 import type {
   PrintingJobSpecification, PaperSize, ColorMode, SidedMode,
-  Orientation, ArtworkSource, ArtworkStatus, PrintingJobPriority, FinishingSpec,
+  Orientation, PrintingJobPriority, FinishingSpec,
 } from '../../types/printing';
 
 interface PrintingJobModalProps {
@@ -28,13 +28,12 @@ interface PrintingJobModalProps {
   onCancel?: () => void;
 }
 
-type ModalTab = 'basic' | 'specs' | 'finishing' | 'artwork' | 'pricing' | 'summary';
+type ModalTab = 'basic' | 'specs' | 'finishing' | 'pricing' | 'summary';
 
 const TABS: { key: ModalTab; label: string; icon: React.ElementType }[] = [
   { key: 'basic', label: 'Basic Info', icon: FileText },
   { key: 'specs', label: 'Print Specs', icon: Printer },
   { key: 'finishing', label: 'Finishing', icon: Scissors },
-  { key: 'artwork', label: 'Artwork', icon: Image },
   { key: 'pricing', label: 'Pricing', icon: DollarSign },
   { key: 'summary', label: 'Summary', icon: Star },
 ];
@@ -43,43 +42,55 @@ const PAPER_TYPES = ['Art Card', 'Art Paper', 'Gloss Art', 'Matte Art', 'Offset'
 const PAPER_WEIGHTS = [80, 100, 120, 150, 170, 200, 250, 300, 350, 400];
 const PAPER_SIZES: PaperSize[] = ['A4', 'A3', 'A5', 'Legal', 'Letter', 'Custom'];
 
+const ink900 = '#16191c', ink700 = '#3a4046', ink500 = '#6b7178', ink300 = '#aeb3b8', line = '#e7e5e1', canvas = '#eeece7', amber = '#b8742f', good = '#3f7d52', goodTint = '#eef6ef';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '7px 10px', border: `1px solid ${line}`, borderRadius: 8,
+  fontSize: 13, color: ink900, background: '#fff', outline: 'none', fontFamily: 'inherit'
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink500, marginBottom: 4
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500, marginBottom: 12
+};
+
 const PaperSpecSection: React.FC<{
   paper: PrintingJobSpecification['paper'];
   onChange: (paper: PrintingJobSpecification['paper']) => void;
 }> = ({ paper, onChange }) => (
-  <div className="grid grid-cols-2 gap-4">
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-600">Paper Type</label>
-      <select value={paper.type} onChange={e => onChange({ ...paper, type: e.target.value })}
-        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
+  <div className="grid grid-cols-2 gap-3">
+    <div>
+      <div style={labelStyle}>Paper Type</div>
+      <select value={paper.type} onChange={e => onChange({ ...paper, type: e.target.value })} style={inputStyle}>
         {PAPER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
       </select>
     </div>
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-600">Weight (gsm)</label>
-      <select value={paper.weight} onChange={e => onChange({ ...paper, weight: Number(e.target.value) })}
-        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
+    <div>
+      <div style={labelStyle}>Weight (gsm)</div>
+      <select value={paper.weight} onChange={e => onChange({ ...paper, weight: Number(e.target.value) })} style={inputStyle}>
         {PAPER_WEIGHTS.map(w => <option key={w} value={w}>{w} gsm</option>)}
       </select>
     </div>
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-slate-600">Paper Size</label>
-      <select value={paper.size} onChange={e => onChange({ ...paper, size: e.target.value as PaperSize })}
-        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
+    <div>
+      <div style={labelStyle}>Size</div>
+      <select value={paper.size} onChange={e => onChange({ ...paper, size: e.target.value as PaperSize })} style={inputStyle}>
         {PAPER_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
       </select>
     </div>
     {paper.size === 'Custom' && (
       <>
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Width (mm)</label>
+        <div>
+          <div style={labelStyle}>Width (mm)</div>
           <input type="number" value={paper.customWidth || ''} onChange={e => onChange({ ...paper, customWidth: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="e.g. 210" />
+            style={inputStyle} placeholder="e.g. 210" />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-600">Height (mm)</label>
+        <div>
+          <div style={labelStyle}>Height (mm)</div>
           <input type="number" value={paper.customHeight || ''} onChange={e => onChange({ ...paper, customHeight: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="e.g. 297" />
+            style={inputStyle} placeholder="e.g. 297" />
         </div>
       </>
     )}
@@ -105,17 +116,21 @@ const FinishingOptions: React.FC<{
     { key: 'packaging', label: 'Packaging', icon: Package },
   ];
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2">
       {options.map(opt => {
         const Icon = opt.icon;
         const isOn = finishing[opt.key] === true;
         return (
           <button key={opt.key} onClick={() => toggle(opt.key)}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all
-              ${isOn ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-            <Icon size={16} className={isOn ? 'text-indigo-600' : 'text-slate-400'} />
-            <span>{opt.label}</span>
-            {isOn && <CheckCircle size={14} className="ml-auto text-indigo-600" />}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', borderRadius: 8,
+              border: `1px solid ${isOn ? amber : line}`, cursor: 'pointer', width: '100%', textAlign: 'left',
+              background: isOn ? '#fbf2e6' : '#fff', fontSize: 12, fontWeight: isOn ? 600 : 500, color: isOn ? amber : ink700,
+              transition: 'all .12s'
+            }}>
+            <Icon size={14} style={{ color: isOn ? amber : ink300 }} />
+            <span style={{ flex: 1 }}>{opt.label}</span>
+            {isOn && <CheckCircle size={12} style={{ color: amber }} />}
           </button>
         );
       })}
@@ -125,18 +140,18 @@ const FinishingOptions: React.FC<{
 
 const PricingDisplay: React.FC<{ pricing: PrintingJobSpecification['pricing']; currency: string }> = ({ pricing, currency }) => {
   const Row = ({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) => (
-    <div className={`flex justify-between items-center py-1.5 ${highlight ? 'border-t-2 border-indigo-200 mt-1 pt-2' : ''}`}>
-      <span className={`text-sm ${highlight ? 'font-bold text-slate-800' : 'text-slate-500'}`}>{label}</span>
-      <span className={`font-mono text-sm ${highlight ? 'font-bold text-indigo-600 text-base' : 'text-slate-700'}`}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', fontSize: 12.5 }}>
+      <span style={{ color: highlight ? ink900 : ink500, fontWeight: highlight ? 700 : 400 }}>{label}</span>
+      <span style={{ fontWeight: highlight ? 700 : 600, color: ink900 }}>
         {currency}{formatNumber(value)}
       </span>
     </div>
   );
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 p-4 space-y-0.5">
-      <div className="flex items-center gap-2 pb-2 mb-2 border-b border-slate-100">
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Live Pricing</span>
+    <div style={{ border: `1px solid ${line}`, borderRadius: 10, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, marginBottom: 10, borderBottom: `1px solid ${line}` }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: good }} />
+        <span style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: good, fontWeight: 700 }}>Live Pricing</span>
       </div>
       <Row label="Printing Cost" value={pricing.printingCost} />
       <Row label="Paper Cost" value={pricing.paperCost} />
@@ -146,7 +161,7 @@ const PricingDisplay: React.FC<{ pricing: PrintingJobSpecification['pricing']; c
       <Row label="Machine Setup" value={pricing.machineSetupCost} />
       <Row label="Delivery Cost" value={pricing.deliveryCost} />
       {pricing.urgentFee > 0 && <Row label="Urgent Fee" value={pricing.urgentFee} />}
-      <div className="border-t border-slate-200 my-1" />
+      <div style={{ borderTop: `1px solid ${line}`, margin: '4px 0' }} />
       <Row label="Subtotal" value={pricing.subtotal} />
       {pricing.discount > 0 && <Row label="Discount" value={-pricing.discount} />}
       <Row label="Tax (16%)" value={pricing.tax} />
@@ -160,60 +175,65 @@ const JobSummaryCard: React.FC<{ spec: PrintingJobSpecification; currency: strin
   const estimatedTime = printingService.estimateProductionTime(spec);
   const estimatedProfit = spec.pricing.grandTotal - spec.pricing.subtotal + spec.pricing.tax;
   return (
-    <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-xl p-5 text-white shadow-lg">
-      <div className="flex items-start justify-between mb-4">
+    <div style={{ border: `1px solid ${line}`, borderRadius: 12, padding: 20, background: canvas }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <h3 className="text-lg font-bold">{spec.jobName || spec.serviceName}</h3>
-          <p className="text-indigo-200 text-sm mt-0.5">{spec.quantity} {spec.unit}</p>
+          <div style={{ fontSize: 17, fontWeight: 700, color: ink900, lineHeight: 1.2 }}>{spec.jobName || spec.serviceName}</div>
+          <div style={{ fontSize: 13, color: ink500, marginTop: 2 }}>{spec.quantity} {spec.unit}</div>
         </div>
-        <div className="bg-white/20 rounded-lg px-3 py-1.5 text-right">
-          <div className="text-xs text-indigo-200">Amount</div>
-          <div className="text-lg font-bold">{currency}{formatNumber(spec.pricing.grandTotal)}</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 9, color: ink500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Amount</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: ink900 }}>{currency}{formatNumber(spec.pricing.grandTotal)}</div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white/10 rounded-lg p-2.5">
-          <div className="text-xs text-indigo-200">Paper</div>
-          <div className="font-semibold text-sm">{spec.paper.weight}gsm {spec.paper.type} — {spec.paper.size}</div>
+      <div className="grid grid-cols-2 gap-2" style={{ marginBottom: 16 }}>
+        <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: `1px solid ${line}` }}>
+          <div style={{ fontSize: 8.5, color: ink500, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Paper</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: ink900 }}>{spec.paper.weight}gsm {spec.paper.type} — {spec.paper.size}</div>
         </div>
-        <div className="bg-white/10 rounded-lg p-2.5">
-          <div className="text-xs text-indigo-200">Printing</div>
-          <div className="font-semibold text-sm">{spec.printing.color} · {spec.printing.sides}</div>
+        <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: `1px solid ${line}` }}>
+          <div style={{ fontSize: 8.5, color: ink500, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Printing</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: ink900 }}>{spec.printing.color} · {spec.printing.sides}</div>
         </div>
         {finishingActive.length > 0 && (
-          <div className="bg-white/10 rounded-lg p-2.5">
-            <div className="text-xs text-indigo-200">Finishing</div>
-            <div className="font-semibold text-sm">{finishingActive.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}</div>
+          <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: `1px solid ${line}` }}>
+            <div style={{ fontSize: 8.5, color: ink500, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Finishing</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: ink900 }}>{finishingActive.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}</div>
           </div>
         )}
-        <div className="bg-white/10 rounded-lg p-2.5">
-          <div className="text-xs text-indigo-200">Due</div>
-          <div className="font-semibold text-sm">{spec.dueDate ? new Date(spec.dueDate).toLocaleDateString() : 'Not set'}</div>
+        <div style={{ background: '#fff', borderRadius: 8, padding: '8px 10px', border: `1px solid ${line}` }}>
+          <div style={{ fontSize: 8.5, color: ink500, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Due</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: ink900 }}>{spec.dueDate ? new Date(spec.dueDate).toLocaleDateString() : 'Not set'}</div>
         </div>
       </div>
-      <div className="border-t border-white/20 pt-3 grid grid-cols-3 gap-3 text-center">
-        <div>
-          <div className="text-xs text-indigo-200">Est. Time</div>
-          <div className="font-bold text-sm">{estimatedTime}</div>
-        </div>
-        <div>
-          <div className="text-xs text-indigo-200">Est. Cost</div>
-          <div className="font-bold text-sm">{currency}{formatNumber(spec.pricing.subtotal)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-indigo-200">Est. Profit</div>
-          <div className="font-bold text-sm text-emerald-300">{currency}{formatNumber(estimatedProfit)}</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, borderTop: `1px solid ${line}`, paddingTop: 14 }}>
+        {[
+          { label: 'Est. Time', value: estimatedTime },
+          { label: 'Est. Cost', value: `${currency}${formatNumber(spec.pricing.subtotal)}` },
+          { label: 'Est. Profit', value: `${currency}${formatNumber(estimatedProfit)}` },
+        ].map(item => (
+          <div key={item.label} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 8.5, color: ink500, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{item.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: item.label === 'Est. Profit' ? good : ink900 }}>{item.value}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
+const tabBtn = (isActive: boolean, hasError?: boolean): React.CSSProperties => ({
+  display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: 'none',
+  fontSize: 11.5, fontWeight: isActive ? 700 : 500, cursor: 'pointer', whiteSpace: 'nowrap',
+  background: isActive ? ink900 : 'transparent',
+  color: isActive ? '#fff' : ink500,
+  transition: 'all .12s', fontFamily: 'inherit',
+  ...(hasError ? { boxShadow: `inset 0 0 0 2px #ef4444` } : {}),
+});
+
 export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
   serviceId, serviceName, customerName, customerId,
-  open = true,
-  onClose,
-  onSaveDraft, onAddToCart, onSaveAsQuote, onCancel,
+  open = true, onClose, onSaveDraft, onAddToCart, onSaveAsQuote, onCancel,
 }) => {
   const handleClose = useCallback(() => {
     onClose?.();
@@ -225,15 +245,11 @@ export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<ModalTab>('basic');
   const [spec, setSpec] = useState<PrintingJobSpecification>({
-    serviceId,
-    serviceName,
+    serviceId, serviceName,
     jobName: serviceName,
     customerName: customerName || '',
     customerId,
-    quantity: 500,
-    unit: 'pcs',
-    dueDate: '',
-    priority: 'Normal',
+    quantity: 500, unit: 'pcs', dueDate: '', priority: 'Normal',
     paper: { type: 'Art Card', weight: 300, size: 'A4' },
     printing: { color: 'Full Color', sides: 'Double Sided', pages: 1, copies: 1, orientation: 'Portrait' },
     finishing: {
@@ -242,8 +258,7 @@ export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
       foiling: false, dieCutting: false, packaging: false,
     },
     artwork: { source: 'Customer Artwork', files: [], status: 'Pending', notes: '' },
-    customerNotes: '',
-    internalNotes: '',
+    customerNotes: '', internalNotes: '',
     pricing: {
       printingCost: 0, paperCost: 0, inkCost: 0, finishingCost: 0,
       designCost: 0, machineSetupCost: 0, deliveryCost: 0, urgentFee: 0,
@@ -278,249 +293,238 @@ export const PrintingJobModal: React.FC<PrintingJobModalProps> = ({
 
   const canAddToCart = !tabErrors.basic || tabErrors.basic.length === 0;
 
-  const TabButton: React.FC<{ tab: ModalTab; icon: React.ElementType }> = ({ tab, icon: Icon }) => {
-    const isActive = activeTab === tab;
-    const hasError = tabErrors[tab]?.length;
-    return (
-      <button onClick={() => setActiveTab(tab)}
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap
-          ${isActive ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}
-          ${hasError ? 'ring-2 ring-red-300' : ''}`}>
-        <Icon size={14} />
-        <span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
-      </button>
-    );
-  };
-
   return (
-    <Dialog open={open} onClose={handleClose} title="Printing Job Details" className="max-w-6xl">
+    <Dialog open={open} onClose={handleClose} className="max-w-4xl">
+      {/* Custom header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '14px 20px 10px 20px', borderBottom: `1px solid ${line}` }}>
+        <div>
+          <div style={{ fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: amber, marginBottom: 4 }}>Printing Job</div>
+          <div style={{ fontSize: 19, color: ink900, lineHeight: 1.1, fontWeight: 700 }}>{spec.jobName || serviceName}</div>
+        </div>
+        <button onClick={handleClose} style={{ width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', color: ink500, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: 2 }}
+          onMouseOver={e => { e.currentTarget.style.background = canvas; e.currentTarget.style.color = ink900; }}
+          onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ink500; }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50/50 -mt-6 -mx-6 px-6 pt-2 pb-2 mb-6 shrink-0">
-        {TABS.map(t => <TabButton key={t.key} tab={t.key} icon={t.icon} />)}
+      <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: `1px solid ${line}`, background: canvas, overflowX: 'auto' }}>
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)} style={tabBtn(activeTab === t.key, !!tabErrors[t.key]?.length)}
+            onMouseOver={e => { if (activeTab !== t.key) { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = ink700; } }}
+            onMouseOut={e => { if (activeTab !== t.key) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = ink500; } }}>
+            <t.icon size={13} />
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Body */}
-      {activeTab === 'basic' && (
-        <div className="max-w-2xl space-y-5">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Basic Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Job Name *</label>
-              <input type="text" value={spec.jobName} onChange={e => updateSpec({ jobName: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="e.g. Business Cards" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Service</label>
-              <input type="text" value={spec.serviceName} disabled
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Customer *</label>
-              <input type="text" value={spec.customerName} onChange={e => updateSpec({ customerName: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" placeholder="Customer name" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Unit</label>
-              <select value={spec.unit} onChange={e => updateSpec({ unit: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none bg-white">
-                <option value="pcs">Pieces</option>
-                <option value="sets">Sets</option>
-                <option value="books">Books</option>
-                <option value="boxes">Boxes</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Quantity</label>
-              <input type="number" min={1} value={spec.quantity} onChange={e => updateSpec({ quantity: Math.max(1, Number(e.target.value)) })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Due Date</label>
-              <input type="date" value={spec.dueDate} onChange={e => updateSpec({ dueDate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-600">Priority</label>
-              <div className="flex gap-2">
-                {(['Normal', 'Urgent', 'Express'] as PrintingJobPriority[]).map(p => (
-                  <button key={p} onClick={() => updateSpec({ priority: p })}
-                    className={`flex-1 px-3 py-2 rounded-lg border text-xs font-bold transition-all
-                      ${spec.priority === p
-                        ? p === 'Normal' ? 'bg-slate-800 text-white border-slate-800'
-                          : p === 'Urgent' ? 'bg-orange-500 text-white border-orange-500'
-                          : 'bg-red-500 text-white border-red-500'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                    {p}
-                  </button>
-                ))}
+      <div style={{ padding: '16px 20px', maxHeight: '60vh', overflowY: 'auto' }}>
+        {activeTab === 'basic' && (
+          <div style={{ maxWidth: 560 }}>
+            <div style={sectionTitle}>Basic Information</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div style={labelStyle}>Job Name *</div>
+                <input type="text" value={spec.jobName} onChange={e => updateSpec({ jobName: e.target.value })}
+                  style={inputStyle} placeholder="e.g. Business Cards" />
+              </div>
+              <div>
+                <div style={labelStyle}>Service</div>
+                <input type="text" value={spec.serviceName} disabled style={{ ...inputStyle, background: canvas, color: ink500 }} />
+              </div>
+              <div>
+                <div style={labelStyle}>Customer *</div>
+                <input type="text" value={spec.customerName} onChange={e => updateSpec({ customerName: e.target.value })}
+                  style={inputStyle} placeholder="Customer name" />
+              </div>
+              <div>
+                <div style={labelStyle}>Unit</div>
+                <select value={spec.unit} onChange={e => updateSpec({ unit: e.target.value })} style={inputStyle}>
+                  <option value="pcs">Pieces</option>
+                  <option value="sets">Sets</option>
+                  <option value="books">Books</option>
+                  <option value="boxes">Boxes</option>
+                </select>
+              </div>
+              <div>
+                <div style={labelStyle}>Quantity</div>
+                <input type="number" min={1} value={spec.quantity} onChange={e => updateSpec({ quantity: Math.max(1, Number(e.target.value)) })}
+                  style={inputStyle} />
+              </div>
+              <div>
+                <div style={labelStyle}>Due Date</div>
+                <input type="date" value={spec.dueDate} onChange={e => updateSpec({ dueDate: e.target.value })}
+                  style={inputStyle} />
+              </div>
+              <div className="col-span-2">
+                <div style={labelStyle}>Priority</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['Normal', 'Urgent', 'Express'] as PrintingJobPriority[]).map(p => (
+                    <button key={p} onClick={() => updateSpec({ priority: p })}
+                      style={{
+                        flex: 1, padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+                        background: spec.priority === p ? ink900 : '#fff',
+                        color: spec.priority === p ? '#fff' : ink700,
+                        outline: `1px solid ${spec.priority === p ? ink900 : line}`,
+                        transition: 'all .12s'
+                      }}
+                      onMouseOver={e => { if (spec.priority !== p) e.currentTarget.style.background = canvas; }}
+                      onMouseOut={e => { if (spec.priority !== p) e.currentTarget.style.background = '#fff'; }}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === 'specs' && (
-        <div className="max-w-3xl space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Layers size={16} /> Paper
-            </h3>
+        {activeTab === 'specs' && (
+          <div style={{ maxWidth: 560 }}>
+            <div style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Layers size={13} /> Paper
+            </div>
             <PaperSpecSection paper={spec.paper} onChange={paper => updateSpec({ paper })} />
-          </div>
-          <div className="border-t border-slate-100 pt-5">
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Printer size={16} /> Printing
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Color</label>
-                <div className="flex gap-2">
-                  {(['Full Color', 'Black & White'] as ColorMode[]).map(c => (
-                    <button key={c} onClick={() => updateSpec({ printing: { ...spec.printing, color: c } })}
-                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                        ${spec.printing.color === c ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                      {c}
-                    </button>
-                  ))}
+            <div style={{ borderTop: `1px solid ${line}`, marginTop: 16, paddingTop: 16 }}>
+              <div style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Printer size={13} /> Printing
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div style={labelStyle}>Color</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {(['Full Color', 'Black & White'] as ColorMode[]).map(c => (
+                      <button key={c} onClick={() => updateSpec({ printing: { ...spec.printing, color: c } })}
+                        style={{
+                          flex: 1, padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit',
+                          background: spec.printing.color === c ? ink900 : '#fff',
+                          color: spec.printing.color === c ? '#fff' : ink700,
+                          outline: `1px solid ${spec.printing.color === c ? ink900 : line}`,
+                          transition: 'all .12s'
+                        }}
+                        onMouseOver={e => { if (spec.printing.color !== c) e.currentTarget.style.background = canvas; }}
+                        onMouseOut={e => { if (spec.printing.color !== c) e.currentTarget.style.background = '#fff'; }}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={labelStyle}>Sides</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {(['Single Sided', 'Double Sided'] as SidedMode[]).map(s => (
+                      <button key={s} onClick={() => updateSpec({ printing: { ...spec.printing, sides: s } })}
+                        style={{
+                          flex: 1, padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit',
+                          background: spec.printing.sides === s ? ink900 : '#fff',
+                          color: spec.printing.sides === s ? '#fff' : ink700,
+                          outline: `1px solid ${spec.printing.sides === s ? ink900 : line}`,
+                          transition: 'all .12s'
+                        }}
+                        onMouseOver={e => { if (spec.printing.sides !== s) e.currentTarget.style.background = canvas; }}
+                        onMouseOut={e => { if (spec.printing.sides !== s) e.currentTarget.style.background = '#fff'; }}>
+                        {s === 'Single Sided' ? 'Single' : 'Double'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={labelStyle}>Pages per Copy</div>
+                  <input type="number" min={1} value={spec.printing.pages} onChange={e => updateSpec({ printing: { ...spec.printing, pages: Math.max(1, Number(e.target.value)) } })}
+                    style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Orientation</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {(['Portrait', 'Landscape'] as Orientation[]).map(o => (
+                      <button key={o} onClick={() => updateSpec({ printing: { ...spec.printing, orientation: o } })}
+                        style={{
+                          flex: 1, padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit',
+                          background: spec.printing.orientation === o ? ink900 : '#fff',
+                          color: spec.printing.orientation === o ? '#fff' : ink700,
+                          outline: `1px solid ${spec.printing.orientation === o ? ink900 : line}`,
+                          transition: 'all .12s'
+                        }}
+                        onMouseOver={e => { if (spec.printing.orientation !== o) e.currentTarget.style.background = canvas; }}
+                        onMouseOut={e => { if (spec.printing.orientation !== o) e.currentTarget.style.background = '#fff'; }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Sides</label>
-                <div className="flex gap-2">
-                  {(['Single Sided', 'Double Sided'] as SidedMode[]).map(s => (
-                    <button key={s} onClick={() => updateSpec({ printing: { ...spec.printing, sides: s } })}
-                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                        ${spec.printing.sides === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                      {s === 'Single Sided' ? 'Single' : 'Double'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Pages per Copy</label>
-                <input type="number" min={1} value={spec.printing.pages} onChange={e => updateSpec({ printing: { ...spec.printing, pages: Math.max(1, Number(e.target.value)) } })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-600">Orientation</label>
-                <div className="flex gap-2">
-                  {(['Portrait', 'Landscape'] as Orientation[]).map(o => (
-                    <button key={o} onClick={() => updateSpec({ printing: { ...spec.printing, orientation: o } })}
-                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all
-                        ${spec.printing.orientation === o ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'}`}>
-                      {o}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === 'finishing' && (
-        <div className="max-w-3xl space-y-4">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Scissors size={16} /> Finishing Options
-          </h3>
-          <FinishingOptions finishing={spec.finishing} onChange={finishing => updateSpec({ finishing })} />
-        </div>
-      )}
-
-      {activeTab === 'artwork' && (
-        <div className="max-w-2xl space-y-5">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Image size={16} /> Artwork
-          </h3>
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Artwork Source</label>
-            <div className="flex gap-3">
-              {(['Customer Artwork', 'Design Required'] as ArtworkSource[]).map(src => (
-                <button key={src} onClick={() => updateSpec({ artwork: { ...spec.artwork, source: src } })}
-                  className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-all
-                    ${spec.artwork.source === src ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                  {src}
-                </button>
-              ))}
+        {activeTab === 'finishing' && (
+          <div style={{ maxWidth: 600 }}>
+            <div style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Scissors size={13} /> Finishing Options
             </div>
+            <FinishingOptions finishing={spec.finishing} onChange={finishing => updateSpec({ finishing })} />
           </div>
-          {spec.artwork.source === 'Customer Artwork' && (
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 transition-colors cursor-pointer">
-              <Upload size={32} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">Drop artwork files here or click to upload</p>
-              <p className="text-xs text-slate-400 mt-1">PDF, AI, EPS, PSD, TIFF — Max 50MB</p>
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Artwork Status</label>
-            <div className="flex gap-2">
-              {(['Pending', 'Received', 'Approved'] as ArtworkStatus[]).map(s => (
-                <button key={s} onClick={() => updateSpec({ artwork: { ...spec.artwork, status: s } })}
-                  className={`px-4 py-2 rounded-lg border text-xs font-bold transition-all
-                    ${spec.artwork.status === s
-                      ? s === 'Approved' ? 'bg-emerald-600 text-white border-emerald-600'
-                        : s === 'Received' ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-amber-600 text-white border-amber-600'
-                      : 'bg-white text-slate-600 border-slate-200'}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Customer Notes</label>
-            <textarea value={spec.customerNotes} onChange={e => updateSpec({ customerNotes: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Any special instructions from the customer..." />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-600">Internal Production Notes</label>
-            <textarea value={spec.internalNotes} onChange={e => updateSpec({ internalNotes: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none h-20" placeholder="Internal instructions for the production team..." />
-          </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === 'pricing' && (
-        <div className="max-w-md mx-auto">
-          <PricingDisplay pricing={spec.pricing} currency={currency} />
-        </div>
-      )}
+        {activeTab === 'pricing' && (
+          <div style={{ maxWidth: 400, margin: '0 auto' }}>
+            <div style={{ ...sectionTitle, textAlign: 'center' }}>Pricing Breakdown</div>
+            <PricingDisplay pricing={spec.pricing} currency={currency} />
+          </div>
+        )}
 
-      {activeTab === 'summary' && (
-        <div className="max-w-lg mx-auto">
-          <JobSummaryCard spec={spec} currency={currency} />
-        </div>
-      )}
+        {activeTab === 'summary' && (
+          <div style={{ maxWidth: 500, margin: '0 auto' }}>
+            <div style={{ ...sectionTitle, textAlign: 'center' }}>Job Summary</div>
+            <JobSummaryCard spec={spec} currency={currency} />
+          </div>
+        )}
+      </div>
 
       {/* Footer */}
-      <div className="border-t border-slate-200 bg-slate-50 -mx-6 -mb-6 px-6 py-4 mt-6 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-white rounded-lg px-4 py-2 border border-slate-200">
-            <span className="text-xs text-slate-500">Total</span>
-            <div className="font-bold text-lg text-indigo-600">{currency}{formatNumber(spec.pricing.grandTotal)}</div>
+      <div style={{ padding: '12px 20px 16px 20px', borderTop: `1px solid ${line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: ink500 }}>Total</div>
+            <div style={{ fontSize: 21, color: ink900, lineHeight: 1.15, fontWeight: 700 }}>{currency}{formatNumber(spec.pricing.grandTotal)}</div>
           </div>
           {!canAddToCart && (
-            <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '6px 10px', borderRadius: 6 }}>
               <AlertCircle size={12} /> Fill required fields
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={handleClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all">
+            style={{ border: `1px solid ${line}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: '#fff', color: ink700, whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: 'inherit' }}
+            onMouseOver={e => e.currentTarget.style.background = canvas}
+            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
             Cancel
           </button>
           <button onClick={() => onSaveDraft(spec)}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all flex items-center gap-1.5">
-            <Save size={14} /> Save Draft
+            style={{ border: `1px solid ${line}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: '#fff', color: ink700, whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}
+            onMouseOver={e => e.currentTarget.style.background = canvas}
+            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+            <Save size={13} /> Save Draft
           </button>
           <button onClick={() => onSaveAsQuote(spec)}
-            className="px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex items-center gap-1.5">
-            <FileText size={14} /> Save as Quote
+            style={{ border: `1px solid ${line}`, borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: '#fff', color: ink700, whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}
+            onMouseOver={e => e.currentTarget.style.background = canvas}
+            onMouseOut={e => e.currentTarget.style.background = '#fff'}>
+            <FileText size={13} /> Save as Quote
           </button>
           <button onClick={() => onAddToCart(spec)} disabled={!canAddToCart}
-            className="px-5 py-2 text-sm font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm">
-            <ShoppingCart size={16} /> Add to Cart
+            style={{ border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12.5, fontWeight: 700, cursor: canAddToCart ? 'pointer' : 'not-allowed', background: ink900, color: '#fff', whiteSpace: 'nowrap', transition: 'all .15s', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, opacity: canAddToCart ? 1 : 0.5 }}
+            onMouseOver={e => { if (canAddToCart) e.currentTarget.style.background = '#000'; }}
+            onMouseOut={e => { if (canAddToCart) e.currentTarget.style.background = ink900; }}>
+            <ShoppingCart size={14} /> Add to Cart
           </button>
         </div>
       </div>

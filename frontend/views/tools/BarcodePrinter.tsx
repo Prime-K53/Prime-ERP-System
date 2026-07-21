@@ -20,7 +20,6 @@ const BarcodePrinter: React.FC = () => {
     
     // Settings
     const [labelSize, setLabelSize] = useState<'Standard' | 'Small'>('Standard'); // Standard: 50x30mm, Small: 38x25mm
-    const [showPrice, setShowPrice] = useState(true);
     const [showName, setShowName] = useState(true);
     const [showSKU, setShowSKU] = useState(true);
 
@@ -205,9 +204,6 @@ const BarcodePrinter: React.FC = () => {
                                 <input type="checkbox" checked={showName} onChange={e => setShowName(e.target.checked)}/> Name
                             </label>
                             <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                                <input type="checkbox" checked={showPrice} onChange={e => setShowPrice(e.target.checked)}/> Price
-                            </label>
-                            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
                                 <input type="checkbox" checked={showSKU} onChange={e => setShowSKU(e.target.checked)}/> SKU
                             </label>
                             <select className="text-xs border rounded p-1" value={labelSize} onChange={e => setLabelSize(e.target.value as 'Standard' | 'Small')}>
@@ -247,7 +243,6 @@ const BarcodePrinter: React.FC = () => {
                                     {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2">{item.name}</div>}
                                     {renderBarcode(item)}
                                     {showSKU && <div className="text-[8px] font-mono text-slate-500">{item.sku}</div>}
-                                    {showPrice && <div className="text-xs font-bold">{currency}{(item.sellingPrice || item.price || 0).toFixed(2)}</div>}
                                 </div>
                             ))}
                         </div>
