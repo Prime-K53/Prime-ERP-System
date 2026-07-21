@@ -188,7 +188,6 @@ const SecurityFooter = ({
     || data?.date || '')
   );
   const qrCodeDataUrl = resolvePdfQrCodeSource(String(data?.securityQrCodeDataUrl || '').trim());
-  const qrLabel = `#${documentNumber}`;
 
   return (
     <View style={s.securityFooter} fixed>
@@ -201,7 +200,7 @@ const SecurityFooter = ({
         style={[
           s.securityQrPanel,
           {
-            width: footerQrSize + 16,
+            width: footerQrSize + 8,
             alignItems: 'center',
             borderWidth: 0,
             backgroundColor: 'transparent',
@@ -213,9 +212,6 @@ const SecurityFooter = ({
         {!!qrCodeDataUrl ? (
           <Image src={qrCodeDataUrl} style={{ width: footerQrSize, height: footerQrSize }} />
         ) : null}
-        <Text style={{ fontSize: 6.5 * fontScale, color: '#64748b', marginTop: 2, textAlign: 'center', lineHeight: 1.2 }}>
-          {qrLabel}
-        </Text>
       </View>
     </View>
   );
