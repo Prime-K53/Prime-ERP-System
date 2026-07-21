@@ -45,7 +45,7 @@ export const FilterPanel: React.FC<Props> = (p) => {
     return !!v;
   }).length;
 
-  const toggleArray = (key: 'classification' | 'inventoryRole' | 'status' | 'warehouse' | 'supplier' | 'category' | 'brand' | 'stockStatus' | 'tracking', value: string) => {
+  const toggleArray = (key: 'classification' | 'inventoryRole' | 'rawMaterialCategory' | 'status' | 'warehouse' | 'supplier' | 'category' | 'brand' | 'stockStatus' | 'tracking', value: string) => {
     const current: string[] = Array.isArray(p.filters[key]) ? p.filters[key] as string[] : [];
     const next = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
     p.onSetFilter(key, next as FilterState[typeof key]);
@@ -170,6 +170,19 @@ export const FilterPanel: React.FC<Props> = (p) => {
                     {TRACKING_OPTS.map(t => (
                       <span key={t.value} onClick={() => toggleArray('tracking', t.value)}
                         className={chipClass(p.filters.tracking.includes(t.value))}>{t.label}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Raw Material Category */}
+                <div>
+                  <FieldLabel label="Raw Material Type" />
+                  <div className="flex flex-wrap">
+                    {['consumable', 'non_consumable'].map(c => (
+                      <span key={c} onClick={() => toggleArray('rawMaterialCategory', c)}
+                        className={chipClass(p.filters.rawMaterialCategory.includes(c))}>
+                        {c === 'consumable' ? 'Consumable' : 'Non-Consumable'}
+                      </span>
                     ))}
                   </div>
                 </div>

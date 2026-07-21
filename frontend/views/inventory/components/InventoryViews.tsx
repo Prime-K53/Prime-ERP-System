@@ -629,6 +629,12 @@ const showStockColumn = filterType === 'Material' || filterType === 'Stationery'
                                                 )}
                                                 <div className="truncate">
                                                     {item.name}
+                                                    {(item.type === 'Raw Material' || item.type === 'Material') && (item as any).rawMaterialCategory === 'non_consumable' && (
+                                                        <span className="ml-2 px-1.5 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-bold rounded-md border border-orange-200 uppercase tracking-tight">Non-Consumable</span>
+                                                    )}
+                                                    {(item.type === 'Raw Material' || item.type === 'Material') && (!(item as any).rawMaterialCategory || (item as any).rawMaterialCategory === 'consumable') && (
+                                                        <span className="ml-2 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-md border border-emerald-200 uppercase tracking-tight">Consumable</span>
+                                                    )}
                                                     {hasVariants && <span className="ml-2 px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md border border-blue-100 uppercase tracking-tight">Variants: {item.variants?.length}</span>}
                                                     {item.isLargeFormat && <div className="text-[10px] text-indigo-500 flex items-center gap-1 mt-0.5 font-bold uppercase tracking-tight"><Ruler size={10} /> Roll: {item.rollWidth}cm</div>}
                                                 </div>

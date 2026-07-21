@@ -8,6 +8,7 @@ export type ViewMode = 'table' | 'compact' | 'card';
 export interface FilterState {
   classification: string[];
   inventoryRole: string[];
+  rawMaterialCategory: string[];
   status: string[];
   warehouse: string[];
   supplier: string[];
@@ -28,6 +29,7 @@ export interface FilterState {
 const DEFAULT_FILTERS: FilterState = {
   classification: [],
   inventoryRole: [],
+  rawMaterialCategory: [],
   status: [],
   warehouse: [],
   supplier: [],
@@ -63,7 +65,7 @@ export function useInventoryList() {
   const [filters, setFilters] = useState<FilterState>(() => {
     try {
       const saved = localStorage.getItem('inventory-list-filters');
-      return saved ? JSON.parse(saved) : DEFAULT_FILTERS;
+      return saved ? { ...DEFAULT_FILTERS, ...JSON.parse(saved) } : DEFAULT_FILTERS;
     } catch { return DEFAULT_FILTERS; }
   });
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -144,6 +146,9 @@ export function useInventoryList() {
     }
     if (filters.inventoryRole.length > 0) {
       result = result.filter(item => filters.inventoryRole.includes(item.inventoryRole || ''));
+    }
+    if (filters.rawMaterialCategory.length > 0) {
+      result = result.filter(item => filters.rawMaterialCategory.includes((item as any).rawMaterialCategory || 'consumable'));
     }
     if (filters.status.length > 0) {
       result = result.filter(item => filters.status.includes(item.status || 'Active'));
@@ -258,7 +263,7 @@ export function useInventoryList() {
 
   const loadPreset = useCallback((name: string) => {
     const preset = filterPresets.find(p => p.name === name);
-    if (preset) { setFilters(preset.filters); setPage(1); }
+    if (preset) { setFilters({ ...DEFAULT_FILTERS, ...preset.filters }); setPage(1); }
   }, [filterPresets]);
 
   const deletePreset = useCallback((name: string) => {

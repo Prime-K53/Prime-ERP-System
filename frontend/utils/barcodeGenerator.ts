@@ -7,6 +7,8 @@ export interface BarcodeOptions {
   displayValue?: boolean;
   fontSize?: number;
   margin?: number;
+  marginTop?: number;
+  marginBottom?: number;
   background?: string;
   lineColor?: string;
 }
@@ -16,8 +18,10 @@ const defaultOptions: BarcodeOptions = {
   width: 2,
   height: 60,
   displayValue: true,
-  fontSize: 14,
+  fontSize: 12,
   margin: 10,
+  marginTop: 8,
+  marginBottom: 8,
   background: '#ffffff',
   lineColor: '#000000',
 };

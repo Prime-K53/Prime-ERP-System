@@ -32,7 +32,16 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
       for (const item of items) {
         const barcodeText = item.barcode || item.sku || item.id || item.name;
         if (barcodeText) {
-          bcUrls[item.id] = generateBarcodeDataUrl(barcodeText, { height: 50, width: 2, margin: 5, fontSize: 10 });
+          const isLabelMode = mode === 'label';
+          bcUrls[item.id] = generateBarcodeDataUrl(barcodeText, {
+            height: isLabelMode ? 38 : 50,
+            width: 2,
+            margin: 6,
+            marginTop: 6,
+            marginBottom: 6,
+            fontSize: isLabelMode ? 9 : 10,
+            displayValue: true,
+          });
         }
         if (mode === 'qrcode') {
           try { qrUrls[item.id] = await QRCode.toDataURL(item.id || item.sku || item.name, { width: 150, margin: 1 }); } catch { qrUrls[item.id] = ''; }
@@ -62,7 +71,7 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
   const renderBarcode = (item: Item) => {
     const url = barcodeDataUrls[item.id];
     if (!url) return null;
-    return <img src={url} alt={`Barcode ${item.barcode}`} className="h-10 w-full object-contain" />;
+    return <img src={url} alt={`Barcode ${item.barcode}`} className="w-full h-auto" />;
   };
 
   const getLabelStyle = () => {
@@ -96,13 +105,13 @@ export const PrintLabelModal: React.FC<Props> = ({ open, items, mode, onClose })
       ) : (
         <div id="printable-labels" className="flex flex-wrap gap-4 justify-center">
           {items.map((item, idx) => (
-            <div key={`${item.id}-${idx}`} className="bg-white border border-[#E5E8E1] rounded-lg flex flex-col items-center justify-center text-center p-3 shadow-sm print-label" style={getLabelStyle()}>
+            <div key={`${item.id}-${idx}`} className="bg-white border border-[#E5E8E1] rounded-lg flex flex-col items-center text-center p-2 shadow-sm print-label overflow-hidden" style={getLabelStyle()}>
               {mode === 'qrcode' && qrDataUrls[item.id] ? (
                 <img src={qrDataUrls[item.id]} alt={`QR for ${item.name}`} className="w-24 h-24" />
               ) : mode === 'barcode' ? renderBarcode(item) : null}
               {mode === 'label' && renderBarcode(item)}
-              {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2 mt-1" style={{ color: '#16201B' }}>{item.name}</div>}
-              {showSKU && <div className="text-[7px] font-mono mt-0.5" style={{ color: '#9CA59E' }}>{item.sku}</div>}
+              {showName && <div className="text-[9px] font-bold leading-tight line-clamp-1 mt-1.5" style={{ color: '#16201B' }}>{item.name}</div>}
+              {showSKU && <div className="text-[7px] font-mono mt-1" style={{ color: '#9CA59E' }}>{item.sku}</div>}
             </div>
           ))}
         </div>

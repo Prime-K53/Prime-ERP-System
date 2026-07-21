@@ -8,7 +8,15 @@ function parseCSVLine(line: string): string[] {
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
     if (ch === ',' && !inQuotes) { result.push(current); current = ''; continue; }
     current += ch;
   }
@@ -33,13 +41,16 @@ export const parseCSV = (file: File): Promise<any[]> => {
         return;
       }
 
-      const headers = parseCSVLine(lines[0]).map(h => h.trim());
+      const rawFirstLine = lines[0].replace(/^\uFEFF/, '');
+      const headers = parseCSVLine(rawFirstLine).map(h => h.trim());
       
       const result = lines.slice(1).map(line => {
         const values = parseCSVLine(line).map(v => v.trim());
         const obj: any = {};
         headers.forEach((header, index) => {
-          obj[header] = values[index];
+          const value = values[index];
+          obj[header] = value;
+          obj[header.toLowerCase()] = value;
         });
         return obj;
       });

@@ -29,15 +29,24 @@ const BarcodePrinter: React.FC = () => {
 
     useEffect(() => {
       const urls: Record<string, string> = {};
+      const isStandard = labelSize === 'Standard';
       for (const p of printQueue) {
         if (urls[p.item.id]) continue;
         const barcodeText = p.item.barcode || p.item.sku || p.item.id || p.item.name;
         if (barcodeText) {
-          urls[p.item.id] = generateBarcodeDataUrl(barcodeText, { height: 40, width: 1.5, margin: 3, fontSize: 8 });
+          urls[p.item.id] = generateBarcodeDataUrl(barcodeText, {
+            height: isStandard ? 36 : 28,
+            width: 1.5,
+            margin: 8,
+            marginTop: isStandard ? 6 : 4,
+            marginBottom: isStandard ? 6 : 4,
+            fontSize: isStandard ? 10 : 9,
+            displayValue: true,
+          });
         }
       }
       setBarcodeDataUrls(urls);
-    }, [printQueue]);
+    }, [printQueue, labelSize]);
 
     useEffect(() => {
         if ((!inventory || inventory.length === 0) && !isLoading) {
@@ -119,7 +128,7 @@ const BarcodePrinter: React.FC = () => {
     const renderBarcode = (item: Item) => {
         const url = barcodeDataUrls[item.id];
         if (!url) return null;
-        return <img src={url} alt={`Barcode ${item.barcode}`} className="h-8 w-full object-contain my-1" />;
+        return <img src={url} alt={`Barcode ${item.barcode}`} className="w-full h-auto" />;
     };
 
     const printStyles = `
@@ -127,7 +136,7 @@ const BarcodePrinter: React.FC = () => {
             body * { visibility: hidden; }
             #printable-labels, #printable-labels * { visibility: visible; }
             #printable-labels { position: absolute; left: 0; top: 0; width: 100%; display: grid; grid-template-columns: repeat(auto-fill, ${labelSize === 'Standard' ? '50mm' : '38mm'}); gap: 2mm; }
-            .label-item { break-inside: avoid; border: 1px solid #ddd; page-break-inside: avoid; }
+            .label-item { break-inside: avoid; border: 1px solid #ddd; page-break-inside: avoid; overflow: hidden; }
             @page { margin: 5mm; size: auto; }
         }
     `;
@@ -234,15 +243,17 @@ const BarcodePrinter: React.FC = () => {
                             {printQueue.flatMap(p => Array(p.qty).fill(p.item)).map((item, i) => (
                                 <div 
                                     key={i} 
-                                    className="bg-white border border-slate-300 rounded flex flex-col items-center justify-center text-center p-2 shadow-sm label-item"
+                                    className="bg-white border border-slate-300 rounded flex flex-col items-center text-center p-2 shadow-sm label-item overflow-hidden"
                                     style={{ 
                                         width: labelSize === 'Standard' ? '50mm' : '38mm', 
                                         height: labelSize === 'Standard' ? '30mm' : '25mm' 
                                     }}
                                 >
-                                    {showName && <div className="text-[9px] font-bold leading-tight line-clamp-2">{item.name}</div>}
-                                    {renderBarcode(item)}
-                                    {showSKU && <div className="text-[8px] font-mono text-slate-500">{item.sku}</div>}
+                                    {showName && <div className="text-[9px] font-bold leading-tight line-clamp-1 mb-1">{item.name}</div>}
+                                    <div className="w-full flex items-center justify-center">
+                                        {renderBarcode(item)}
+                                    </div>
+                                    {showSKU && <div className="text-[8px] font-mono text-slate-500 mt-1">{item.sku}</div>}
                                 </div>
                             ))}
                         </div>

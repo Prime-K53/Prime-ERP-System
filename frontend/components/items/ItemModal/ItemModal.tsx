@@ -355,6 +355,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const [rawReorder, setRawReorder] = useState(0);
   const [rawSupplier, setRawSupplier] = useState('');
   const [rawLocation, setRawLocation] = useState('');
+  const [rawConsumableType, setRawConsumableType] = useState<'consumable' | 'non_consumable'>('consumable');
 
   // Product
   const [variants, setVariants] = useState<{ name: string; bomCost: number; cost: number; selling: number; bomPages?: number; bomCovers?: number; bomStaples?: number; bomTape?: number }[]>([]);
@@ -455,6 +456,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
         setRawBuyUnit((item as any).purchaseUnit || (item as any).usageUnit || 'Ream');
         setRawUseUnit((item as any).usageUnit || 'Sheet');
         setRawConvRate((item as any).conversionRate || (item as any).conversionFactor || 500);
+        setRawConsumableType((item as any).rawMaterialCategory || 'consumable');
       }
 
       if (item.type === 'Product') {
@@ -539,6 +541,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       setRawReorder(0);
       setRawSupplier('');
       setRawLocation('');
+      setRawConsumableType('consumable');
       setProductBomPages(96);
       setProductBomCovers(2);
       setProductBomStaples(2);
@@ -894,6 +897,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
         reorderPoint: rawReorder,
         binLocation: rawLocation,
         preferredSupplierId: rawSupplier,
+        rawMaterialCategory: rawConsumableType,
       };
     }
 
@@ -995,7 +999,7 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
     } finally {
       setSaving(false);
     }
-  }, [item, name, sku, category, description, active, skuError, rawStock, rawBuyCost, rawBuyUnit, rawUseUnit, rawConvRate, rawReorder, rawSupplier, rawLocation, variants, productPaperCost, productTonerCost, productFinishCost, productStock, productReorder, productSP, pricingMethod, servicePaperCost, serviceTonerCost, serviceFinishing, serviceSP, serviceStock, serviceReorder, turnaround, rushSurcharge, trackStock, statVariants, statTotalStock, statReorder, statSupplier, costingMethod, USER, allItems, onSave, addItem, updateItem, deleteItem, notify, onClose, serviceFinishingTotal, productBase, serviceBase, productProfit, serviceProfit, productMarkup, serviceMarkup, statBlend, TARGET_MARKUP]);
+  }, [item, name, sku, category, description, active, skuError, rawStock, rawBuyCost, rawBuyUnit, rawUseUnit, rawConvRate, rawReorder, rawSupplier, rawLocation, rawConsumableType, variants, productPaperCost, productTonerCost, productFinishCost, productStock, productReorder, productSP, pricingMethod, servicePaperCost, serviceTonerCost, serviceFinishing, serviceSP, serviceStock, serviceReorder, turnaround, rushSurcharge, trackStock, statVariants, statTotalStock, statReorder, statSupplier, costingMethod, USER, allItems, onSave, addItem, updateItem, deleteItem, notify, onClose, serviceFinishingTotal, productBase, serviceBase, productProfit, serviceProfit, productMarkup, serviceMarkup, statBlend, TARGET_MARKUP]);
 
   useEffect(() => {
     if (!open) return;
@@ -1044,40 +1048,78 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
   const renderRawTab = () => (
     <div>
       <div style={s.section}>
-        <p style={s.sectionTitle}>Unit Conversion</p>
-        <div style={s.grid3}>
-          <Field label="Buying Unit" hint="The unit you purchase from your supplier">
-            <select style={s.input} value={rawBuyUnit} onChange={e => setRawBuyUnit(e.target.value)}>
-              <option>Ream</option><option>Roll</option><option>Box</option><option>Litre</option><option>Kilogram</option>
-            </select>
-          </Field>
-          <Field label="Using Unit" hint="The unit consumed inside a BOM">
-            <select style={s.input} value={rawUseUnit} onChange={e => setRawUseUnit(e.target.value)}>
-              <option>Sheet</option><option>Meter</option><option>Piece</option><option>Millilitre</option><option>Gram</option>
-            </select>
-          </Field>
-          <Field label="Conversion Rate" hint={`1 ${rawBuyUnit} = ${rawConvRate} ${rawUseUnit}s`}>
-            <input type="number" style={{ ...s.input, ...s.mono }} value={rawConvRate} onChange={e => setRawConvRate(Number(e.target.value) || 0)} />
-          </Field>
+        <p style={s.sectionTitle}>Material Category</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" onClick={() => setRawConsumableType('consumable')} style={{
+            flex: 1, padding: '10px 16px', borderRadius: 8, border: `2px solid ${rawConsumableType === 'consumable' ? '#2563EB' : '#E2E8F0'}`,
+            background: rawConsumableType === 'consumable' ? '#EFF6FF' : '#FFF', cursor: 'pointer', textAlign: 'center' as const,
+            fontWeight: rawConsumableType === 'consumable' ? 600 : 400, fontSize: 13.5, color: rawConsumableType === 'consumable' ? '#1D4ED8' : '#64748B',
+          }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>🔄</div>
+            <div>Consumable</div>
+            <div style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Paper, toner, ink — used up per job</div>
+          </button>
+          <button type="button" onClick={() => setRawConsumableType('non_consumable')} style={{
+            flex: 1, padding: '10px 16px', borderRadius: 8, border: `2px solid ${rawConsumableType === 'non_consumable' ? '#2563EB' : '#E2E8F0'}`,
+            background: rawConsumableType === 'non_consumable' ? '#EFF6FF' : '#FFF', cursor: 'pointer', textAlign: 'center' as const,
+            fontWeight: rawConsumableType === 'non_consumable' ? 600 : 400, fontSize: 13.5, color: rawConsumableType === 'non_consumable' ? '#1D4ED8' : '#64748B',
+          }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>⚙️</div>
+            <div>Non-Consumable</div>
+            <div style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Printer parts — wear out over time</div>
+          </button>
         </div>
       </div>
-      <div style={s.section}>
-        <p style={s.sectionTitle}>Cost Summary</p>
-        <div style={s.costStrip}>
-          <div style={s.costItem}><div style={s.costItemK}>Cost / {rawBuyUnit}</div><div style={s.costItemV}>{formatCurrency(rawBuyCost, currencySymbol)}</div></div>
-          <div style={s.costItem}><div style={s.costItemK}>Cost / {rawUseUnit}</div><div style={{ ...s.costItemV, color: VAR_STYLES.ink700 }}>{formatCurrency(rawUnitCost, currencySymbol)}</div></div>
-          <div style={s.costItem}><div style={s.costItemK}>Conversion</div><div style={s.costItemV}>1:{rawConvRate}</div></div>
-          <div style={s.costItem}><div style={s.costItemK}>Feeds Into</div><div style={{ ...s.costItemV, fontSize: 12, fontWeight: 600, color: '#2563EB' }}>BOM Costing</div></div>
-        </div>
-        <div style={{ marginTop: 14 }}>
-          <Field label={`Cost per ${rawBuyUnit}`} hint="What your supplier charges per buying unit">
+      {rawConsumableType === 'non_consumable' && (
+        <div style={s.section}>
+          <p style={s.sectionTitle}>Cost Price</p>
+          <Field label="Unit Cost" hint="What you pay per unit">
             <div style={s.prefixInput}>
               <span style={s.prefixSpan}>{currencySymbol}</span>
               <input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={rawBuyCost} onChange={e => setRawBuyCost(Number(e.target.value) || 0)} />
             </div>
           </Field>
         </div>
-      </div>
+      )}
+      {rawConsumableType === 'consumable' && (
+        <div style={s.section}>
+          <p style={s.sectionTitle}>Unit Conversion</p>
+          <div style={s.grid3}>
+            <Field label="Buying Unit" hint="The unit you purchase from your supplier">
+              <select style={s.input} value={rawBuyUnit} onChange={e => setRawBuyUnit(e.target.value)}>
+                <option>Ream</option><option>Roll</option><option>Box</option><option>Litre</option><option>Kilogram</option>
+              </select>
+            </Field>
+            <Field label="Using Unit" hint="The unit consumed inside a BOM">
+              <select style={s.input} value={rawUseUnit} onChange={e => setRawUseUnit(e.target.value)}>
+                <option>Sheet</option><option>Meter</option><option>Piece</option><option>Millilitre</option><option>Gram</option>
+              </select>
+            </Field>
+            <Field label="Conversion Rate" hint={`1 ${rawBuyUnit} = ${rawConvRate} ${rawUseUnit}s`}>
+              <input type="number" style={{ ...s.input, ...s.mono }} value={rawConvRate} onChange={e => setRawConvRate(Number(e.target.value) || 0)} />
+            </Field>
+          </div>
+        </div>
+      )}
+      {rawConsumableType === 'consumable' && (
+        <div style={s.section}>
+          <p style={s.sectionTitle}>Cost Summary</p>
+          <div style={s.costStrip}>
+            <div style={s.costItem}><div style={s.costItemK}>Cost / {rawBuyUnit}</div><div style={s.costItemV}>{formatCurrency(rawBuyCost, currencySymbol)}</div></div>
+            <div style={s.costItem}><div style={s.costItemK}>Cost / {rawUseUnit}</div><div style={{ ...s.costItemV, color: VAR_STYLES.ink700 }}>{formatCurrency(rawUnitCost, currencySymbol)}</div></div>
+            <div style={s.costItem}><div style={s.costItemK}>Conversion</div><div style={s.costItemV}>1:{rawConvRate}</div></div>
+            <div style={s.costItem}><div style={s.costItemK}>Feeds Into</div><div style={{ ...s.costItemV, fontSize: 12, fontWeight: 600, color: '#2563EB' }}>BOM Costing</div></div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <Field label={`Cost per ${rawBuyUnit}`} hint="What your supplier charges per buying unit">
+              <div style={s.prefixInput}>
+                <span style={s.prefixSpan}>{currencySymbol}</span>
+                <input type="number" style={{ ...s.input, ...s.mono, paddingLeft: 28 }} value={rawBuyCost} onChange={e => setRawBuyCost(Number(e.target.value) || 0)} />
+              </div>
+            </Field>
+          </div>
+        </div>
+      )}
       <div style={s.section}>
         <p style={s.sectionTitle}>Stock &amp; Reorder</p>
         <div style={s.grid2}>
@@ -1231,21 +1273,23 @@ export const ItemModal: React.FC<Props> = ({ open, item, onClose, onSave, allIte
       </div>
       <div style={s.section}>
         <p style={s.sectionTitle}>Finishing Options Offered <span style={s.badge}>Per job</span></p>
-        <div style={s.chipGrid}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {serviceFinishing.map((f, i) => (
-            <div key={f.name} style={{ ...s.chip, ...(f.active ? s.chipActive : {}) }} onClick={() => {
-              const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next);
-            }}>
-              <div style={s.chipTop}>
-                <span style={s.chipName}>{f.name}</span>
-                <span style={{ ...s.chipCheck, ...(f.active ? s.chipCheckActive : {}) }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ opacity: f.active ? 1 : 0 }}>
-                    <path d="M5 12l5 5L20 6" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </div>
-              <span style={s.chipPrice}>{currencySymbol} {f.price.toFixed(2)}{f.quantity && f.quantity > 1 ? ` × ${f.quantity}` : ''}</span>
-            </div>
+            <button key={f.name}
+              onClick={() => {
+                const next = [...serviceFinishing]; next[i] = { ...next[i], active: !next[i].active }; setServiceFinishing(next);
+              }}
+              style={{
+                padding: '8px 16px', borderRadius: 100, border: 'none', cursor: 'pointer',
+                fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', lineHeight: 1.3,
+                background: f.active ? '#2563EB' : VAR_STYLES.paper,
+                color: f.active ? '#fff' : VAR_STYLES.textDim,
+                transition: 'all .15s',
+              }}
+              onMouseOver={e => { if (!f.active) e.currentTarget.style.background = VAR_STYLES.line; }}
+              onMouseOut={e => { if (!f.active) e.currentTarget.style.background = VAR_STYLES.paper; }}>
+              {f.name}
+            </button>
           ))}
         </div>
       </div>

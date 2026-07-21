@@ -33,6 +33,11 @@ export const CardView: React.FC<Props> = ({ items, onView, onEdit }) => (
         </div>
         <span className="font-mono text-[12px] block mt-[2px]" style={{ color: '#64748B' }}>{item.sku || '—'}</span>
         <span className="inline-flex px-[9px] py-[3px] rounded-[99px] text-[12px] mt-2" style={{ background: '#F8FAFC', color: '#475569' }}>{item.type || '—'}</span>
+        {(item.type === 'Raw Material' || item.type === 'Material') && (
+          <span className={`inline-flex px-[9px] py-[3px] rounded-[99px] text-[12px] mt-2 ml-1.5 ${(item as any).rawMaterialCategory === 'non_consumable' ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}>
+            {(item as any).rawMaterialCategory === 'non_consumable' ? 'Non-Consumable' : 'Consumable'}
+          </span>
+        )}
         <div className="grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px', fontSize: '12.5px' }}>
           <div><span className="block text-[10.5px] uppercase tracking-[.05em]" style={{ color: '#94A3B8' }}>Stock</span><span className="font-mono tabular-nums">{item.stock || 0}</span></div>
           <div><span className="block text-[10.5px] uppercase tracking-[.05em]" style={{ color: '#94A3B8' }}>Available</span><span className="font-mono tabular-nums">{(item.stock || 0) - (item.reserved || 0)}</span></div>

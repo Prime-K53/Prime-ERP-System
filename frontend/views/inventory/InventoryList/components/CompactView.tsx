@@ -29,6 +29,11 @@ export const CompactView: React.FC<Props> = ({ items, onView, onEdit }) => (
           <span className="text-[12.5px] font-medium truncate" style={{ color: '#0F172A' }}>{item.name}</span>
           <span className="font-mono text-[12.5px] shrink-0" style={{ color: '#64748B' }}>{item.sku}</span>
           <span className="inline-flex px-[9px] py-[3px] rounded-[99px] text-[12px] shrink-0" style={{ background: '#F8FAFC', color: '#475569' }}>{item.type}</span>
+          {(item.type === 'Raw Material' || item.type === 'Material') && (
+            <span className={`inline-flex px-[9px] py-[3px] rounded-[99px] text-[12px] shrink-0 ${(item as any).rawMaterialCategory === 'non_consumable' ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}>
+              {(item as any).rawMaterialCategory === 'non_consumable' ? 'Non-Consumable' : 'Consumable'}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <RowIndicators item={item} />

@@ -11,8 +11,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-const TIMEOUT_MS = 5000
-const TIMEOUT_MS_IDEMPOTENCY = 2500
+const TIMEOUT_MS = 30000
+const TIMEOUT_MS_IDEMPOTENCY = 10000
 
 function fetchWithTimeout(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const controller = new AbortController()

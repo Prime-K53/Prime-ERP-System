@@ -97,16 +97,16 @@ const DataImport: React.FC = () => {
                 continue;
               }
               const phoneValue = normalizePhone(row['Phone number'] || row.Contact || row.Phone || row.contact || row['Phone Number'] || row.PhoneNumber || row.Mobile || row['Mobile Number'] || row.MobileNumber || row.Telephone || row['Phone No'] || row.Phone_Number || '');
-              const customer = {
+               const customer = {
                 id: row['Customer ID'] || row.ID || row.id || generateNextId('customer', currentCustomers, companyConfig),
                 name,
                 accountNumber: row['Branch Account'] || row.AccountNumber || row.accountNumber || generateAccountNumber(),
                 contact: phoneValue,
                 phone: phoneValue,
                 email: row.Email || row.email || '',
-                address: row['Billing Address'] || row.Address || row.address || '',
-                billingAddress: row['Billing Address'] || row.Address || row.address || '',
-                shippingAddress: row['Shipping Address'] || '',
+                address: row['Billing Address'] || row.Address || row.address || row['Street Address'] || row['Addr'] || row.Addr || '',
+                billingAddress: row['Billing Address'] || row.Address || row.address || row['Street Address'] || row['Addr'] || row.Addr || '',
+                shippingAddress: row['Shipping Address'] || row['Delivery Address'] || '',
                 segment: row.Segment || row.segment || '',
                 balance: Number(row['Opening Balance'] || row.balance || 0),
                 customerType: (row.Type || row.type || row.CustomerType) === 'Credit' ? 'Credit' : 'Retail',
@@ -206,17 +206,17 @@ const DataImport: React.FC = () => {
               const nameLower = name.toLowerCase();
               const existing = customers.find(c => c.name.toLowerCase() === nameLower);
               if (existing) {
-                const phoneValue = normalizePhone(row['Phone number'] || row.Contact || row.Phone || row.contact || row['Phone Number'] || row.PhoneNumber || row.Mobile || row['Mobile Number'] || row.MobileNumber || row.Telephone || row['Phone No'] || row.Phone_Number || '');
-                const updatedCustomer = {
-                  ...existing,
-                  name,
-                  accountNumber: row['Branch Account'] || row.AccountNumber || row.accountNumber || existing.accountNumber,
-                  contact: phoneValue || existing.contact,
-                  phone: phoneValue || existing.phone,
-                  email: row.Email || row.email || existing.email || '',
-                  address: row['Billing Address'] || row.Address || row.address || existing.address || '',
-                  billingAddress: row['Billing Address'] || row.Address || row.address || existing.billingAddress || existing.address || '',
-                  shippingAddress: row['Shipping Address'] || existing.shippingAddress || '',
+                 const phoneValue = normalizePhone(row['Phone number'] || row.Contact || row.Phone || row.contact || row['Phone Number'] || row.PhoneNumber || row.Mobile || row['Mobile Number'] || row.MobileNumber || row.Telephone || row['Phone No'] || row.Phone_Number || row['Tel'] || row.Tel || row['Contact Number'] || row['ContactNo'] || row['Cell'] || row.Cell || '');
+                 const updatedCustomer = {
+                   ...existing,
+                   name,
+                   accountNumber: row['Branch Account'] || row.AccountNumber || row.accountNumber || existing.accountNumber,
+                   contact: phoneValue || existing.contact,
+                   phone: phoneValue || existing.phone,
+                   email: row.Email || row.email || existing.email || '',
+                   address: row['Billing Address'] || row.Address || row.address || row['Street Address'] || row['Addr'] || row.Addr || existing.address || '',
+                   billingAddress: row['Billing Address'] || row.Address || row.address || row['Street Address'] || row['Addr'] || row.Addr || existing.billingAddress || existing.address || '',
+                   shippingAddress: row['Shipping Address'] || row['Delivery Address'] || existing.shippingAddress || '',
                   segment: row.Segment || row.segment || existing.segment || '',
                   balance: Number(row['Opening Balance'] || row.balance || existing.balance || 0),
                   customerType: (row.Type || row.type || row.CustomerType) === 'Credit' ? 'Credit' : (existing.customerType || 'Retail'),

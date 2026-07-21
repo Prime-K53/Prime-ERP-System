@@ -8,6 +8,9 @@ export type InventoryRole = 'internal' | 'sellable' | 'both';
 /** Sub-classification for internal cost-source items */
 export type ResourceSubtype = 'raw_material' | 'packaging' | 'spare_part';
 
+/** Whether a raw material is consumed during production or wears out over time */
+export type RawMaterialCategory = 'consumable' | 'non_consumable';
+
 /** Costing method for calculating normalized Cost Price */
 export type CostingMethod = 'weighted_average' | 'fifo' | 'standard';
 

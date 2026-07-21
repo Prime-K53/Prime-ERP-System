@@ -1285,8 +1285,12 @@ export const dbService = {
 
     async get<T>(storeName: keyof NexusDB, id: string): Promise<T | undefined> {
         if (isCloudOnlyMode() && String(storeName) !== 'syncOutbox' && !LOCAL_ONLY_STORES.has(String(storeName))) {
-            const cloudValue = await cloudDb.get<T>(String(storeName), id);
-            if (cloudValue !== null && cloudValue !== undefined) return cloudValue;
+            try {
+                const cloudValue = await cloudDb.get<T>(String(storeName), id);
+                if (cloudValue !== null && cloudValue !== undefined) return cloudValue;
+            } catch (err) {
+                console.warn(`[DB] Cloud-only get failed for ${String(storeName)}/${id}, falling back to local:`, err);
+            }
             const localValue = await getFromLegacyStore<T>(storeName, id);
             if (localValue !== undefined) return localValue;
             return undefined;

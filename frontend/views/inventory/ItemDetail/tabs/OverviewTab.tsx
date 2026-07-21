@@ -122,7 +122,6 @@ export const OverviewTab: React.FC<Props> = ({ item }) => {
                         {f.label}{!item.barcode && barcodeText ? <span className="text-[8px] text-slate-300 font-normal ml-1">(using SKU)</span> : ''}
                       </span>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <span className="font-mono text-slate-700 text-sm">{barcodeText}</span>
                         {barcodeDataUrl && (
                           <>
                             <img src={barcodeDataUrl} alt={`Barcode ${barcodeText}`} className="h-10 border border-slate-200 rounded" />
