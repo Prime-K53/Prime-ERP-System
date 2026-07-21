@@ -303,7 +303,6 @@ const handleProduce = useCallback((item: Item) => {
       sku: item.sku ? `${item.sku}-COPY` : '',
     };
     setEditingItem(dup as Item);
-    setLockClassification(true);
     setIsModalOpen(true);
   }, []);
 

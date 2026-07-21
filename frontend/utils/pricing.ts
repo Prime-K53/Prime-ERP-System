@@ -231,8 +231,9 @@ export function calculateItemFinancials(
     };
   }
 
-  const { paperId, tonerId, finishingOptions, marketAdjustment, manualOverride } = pricingConfig;
+  const { paperId, tonerId, finishingOptions, marketAdjustment, manualOverride, pricingMethod } = pricingConfig;
   const totalPages = pages || 1;
+  const sheetCount = pricingMethod === 'per_sheet' ? totalPages : Math.ceil(totalPages / 2);
 
   // Find paper and toner from inventory
   const paper = paperId ? inventory.find((item: any) => item.id === paperId) : null;
@@ -241,7 +242,7 @@ export function calculateItemFinancials(
   // Calculate material costs
   const paperCostPerPage = paper ? Number(paper.cost_price ?? paper.cost_per_unit ?? paper.cost ?? 0) : 0;
   const tonerCostPerPage = toner ? Number(toner.cost_price ?? toner.cost_per_unit ?? toner.cost ?? 0) : 0;
-  const paperTotal = paperCostPerPage * totalPages;
+  const paperTotal = paperCostPerPage * sheetCount;
   const tonerTotal = tonerCostPerPage * totalPages;
 
   // Calculate finishing costs

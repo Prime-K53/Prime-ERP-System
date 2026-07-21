@@ -322,6 +322,7 @@ export const pricingService = {
         const safePages = Math.max(1, Math.floor(Number(pages) || Number(item.pages) || 1));
         const safeCopies = Math.max(1, Math.floor(Number(copies) || 1));
         const totalPages = safePages * safeCopies;
+        const pricingMethod = (item as any).pricingConfig?.pricingMethod || 'per_page';
         const components: DynamicServiceComponentCost[] = [];
 
         // Service calculator pricing should honor material consumption granularity.
@@ -336,7 +337,7 @@ export const pricingService = {
             collectBreakdown: boolean
         ) => {
             const evalTotalPages = evalPages * evalCopies;
-            const sheetsPerCopy = Math.ceil(evalPages / 2);
+            const sheetsPerCopy = pricingMethod === 'per_sheet' ? evalPages : Math.ceil(evalPages / 2);
             const totalSheets = sheetsPerCopy * evalCopies;
             let total = 0;
             const breakdown: DynamicServiceComponentCost[] = [];

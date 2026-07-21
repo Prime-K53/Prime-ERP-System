@@ -149,8 +149,8 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
                     <p className="text-sm text-slate-500">Inventory stock levels have been updated</p>
                 </div>
             ) : (
-                <>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="overflow-y-auto max-h-[65vh] pr-1 space-y-6">
+                    <div className="grid grid-cols-3 gap-4">
                         <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 rounded-2xl border border-blue-200/50">
                             <div className="text-[10px] font-bold text-blue-600 uppercase tracking-tight mb-1">
                                 Selected Items
@@ -311,7 +311,7 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
                             One or more selected items will result in negative stock.
                         </p>
                     )}
-                </>
+                </div>
             )}
 
             {step === 'preview' && items.length > 0 && (
