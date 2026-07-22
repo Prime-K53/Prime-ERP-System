@@ -11,7 +11,7 @@ export default {
       },
       boxShadow: { soft: '0 4px 20px -2px rgba(0,0,0,0.05)', card: '0 10px 30px -5px rgba(0,0,0,0.04)', float: '0 20px 40px -10px rgba(0,0,0,0.08)', premium: '0 25px 50px -12px rgba(0,0,0,0.15)', glass: '0 8px 32px 0 rgba(31,38,135,0.07)' },
       borderRadius: { '4xl': '2.5rem', '5xl': '3rem' },
-      animation: { 'toast-in': 'toastIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards', 'fade-in': 'fadeIn 0.3s ease-out forwards', 'check-pop': 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', 'slide-up': 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards', 'slide-down': 'slideDown 0.5s cubic-bezier(0.16,1,0.3,1) forwards', 'float': 'float 6s ease-in-out infinite', 'progress-indeterminate': 'progressIndeterminate 1.5s ease-in-out infinite', 'pulse-subtle': 'pulseSubtle 2s ease-in-out infinite' },
+      animation: { 'toast-in': 'toastIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards', 'fade-in': 'fadeIn 0.3s ease-out forwards', 'check-pop': 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards', 'slide-up': 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) forwards', 'slide-down': 'slideDown 0.5s cubic-bezier(0.16,1,0.3,1) forwards', 'float': 'float 6s ease-in-out infinite', 'progress-indeterminate': 'progressIndeterminate 2s cubic-bezier(0.4, 0, 0.2, 1) infinite', 'pulse-subtle': 'pulseSubtle 2s ease-in-out infinite' },
       keyframes: {
         progressIndeterminate: { '0%': { transform: 'translateX(-100%)' }, '50%': { transform: 'translateX(0%)' }, '100%': { transform: 'translateX(100%)' } },
         pulseSubtle: { '0%,100%': { transform: 'scale(1)', opacity: '1' }, '50%': { transform: 'scale(1.02)', opacity: '0.9' } },

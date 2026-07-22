@@ -34,7 +34,6 @@ import SetupWizard from './views/auth/SetupWizard';
 import ForgotPassword from './views/auth/ForgotPassword';
 import ResetPassword from './views/auth/ResetPassword';
 
-import { resolveAppAssetUrl } from './utils/runtime';
 import { isResponsiveDebugEnabled } from './utils/debugFlags';
 
 
@@ -698,26 +697,23 @@ const RootNavigator: React.FC = () => {
         <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] animate-pulse delay-700" />
         
         <div className="flex flex-col items-center gap-8 relative z-10">
-          {/* Logo & Spinner Container */}
-          <div className="relative">
-            <div className="w-24 h-24 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <img src={resolveAppAssetUrl('/pwa-icon-192x192.png')} alt="Prime ERP" className="w-14 h-14 rounded-2xl shadow-lg shadow-blue-200 animate-pulse-subtle" />
-            </div>
+          {/* Premium Logo */}
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-[0_8px_32px_rgba(59,130,246,0.3)] ring-1 ring-white/20 transition-all duration-500 hover:scale-105 hover:shadow-[0_12px_40px_rgba(59,130,246,0.45)]">
+            <span className="text-white text-5xl font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]">P</span>
           </div>
 
           <div className="text-center space-y-2">
-            <h1 className="text-4xl font-black text-slate-800 tracking-tight animate-fade-in">
-              Prime <span className="text-blue-600">ERP</span> System
+            <h1 className="text-4xl font-black tracking-tight animate-fade-in">
+              <span className="text-blue-600">Prime</span> <span className="text-green-600">ERP</span> <span className="text-blue-600">System</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] animate-pulse">
               Powered by AI
             </p>
           </div>
 
-          {/* Loading Progress */}
-          <div className="w-64 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 rounded-full animate-progress-indeterminate"></div>
+          {/* Premium Loading Bar */}
+          <div className="w-80 h-[3px] bg-slate-100/80 rounded-full overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-progress-indeterminate shadow-[0_0_16px_rgba(99,102,241,0.25)]"></div>
           </div>
         </div>
       </div>
