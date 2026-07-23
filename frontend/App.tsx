@@ -651,6 +651,7 @@ const AppLayout: React.FC = () => {
 
                 {/* Smart Features */}
                 <Route element={<ErrorBoundary name="Smart Features"><Outlet /></ErrorBoundary>}>
+                  <Route path="/smart-features" element={<Navigate to="/smart-features/sales-dashboard" replace />} />
                   <Route path="/smart-features/sales-dashboard" element={<SmartSalesDashboard />} />
                   <Route path="/smart-features/invoice-intelligence" element={<InvoiceIntelligence />} />
                   <Route path="/smart-features/customer-risk" element={<CustomerRiskScore />} />
