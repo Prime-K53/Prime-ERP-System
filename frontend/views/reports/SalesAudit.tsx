@@ -35,7 +35,7 @@ const SalesAudit: React.FC = () => {
     const { invoices = [] } = useFinance();
     const { batches: examinationBatches = [] } = useExamination();
     const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
-    const [dateRange, setDateRange] = useState<DateRangeFilter>('today');
+    const [dateRange, setDateRange] = useState<DateRangeFilter>('all');
     const [expandedSection, setExpandedSection] = useState<string | null>('daily');
 
     const formatCurrency = (val: number) => {
@@ -45,7 +45,9 @@ const SalesAudit: React.FC = () => {
 
     const filterByDateRange = (dateStr: string): boolean => {
         if (dateRange === 'all') return true;
+        if (!dateStr) return false;
         const date = parseISO(dateStr);
+        if (isNaN(date.getTime())) return false;
         const now = new Date();
 
         switch (dateRange) {
