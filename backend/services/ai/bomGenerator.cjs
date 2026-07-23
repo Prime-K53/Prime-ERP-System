@@ -3,7 +3,7 @@ const BaseAIService = require('./baseService.cjs');
 class BOMGenerator extends BaseAIService {
   async generate(companyId, spec) {
     if (!spec || !spec.productName) {
-      return { error: 'Product name is required', suggestions: this._suggestFromExisting(companyId) };
+      return { error: 'Product name is required', suggestions: await this._suggestFromExisting(companyId) };
     }
 
     const existingBoms = await this._all(
@@ -175,8 +175,8 @@ class BOMGenerator extends BaseAIService {
       }));
   }
 
-  _suggestFromExisting(companyId) {
-    const boms = this._all(
+  async _suggestFromExisting(companyId) {
+    const boms = await this._all(
       `SELECT name, total_cost FROM bill_of_materials WHERE company_id = ? ORDER BY created_at DESC LIMIT 5`,
       [companyId]
     );

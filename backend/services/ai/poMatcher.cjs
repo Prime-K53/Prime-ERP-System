@@ -48,7 +48,7 @@ class POMatcher extends BaseAIService {
         poStatus: po.status,
         poTotal: this._safeNumber(po.total_amount),
         itemCount: pos.length,
-        receivedCount: grs.reduce((s, g) => s + (g.items_received ? JSON.parse(g.items_received || '[]').length : 0), 0),
+        receivedCount: grs.reduce((s, g) => s + (g.items_received ? (() => { try { return JSON.parse(g.items_received || '[]').length; } catch { return 0; } })() : 0), 0),
         grCount: grs.length,
         apCount: apMatch.length,
         apTotal: apMatch.reduce((s, a) => s + this._safeNumber(a.amount), 0),

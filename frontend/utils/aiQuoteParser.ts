@@ -27,7 +27,20 @@ export function parseAIResponse(raw: string): AIQuoteResult {
     .replace(/```\s*/g, '')
     .trim();
 
-  const parsed = JSON.parse(cleaned);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return {
+      documentType: 'quotation',
+      customer: { name: '', email: '', phone: '', address: '' },
+      items: [],
+      discount: { type: 'percentage', value: 0 },
+      notes: '',
+      dueDate: '',
+      paymentTerms: '',
+    };
+  }
 
   const result: AIQuoteResult = {
     documentType: parsed.documentType === 'invoice' ? 'invoice' : 'quotation',

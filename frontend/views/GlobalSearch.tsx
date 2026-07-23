@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { logger } from '../services/logger';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Package, ShoppingCart, Users, Truck, Search, ArrowRight, Sparkles, Loader2, MessageSquare, X } from 'lucide-react';
@@ -26,12 +26,16 @@ const GlobalSearch: React.FC = () => {
 
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const safe = (arr: any[], n = 50) => (Array.isArray(arr) ? arr.slice(0, n) : []);
 
   useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     const handleAiSearch = async () => {
         if (!query || query.length < 5 || !isOnline) return;
         
-        // Only trigger AI if it looks like a question or natural language
         const isQuestion = query.includes('?') || 
                           query.toLowerCase().startsWith('who') || 
                           query.toLowerCase().startsWith('what') || 
@@ -39,10 +43,13 @@ const GlobalSearch: React.FC = () => {
                           query.toLowerCase().startsWith('show') ||
                           query.toLowerCase().startsWith('find');
 
-        if (isQuestion || (results.items.length === 0 && results.sales.length === 0 && results.contacts.length === 0)) {
+        const noResults = !inventory.some(i => String(i.name || '').toLowerCase().includes(query.toLowerCase()) || String(i.sku || '').toLowerCase().includes(query.toLowerCase())) &&
+                          !sales.some(s => String(s.id || '').toLowerCase().includes(query.toLowerCase()) || String(s.customerName || '').toLowerCase().includes(query.toLowerCase())) &&
+                          ![...customers, ...suppliers].some(c => String(c.name || '').toLowerCase().includes(query.toLowerCase()) || String(c.contact || '').toLowerCase().includes(query.toLowerCase()) || String(c.email || '').toLowerCase().includes(query.toLowerCase())) &&
+                          !purchases.some(p => String(p.id || '').toLowerCase().includes(query.toLowerCase()) || String(p.supplierId || '').toLowerCase().includes(query.toLowerCase()));
+        if (isQuestion || noResults) {
             setIsAiLoading(true);
             try {
-                const safe = (arr: any[], n = 50) => (Array.isArray(arr) ? arr.slice(0, n) : []);
                 const context = {
                     inventory: safe(inventory.map(i => ({ id: i.id, name: i.name, sku: i.sku, type: i.type, category: i.category, cost: i.cost, price: i.price, stock: i.stock, minStockLevel: i.minStockLevel }))),
                     sales: safe(sales.map(s => ({ id: s.id, date: s.date, customerName: s.customerName, totalAmount: s.totalAmount, status: s.status, items: s.items?.map((it: any) => ({ productId: it.productId, name: it.name, quantity: it.quantity, price: it.price, cost: it.cost })) }))),
@@ -61,8 +68,11 @@ const GlobalSearch: React.FC = () => {
     };
 
     setAiAnswer(null);
-    handleAiSearch();
-  }, [query]);
+    debounceRef.current = setTimeout(handleAiSearch, 400);
+    return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, inventory, sales, customers, suppliers, purchases, isOnline]);
 
   const results = useMemo(() => {
     if (!query) return { items: [], sales: [], contacts: [], purchases: [] };

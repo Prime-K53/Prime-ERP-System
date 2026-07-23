@@ -261,7 +261,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildDailyBriefPrompt(data) }], this.cfg()
       );
-      const result = JSON.parse(text);
+      const result = parseJSON(text);
       return { bullets: Array.isArray(result?.bullets) ? result.bullets : [] };
     } catch {
       return { bullets: [] };
@@ -273,7 +273,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildSalesOpportunityPrompt(customers, invoices) }], this.cfg()
       );
-      const result = JSON.parse(text);
+      const result = parseJSON(text);
       return Array.isArray(result) ? result : [];
     } catch { return []; }
   }
@@ -283,7 +283,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildInventoryRiskPrompt(items) }], this.cfg()
       );
-      const result = JSON.parse(text);
+      const result = parseJSON(text);
       return Array.isArray(result) ? result : [];
     } catch { return []; }
   }
@@ -296,7 +296,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildCashFlowWarningPrompt(data) }], this.cfg()
       );
-      return JSON.parse(text);
+      return parseJSON(text);
     } catch {
       return { status: 'cautious', projectedBalance: 0, message: 'Unable to analyze cash flow.' };
     }
@@ -307,7 +307,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildCustomerInsightPrompt(customer, invoices, payments) }], this.cfg()
       );
-      return JSON.parse(text);
+      return parseJSON(text);
     } catch {
       return { reliability: 'medium', totalSpent: 0, averageInvoice: 0, lastOrderDate: '', paymentPunctuality: 'average', insight: 'Data unavailable.' };
     }
@@ -318,7 +318,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildSupplierScorecardPrompt(supplier, purchases, payments) }], this.cfg()
       );
-      return JSON.parse(text);
+      return parseJSON(text);
     } catch {
       return { score: 50, reliability: 'average', totalSpend: 0, orderCount: 0, strengths: [], weaknesses: [], recommendation: 'Data unavailable.' };
     }
@@ -329,7 +329,7 @@ class AIService {
       const text = await this.provider.generateChat(
         [{ role: 'user', content: P.buildDocumentSummaryPrompt(docType, data) }], this.cfg()
       );
-      return JSON.parse(text);
+      return parseJSON(text);
     } catch {
       return { summary: 'Unable to summarize.', keyNumbers: [], status: 'unknown' };
     }
@@ -379,7 +379,7 @@ class AIService {
         { role: 'system', content: P.PREDICTIVE_MAINTENANCE_SYSTEM_INSTRUCTION },
         { role: 'user', content: P.buildPredictiveMaintenancePrompt(machineName, temperature, vibration, efficiency, uptime) },
       ], this.cfg());
-      return JSON.parse(text);
+      return parseJSON(text);
     } catch {
       return { risk: 'Low', advice: 'Telemetry within normal operating parameters.' };
     }

@@ -208,7 +208,7 @@ class AnomalyDetector extends BaseAIService {
     const anomalies = [];
 
     const auditLogs = await this._all(
-      `SELECT * FROM audit_log
+      `SELECT * FROM audit_logs
        WHERE company_id = ? AND created_at >= datetime('now', ? || ' days')
        ORDER BY created_at DESC`,
       [companyId, String(-lookbackDays)]
@@ -244,7 +244,7 @@ class AnomalyDetector extends BaseAIService {
   async _detectAuditAnomalies(companyId, lookbackDays) {
     const anomalies = [];
     const auditLogs = await this._all(
-      `SELECT * FROM audit_log
+      `SELECT * FROM audit_logs
        WHERE company_id = ? AND created_at >= datetime('now', ? || ' days')
        ORDER BY created_at DESC`,
       [companyId, String(-lookbackDays)]

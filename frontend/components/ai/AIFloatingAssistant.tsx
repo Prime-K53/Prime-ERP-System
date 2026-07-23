@@ -63,9 +63,10 @@ Provide concise, actionable insights. Use the data above to give specific number
     setMessages(prev => [...prev, { role: 'user', content: q }]);
     setLoading(true);
     const context = generateContext();
-    const resp = await generateAIResponse(
-      `${context}\n\nUser Question: ${q}`,
-      `You are Prime ERP AI Assistant.
+    try {
+      const resp = await generateAIResponse(
+        `${context}\n\nUser Question: ${q}`,
+        `You are Prime ERP AI Assistant.
 
 All responses must follow professional business-report formatting.
 
@@ -82,9 +83,13 @@ Always use paragraphs, bullet points, tables, or sections.
 Use Markdown formatting.
 Highlight important numbers in bold.
 Keep explanations concise but professional.`
-    );
-    setMessages(prev => [...prev, { role: 'assistant', content: resp }]);
-    setLoading(false);
+      );
+      setMessages(prev => [...prev, { role: 'assistant', content: resp }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error processing your request. Please try again.' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

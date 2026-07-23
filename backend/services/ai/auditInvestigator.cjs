@@ -46,7 +46,7 @@ class AuditInvestigator extends BaseAIService {
   async _getAuditLogs(companyId, options) {
     const daysBack = options.daysBack || 90;
     return this._all(
-      `SELECT * FROM audit_log
+      `SELECT * FROM audit_logs
        WHERE company_id = ? AND created_at >= datetime('now', ? || ' days')
        ORDER BY created_at DESC LIMIT 1000`,
       [companyId, String(-daysBack)]
@@ -57,9 +57,9 @@ class AuditInvestigator extends BaseAIService {
     const daysBack = options.daysBack || 90;
     return this._all(
       `SELECT * FROM examination_pricing_audit
-       WHERE created_at >= datetime('now', ? || ' days')
+       WHERE company_id = ? AND created_at >= datetime('now', ? || ' days')
        ORDER BY created_at DESC LIMIT 500`,
-      [String(-daysBack)]
+      [companyId, String(-daysBack)]
     );
   }
 
@@ -67,9 +67,9 @@ class AuditInvestigator extends BaseAIService {
     const daysBack = options.daysBack || 90;
     return this._all(
       `SELECT * FROM profit_margin_audit_logs
-       WHERE created_at >= datetime('now', ? || ' days')
+       WHERE company_id = ? AND created_at >= datetime('now', ? || ' days')
        ORDER BY created_at DESC LIMIT 500`,
-      [String(-daysBack)]
+      [companyId, String(-daysBack)]
     );
   }
 
