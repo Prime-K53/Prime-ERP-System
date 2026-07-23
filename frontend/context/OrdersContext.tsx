@@ -153,11 +153,13 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         taxRate: quotation.taxRate
       };
 
-      // Try to find customer ID from sales context customers
+      // Try to find customer ID and referral info from sales context customers
       if (salesContext) {
         const customer = salesContext.customers.find(c => c.name === quotation.customerName);
         if (customer) {
           newOrder.customerId = customer.id;
+          newOrder.referredBy = customer.referredById || '';
+          newOrder.referredByName = customer.referredByName || '';
         }
       }
 
@@ -192,6 +194,7 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         subtotal: toNum(item.subtotal || (toNum(item.quantity || item.qty) * toNum(item.unitPrice || item.price || item.cost)))
       }));
       const pricingSummary = summarizePricingBreakdown(normalizedItems as unknown[]);
+      const refCustomer = salesContext?.customers.find((c: any) => c.id === data.customerId || c.name === data.customerName);
 
       const newOrder: Order = {
         id: generateNextId('ORD', orders),
@@ -214,6 +217,8 @@ export const OrdersProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         notes: data.notes,
         shippingAddress: data.shippingAddress,
         billingAddress: data.billingAddress,
+        referredBy: data.referredBy || refCustomer?.referredById || '',
+        referredByName: data.referredByName || refCustomer?.referredByName || '',
         adjustmentSnapshots: data.adjustmentSnapshots || aggregateMarketAdjustmentSnapshots(normalizedItems as unknown[]),
         adjustmentTotal: data.adjustmentTotal || pricingSummary.adjustmentTotal,
         materialTotal: data.materialTotal || pricingSummary.materialTotal,

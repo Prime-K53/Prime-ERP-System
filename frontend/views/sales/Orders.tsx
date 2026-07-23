@@ -1068,6 +1068,8 @@ const Orders: React.FC = () => {
                                 createdBy: user?.name || 'System User',
                                 type: 'standard',
                                 paymentTerms: paymentPolicy.paymentTerms,
+                                referredBy: customer?.referredById || item.referredBy || '',
+                                referredByName: customer?.referredByName || item.referredByName || '',
                                 conversionDetails: {
                                     sourceType: 'order',
                                     sourceNumber: item.orderNumber,
@@ -1227,6 +1229,7 @@ const Orders: React.FC = () => {
                                 const order = orders.find(o => o.id === id);
                                 if (!order) continue;
 
+                                const bulkCustomer = customers.find((c: any) => c.id === order.customerId || c.name === order.customerName);
                                 const invoiceData = {
                                     ...order,
                                     id: '',
@@ -1246,6 +1249,8 @@ const Orders: React.FC = () => {
                                         smartPricingSnapshot: i.smartPricingSnapshot,
                                         productionCostSnapshot: i.productionCostSnapshot,
                                     })),
+                                    referredBy: order.referredBy || bulkCustomer?.referredById || '',
+                                    referredByName: order.referredByName || bulkCustomer?.referredByName || '',
                                     conversionDetails: {
                                         sourceType: 'order',
                                         sourceNumber: order.orderNumber,

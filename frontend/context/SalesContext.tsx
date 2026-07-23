@@ -316,6 +316,7 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 const invId = generateNextId('INV-REC', finance.invoices, companyConfig);
                 const roundedTotal = roundFinancial(sub.total);
 
+                const subCustomer = salesStore.customers.find(c => c.id === sub.customerId || c.name === sub.customerName);
                 const invoice: Invoice = {
                     id: invId,
                     customerId: sub.customerId,
@@ -325,7 +326,9 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     date: new Date().toISOString(),
                     dueDate: sub.nextRunDate,
                     status: 'Paid',
-                    items: sub.items
+                    items: sub.items,
+                    referredBy: sub.referredBy || subCustomer?.referredById || '',
+                    referredByName: sub.referredByName || subCustomer?.referredByName || ''
                 };
 
                 try {
@@ -835,7 +838,9 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             notes: `Converted from [Quotation] #[${q.id}] on [${new Date().toLocaleDateString()}] as accepted by [${q.customerName}]`,
             tax: q.tax,
             taxRate: q.taxRate,
-            paymentTerms: paymentPolicy.paymentTerms
+            paymentTerms: paymentPolicy.paymentTerms,
+            referredBy: customerProfile?.referredById || '',
+            referredByName: customerProfile?.referredByName || ''
         };
 
         try {
@@ -884,7 +889,9 @@ export const SalesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 price,
                 lineTotalNet: totalAmount
             }] : [],
-            paymentTerms: paymentPolicy.paymentTerms
+            paymentTerms: paymentPolicy.paymentTerms,
+            referredBy: customerProfile?.referredById || jo.referredBy || '',
+            referredByName: customerProfile?.referredByName || jo.referredByName || ''
         };
 
         try {
