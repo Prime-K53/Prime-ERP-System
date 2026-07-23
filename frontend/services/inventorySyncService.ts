@@ -44,6 +44,25 @@ export async function syncAllItemStockWithWarehouses(): Promise<number> {
   return syncedCount;
 }
 
+export async function syncWarehouseFromMaster(itemId: string): Promise<void> {
+  const inventory = await dbService.getAll<any>('inventory');
+  const item = inventory.find(i => i.id === itemId);
+  if (!item) return;
+
+  const warehouseInventory = await dbService.getAll<any>('warehouseInventory');
+  const existingWh = warehouseInventory.find((w: any) => w.itemId === itemId);
+
+  if (!existingWh) {
+    await dbService.put('warehouseInventory', {
+      id: `WH-MAIN_${itemId}`,
+      itemId,
+      warehouseId: 'WH-MAIN',
+      quantity: item.stock || 0,
+      reserved: item.reservedStock || 0
+    });
+  }
+}
+
 export async function createWarehouseSnapshot(): Promise<{ itemId: string; warehouseId: string; quantity: number; reserved: number }[]> {
   const warehouseInventory = await dbService.getAll<any>('warehouseInventory');
   return warehouseInventory.map((w: any) => ({

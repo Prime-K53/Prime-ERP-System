@@ -3881,10 +3881,12 @@ export const transactionService = {
 
     async adjustStock(params: { itemId: string, qtyChange: number, reason: string, warehouseId: string, notes?: string, variantId?: string }) {
         return dbService.executeAtomicOperation(
-            ['inventory', 'ledger'],
+            ['inventory', 'ledger', 'warehouseInventory', 'inventoryTransactions'],
             async (tx) => {
                 const inventoryStore = tx.objectStore('inventory');
                 const ledgerStore = tx.objectStore('ledger');
+                const whStore = tx.objectStore('warehouseInventory');
+                const auditStore = tx.objectStore('inventoryTransactions');
 
                 const item = await inventoryStore.get(params.itemId);
                 if (!item) throw new Error("Item not found");
@@ -3901,6 +3903,29 @@ export const transactionService = {
 
                 item.stock = (item.stock || 0) + params.qtyChange;
                 await inventoryStore.put(item);
+
+                // Update warehouseInventory
+                const warehouseId = params.warehouseId || 'WH-MAIN';
+                const whKey = [warehouseId, params.itemId].join('_');
+                const whRecord = await whStore.get(whKey);
+                if (whRecord) {
+                    whRecord.quantity = (whRecord.quantity || 0) + params.qtyChange;
+                    await whStore.put(whRecord);
+                } else {
+                    await whStore.put({ id: whKey, itemId: params.itemId, warehouseId, quantity: Math.max(0, params.qtyChange), reserved: 0 });
+                }
+
+                // Inventory transaction audit
+                await auditStore.put({
+                    id: `ADJ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                    itemId: params.itemId,
+                    warehouseId,
+                    quantity: params.qtyChange,
+                    type: 'ADJUSTMENT',
+                    date: new Date().toISOString(),
+                    referenceId: params.reason,
+                    notes: params.notes || ''
+                });
 
                 // If it's a significant adjustment, log to ledger
                 if (Math.abs(params.qtyChange * adjustmentCost) > 0) {
@@ -3957,9 +3982,54 @@ export const transactionService = {
     },
 
     async transferStock(itemId: string, fromWarehouseId: string, toWarehouseId: string, quantity: number) {
-        // In this simplified local DB, we just track total stock per item.
-        // A real system would track stock per warehouse.
-        return { success: true };
+        return dbService.executeAtomicOperation(
+            ['inventory', 'warehouseInventory'],
+            async (tx) => {
+                const invStore = tx.objectStore('inventory');
+                const whStore = tx.objectStore('warehouseInventory');
+
+                // Decrement source warehouse
+                const sourceWhKey = [fromWarehouseId, itemId].join('_');
+                const sourceWh = await whStore.get(sourceWhKey);
+                if (sourceWh) {
+                    sourceWh.quantity = (sourceWh.quantity || 0) - quantity;
+                    if (sourceWh.quantity < 0) sourceWh.quantity = 0;
+                    await whStore.put(sourceWh);
+                }
+
+                // Increment destination warehouse
+                const destWhKey = [toWarehouseId, itemId].join('_');
+                const destWh = await whStore.get(destWhKey);
+                if (destWh) {
+                    destWh.quantity = (destWh.quantity || 0) + quantity;
+                    await whStore.put(destWh);
+                } else {
+                    await whStore.put({ id: destWhKey, itemId, warehouseId: toWarehouseId, quantity, reserved: 0 });
+                }
+
+                // Update master item stock
+                const item = await invStore.get(itemId);
+                if (item) {
+                    item.stock = (item.stock || 0);
+                    await invStore.put(item);
+                }
+
+                // Create inventory transaction record
+                const auditStore = tx.objectStore('inventoryTransactions');
+                await auditStore.put({
+                    id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                    itemId,
+                    fromWarehouseId,
+                    toWarehouseId,
+                    quantity,
+                    type: 'TRANSFER',
+                    date: new Date().toISOString(),
+                    referenceId: `TRF-${itemId}-${Date.now()}`
+                });
+
+                return { success: true };
+            }
+        );
     },
 
     async processPurchaseOrder(purchase: Purchase) {

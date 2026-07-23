@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import Breadcrumbs from './components/Breadcrumbs';
 import Toast from './components/Toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AppProvider } from './context/AppContext';
 import { FinanceProvider } from './context/FinanceContext';
 import { InventoryProvider } from './context/InventoryContext';
 import { SalesProvider } from './context/SalesContext';
@@ -173,6 +174,15 @@ const AuditInvestigator = lazyWithRetry('./views/ai/AuditInvestigator', () => im
 const BOMGenerator = lazyWithRetry('./views/ai/BOMGenerator', () => import('./views/ai/BOMGenerator'));
 const ServiceJobsPage = lazyWithRetry('./views/service/ServiceJobsPage', () => import('./views/service/ServiceJobsPage'));
 const ServiceRecipeEditorPage = lazyWithRetry('./views/service/ServiceRecipeEditorPage', () => import('./views/service/ServiceRecipeEditorPage'));
+
+const SmartSalesDashboard = lazyWithRetry('./views/SmartSalesDashboard', () => import('./views/SmartSalesDashboard'));
+const InvoiceIntelligence = lazyWithRetry('./views/InvoiceIntelligence', () => import('./views/InvoiceIntelligence'));
+const CustomerRiskScore = lazyWithRetry('./views/CustomerRiskScore', () => import('./views/CustomerRiskScore'));
+const NaturalLanguageReporting = lazyWithRetry('./views/NaturalLanguageReporting', () => import('./views/NaturalLanguageReporting'));
+const AccountingAssistant = lazyWithRetry('./views/AccountingAssistant', () => import('./views/AccountingAssistant'));
+const AnomalyDetectionView = lazyWithRetry('./views/AnomalyDetection', () => import('./views/AnomalyDetection'));
+const ReportSummaryView = lazyWithRetry('./views/ReportSummary', () => import('./views/ReportSummary'));
+const AdvancedDataTableView = lazyWithRetry('./views/AdvancedDataTable', () => import('./views/AdvancedDataTable'));
 
 const BusinessHealthReport = lazyWithRetry('./views/reports/BusinessHealthReport', () => import('./views/reports/BusinessHealthReport'));
 // VATReport removed
@@ -639,6 +649,18 @@ const AppLayout: React.FC = () => {
                   <Route path="/ai-analytics/bom" element={<BOMGenerator />} />
                 </Route>
 
+                {/* Smart Features */}
+                <Route element={<ErrorBoundary name="Smart Features"><Outlet /></ErrorBoundary>}>
+                  <Route path="/smart-features/sales-dashboard" element={<SmartSalesDashboard />} />
+                  <Route path="/smart-features/invoice-intelligence" element={<InvoiceIntelligence />} />
+                  <Route path="/smart-features/customer-risk" element={<CustomerRiskScore />} />
+                  <Route path="/smart-features/natural-language-reporting" element={<NaturalLanguageReporting />} />
+                  <Route path="/smart-features/accounting-assistant" element={<AccountingAssistant />} />
+                  <Route path="/smart-features/anomaly-detection" element={<AnomalyDetectionView />} />
+                  <Route path="/smart-features/report-summaries" element={<ReportSummaryView />} />
+                  <Route path="/smart-features/advanced-data-table" element={<AdvancedDataTableView />} />
+                </Route>
+
                 {/* Examination */}
                 <Route element={<ErrorBoundary name="Examination"><Outlet /></ErrorBoundary>}>
                   <Route path="/examination" element={<Navigate to="/examination/batches" replace />} />
@@ -785,6 +807,7 @@ const App: React.FC = () => {
         <KeyboardProvider>
           <NotificationProvider>
             <AuthProvider>
+              <AppProvider>
               <FinanceProvider>
                 <InventoryProvider>
                   <ProductionProvider>
@@ -802,6 +825,7 @@ const App: React.FC = () => {
                   </ProductionProvider>
                 </InventoryProvider>
               </FinanceProvider>
+              </AppProvider>
             </AuthProvider>
           </NotificationProvider>
         </KeyboardProvider>

@@ -243,6 +243,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
           path: '/ai-analytics',
           icon: <BarChart3 size={18} />,
         },
+        {
+          label: 'Smart Features',
+          path: '/smart-features',
+          icon: <Sparkles size={18} />,
+          hideSubMenu: true,
+          subItems: [
+            { label: 'Sales Dashboard', path: '/smart-features/sales-dashboard', icon: <BarChart3 size={14} /> },
+            { label: 'Invoice Intelligence', path: '/smart-features/invoice-intelligence', icon: <FileText size={14} /> },
+            { label: 'Customer Risk', path: '/smart-features/customer-risk', icon: <Users size={14} /> },
+            { label: 'NL Reporting', path: '/smart-features/natural-language-reporting', icon: <MessageSquare size={14} /> },
+            { label: 'Accounting Asst.', path: '/smart-features/accounting-assistant', icon: <Calculator size={14} /> },
+            { label: 'Anomaly Detection', path: '/smart-features/anomaly-detection', icon: <Activity size={14} /> },
+            { label: 'Report Summaries', path: '/smart-features/report-summaries', icon: <FileBarChart size={14} /> },
+            { label: 'Advanced Table', path: '/smart-features/advanced-data-table', icon: <Table size={14} /> },
+          ]
+        },
       ]
     },
     {

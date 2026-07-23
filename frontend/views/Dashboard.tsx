@@ -133,8 +133,8 @@ const getGreeting = (): string => {
    return `${curr}${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
  };
 
-const hasChartValues = (rows: Array<{ income: number; expenses: number }>) =>
-  rows.some(r => toSafeNumber(r.income) > 0 || toSafeNumber(r.expenses) > 0);
+const hasChartValues = (rows: Array<{ income: number; expenses: number; pos: number; paid_inv: number; unpaid_inv: number; partial_inv: number }>) =>
+  rows.some(r => toSafeNumber(r.income) > 0 || toSafeNumber(r.expenses) > 0 || toSafeNumber(r.pos) > 0 || toSafeNumber(r.paid_inv) > 0 || toSafeNumber(r.unpaid_inv) > 0 || toSafeNumber(r.partial_inv) > 0);
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
@@ -1235,7 +1235,7 @@ const DashboardContent: React.FC = () => {
     setIsLoading(true);
     try {
       const now  = new Date();
-      const cData: Record<string, { income: number; expenses: number; day: string }> = {};
+      const cData: Record<string, { income: number; expenses: number; pos: number; paid_inv: number; unpaid_inv: number; partial_inv: number; day: string }> = {};
 
       if (activePeriod === 'Year') {
         const finYearRaw = (companyConfig as Record<string, unknown>)?.financialYearStart || (companyConfig as Record<string, unknown>)?.financialYearStartMonth;
@@ -1255,7 +1255,7 @@ const DashboardContent: React.FC = () => {
             const d = new Date(startYear, finMonth + i, 1);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const label = d.toLocaleDateString('en-US', { month: 'short' });
-            cData[key] = { income: 0, expenses: 0, day: label };
+            cData[key] = { income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0, day: label };
         }
       } else {
         const days = PERIOD_DAYS[activePeriod] ?? 30;
@@ -1273,7 +1273,7 @@ const DashboardContent: React.FC = () => {
             label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }
 
-          if (!cData[key]) cData[key] = { income: 0, expenses: 0, day: label };
+          if (!cData[key]) cData[key] = { income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0, day: label };
         }
       }
 
@@ -1283,19 +1283,32 @@ const DashboardContent: React.FC = () => {
           return activePeriod === 'Year' ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}` : dRaw.split('T')[0];
       };
 
-      // Aggregate posted invoices
-      invoices.forEach((inv: any) => {
-        const key = getChartKey(String(inv.date || inv.createdAt || ''));
-        if (key && cData[key]) cData[key].income += getInvoiceRevenueAmount(inv);
-      });
-
-      // Aggregate sales
-      // Note: Income from sales is already aggregated via 'invoices' as every sale creates a corresponding invoice record. 
-      // We only count COGS/Expenses from the sales objects here.
+      // Aggregate revenue by source and invoice status
+      // POS sales
       sales.forEach((s: any) => {
         const key = getChartKey(String(s.date || s.createdAt || ''));
         if (key && cData[key]) {
+          const total = toSafeNumber(s.totalAmount);
+          if (total > 0) cData[key].pos += total;
           cData[key].expenses += toSafeNumber(s.cost ?? s.expense ?? 0);
+        }
+      });
+
+      // Invoices by status
+      invoices.forEach((inv: any) => {
+        const key = getChartKey(String(inv.date || inv.createdAt || ''));
+        if (key && cData[key]) {
+          const total = getInvoiceRevenueAmount(inv);
+          const status = String(inv.status || '').toLowerCase();
+          if (status === 'paid' || status === 'completed') {
+            cData[key].paid_inv += total;
+          } else if (status === 'partial' || status === 'partially paid' || status === 'overdue') {
+            cData[key].partial_inv += total;
+          } else if (status === 'unpaid' || status === 'due' || status === 'pending') {
+            cData[key].unpaid_inv += total;
+          } else {
+            cData[key].income += total;
+          }
         }
       });
 
@@ -1323,15 +1336,15 @@ const DashboardContent: React.FC = () => {
         // fallback zero data shaped to chosen period
         if (activePeriod === 'Year') {
           formattedData = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((month) => ({
-            day: month, income: 0, expenses: 0
+            day: month, income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0
           }));
         } else if (activePeriod === 'Week') {
           formattedData = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => ({
-            day: d, income: 0, expenses: 0
+            day: d, income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0
           }));
         } else {
           formattedData = Array.from({ length: 30 }, (_, i) => ({
-            day: `${i + 1}`, income: 0, expenses: 0
+            day: `${i + 1}`, income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0
           }));
         }
       }
@@ -2127,14 +2140,26 @@ const DashboardContent: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#16a34a' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#5b578c' }}>Revenue</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>POS</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#dc2626' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#5b578c' }}>Expenses</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#16a34a' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Paid</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Unpaid</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6366f1' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Partial</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Expenses</span>
                 </div>
                 {!isMobile && (
                   <div style={{ marginLeft: 4 }}>
@@ -2200,19 +2225,50 @@ const DashboardContent: React.FC = () => {
                     />
                     <Area
                       type="monotone"
-                      dataKey="income"
-                      name="Revenue"
+                      dataKey="pos"
+                      name="POS Sales"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      fillOpacity={0}
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#f59e0b', strokeWidth: 2 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="paid_inv"
+                      name="Paid Invoices"
                       stroke="#16a34a"
                       strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#gradRevenue)"
+                      fillOpacity={0}
                       dot={false}
-                      activeDot={{ r: 6, fill: '#ffffff', stroke: '#16a34a', strokeWidth: 3, filter: 'drop-shadow(0 4px 8px rgba(22,163,74,0.4))' }}
+                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#16a34a', strokeWidth: 2 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="unpaid_inv"
+                      name="Unpaid Invoices"
+                      stroke="#dc2626"
+                      strokeWidth={2}
+                      fillOpacity={0}
+                      strokeDasharray="4 3"
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="partial_inv"
+                      name="Partial Invoices"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      fillOpacity={0}
+                      strokeDasharray="2 2"
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#6366f1', strokeWidth: 2 }}
                     />
                     <Area
                       type="monotone"
                       dataKey="expenses"
-                      name="Expense"
+                      name="Expenses"
                       stroke="#dc2626"
                       strokeWidth={2}
                       fillOpacity={1}
