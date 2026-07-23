@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { logger } from '@/services/logger';
 import {
   BankAccount, BankTransaction, BankStatement, ScheduledPayment, ExchangeRate,
@@ -63,7 +63,7 @@ const Banking: React.FC = () => {
       refreshAllData()
     ]);
   }, { interval: REFRESH_INTERVAL });
-  const normalizeDate = (value: string) => value.split('T')[0];
+  const normalizeDate = useCallback((value: string) => value.split('T')[0], []);
 
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'Accounts' | 'Transactions' | 'Statements' | 'Scheduled' | 'Reconciliation' | 'Forecasts' | 'Reports'>('Accounts');
@@ -1688,6 +1688,9 @@ const Banking: React.FC = () => {
                   >
                     <option value="Asset">Asset</option>
                     <option value="Liability">Liability</option>
+                    <option value="Equity">Equity</option>
+                    <option value="Revenue">Revenue</option>
+                    <option value="Expense">Expense</option>
                   </select>
                 </div>
                 <div>

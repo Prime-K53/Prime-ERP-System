@@ -80,8 +80,7 @@ const Transfers: React.FC = () => {
       })
       .filter(transfer => {
         if (filterStatus === 'all') return true;
-        // Assuming all transfers are completed since they're executed
-        return filterStatus === 'completed';
+        return transfer.status === filterStatus;
       })
       .sort((a, b) => {
         let aValue: any, bValue: any;
@@ -109,8 +108,10 @@ const Transfers: React.FC = () => {
         }
         
         if (sortOrder === 'asc') {
+          if (typeof aValue === 'string' && typeof bValue === 'string') return aValue.localeCompare(bValue);
           return aValue > bValue ? 1 : -1;
         } else {
+          if (typeof aValue === 'string' && typeof bValue === 'string') return bValue.localeCompare(aValue);
           return aValue < bValue ? 1 : -1;
         }
       });

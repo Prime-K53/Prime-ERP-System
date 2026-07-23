@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Briefcase, DollarSign, Clock, UserPlus, Trash2, Edit2, FileText, Save, X, Eye, Calculator } from 'lucide-react';
+import { Briefcase, DollarSign, Clock, UserPlus, Trash2, Edit2, FileText, Save, X, Eye, Calculator, AlertTriangle } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { Employee, PayrollRun, Payslip } from '../../types';
@@ -15,8 +15,8 @@ interface DeductionBreakdown {
 
 const Payroll: React.FC = () => {
   const { employees, payrollRuns, payslips, addEmployee, updateEmployee, deleteEmployee, runPayroll } = useFinance();
-  const { companyConfig } = useAuth();
-  const currency = companyConfig.currencySymbol;
+  const { companyConfig, notify } = useAuth();
+  const currency = companyConfig?.currencySymbol || '$';
 
   const [activeTab, setActiveTab] = useState<'Run' | 'Employees' | 'History'>('Run');
 
@@ -36,6 +36,9 @@ const Payroll: React.FC = () => {
   // Run Payroll State
   const [runMonth, setRunMonth] = useState(new Date().toISOString().slice(0, 7));
   const [runDate, setRunDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Per-employee deduction overrides
   const [deductionOverrides, setDeductionOverrides] = useState<Record<string, Partial<DeductionBreakdown>>>({});
@@ -81,7 +84,7 @@ const Payroll: React.FC = () => {
       } as Employee;
 
       if (empData.basicSalary <= 0) {
-          alert('Salary must be greater than zero.');
+          notify?.('Salary must be greater than zero.', 'error');
           return;
       }
 
@@ -93,19 +96,23 @@ const Payroll: React.FC = () => {
 
   const handleRunPayroll = () => {
       if (activeEmployees.length === 0) {
-          alert("No active employees to pay.");
+          notify?.("No active employees to pay.", 'error');
           return;
       }
       const normalizedMonth = runMonth.replace(/^(\d{4})-0?(\d{1,2})$/, '$1-$2');
       if (payrollRuns.some(r => r.month.replace(/^(\d{4})-0?(\d{1,2})$/, '$1-$2') === normalizedMonth)) {
-          alert("Payroll already run for this month.");
+          notify?.("Payroll already run for this month.", 'error');
           return;
       }
 
-      if (confirm(`Confirm Payroll Run for ${runMonth}?\nTotal Basic: ${currency}${estTotalPayroll.toLocaleString()}\nTotal Deductions: ${currency}${estTotalDeductions.toLocaleString()}\nNet Pay: ${currency}${estNetPay.toLocaleString()}`)) {
-          runPayroll(runMonth, runDate, activeEmployees);
-          setActiveTab('History');
-      }
+      setConfirmDialog({
+          message: `Confirm Payroll Run for ${runMonth}?\nTotal Basic: ${currency}${estTotalPayroll.toLocaleString()}\nTotal Deductions: ${currency}${estTotalDeductions.toLocaleString()}\nNet Pay: ${currency}${estNetPay.toLocaleString()}`,
+          onConfirm: () => {
+              runPayroll(runMonth, runDate, activeEmployees);
+              setActiveTab('History');
+              setConfirmDialog(null);
+          }
+      });
   };
 
   return (
@@ -432,6 +439,35 @@ const Payroll: React.FC = () => {
                             {payrollRuns.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No payroll history available.</td></tr>}
                         </tbody>
                     </table>
+                </div>
+            </div>
+        )}
+
+        {/* Confirm Dialog */}
+        {confirmDialog && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn">
+                    <div className="p-6 text-center space-y-4">
+                        <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 flex items-center justify-center border border-amber-200">
+                            <AlertTriangle size={32} className="text-amber-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900">Confirm Payroll Run</h3>
+                        <p className="text-sm text-slate-600 whitespace-pre-line">{confirmDialog.message}</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                        <button
+                            onClick={() => setConfirmDialog(null)}
+                            className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-50 text-sm transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={confirmDialog.onConfirm}
+                            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 text-sm transition-colors"
+                        >
+                            Confirm
+                        </button>
+                    </div>
                 </div>
             </div>
         )}

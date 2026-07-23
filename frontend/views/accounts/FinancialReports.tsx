@@ -82,7 +82,7 @@ const FinancialReports: React.FC = () => {
     const { safeOpenPreview } = useDocumentStore();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [reportType, setReportType] = useState<'TrialBalance' | 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'AgedAR' | 'AgedAP' | 'Budget'>('IncomeStatement');
+    const [reportType, setReportType] = useState<'TrialBalance' | 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'EquityStatement' | 'AgedAR' | 'AgedAP' | 'Budget'>('IncomeStatement');
     const [drilldownAccount, setDrilldownAccount] = useState<Account | null>(null);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [selectedSubAccountNames, setSelectedSubAccountNames] = useState<string[]>([]);
@@ -96,8 +96,8 @@ const FinancialReports: React.FC = () => {
 
     useEffect(() => {
         const typeParam = searchParams.get('type');
-        if (typeParam && ['TrialBalance', 'IncomeStatement', 'BalanceSheet', 'CashFlow', 'AgedAR', 'AgedAP', 'Budget'].includes(typeParam)) {
-            setReportType(typeParam as 'TrialBalance' | 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'AgedAR' | 'AgedAP' | 'Budget');
+        if (typeParam && ['TrialBalance', 'IncomeStatement', 'BalanceSheet', 'CashFlow', 'EquityStatement', 'AgedAR', 'AgedAP', 'Budget'].includes(typeParam)) {
+            setReportType(typeParam as 'TrialBalance' | 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'EquityStatement' | 'AgedAR' | 'AgedAP' | 'Budget');
         }
     }, [searchParams]);
 
@@ -107,6 +107,7 @@ const FinancialReports: React.FC = () => {
 
     const [quickFilter, setQuickFilter] = useState('This Year');
     const [compareWithPrevious, setCompareWithPrevious] = useState(false);
+    const [refreshCounter, setRefreshCounter] = useState(0);
 
     const handleQuickFilter = (type: string) => {
         const now = new Date();
@@ -126,8 +127,9 @@ const FinancialReports: React.FC = () => {
             reportName: reportType === 'IncomeStatement' ? 'Profit & Loss Statement' :
                 reportType === 'BalanceSheet' ? 'Balance Sheet' :
                     reportType === 'CashFlow' ? 'Statement of Cash Flows' :
-                        reportType === 'TrialBalance' ? 'Trial Balance' :
-                            reportType === 'Budget' ? 'Budget Analysis' : 'Aged Report',
+                        reportType === 'EquityStatement' ? 'Statement of Changes in Equity' :
+                            reportType === 'TrialBalance' ? 'Trial Balance' :
+                                reportType === 'Budget' ? 'Budget Analysis' : 'Aged Report',
             period: `${format(parseISO(dateRange.start), 'MMMM d, yyyy')} - ${format(parseISO(dateRange.end), 'MMMM d, yyyy')}`,
             currency,
             sections: []
@@ -251,6 +253,36 @@ const FinancialReports: React.FC = () => {
             reportData.netPerformance = {
                 label: 'Net Change in Cash',
                 amount: cashFlowStats.netChange
+            };
+        } else if (reportType === 'EquityStatement') {
+            const equityRows = getAccountRows(['Equity']);
+            const openingEquityRow = (accountBalances.current['3000'] || 0);
+            const netIncomeVal = netIncome.current;
+            const totalEquityRow = equityRows.reduce((s, a) => s + a.balance, 0);
+            const capitalContributions = equityRows
+                .filter(a => a.balance > 0 && a.code !== '3000')
+                .reduce((s, a) => s + a.balance, 0);
+            const drawings = equityRows
+                .filter(a => a.balance < 0 && a.code !== '3000')
+                .reduce((s, a) => s + Math.abs(a.balance), 0);
+
+            reportData.sections = [
+                {
+                    title: 'Equity Movement',
+                    rows: [
+                        { label: 'Opening Equity', amount: openingEquityRow, subText: 'As at period start' },
+                        { label: 'Net Income / (Loss) for Period', amount: netIncomeVal, subText: 'From Income Statement' },
+                        ...(capitalContributions !== 0 ? [{ label: 'Capital Contributions', amount: capitalContributions }] : []),
+                        ...(drawings !== 0 ? [{ label: 'Drawings / Distributions', amount: -drawings }] : []),
+                        ...equityRows
+                            .filter(a => a.code !== '3000')
+                            .map(a => ({ label: a.name, amount: a.balance, subText: a.code })),
+                    ]
+                }
+            ];
+            reportData.netPerformance = {
+                label: 'Closing Equity',
+                amount: totalEquityRow
             };
         } else if (reportType === 'TrialBalance') {
             const totalDebit = (accounts || []).reduce((sum, a) => {
@@ -418,7 +450,7 @@ const FinancialReports: React.FC = () => {
             }
         });
         return { current: balances, previous: prevBalances };
-    }, [ledger, accounts, dateRange, compareWithPrevious, selectedCustomerId, selectedSubAccountNames]);
+    }, [ledger, accounts, dateRange, compareWithPrevious, selectedCustomerId, selectedSubAccountNames, refreshCounter]);
 
     const getAccountRows = (types: AccountType[]) => {
         return (accounts || [])
@@ -858,9 +890,10 @@ const FinancialReports: React.FC = () => {
                             {reportType === 'IncomeStatement' ? 'Profit & Loss' :
                                 reportType === 'BalanceSheet' ? 'Balance Sheet' :
                                     reportType === 'CashFlow' ? 'Statement of Cash Flows' :
-                                        reportType === 'TrialBalance' ? 'Trial Balance' :
-                                            reportType === 'Budget' ? 'Budget Analysis' :
-                                                reportType === 'AgedAR' ? 'Aged Receivables' : 'Aged Payables'}
+                                        reportType === 'EquityStatement' ? 'Statement of Changes in Equity' :
+                                            reportType === 'TrialBalance' ? 'Trial Balance' :
+                                                reportType === 'Budget' ? 'Budget Analysis' :
+                                                    reportType === 'AgedAR' ? 'Aged Receivables' : 'Aged Payables'}
                         </h1>
                         <div className="h-6 w-px bg-slate-200 mx-2" />
                         <div className="flex items-center gap-2 group cursor-pointer">
@@ -888,7 +921,7 @@ const FinancialReports: React.FC = () => {
                             Export
                         </button>
                         <button
-                            onClick={() => window.location.reload()}
+                            onClick={() => setRefreshCounter(c => c + 1)}
                             className="flex items-center gap-2 px-6 py-2 bg-[#2CA01C] hover:bg-[#248217] text-white rounded-full text-sm font-black transition-all shadow-sm active:scale-95"
                         >
                             Run Report
@@ -953,7 +986,7 @@ const FinancialReports: React.FC = () => {
                                     {selectedCustomerId ? 'Filtered' : 'Customer'}
                                 </button>
                                 <button
-                                    onClick={() => window.location.reload()}
+                                    onClick={() => setRefreshCounter(c => c + 1)}
                                     className="p-2 bg-white border border-slate-300 hover:border-slate-400 rounded text-slate-600 transition-colors"
                                     title="Refresh Data"
                                 >
@@ -1038,9 +1071,10 @@ const FinancialReports: React.FC = () => {
                                     {reportType === 'IncomeStatement' ? 'Profit & Loss' :
                                         reportType === 'BalanceSheet' ? 'Balance Sheet' :
                                             reportType === 'CashFlow' ? 'Statement of Cash Flows' :
-                                                reportType === 'TrialBalance' ? 'Trial Balance' :
-                                                    reportType === 'Budget' ? 'Budget Analysis' :
-                                                        reportType === 'AgedAR' ? 'Aged Receivables' : 'Aged Payables'}
+                                                reportType === 'EquityStatement' ? 'Statement of Changes in Equity' :
+                                                    reportType === 'TrialBalance' ? 'Trial Balance' :
+                                                        reportType === 'Budget' ? 'Budget Analysis' :
+                                                            reportType === 'AgedAR' ? 'Aged Receivables' : 'Aged Payables'}
                                 </h3>
                                 <p className="text-sm text-slate-500 mt-2 font-medium">
                                     {reportType === 'BalanceSheet' ? `As of ${format(parseISO(dateRange.end), 'MMMM d, yyyy')}` :
@@ -1189,6 +1223,31 @@ const FinancialReports: React.FC = () => {
                                             <ReportRow label="Net Change in Cash" amount={cashFlowStats.netChange} currency={currency} isTotal />
                                             <div className="h-px bg-white/20 my-4" />
                                             <ReportRow label="Closing Balance" amount={cashFlowStats.endingBalance} currency={currency} isTotal forceColor="text-emerald-400" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {reportType === 'EquityStatement' && (
+                                    <div className="space-y-10">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 border-b-2 border-slate-900 pb-2 mb-4 text-xs uppercase tracking-widest">Statement of Changes in Equity</h3>
+                                            <ReportRow label="Opening Equity" amount={accountBalances.current['3000'] || 0} currency={currency} isTotal />
+                                            <ReportRow label="Net Income / (Loss) for Period" amount={netIncome.current} currency={currency} />
+                                            {getAccountRows(['Equity']).filter(a => a.code !== '3000' && a.balance > 0).map(a => (
+                                                <ReportRow key={a.id} label={a.name} amount={a.balance} currency={currency} subText={a.code} />
+                                            ))}
+                                            {getAccountRows(['Equity']).filter(a => a.code !== '3000' && a.balance < 0).map(a => (
+                                                <ReportRow key={a.id} label={`Drawings: ${a.name}`} amount={a.balance} currency={currency} subText={a.code} />
+                                            ))}
+                                            <div className="pt-6 border-t-4 border-double border-slate-900 mt-6 bg-[#393A3D] text-white p-8 rounded-xl">
+                                                <ReportRow
+                                                    label="Closing Equity"
+                                                    amount={getAccountRows(['Equity']).reduce((s, a) => s + a.balance, 0)}
+                                                    currency={currency}
+                                                    isTotal
+                                                    forceColor="text-emerald-400"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}

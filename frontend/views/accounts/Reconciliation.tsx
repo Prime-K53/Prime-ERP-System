@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 const Reconciliation: React.FC = () => {
   const { accounts, ledger, toggleReconciled } = useFinance();
   const { companyConfig } = useAuth();
-  const currency = companyConfig.currencySymbol;
+  const currency = companyConfig?.currencySymbol || '$';
 
   // State
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');

@@ -13,7 +13,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogFooter } from './Dialog';
 interface ReportOptionsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    reportType: 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'TrialBalance' | 'Budget' | 'AgedAR' | 'AgedAP';
+    reportType: 'IncomeStatement' | 'BalanceSheet' | 'CashFlow' | 'EquityStatement' | 'TrialBalance' | 'Budget' | 'AgedAR' | 'AgedAP';
     reportLabel: string;
 }
 
@@ -22,7 +22,7 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
     const { purchases } = useProcurement();
     const { companyConfig, notify } = useAuth();
     const { safeOpenPreview } = useDocumentStore();
-    const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
+    const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
     const [dateRange, setDateRange] = useState({
         start: startOfYear(new Date()).toISOString().split('T')[0],
@@ -237,7 +237,7 @@ const ReportOptionsModal: React.FC<ReportOptionsModalProps> = ({ isOpen, onClose
                             { label: 'This Year', start: startOfYear(new Date()), end: endOfYear(new Date()) },
                             { label: 'This Month', start: startOfMonth(new Date()), end: endOfMonth(new Date()) },
                             { label: 'Q1', start: new Date(new Date().getFullYear(), 0, 1), end: new Date(new Date().getFullYear(), 2, 31) },
-                            { label: 'Full Year 2024', start: new Date(2024, 0, 1), end: new Date(2024, 11, 31) }
+                            { label: `FY ${new Date().getFullYear()}`, start: new Date(new Date().getFullYear(), 0, 1), end: new Date(new Date().getFullYear(), 11, 31) }
                         ].map(opt => (
                             <button
                                 key={opt.label}

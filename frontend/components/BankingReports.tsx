@@ -33,7 +33,7 @@ interface FilterOptions {
 
 const BankingReports: React.FC<{ selectedAccountId?: string }> = ({ selectedAccountId }) => {
   const { companyConfig } = useAuth();
-  const currency = currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
+  const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
   const { accounts, transactions, reconciliations, fees, fetchBankingData } = useBankingStore();
   const [activeReport, setActiveReport] = useState<ReportType>('transaction');
   const [selectedAccount, setSelectedAccount] = useState<string>(selectedAccountId || '');

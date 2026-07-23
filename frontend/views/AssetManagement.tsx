@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Printer, Truck, Wrench, Monitor, Package, MoreVertical, Edit2, Trash2, X, ChevronDown, Calendar, DollarSign, MapPin, User, FileText, AlertCircle } from 'lucide-react';
+import { api } from '../services/api';
 
 interface Asset {
   id: string;
