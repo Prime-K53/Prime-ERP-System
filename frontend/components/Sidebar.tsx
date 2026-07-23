@@ -239,6 +239,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
           ]
         },
         {
+          label: 'AI Workspace',
+          path: '/ai-workspace',
+          icon: <Sparkles size={18} />,
+        },
+        {
           label: 'AI Analytics',
           path: '/ai-analytics',
           icon: <BarChart3 size={18} />,

@@ -26,10 +26,14 @@ import { KeyboardProvider } from './core/keyboard';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboard } from './core/keyboard';
+import { useKeyboard as useGlobalKeyboard } from './hooks';
 import { useDocumentStore } from './stores/documentStore.ts';
 import { PreviewModal } from './views/shared/components/PDF/PreviewModal.tsx';
 import { PdfWorker } from './views/shared/components/PDF/PdfWorker.tsx';
-import { Bell, Loader2, Coins, X, Calculator, Menu, UserIcon } from 'lucide-react';
+import { Bell, Loader2, Coins, X, Calculator, Menu, UserIcon, Search as SearchIcon, Sparkles, PieChart, BarChart3, FileText, Users, Activity, FileBarChart, MessageSquare, Table, Settings as SettingsIcon } from 'lucide-react';
+import { AICopilot } from './components/ai';
+import { CommandPalette } from './components/ui';
+import { NotificationCenter } from './components/ui';
 import Login from './views/auth/Login';
 import SetupWizard from './views/auth/SetupWizard';
 import ForgotPassword from './views/auth/ForgotPassword';
@@ -185,6 +189,7 @@ const ReportSummaryView = lazyWithRetry('./views/ReportSummary', () => import('.
 const AdvancedDataTableView = lazyWithRetry('./views/AdvancedDataTable', () => import('./views/AdvancedDataTable'));
 
 const BusinessHealthReport = lazyWithRetry('./views/reports/BusinessHealthReport', () => import('./views/reports/BusinessHealthReport'));
+const AIWorkspace = lazyWithRetry('./views/AIWorkspace', () => import('./views/AIWorkspace'));
 // VATReport removed
 
 const PwaUpdateNotificationWrapper: React.FC = () => {
@@ -302,7 +307,8 @@ const ResponsiveDebugUtility: React.FC = () => {
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
-  const { companyConfig, isOnline, user } = useAuth();
+  const navigate = useNavigate();
+  const { companyConfig, isOnline, user, notify } = useAuth();
   const {
     isOpen,
     data,
@@ -316,6 +322,10 @@ const AppLayout: React.FC = () => {
   } = useSales();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const notificationBellRef = useRef<HTMLButtonElement>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     const theme = companyConfig?.appearance?.theme || 'Light';
@@ -360,6 +370,10 @@ const AppLayout: React.FC = () => {
     }
   }, [location.pathname]);
 
+  useGlobalKeyboard([
+    { key: 'k', meta: true, handler: () => setCommandPaletteOpen(true) },
+  ]);
+
   useKeyboard([
     {
       id: 'nav-dashboard', key: 'd', alt: true, priority: 100,
@@ -386,7 +400,7 @@ const AppLayout: React.FC = () => {
       handler: () => setSidebarCollapsed(p => !p),
       description: 'Toggle sidebar',
     },
-  ], [location.pathname]);
+  ], [location.pathname, setCommandPaletteOpen]);
 
   return (
     <div className="app-layout-scroll">
@@ -419,6 +433,37 @@ const AppLayout: React.FC = () => {
             </button>
             <div className="flex-1 min-w-0 overflow-hidden">
               <Breadcrumbs />
+            </div>
+            <button
+              onClick={() => { setCommandPaletteOpen(true); }}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors text-xs"
+            >
+              <SearchIcon size={14} />
+              <span className="hidden md:inline">Search...</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono font-bold text-slate-400">⌘K</kbd>
+            </button>
+            <div className="relative">
+              <button
+                ref={notificationBellRef}
+                onClick={() => setNotificationCenterOpen(!notificationCenterOpen)}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors relative"
+              >
+                <Bell size={18} />
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </button>
+              <NotificationCenter
+                isOpen={notificationCenterOpen}
+                onClose={() => setNotificationCenterOpen(false)}
+                notifications={notifications}
+                onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
+                onMarkAllRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                onClear={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                anchorEl={notificationBellRef.current}
+              />
             </div>
           </div>
         </div>
@@ -698,6 +743,8 @@ const AppLayout: React.FC = () => {
                 </Route>
 
                 <Route path="/architect" element={<ErrorBoundary name="Architect"><Architect /></ErrorBoundary>} />
+                {/* AI Workspace */}
+                <Route path="/ai-workspace" element={<ErrorBoundary name="AI Workspace"><AIWorkspace /></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
           </Suspense>
@@ -705,6 +752,25 @@ const AppLayout: React.FC = () => {
         </main>
       </div>
       </div>
+
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        items={[
+          { id: 'dashboard', label: 'Dashboard', icon: <PieChart size={16} />, category: 'Navigation', onClick: () => { window.location.hash = '#/'; setCommandPaletteOpen(false); } },
+          { id: 'ai-workspace', label: 'AI Workspace', icon: <Sparkles size={16} />, category: 'Navigation', onClick: () => { navigate('/ai-workspace'); setCommandPaletteOpen(false); } },
+          { id: 'sales-dashboard', label: 'Smart Sales Dashboard', icon: <BarChart3 size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/sales-dashboard'); setCommandPaletteOpen(false); } },
+          { id: 'invoice-intelligence', label: 'Invoice Intelligence', icon: <FileText size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/invoice-intelligence'); setCommandPaletteOpen(false); } },
+          { id: 'customer-risk', label: 'Customer Risk Score', icon: <Users size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/customer-risk'); setCommandPaletteOpen(false); } },
+          { id: 'anomaly-detection', label: 'Anomaly Detection', icon: <Activity size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/anomaly-detection'); setCommandPaletteOpen(false); } },
+          { id: 'report-summaries', label: 'Report Summaries', icon: <FileBarChart size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/report-summaries'); setCommandPaletteOpen(false); } },
+          { id: 'nl-reporting', label: 'Natural Language Reporting', icon: <MessageSquare size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/natural-language-reporting'); setCommandPaletteOpen(false); } },
+          { id: 'accounting-asst', label: 'Accounting Assistant', icon: <Calculator size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/accounting-assistant'); setCommandPaletteOpen(false); } },
+          { id: 'advanced-table', label: 'Advanced Data Table', icon: <Table size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/advanced-data-table'); setCommandPaletteOpen(false); } },
+          { id: 'settings', label: 'Settings', icon: <SettingsIcon size={16} />, category: 'System', onClick: () => { window.location.hash = '#/settings'; setCommandPaletteOpen(false); } },
+        ]}
+      />
+      <AICopilot />
     </div>
   );
 };
