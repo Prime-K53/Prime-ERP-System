@@ -8,13 +8,12 @@ import { useSales } from '../context/SalesContext';
 import { useProduction } from '../context/ProductionContext';
 import { useInventory } from '../context/InventoryContext';
 import { useProcurement } from '../context/ProcurementContext';
-import { useNotifications } from '../context/NotificationContext';
 import {
   TrendingUp, TrendingDown, DollarSign, Clock,
-  Briefcase, Users, ChevronDown, Bell, Search, User,
+  Briefcase, Users, ChevronDown, User,
   MessageSquare, Calculator, FileText, Zap, ArrowRight, ChevronRight,
   Sparkles, Database, BarChart2, X, ArrowUp, ArrowDown, Building2,
-  CheckCircle2, Trash2, ExternalLink, Star, Sun, Calendar} from 'lucide-react';
+  Star, Sun, Calendar} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
 
 import { useDashboardStore } from '../stores/dashboardStore';
@@ -732,7 +731,6 @@ const DashboardContent: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const { initialized, loadDefaults, widgets } = useDashboardStore();
 
@@ -749,14 +747,6 @@ const DashboardContent: React.FC = () => {
   const { customers, sales, customerPayments, quotations, jobOrders } = useSales();
   const { workOrders } = useProduction();
   const { purchases, suppliers } = useProcurement();
-
-  const { 
-    notifications: globalNotifications, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead, 
-    dismissNotification 
-  } = useNotifications();
 
   // Re-enable 1-minute polling and focus refresh for Dashboard
   useModuleRefresh(undefined, { interval: 60000 });
@@ -1462,86 +1452,6 @@ const DashboardContent: React.FC = () => {
             <input type="file" ref={restoreInputRef} style={{ display: 'none' }} accept=".json" onChange={handleRestoreBackupFile} />
           </div>
 
-          {/* Search — pill style, hidden on mobile */}
-          {!isMobile && (
-            <div style={{ position: 'relative', width: isTablet ? 220 : 300 }}>
-              <Search
-                size={16}
-                color="#94a3b8"
-                style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-              />
-              <input
-                type="text"
-                placeholder="Search transactions, clients..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 18px 10px 42px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(255,255,255,0.8)',
-                  backgroundColor: 'rgba(255,255,255,0.6)',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  outline: 'none',
-                  color: '#2e2a5d',
-                  boxShadow: '0 4px 12px rgba(31,38,135,0.05)',
-                  transition: 'border-color 0.15s, box-shadow 0.15s, background-color 0.15s',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={e => {
-                  setIsSearchFocused(true);
-                  e.target.style.borderColor = '#93c5fd';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)';
-                  e.target.style.backgroundColor = 'rgba(255,255,255,0.9)';
-                }}
-                onBlur={e => {
-                  setTimeout(() => setIsSearchFocused(false), 200);
-                  e.target.style.borderColor = 'rgba(255,255,255,0.8)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(31,38,135,0.05)';
-                  e.target.style.backgroundColor = 'rgba(255,255,255,0.6)';
-                }}
-              />
-
-              {/* Live Preview Dropdown */}
-              {isSearchFocused && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: 8,
-                  backgroundColor: '#ffffff',
-                  borderRadius: 16,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  overflow: 'hidden',
-                  zIndex: 50,
-                }}>
-                  {searchResults.map((res, i) => (
-                    <div
-                      key={i}
-                      onClick={() => navigate(res.link)}
-                      style={{
-                        padding: '10px 16px',
-                        borderBottom: i === searchResults.length - 1 ? 'none' : '1px solid #f1f5f9',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: 500, color: '#1e293b' }}>{res.text}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', backgroundColor: '#eef2ff', padding: '2px 6px', borderRadius: 6 }}>{res.type}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Right side group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
             {/* Action Buttons — icon only on mobile */}
@@ -1598,43 +1508,7 @@ const DashboardContent: React.FC = () => {
                 </div>
               </button>
 
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                style={{
-                  padding: isMobile ? '8px' : '8px 16px',
-                  borderRadius: 999,
-                  backgroundColor: showNotifications ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)',
-                  border: `1px solid ${showNotifications ? '#bfdbfe' : 'rgba(255,255,255,0.8)'}`,
-                  boxShadow: '0 4px 12px rgba(31,38,135,0.05)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: showNotifications ? '#2563EB' : '#2e2a5d',
-                  position: 'relative',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ position: 'relative' }}>
-                    <Bell size={16} />
-                    {unreadCount > 0 && (
-                      <span style={{
-                        position: 'absolute', top: -7, right: -7,
-                        width: 14, height: 14,
-                        backgroundColor: '#ef4444',
-                        borderRadius: '50%',
-                        fontSize: 8, fontWeight: 800,
-                        color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: '1.5px solid #fff',
-                        animation: 'subtle-pulse 2s infinite'
-                      }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
-                    )}
-                  </div>
-                  {!isMobile && <span style={{ fontWeight: 600, fontSize: 13 }}>Notifications</span>}
-                </div>
-              </button>
-            </div>
+              </div>
 
             {/* User Profile */}
             <div 
@@ -1697,31 +1571,7 @@ const DashboardContent: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile full-width search row */}
-          {isMobile && (
-            <div style={{ width: '100%', position: 'relative' }}>
-              <Search size={16} color="#3b82f6" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px 9px 36px',
-                  borderRadius: 999,
-                  border: '1px solid #e8effc',
-                  backgroundColor: '#f8faff',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  outline: 'none',
-                  color: '#1e293b',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          )}
-        </div>
+          </div>
 
         {/* ── Date, Greeting and Reports Button ──────────────────────────────── */}
         <div style={{
@@ -2195,10 +2045,16 @@ const DashboardContent: React.FC = () => {
                       interval="preserveStartEnd"
                     />
                     <YAxis
+                      domain={[0, 'auto']}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#cbd5e1', fontSize: isMobile ? 10 : 11, fontWeight: 500 }}
-                      tickFormatter={(val) => val === 0 ? '0' : val >= 1000 ? `${(val / 1000).toFixed(0)}k` : String(val)}
+                      tickFormatter={(val) => {
+                        if (val === 0) return '0';
+                        if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+                        if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
+                        return String(val);
+                      }}
                       dx={-4}
                       width={isMobile ? 36 : 48}
                     />
@@ -2271,138 +2127,6 @@ const DashboardContent: React.FC = () => {
         onOpenChange={setIsWhatsAppModalOpen} 
         companyName={companyConfig?.companyName || 'Prime ERP'}
       />
-
-      {showNotifications && (
-        <div 
-          onClick={() => setShowNotifications(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            backgroundColor: 'rgba(0,0,0,0.05)',
-            display: 'flex', justifyContent: 'flex-end', paddingTop: 80, paddingRight: isMobile ? 10 : 30
-          }}
-        >
-          <div 
-            onClick={e => e.stopPropagation()}
-            style={{
-              width: isMobile ? 'calc(100vw - 20px)' : 400,
-              maxHeight: '70vh',
-              backgroundColor: '#fff',
-              borderRadius: 24,
-              boxShadow: '0 20px 50px rgba(15,23,42,0.15)',
-              border: '1px solid rgba(15,23,42,0.08)',
-              padding: 24,
-              display: 'flex', flexDirection: 'column',
-              gap: 16,
-              overflow: 'hidden',
-              animation: 'kpi-slide-in 0.3s ease-out'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Notifications</h3>
-                {unreadCount > 0 && (
-                  <span style={{ padding: '2px 8px', borderRadius: 99, backgroundColor: '#eff6ff', color: '#2563EB', fontSize: 11, fontWeight: 700 }}>{unreadCount} New</span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {unreadCount > 0 && (
-                  <button 
-                    onClick={() => markAllAsRead()}
-                    title="Mark all as read"
-                    style={{ border: 'none', background: 'none', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
-                  >
-                    <CheckCircle2 size={16} /> Mark all read
-                  </button>
-                )}
-                <button 
-                  onClick={() => setShowNotifications(false)}
-                  style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  title="Close" aria-label="Close notifications"
-                ><X size={20} /></button>
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
-              {globalNotifications.length === 0 ? (
-                <div style={{ padding: '60px 0', textAlign: 'center', color: '#94a3b8' }}>
-                  <Bell size={48} style={{ opacity: 0.1, marginBottom: 16 }} />
-                  <p style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>All caught up!</p>
-                  <p style={{ fontSize: 12, marginTop: 4 }}>No notifications for you right now.</p>
-                </div>
-              ) : (
-                globalNotifications.map((notif: any) => (
-                  <div 
-                    key={notif.id}
-                    onClick={() => {
-                      if (!notif.is_read) markAsRead(notif.id);
-                      if (notif.actionUrl) {
-                        setShowNotifications(false);
-                        navigate(notif.actionUrl);
-                      }
-                    }}
-                    style={{
-                      padding: '16px', borderRadius: 20, border: '1px solid rgba(15,23,42,0.05)',
-                      backgroundColor: notif.is_read ? '#fff' : '#f8fafc', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: notif.is_read ? 'none' : '0 4px 12px rgba(37,99,235,0.04)'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(37,99,235,0.2)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(15,23,42,0.05)'}
-                  >
-                    {!notif.is_read && (
-                      <div style={{ position: 'absolute', top: 18, left: 6, width: 6, height: 6, borderRadius: '50%', backgroundColor: '#2563EB' }} />
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ 
-                        fontSize: 10, fontWeight: 800, 
-                        color: notif.priority === 'High' || notif.priority === 'Urgent' ? '#ef4444' : '#2563EB', 
-                        textTransform: 'uppercase', letterSpacing: '0.05em' 
-                      }}>
-                        {notif.module?.toUpperCase()} | {notif.type?.replace(/_/g, ' ')}
-                      </span>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); dismissNotification(notif.id); }}
-                        style={{ border: 'none', background: 'none', color: '#cbd5e1', cursor: 'pointer', padding: 4, borderRadius: 6 }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                        onMouseLeave={e => e.currentTarget.style.color = '#cbd5e1'}
-                        title="Dismiss" aria-label="Dismiss notification"
-                      ><Trash2 size={14} /></button>
-                    </div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{notif.title}</h4>
-                    <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>{notif.message}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{format(new Date(notif.created_at || notif.date), 'MMM d, h:mm a')}</span>
-                      {notif.actionUrl && (
-                        <div style={{ fontSize: 10, color: '#2563EB', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          View Details <ArrowRight size={10} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16, display: 'flex', justifyContent: 'center' }}>
-              <button 
-                onClick={() => { setShowNotifications(false); navigate('/audit'); }}
-                style={{ 
-                  border: 'none', background: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, 
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 12
-                }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <ExternalLink size={14} /> View full activity log
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ConfirmDialog
         open={confirmState.open}
