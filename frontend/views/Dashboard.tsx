@@ -13,7 +13,7 @@ import {
   Briefcase, Users, ChevronDown, User,
   MessageSquare, Calculator, FileText, Zap, ArrowRight, ChevronRight,
   Sparkles, Database, BarChart2, X, ArrowUp, ArrowDown, Building2,
-  Star, Sun, Calendar} from 'lucide-react';
+  Star, Sun, Calendar, Search, CalendarDays} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
 
 import { useDashboardStore } from '../stores/dashboardStore';
@@ -771,6 +771,27 @@ const DashboardContent: React.FC = () => {
   const [chartData, setChartData]   = useState<any[]>([]);
   const [activePeriod, setActivePeriod] = useState<string>('Year');
 
+  const finYearStart = companyConfig?.financialYearStart || 'January';
+  const finYearStartMonth = new Date(`${finYearStart} 1, 2000`).getMonth();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const finYearBase = currentMonth < finYearStartMonth ? currentYear - 1 : currentYear;
+  const finYears = Array.from({ length: 5 }, (_, i) => {
+    const start = finYearBase - 2 + i;
+    return `${start}/${String(start + 1).slice(2)}`;
+  });
+  const [selectedFinYear, setSelectedFinYear] = useState<string>(finYears[2]);
+  const [showFinYearDropdown, setShowFinYearDropdown] = useState(false);
+  const finYearRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (finYearRef.current && !finYearRef.current.contains(e.target as Node)) setShowFinYearDropdown(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   // ── Company Menu & Restore Logic ─────────────────────────────────────────
 
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
@@ -1228,21 +1249,10 @@ const DashboardContent: React.FC = () => {
       const cData: Record<string, { income: number; expenses: number; pos: number; paid_inv: number; unpaid_inv: number; partial_inv: number; day: string }> = {};
 
       if (activePeriod === 'Year') {
-        const finYearRaw = (companyConfig as Record<string, unknown>)?.financialYearStart || (companyConfig as Record<string, unknown>)?.financialYearStartMonth;
-        let finMonth = 0;
-        if (typeof finYearRaw === 'number') finMonth = finYearRaw;
-        else if (typeof finYearRaw === 'string' && finYearRaw.includes('-')) {
-            const m = parseInt(finYearRaw.split('-')[1] || '1', 10);
-            if (!isNaN(m)) finMonth = m - 1;
-        }
-
-        let startYear = now.getFullYear();
-        if (now.getMonth() < finMonth) {
-            startYear -= 1;
-        }
+        const startYear = parseInt(selectedFinYear.split('/')[0], 10);
 
         for (let i = 0; i < 12; i++) {
-            const d = new Date(startYear, finMonth + i, 1);
+            const d = new Date(startYear, finYearStartMonth + i, 1);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             const label = d.toLocaleDateString('en-US', { month: 'short' });
             cData[key] = { income: 0, expenses: 0, pos: 0, paid_inv: 0, unpaid_inv: 0, partial_inv: 0, day: label };
@@ -1352,7 +1362,7 @@ const DashboardContent: React.FC = () => {
     }
   }, [invoices, sales, purchases, activePeriod, companyConfig]);
 
-  useEffect(() => { loadChartData(); }, []); // eslint-disable-line
+  useEffect(() => { loadChartData(); }, [selectedFinYear]); // eslint-disable-line
 
 
 
@@ -1397,7 +1407,7 @@ const DashboardContent: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: isMobile ? '8px 16px' : isTablet ? '16px 24px' : '16px 32px',
+          padding: isMobile ? '8px 12px' : isTablet ? '10px 16px' : '10px 20px',
           borderBottom: '1px solid rgba(255,255,255,0.3)',
           background: 'rgba(255,255,255,0.25)',
           backdropFilter: 'blur(10px)',
@@ -1452,10 +1462,124 @@ const DashboardContent: React.FC = () => {
             <input type="file" ref={restoreInputRef} style={{ display: 'none' }} accept=".json" onChange={handleRestoreBackupFile} />
           </div>
 
+          {/* Premium Search Bar — desktop */}
+          {!isMobile && (
+            <div className="premium-search" style={{ position: 'relative', flex: '0 1 280px', minWidth: 0 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px',
+                borderRadius: 999,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0.4))',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.8)',
+                boxShadow: '0 2px 8px rgba(31,38,135,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
+                transition: 'all 0.2s ease',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(31,38,135,0.04), inset 0 1px 0 rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'; }}
+              >
+                <Search size={14} color="#6366f1" style={{ opacity: 0.6 }} />
+                <input
+                  type="text"
+                  placeholder="Search transactions, clients..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={e => { setIsSearchFocused(true); }}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  style={{
+                    flex: 1, border: 'none', background: 'transparent',
+                    fontSize: 12, fontWeight: 500, color: '#2e2a5d',
+                    outline: 'none', minWidth: 0,
+                  }}
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'rgba(148,163,184,0.15)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, color: '#94a3b8', flexShrink: 0 }}>
+                    <X size={10} />
+                  </button>
+                )}
+              </div>
+
+              {/* Live Preview Dropdown */}
+              {isSearchFocused && searchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6,
+                  backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: 16, boxShadow: '0 12px 48px rgba(31,38,135,0.15)', border: '1px solid rgba(255,255,255,0.9)',
+                  overflow: 'hidden', zIndex: 50,
+                }}>
+                  {searchResults.map((res, i) => (
+                    <div key={i} onClick={() => navigate(res.link)} style={{
+                      padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      borderBottom: i === searchResults.length - 1 ? 'none' : '1px solid rgba(241,245,249,0.7)',
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.04)'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <span style={{ fontSize: 12, fontWeight: 500, color: '#1e293b' }}>{res.text}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', backgroundColor: 'rgba(99,102,241,0.08)', padding: '2px 6px', borderRadius: 6 }}>{res.type}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Right side group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
             {/* Action Buttons — icon only on mobile */}
             <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8 }}>
+              {/* Financial Year Dropdown */}
+              {!isMobile && (
+                <div ref={finYearRef} style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowFinYearDropdown(o => !o)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 999,
+                      backgroundColor: 'rgba(99,102,241,0.08)',
+                      border: '1px solid rgba(99,102,241,0.15)',
+                      boxShadow: '0 2px 8px rgba(99,102,241,0.04)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                      color: '#6366f1', fontSize: 12, fontWeight: 700,
+                      transition: 'all 0.15s ease',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.12)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.15)'; }}
+                  >
+                    <CalendarDays size={14} />
+                    <span>FY {selectedFinYear}</span>
+                    <ChevronDown size={12} style={{ transform: showFinYearDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </button>
+                  {showFinYearDropdown && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, marginTop: 6, minWidth: 140,
+                      backgroundColor: '#ffffff', borderRadius: 14,
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                      border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden', zIndex: 60,
+                    }}>
+                      {finYears.map(fy => (
+                        <button
+                          key={fy}
+                          onClick={() => { setSelectedFinYear(fy); setShowFinYearDropdown(false); }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '10px 14px', fontSize: 12, fontWeight: selectedFinYear === fy ? 700 : 500,
+                            color: selectedFinYear === fy ? '#6366f1' : '#475569',
+                            backgroundColor: selectedFinYear === fy ? 'rgba(99,102,241,0.06)' : 'transparent',
+                            border: 'none', cursor: 'pointer', transition: 'background 0.1s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.04)'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = selectedFinYear === fy ? 'rgba(99,102,241,0.06)' : 'transparent'}
+                        >
+                          FY {fy}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() => navigate('/smart-operations/pricing')}
                 title="Calculator"
