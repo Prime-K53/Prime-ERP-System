@@ -8,6 +8,7 @@ import Breadcrumbs from './components/Breadcrumbs';
 import Toast from './components/Toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
+import { FinancialYearProvider } from './context/FinancialYearContext';
 import { FinanceProvider } from './context/FinanceContext';
 import { InventoryProvider } from './context/InventoryContext';
 import { SalesProvider } from './context/SalesContext';
@@ -879,6 +880,7 @@ const App: React.FC = () => {
           <NotificationProvider>
             <AuthProvider>
               <AppProvider>
+              <FinancialYearProvider>
               <FinanceProvider>
                 <InventoryProvider>
                   <ProductionProvider>

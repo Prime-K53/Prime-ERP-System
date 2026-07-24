@@ -548,9 +548,23 @@ async function startServer() {
   // System & Licensing Endpoints
   const licenseService = require('./services/licenseService.cjs');
 
+  // ── Financial Year validation helper ──────────────────────────────────
+  const validateFyDate = async (dateField, body, companyId) => {
+    if (!body[dateField]) return;
+    const fySvc = new (require('./services/financialYearService.cjs'))();
+    const fy = await fySvc.getFinancialYearByDate(body[dateField], companyId);
+    if (!fy) {
+      throw new Error(`Selected date (${body[dateField]}) does not belong to any active Financial Year. Please switch Financial Year or choose a valid date.`);
+    }
+    if (fy.is_closed) {
+      throw new Error(`Financial Year "${fy.name}" is closed. No new transactions can be created in this period.`);
+    }
+  };
+
   app.get('/api/dashboard', async (req, res) => {
     const daysRaw = Number(req.query?.days);
     const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.min(daysRaw, 120) : 30;
+    const financialYearId = req.query?.financial_year_id || req.financialYearId || '';
 
     const getOne = (query, params = []) => new Promise((resolve, reject) => {
       db.get(query, params, (error, row) => {
@@ -569,33 +583,47 @@ async function startServer() {
     try {
       const offset = `-${days - 1} days`;
       const companyId = req.companyId || '';
+
+      let fyDateFilter = '';
+      let fyParams = [];
+      if (financialYearId) {
+        const fy = await new Promise((resolve) => {
+          db.get('SELECT start_date, end_date FROM financial_years WHERE id = ? AND company_id = ?',
+            [financialYearId, companyId], (err, row) => resolve(row || null));
+        });
+        if (fy) {
+          fyDateFilter = ' AND date(date) >= date(?) AND date(date) <= date(?)';
+          fyParams = [fy.start_date, fy.end_date];
+        }
+      }
+
       const [revenueRow, todayRow, outstandingRow, chartRows, salesRows, invoiceRows] = await Promise.all([
-        getOne(`SELECT SUM(total_amount) as revenue FROM sales WHERE company_id = ?`, [companyId]),
-        getOne(`SELECT SUM(total_amount) as todaySales FROM sales WHERE date(date) = date('now') AND company_id = ?`, [companyId]),
+        getOne(`SELECT SUM(total_amount) as revenue FROM sales WHERE company_id = ?${fyDateFilter}`, [companyId, ...fyParams]),
+        getOne(`SELECT SUM(total_amount) as todaySales FROM sales WHERE date(date) = date('now') AND company_id = ?${fyDateFilter.replace(/AND date\(date\) >= date\(\?\) AND date\(date\) <= date\(\?\)/g, '')}`, [companyId, ...(fyParams.length ? [] : [])]),
         getOne(`SELECT COUNT(*) as outstandingInvoices FROM invoices WHERE lower(COALESCE(status, '')) != 'paid' AND company_id = ?`, [companyId]),
         getAll(
           `SELECT date(date) as day, SUM(total_amount) as total
            FROM sales
-           WHERE date(date) >= date('now', ?) AND company_id = ?
+           WHERE date(date) >= date('now', ?) AND company_id = ?${fyDateFilter}
            GROUP BY date(date)
            ORDER BY day`,
-          [offset, companyId]
+          [offset, companyId, ...fyParams]
         ),
         getAll(
           `SELECT id, customer_id as customerId, customer_name as customerName, total_amount as totalAmount, date
            FROM sales
-           WHERE company_id = ?
+           WHERE company_id = ?${fyDateFilter}
            ORDER BY date DESC
            LIMIT 200`,
-          [companyId]
+          [companyId, ...fyParams]
         ),
         getAll(
           `SELECT id, customer_id as customerId, customer_name as customerName, total_amount as totalAmount, status, created_at as createdAt
            FROM invoices
-           WHERE company_id = ?
+           WHERE company_id = ?${fyDateFilter}
            ORDER BY created_at DESC
            LIMIT 50`,
-          [companyId]
+          [companyId, ...fyParams]
         )
       ]);
 
@@ -949,6 +977,7 @@ async function startServer() {
   const reporting = new (require('./services/financialReportingService.cjs'))();
   const vatManagement = new (require('./services/vatManagementService.cjs'))();
   const currency = new (require('./services/currencyService.cjs'))();
+  const financialYear = new (require('./services/financialYearService.cjs'))();
 
   // Chart of Accounts
   app.get('/api/accounts', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
@@ -1055,6 +1084,7 @@ async function startServer() {
 
   app.post('/api/expenses', requireRole('Admin', 'Accountant', 'Manager'), validateBody(expenseSchemas.create), async (req, res) => {
     try {
+      await validateFyDate('expense_date', req.body, req.companyId || '');
       const row = await finance.createExpense({ ...req.body, created_by: req.user?.id }, req.companyId || '');
       res.status(201).json(row);
     } catch (err) {
@@ -1154,6 +1184,107 @@ async function startServer() {
     } catch (err) {
       console.error('[Finance] deleteBudget error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to delete budget' });
+    }
+  });
+
+  // --- Financial Year Endpoints ---
+  app.get('/api/financial-years', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const rows = await financialYear.getFinancialYears(req.companyId || '');
+      res.json(rows);
+    } catch (err) {
+      console.error('[FY] list error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch financial years' });
+    }
+  });
+
+  app.get('/api/financial-years/default', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      let fy = await financialYear.getDefaultFinancialYear(req.companyId || '');
+      if (!fy) {
+        fy = await financialYear.getOrCreateDefaultFinancialYear(req.companyId || '', req.user?.id);
+      }
+      res.json(fy || {});
+    } catch (err) {
+      console.error('[FY] default error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch default financial year' });
+    }
+  });
+
+  app.get('/api/financial-years/current', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      let fy = await financialYear.getFinancialYearByDate(today, req.companyId || '');
+      if (!fy) {
+        fy = await financialYear.getDefaultFinancialYear(req.companyId || '');
+      }
+      res.json(fy || {});
+    } catch (err) {
+      console.error('[FY] current error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch current financial year' });
+    }
+  });
+
+  app.get('/api/financial-years/by-date', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const date = req.query.date || new Date().toISOString().slice(0, 10);
+      const fy = await financialYear.getFinancialYearByDate(date, req.companyId || '');
+      res.json(fy || {});
+    } catch (err) {
+      console.error('[FY] by-date error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch financial year for date' });
+    }
+  });
+
+  app.get('/api/financial-years/:id', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+    try {
+      const row = await financialYear.getFinancialYearById(req.params.id, req.companyId || '');
+      if (!row) return res.status(404).json({ error: 'Financial year not found' });
+      res.json(row);
+    } catch (err) {
+      console.error('[FY] get error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to fetch financial year' });
+    }
+  });
+
+  app.post('/api/financial-years', requireRole('Admin'), async (req, res) => {
+    try {
+      const row = await financialYear.createFinancialYear(req.body, req.companyId || '', req.user?.id);
+      res.status(201).json(row);
+    } catch (err) {
+      console.error('[FY] create error:', err?.message || err);
+      res.status(400).json({ error: err?.message || 'Failed to create financial year' });
+    }
+  });
+
+  app.put('/api/financial-years/:id', requireRole('Admin'), async (req, res) => {
+    try {
+      const row = await financialYear.updateFinancialYear(req.params.id, req.body, req.companyId || '');
+      if (!row) return res.status(404).json({ error: 'Financial year not found' });
+      res.json(row);
+    } catch (err) {
+      console.error('[FY] update error:', err?.message || err);
+      res.status(400).json({ error: err?.message || 'Failed to update financial year' });
+    }
+  });
+
+  app.post('/api/financial-years/:id/close', requireRole('Admin'), async (req, res) => {
+    try {
+      const row = await financialYear.closeFinancialYear(req.params.id, req.companyId || '');
+      res.json(row);
+    } catch (err) {
+      console.error('[FY] close error:', err?.message || err);
+      res.status(400).json({ error: err?.message || 'Failed to close financial year' });
+    }
+  });
+
+  app.delete('/api/financial-years/:id', requireRole('Admin'), async (req, res) => {
+    try {
+      await financialYear.deleteFinancialYear(req.params.id, req.companyId || '');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[FY] delete error:', err?.message || err);
+      res.status(400).json({ error: err?.message || 'Failed to delete financial year' });
     }
   });
 
@@ -1822,6 +1953,7 @@ async function startServer() {
 
   app.post('/api/purchases', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
+      await validateFyDate('order_date', req.body, req.companyId || '');
       const row = await procurement.createPurchase(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
     } catch (err) {

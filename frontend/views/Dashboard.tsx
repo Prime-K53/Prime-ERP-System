@@ -3,6 +3,7 @@ import { logger } from '@/services/logger';
 import { useNavigate } from 'react-router-dom';
 import { useModuleRefresh } from '../hooks/useModuleRefresh';
 import { useAuth } from '../context/AuthContext';
+import { useFinancialYear } from '../context/FinancialYearContext';
 import { useFinance } from '../context/FinanceContext';
 import { useSales } from '../context/SalesContext';
 import { useProduction } from '../context/ProductionContext';
@@ -781,16 +782,18 @@ const DashboardContent: React.FC = () => {
     return `${start}/${String(start + 1).slice(2)}`;
   });
   const [selectedFinYear, setSelectedFinYear] = useState<string>(finYears[2]);
-  const [showFinYearDropdown, setShowFinYearDropdown] = useState(false);
-  const finYearRef = useRef<HTMLDivElement>(null);
+  const { selectedFinancialYear } = useFinancialYear();
 
+  // Sync chart year with selected FY from global context
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (finYearRef.current && !finYearRef.current.contains(e.target as Node)) setShowFinYearDropdown(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    if (selectedFinancialYear) {
+      const sy = selectedFinancialYear.start_date?.slice(0, 4);
+      const ey = selectedFinancialYear.end_date?.slice(0, 4);
+      if (sy && ey) {
+        setSelectedFinYear(`${sy}/${ey?.slice(2)}`);
+      }
+    }
+  }, [selectedFinancialYear]);
 
   // ── Company Menu & Restore Logic ─────────────────────────────────────────
 
@@ -1529,56 +1532,6 @@ const DashboardContent: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
             {/* Action Buttons — icon only on mobile */}
             <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8 }}>
-              {/* Financial Year Dropdown */}
-              {!isMobile && (
-                <div ref={finYearRef} style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setShowFinYearDropdown(o => !o)}
-                    style={{
-                      padding: '8px 14px', borderRadius: 999,
-                      backgroundColor: 'rgba(99,102,241,0.08)',
-                      border: '1px solid rgba(99,102,241,0.15)',
-                      boxShadow: '0 2px 8px rgba(99,102,241,0.04)',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                      color: '#6366f1', fontSize: 12, fontWeight: 700,
-                      transition: 'all 0.15s ease',
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.12)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.15)'; }}
-                  >
-                    <CalendarDays size={14} />
-                    <span>FY {selectedFinYear}</span>
-                    <ChevronDown size={12} style={{ transform: showFinYearDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                  </button>
-                  {showFinYearDropdown && (
-                    <div style={{
-                      position: 'absolute', top: '100%', left: 0, marginTop: 6, minWidth: 140,
-                      backgroundColor: '#ffffff', borderRadius: 14,
-                      boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                      border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden', zIndex: 60,
-                    }}>
-                      {finYears.map(fy => (
-                        <button
-                          key={fy}
-                          onClick={() => { setSelectedFinYear(fy); setShowFinYearDropdown(false); }}
-                          style={{
-                            display: 'block', width: '100%', textAlign: 'left',
-                            padding: '10px 14px', fontSize: 12, fontWeight: selectedFinYear === fy ? 700 : 500,
-                            color: selectedFinYear === fy ? '#6366f1' : '#475569',
-                            backgroundColor: selectedFinYear === fy ? 'rgba(99,102,241,0.06)' : 'transparent',
-                            border: 'none', cursor: 'pointer', transition: 'background 0.1s',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.04)'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = selectedFinYear === fy ? 'rgba(99,102,241,0.06)' : 'transparent'}
-                        >
-                          FY {fy}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <button
                 onClick={() => navigate('/smart-operations/pricing')}

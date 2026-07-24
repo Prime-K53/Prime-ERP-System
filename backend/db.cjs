@@ -1985,6 +1985,24 @@ const initDb = () => {
       db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_customer ON customer_payments(customer_id)`);
       db.run(`CREATE INDEX IF NOT EXISTS idx_customer_payments_date ON customer_payments(date)`);
 
+      db.run(`CREATE TABLE IF NOT EXISTS financial_years (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        code TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        is_closed INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'Active' CHECK(status IN ('Active','Closed')),
+        company_id TEXT NOT NULL,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_financial_years_company ON financial_years(company_id)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_financial_years_dates ON financial_years(company_id, start_date, end_date)`);
+      db.run(`CREATE INDEX IF NOT EXISTS idx_financial_years_default ON financial_years(company_id, is_default)`);
+
       // Payment Allocation Tables
       db.run(`CREATE TABLE IF NOT EXISTS payment_allocations (
         id TEXT PRIMARY KEY,

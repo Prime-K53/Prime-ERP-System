@@ -2316,6 +2316,47 @@ export const api = {
         throw new Error(text || `Backend returned ${resp.status}`);
       }
       return resp.json();
-    }, 'System.DeleteWorkspace')
+    }, 'System.DeleteWorkspace'),
+
+    // Financial Years
+    getFinancialYears: () => handle(async () => {
+      const response = await apiClient.get('/financial-years');
+      return response.data;
+    }, 'FinancialYear.List'),
+
+    getDefaultFinancialYear: () => handle(async () => {
+      const response = await apiClient.get('/financial-years/default');
+      return response.data;
+    }, 'FinancialYear.Default'),
+
+    getCurrentFinancialYear: () => handle(async () => {
+      const response = await apiClient.get('/financial-years/current');
+      return response.data;
+    }, 'FinancialYear.Current'),
+
+    getFinancialYearByDate: (date: string) => handle(async () => {
+      const response = await apiClient.get('/financial-years/by-date', { params: { date } });
+      return response.data;
+    }, 'FinancialYear.ByDate'),
+
+    createFinancialYear: (data: any) => handle(async () => {
+      const response = await apiClient.post('/financial-years', data);
+      return response.data;
+    }, 'FinancialYear.Create'),
+
+    updateFinancialYear: (id: string, data: any) => handle(async () => {
+      const response = await apiClient.put(`/financial-years/${id}`, data);
+      return response.data;
+    }, 'FinancialYear.Update'),
+
+    closeFinancialYear: (id: string) => handle(async () => {
+      const response = await apiClient.post(`/financial-years/${id}/close`);
+      return response.data;
+    }, 'FinancialYear.Close'),
+
+    deleteFinancialYear: (id: string) => handle(async () => {
+      const response = await apiClient.delete(`/financial-years/${id}`);
+      return response.data;
+    }, 'FinancialYear.Delete'),
   }
 };
