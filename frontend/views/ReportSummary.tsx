@@ -416,7 +416,7 @@ const ReportSummary: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-screen w-full bg-[#f8fafc] font-sans text-[13px] leading-[1.5] text-slate-700">
+      <div className="flex flex-col h-screen w-full bg-[#f0f4f8] font-sans text-[13px] leading-[1.5] text-slate-700">
         <div className="flex items-center justify-center flex-1">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -428,7 +428,7 @@ const ReportSummary: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f8fafc] font-sans text-[13px] leading-[1.5] text-slate-700 overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-[#f0f4f8] font-sans text-[13px] leading-[1.5] text-slate-700 overflow-hidden">
       <div className="bg-white border-b border-slate-200 shrink-0 px-6 py-4">
         <div className="flex justify-between items-center">
           <div>

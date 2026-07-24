@@ -239,11 +239,13 @@ const SmartSalesDashboard: React.FC = () => {
   useEffect(() => { fetchData(); }, [period]);
 
   const cardStyle: React.CSSProperties = {
-    background: '#ffffff',
-    borderRadius: 12,
+    background: 'rgba(255,255,255,0.75)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderRadius: 16,
     padding: '20px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    border: '1px solid #e2e8f0',
+    border: '1px solid rgba(255,255,255,0.6)',
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
@@ -297,7 +299,7 @@ const SmartSalesDashboard: React.FC = () => {
       className="animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{
         minHeight: '100vh',
-        background: '#f8fafc',
+        background: '#f0f4f8',
         padding: '24px',
         fontFamily: "'Inter', -apple-system, sans-serif",
         color: '#1e293b',
@@ -341,87 +343,66 @@ const SmartSalesDashboard: React.FC = () => {
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {overview && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={cardHeaderStyle}>Total Revenue</div>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', flexShrink: 0 }}>
-                    <DollarSign size={16} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #6366f1' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1', flexShrink: 0 }}>
+                  <DollarSign size={18} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Total Revenue</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{currencySymbol}{formatShortCurrency(overview.totalRevenue)}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <TrendingUp size={10} color="#16a34a" />
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>{overview.growthPercent >= 0 ? '+' : ''}{overview.growthPercent.toFixed(1)}%</span>
+                    <span>vs yesterday</span>
                   </div>
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                  {currencySymbol}{formatShortCurrency(overview.totalRevenue)}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                  <TrendingUp size={12} color="#16a34a" />
-                  <span style={{ color: '#16a34a', fontWeight: 700 }}>{overview.growthPercent >= 0 ? '+' : ''}{overview.growthPercent.toFixed(1)}%</span>
-                  <span>vs yesterday</span>
                 </div>
               </div>
 
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={cardHeaderStyle}>Today's Revenue</div>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
-                    <Clock size={16} />
-                  </div>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #10b981' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
+                  <Clock size={18} />
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#059669', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                  {currencySymbol}{formatShortCurrency(overview.todayRevenue)}
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                  {overview.todayTransactions} transactions today
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Today's Revenue</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{currencySymbol}{formatShortCurrency(overview.todayRevenue)}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{overview.todayTransactions} transactions today</div>
                 </div>
               </div>
 
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={cardHeaderStyle}>Revenue Growth</div>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626', flexShrink: 0 }}>
-                    <BarChart3 size={16} />
+              <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid '#f59e0b' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626', flexShrink: 0 }}>
+                  <BarChart3 size={18} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Revenue Growth</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {overview.growthPercent >= 0 ? <TrendingUp size={16} color="#16a34a" /> : <TrendingDown size={16} color="#dc2626" />}
+                    <span style={{ color: overview.growthPercent >= 0 ? '#16a34a' : '#dc2626' }}>{overview.growthPercent >= 0 ? '+' : ''}{overview.growthPercent.toFixed(1)}%</span>
                   </div>
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {overview.growthPercent >= 0 ? <TrendingUp size={20} color="#16a34a" /> : <TrendingDown size={20} color="#dc2626" />}
-                  <span style={{ color: overview.growthPercent >= 0 ? '#16a34a' : '#dc2626' }}>
-                    {overview.growthPercent >= 0 ? '+' : ''}{overview.growthPercent.toFixed(1)}%
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                  {overview.yesterdayRevenue > 0
-                    ? `Yesterday: ${currencySymbol}${formatShortCurrency(overview.yesterdayRevenue)}`
-                    : 'No yesterday data'}
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{overview.yesterdayRevenue > 0 ? `Yesterday: ${currencySymbol}${formatShortCurrency(overview.yesterdayRevenue)}` : 'No yesterday data'}</div>
                 </div>
               </div>
 
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={cardHeaderStyle}>Transactions</div>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c3aed', flexShrink: 0 }}>
-                    <ShoppingBag size={16} />
-                  </div>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #7c3aed' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c3aed', flexShrink: 0 }}>
+                  <ShoppingBag size={18} />
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                  {formatNumber(overview.totalTransactions)}
-                </div>
-                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                  <span>POS: {formatNumber(overview.posRevenue > 0 ? 1 : 0)}</span>
-                  <span>Invoice: {formatNumber(overview.invoiceRevenue > 0 ? 1 : 0)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Transactions</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{formatNumber(overview.totalTransactions)}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>POS: {formatNumber(overview.posRevenue > 0 ? 1 : 0)} · Invoice: {formatNumber(overview.invoiceRevenue > 0 ? 1 : 0)}</div>
                 </div>
               </div>
 
-              <div style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={cardHeaderStyle}>Avg Transaction</div>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', flexShrink: 0 }}>
-                    <Target size={16} />
-                  </div>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #f59e0b' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b', flexShrink: 0 }}>
+                  <Target size={18} />
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                  {currencySymbol}{formatShortCurrency(overview.averageTransactionValue)}
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                  Per transaction average
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Avg Transaction</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{currencySymbol}{formatShortCurrency(overview.averageTransactionValue)}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>Per transaction average</div>
                 </div>
               </div>
             </div>

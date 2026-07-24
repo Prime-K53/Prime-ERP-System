@@ -104,60 +104,52 @@ const CustomerRiskScore: React.FC = () => {
   ) : null;
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ padding: 24, background: '#f0f4f8', minHeight: '100vh' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Customer Risk Score</h1>
         <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Analyze customer payment behavior and risk profiles</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={20} color="#16a34a" />
-            </div>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Low Risk</p>
-              <p style={{ fontSize: 24, fontWeight: 800, color: '#16a34a' }}>{categoryCounts.Low}</p>
-            </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #16a34a' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Shield size={18} color="#16a34a" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Low Risk</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#16a34a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{categoryCounts.Low}</div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertTriangle size={20} color="#f59e0b" />
-            </div>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Medium Risk</p>
-              <p style={{ fontSize: 24, fontWeight: 800, color: '#f59e0b' }}>{categoryCounts.Medium}</p>
-            </div>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #f59e0b' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <AlertTriangle size={18} color="#f59e0b" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Medium Risk</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#f59e0b', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{categoryCounts.Medium}</div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fce4ec', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertTriangle size={20} color="#dc2626" />
-            </div>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>High Risk</p>
-              <p style={{ fontSize: 24, fontWeight: 800, color: '#dc2626' }}>{categoryCounts.High}</p>
-            </div>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #dc2626' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fce4ec', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <AlertTriangle size={18} color="#dc2626" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>High Risk</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#dc2626', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{categoryCounts.High}</div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Users size={20} color="#4f46e5" />
-            </div>
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Customers</p>
-              <p style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>{customers.length}</p>
-            </div>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: '3px solid #6366f1' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Users size={18} color="#6366f1" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>Total Customers</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{customers.length}</div>
           </div>
         </div>
       </div>
 
-      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div style={{ background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid rgba(255,255,255,0.6)', overflow: 'hidden' }}>
         <div style={{ padding: 16, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -250,7 +242,7 @@ const CustomerRiskScore: React.FC = () => {
         const returnRate = getCustomerReturnRate(cId, sales);
 
         return (
-          <div style={{ marginTop: 24, background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', padding: 24 }}>
+          <div style={{ marginTop: 24, background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid rgba(255,255,255,0.6)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{detail.customerName} — Risk Detail</h2>
               <span style={{ fontSize: 36, fontWeight: 900, color: getScoreColor(detail.score) }}>{detail.score}<span style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>/100</span></span>

@@ -31,11 +31,13 @@ const toSafeNumber = (value: unknown): number => {
 };
 
 const cardStyle: React.CSSProperties = {
-  background: '#ffffff',
-  borderRadius: 12,
+  background: 'rgba(255,255,255,0.75)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  borderRadius: 16,
   padding: '20px',
   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  border: '1px solid #e2e8f0',
+  border: '1px solid rgba(255,255,255,0.6)',
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
@@ -100,15 +102,13 @@ const RiskScoreBadge = ({ score }: { score: number }) => {
 };
 
 const StatCard = ({ label, value, icon, color, bg }: { label: string; value: string | number; icon: React.ReactNode; color: string; bg: string }) => (
-  <div style={{ ...cardStyle, gap: 12 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div style={cardHeaderStyle}>{label}</div>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
-        {icon}
-      </div>
+  <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14, borderLeft: `3px solid ${color}` }}>
+    <div style={{ width: 38, height: 38, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
+      {icon}
     </div>
-    <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-      {value}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>{value}</div>
     </div>
   </div>
 );
@@ -193,7 +193,7 @@ const InvoiceIntelligence: React.FC = () => {
       className="animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{
         minHeight: '100vh',
-        background: '#f8fafc',
+background: '#f0f4f8',
         padding: '24px',
         fontFamily: "'Inter', -apple-system, sans-serif",
         color: '#1e293b',

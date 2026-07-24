@@ -172,7 +172,7 @@ const AdvancedDataTable: React.FC = () => {
   const hasActiveFilters = Object.keys(filters).length > 0 || searchQuery.length > 0;
 
   return (
-    <div className="p-4 md:p-6 max-w-[1600px] mx-auto flex flex-col h-full relative w-full">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto flex flex-col h-full relative w-full" style={{ background: '#f0f4f8', minHeight: '100vh' }}>
       <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2 tracking-tight">

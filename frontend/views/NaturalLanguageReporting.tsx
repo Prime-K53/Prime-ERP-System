@@ -111,7 +111,7 @@ const NaturalLanguageReporting: React.FC = () => {
       flexDirection: 'column',
       height: '100vh',
       width: '100%',
-      backgroundColor: '#f8fafc',
+backgroundColor: '#f0f4f8',
       fontFamily: "'Inter', sans-serif",
       fontSize: 13,
       lineHeight: 1.5,
@@ -365,9 +365,11 @@ const NaturalLanguageReporting: React.FC = () => {
 
               {result.columns.length > 0 && result.data.length > 0 && (
                 <div style={{
-                  backgroundColor: '#fff',
+                  backgroundColor: 'rgba(255,255,255,0.75)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
                   borderRadius: 16,
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid rgba(255,255,255,0.6)',
                   overflow: 'hidden',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
                 }}>

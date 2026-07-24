@@ -265,7 +265,7 @@ const AnomalyDetection: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+    <div className="p-6 max-w-[1600px] mx-auto flex flex-col overflow-hidden" style={{ minHeight: '100vh', background: '#f0f4f8' }}>
       <div className="mb-6 shrink-0">
         <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
           <ShieldAlert className="text-rose-600" size={20} />

@@ -196,7 +196,7 @@ const AccountingAssistant: React.FC = () => {
       className="animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{
         minHeight: '100vh',
-        background: '#f8fafc',
+        background: '#f0f4f8',
         padding: '24px',
         fontFamily: "'Inter', -apple-system, sans-serif",
         color: '#1e293b',
