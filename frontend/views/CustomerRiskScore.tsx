@@ -104,14 +104,14 @@ const CustomerRiskScore: React.FC = () => {
   ) : null;
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100%' }}>
+    <div style={{ padding: 24, background: '#f8fafc', minHeight: '100vh' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Customer Risk Score</h1>
         <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Analyze customer payment behavior and risk profiles</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Shield size={20} color="#16a34a" />
@@ -122,7 +122,7 @@ const CustomerRiskScore: React.FC = () => {
             </div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AlertTriangle size={20} color="#f59e0b" />
@@ -133,7 +133,7 @@ const CustomerRiskScore: React.FC = () => {
             </div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fce4ec', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AlertTriangle size={20} color="#dc2626" />
@@ -144,7 +144,7 @@ const CustomerRiskScore: React.FC = () => {
             </div>
           </div>
         </div>
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Users size={20} color="#4f46e5" />
@@ -157,7 +157,7 @@ const CustomerRiskScore: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
         <div style={{ padding: 16, borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -250,7 +250,7 @@ const CustomerRiskScore: React.FC = () => {
         const returnRate = getCustomerReturnRate(cId, sales);
 
         return (
-          <div style={{ marginTop: 24, background: 'white', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: 24 }}>
+          <div style={{ marginTop: 24, background: 'white', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #e2e8f0', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{detail.customerName} — Risk Detail</h2>
               <span style={{ fontSize: 36, fontWeight: 900, color: getScoreColor(detail.score) }}>{detail.score}<span style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8' }}>/100</span></span>

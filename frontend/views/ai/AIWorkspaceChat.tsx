@@ -6,6 +6,7 @@ import {
   Zap, Brain, Target, CreditCard, ArrowRight, Clock,
   AlertCircle, CheckCircle, X, ChevronRight, Lightbulb
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useSales } from '../../context/SalesContext';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -30,46 +31,46 @@ const suggestedPrompts = [
 
 const skillCards = [
   {
-    icon: <FileText size={22} />,
+    icon: <FileText size={20} />,
     title: 'Invoice Intelligence',
     desc: 'AI-powered invoice analysis and processing',
     path: '/smart-features/invoice-intelligence',
-    gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    color: '#6366f1',
   },
   {
-    icon: <Shield size={22} />,
+    icon: <Shield size={20} />,
     title: 'Customer Risk',
     desc: 'Predictive risk scoring for your customers',
     path: '/smart-features/customer-risk',
-    gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+    color: '#f59e0b',
   },
   {
-    icon: <MessageSquare size={22} />,
-    title: 'Report Summaries',
-    desc: 'Auto-generated executive report summaries',
-    path: '/smart-features/report-summaries',
-    gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-  },
-  {
-    icon: <AlertTriangle size={22} />,
-    title: 'Anomaly Detection',
-    desc: 'Detect fraud and unusual patterns',
-    path: '/smart-features/anomaly-detection',
-    gradient: 'linear-gradient(135deg, #d946ef, #ec4899)',
-  },
-  {
-    icon: <BarChart3 size={22} />,
-    title: 'NL Reporting',
-    desc: 'Natural language financial queries',
-    path: '/smart-features/natural-language-reporting',
-    gradient: 'linear-gradient(135deg, #10b981, #059669)',
-  },
-  {
-    icon: <TrendingUp size={22} />,
+    icon: <BarChart3 size={20} />,
     title: 'Smart Sales Dashboard',
     desc: 'AI-driven sales performance insights',
     path: '/smart-features/sales-dashboard',
-    gradient: 'linear-gradient(135deg, #f97316, #eab308)',
+    color: '#10b981',
+  },
+  {
+    icon: <MessageSquare size={20} />,
+    title: 'NL Reporting',
+    desc: 'Natural language financial queries',
+    path: '/smart-features/natural-language-reporting',
+    color: '#06b6d4',
+  },
+  {
+    icon: <AlertTriangle size={20} />,
+    title: 'Anomaly Detection',
+    desc: 'Detect fraud and unusual patterns',
+    path: '/smart-features/anomaly-detection',
+    color: '#d946ef',
+  },
+  {
+    icon: <Zap size={20} />,
+    title: 'Report Summaries',
+    desc: 'Auto-generated executive report summaries',
+    path: '/smart-features/report-summaries',
+    color: '#3b82f6',
   },
 ];
 
@@ -78,105 +79,102 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    background: '#f0f2f5',
+    background: '#f8fafc',
     fontFamily: "'Inter', system-ui, sans-serif",
     overflow: 'hidden',
   },
   header: {
-    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-    padding: '16px 28px',
+    background: '#ffffff',
+    padding: '12px 24px',
     display: 'flex',
     alignItems: 'center',
-    gap: '14px',
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    gap: '12px',
+    borderBottom: '1px solid #e2e8f0',
   },
   headerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    background: '#6366f1',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
-    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
   },
   headerText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 600,
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: 700,
     letterSpacing: '-0.3px',
   },
   headerSub: {
-    color: 'rgba(255,255,255,0.5)',
+    color: '#64748b',
     fontSize: 12,
     fontWeight: 400,
-    marginTop: 2,
+    marginTop: 1,
   },
   mainContent: {
     display: 'flex',
     flex: 1,
     overflow: 'hidden',
-    padding: '18px 28px',
-    gap: 18,
+    padding: '16px 24px',
+    gap: 16,
   },
   chatSection: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    background: 'rgba(255,255,255,0.7)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    borderRadius: 16,
-    border: '1px solid rgba(255,255,255,0.9)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    background: '#ffffff',
+    borderRadius: 12,
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     overflow: 'hidden',
     minWidth: 0,
   },
   chatHeader: {
-    padding: '16px 22px',
+    padding: '12px 20px',
     borderBottom: '1px solid #e2e8f0',
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   chatHeaderTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 600,
     color: '#0f172a',
   },
   chatHeaderStatus: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#10b981',
-    fontWeight: 500,
+    fontWeight: 600,
     background: '#d1fae5',
     padding: '2px 8px',
-    borderRadius: 10,
+    borderRadius: 8,
   },
   messagesContainer: {
     flex: 1,
     overflowY: 'auto',
-    padding: '20px 22px',
+    padding: '16px 20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 16,
+    gap: 12,
   },
   messageRow: {
     display: 'flex',
-    gap: 12,
+    gap: 10,
     maxWidth: '85%',
   },
   userMessageRow: {
     display: 'flex',
-    gap: 12,
+    gap: 10,
     maxWidth: '85%',
     alignSelf: 'flex-end',
     flexDirection: 'row-reverse',
   },
   avatarBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -184,148 +182,148 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 2,
   },
   messageBubble: {
-    borderRadius: 14,
-    padding: '12px 16px',
-    fontSize: 14,
-    lineHeight: 1.6,
-    position: 'relative',
+    borderRadius: 12,
+    padding: '10px 14px',
+    fontSize: 13,
+    lineHeight: 1.5,
   },
   messageName: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 600,
-    marginBottom: 4,
+    marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
   messageTime: {
     fontSize: 10,
     color: '#94a3b8',
-    marginTop: 6,
+    marginTop: 4,
     textAlign: 'right',
   },
   inputArea: {
     borderTop: '1px solid #e2e8f0',
-    padding: '14px 18px',
+    padding: '12px 16px',
     display: 'flex',
-    gap: 10,
+    gap: 8,
     alignItems: 'flex-end',
-    background: 'rgba(255,255,255,0.5)',
+    background: '#f8fafc',
   },
   inputField: {
     flex: 1,
     border: '1px solid #e2e8f0',
-    borderRadius: 12,
-    padding: '10px 14px',
-    fontSize: 14,
+    borderRadius: 10,
+    padding: '8px 12px',
+    fontSize: 13,
     outline: 'none',
     background: '#fff',
     color: '#0f172a',
     resize: 'none',
     fontFamily: "'Inter', system-ui, sans-serif",
     lineHeight: 1.5,
-    minHeight: 42,
-    maxHeight: 120,
+    minHeight: 38,
+    maxHeight: 100,
   },
   sendButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     border: 'none',
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+    background: '#6366f1',
     color: '#fff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
     flexShrink: 0,
-    transition: 'all 0.2s',
     boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
   },
   promptsContainer: {
-    padding: '0 18px 12px',
+    padding: '0 16px 10px',
     display: 'flex',
-    gap: 8,
+    gap: 6,
     overflowX: 'auto',
     flexShrink: 0,
   },
   promptChip: {
-    padding: '6px 14px',
-    borderRadius: 20,
+    padding: '5px 12px',
+    borderRadius: 16,
     border: '1px solid #e2e8f0',
     background: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     color: '#475569',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     fontWeight: 500,
-    transition: 'all 0.15s',
     flexShrink: 0,
   },
   skillsPanel: {
-    width: 340,
+    width: 300,
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
+    gap: 8,
     overflowY: 'auto',
     flexShrink: 0,
   },
   skillsPanelTitle: {
-    fontSize: 13,
-    fontWeight: 600,
+    fontSize: 11,
+    fontWeight: 700,
     color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: '0.8px',
-    paddingLeft: 4,
-    marginBottom: 4,
+    paddingLeft: 2,
+    marginBottom: 2,
   },
   skillCard: {
-    borderRadius: 14,
-    padding: '16px 18px',
-    color: '#fff',
+    borderRadius: 10,
+    padding: '12px 14px',
+    background: '#ffffff',
+    border: '1px solid #e2e8f0',
+    borderLeft: '4px solid #6366f1',
     display: 'flex',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     cursor: 'pointer',
-    border: 'none',
     textAlign: 'left',
-    transition: 'transform 0.15s, box-shadow 0.15s',
     width: '100%',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
   },
   skillIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    background: 'rgba(255,255,255,0.2)',
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   skillTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
+    color: '#0f172a',
   },
   skillDesc: {
-    fontSize: 11,
-    opacity: 0.8,
-    marginTop: 2,
-    lineHeight: 1.4,
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 1,
+    lineHeight: 1.3,
   },
   skillOpen: {
     marginLeft: 'auto',
-    padding: '5px 12px',
-    borderRadius: 8,
-    background: 'rgba(255,255,255,0.25)',
-    fontSize: 11,
+    padding: '4px 10px',
+    borderRadius: 6,
+    background: '#f1f5f9',
+    fontSize: 10,
     fontWeight: 600,
+    color: '#6366f1',
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     flexShrink: 0,
   },
 };
 
 const AIWorkspaceChat: React.FC = () => {
+  const navigate = useNavigate();
   const { sales, customers } = useSales();
   const { invoices, expenses } = useFinance();
   const { companyConfig } = useAuth();
@@ -524,7 +522,7 @@ const AIWorkspaceChat: React.FC = () => {
   };
 
   const handleNavigate = (path: string) => {
-    window.location.href = path;
+    navigate(path);
   };
 
   const formatTime = (d: Date) => {
@@ -710,29 +708,36 @@ const AIWorkspaceChat: React.FC = () => {
               <button
                 style={{
                   ...styles.skillCard,
-                  background: skill.gradient,
-                  boxShadow: `0 4px 14px ${skill.gradient.includes('6366f1') ? 'rgba(99,102,241,0.25)' : 'rgba(0,0,0,0.12)'}`,
+                  borderLeftColor: skill.color,
                 }}
                 onClick={() => handleNavigate(skill.path)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = `0 6px 20px ${skill.gradient.includes('6366f1') ? 'rgba(99,102,241,0.35)' : 'rgba(0,0,0,0.18)'}`;
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = `0 4px 14px ${skill.gradient.includes('6366f1') ? 'rgba(99,102,241,0.25)' : 'rgba(0,0,0,0.12)'}`;
+                  e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)';
                 }}
               >
-                <div style={styles.skillIconBox}>
+                <div style={{
+                  ...styles.skillIconBox,
+                  background: `${skill.color}12`,
+                  color: skill.color,
+                }}>
                   {skill.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={styles.skillTitle}>{skill.title}</div>
                   <div style={styles.skillDesc}>{skill.desc}</div>
                 </div>
-                <div style={styles.skillOpen}>
+                <div style={{
+                  ...styles.skillOpen,
+                  color: skill.color,
+                  background: `${skill.color}10`,
+                }}>
                   Open
-                  <ChevronRight size={12} />
+                  <ChevronRight size={10} />
                 </div>
               </button>
             </motion.div>

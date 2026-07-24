@@ -31,13 +31,11 @@ const toSafeNumber = (value: unknown): number => {
 };
 
 const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.65)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  borderRadius: 24,
-  padding: '24px',
-  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.08)',
-  border: '1px solid rgba(255, 255, 255, 0.8)',
+  background: '#ffffff',
+  borderRadius: 12,
+  padding: '20px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  border: '1px solid #e2e8f0',
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
@@ -195,7 +193,7 @@ const InvoiceIntelligence: React.FC = () => {
       className="animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(circle at top left, #dfebfc, transparent 40%), radial-gradient(circle at bottom right, #ece1fa, transparent 40%), linear-gradient(135deg, #a7b5f5 0%, #d1c5f4 50%, #9db6f2 100%)',
+        background: '#f8fafc',
         padding: '24px',
         fontFamily: "'Inter', -apple-system, sans-serif",
         color: '#1e293b',
@@ -203,12 +201,10 @@ const InvoiceIntelligence: React.FC = () => {
     >
       <div
         style={{
-          background: 'rgba(255,255,255,0.45)',
-          backdropFilter: 'blur(36px)',
-          WebkitBackdropFilter: 'blur(36px)',
-          borderRadius: 28,
-          boxShadow: '0 8px 32px rgba(31, 38, 135, 0.12)',
-          border: '1px solid rgba(255,255,255,0.6)',
+          background: '#ffffff',
+          borderRadius: 12,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          border: '1px solid #e2e8f0',
           maxWidth: 1520,
           width: '100%',
           margin: '0 auto',
@@ -218,18 +214,16 @@ const InvoiceIntelligence: React.FC = () => {
         <div
           style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '16px 32px',
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            background: 'rgba(255,255,255,0.25)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
+            padding: '14px 24px',
+            borderBottom: '1px solid #e2e8f0',
+            background: '#ffffff',
             flexWrap: 'wrap',
             gap: 12,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Shield size={24} color="#6366f1" />
-            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#2e2a5d' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Shield size={22} color="#6366f1" />
+            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#0f172a' }}>
               Invoice Intelligence
             </h1>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', backgroundColor: '#eef2ff', padding: '2px 8px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
@@ -237,17 +231,17 @@ const InvoiceIntelligence: React.FC = () => {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: '#5b578c', fontWeight: 500 }}>
+            <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>
               {invoicesCount} invoices · {customersCount} customers
             </span>
             <button
               onClick={runAnalysis}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 20,
+                padding: '7px 14px', borderRadius: 8,
                 border: '1px solid #E2E8F0', backgroundColor: '#fff',
                 fontSize: 12, fontWeight: 600, color: '#6366f1',
-                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                cursor: 'pointer',
               }}
             >
               <Loader2 size={14} /> Re-run Analysis
@@ -255,7 +249,7 @@ const InvoiceIntelligence: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Validation Summary Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>

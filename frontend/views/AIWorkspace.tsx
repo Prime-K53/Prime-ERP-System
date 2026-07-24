@@ -74,7 +74,7 @@ const AIWorkspace: React.FC = () => {
     {
       label: 'Advanced Data Table',
       description: 'Comprehensive data grid with filtering, sorting, and export capabilities.',
-      path: '/smart-features/data-table',
+      path: '/smart-features/advanced-data-table',
       icon: <Sparkles />,
       color: 'bg-purple-50 text-purple-500'
     },
