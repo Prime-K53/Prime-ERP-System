@@ -29,4 +29,4 @@ export interface AIProvider {
   generateChatStream(messages: ChatMessage[], config?: AIConfig): AsyncGenerator<string>;
 }
 
-export type ProviderName = 'openrouter' | 'gemini' | 'ollama' | 'openai' | 'zai' | 'opencode' | 'custom';
+export type ProviderName = 'ollama' | 'local' | 'openai' | 'custom';

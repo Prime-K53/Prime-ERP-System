@@ -1,26 +1,15 @@
 import { AIProvider, ChatMessage, ProviderName, AIConfig } from './types';
 import { logger } from '@/services/logger';
-import { openRouterProvider, parseJSON } from './providers/openrouter';
-import { geminiProvider } from './providers/gemini';
+import { localProvider, parseJSON } from './providers/local';
 import * as P from './prompts';
 
-/* ───────── Provider registry ───────── */
-
 function getProvider(name: ProviderName): AIProvider {
-  if (name === 'gemini') return geminiProvider;
-  return openRouterProvider;
+  return localProvider;
 }
 
 function selectProvider(): AIProvider {
-  const name = (
-    import.meta.env.VITE_AI_PROVIDER ||
-    (process.env as Record<string, string | undefined>).VITE_AI_PROVIDER ||
-    'openrouter'
-  ) as ProviderName;
-  return getProvider(name);
+  return localProvider;
 }
-
-/* ───────── Helpers ───────── */
 
 function buildImageMessages(imageBase64: string, prompt: string): ChatMessage[] {
   return [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageBase64 } }] }];
@@ -32,11 +21,8 @@ function buildMultiImageMessages(images: string[], prompt: string): ChatMessage[
   return [{ role: 'user', content: parts }];
 }
 
-/* ───────── Service class ───────── */
-
 class AIService {
   private provider: AIProvider;
-  private currentApiKey = '';
   private currentModel = '';
   private currentBaseUrl = '';
 
@@ -51,37 +37,28 @@ class AIService {
       if (!raw) return;
       const cfg = JSON.parse(raw)?.aiConfig;
       if (!cfg) return;
-      if (cfg.apiKey) this.currentApiKey = cfg.apiKey;
       if (cfg.model) this.currentModel = cfg.model;
       if (cfg.baseUrl) this.currentBaseUrl = cfg.baseUrl;
-      if (cfg.provider) {
-        const name = cfg.provider as ProviderName;
-        this.provider = getProvider(name);
-      }
     } catch { /* ignore */ }
   }
 
-  configure(opts: { apiKey?: string; model?: string; baseUrl?: string }) {
-    if (opts.apiKey !== undefined) this.currentApiKey = opts.apiKey;
+  configure(opts: { model?: string; baseUrl?: string }) {
     if (opts.model !== undefined) this.currentModel = opts.model;
     if (opts.baseUrl !== undefined) this.currentBaseUrl = opts.baseUrl;
   }
 
-  setProvider(name: ProviderName) {
-    this.provider = getProvider(name);
+  setProvider(_name: ProviderName) {
+    this.provider = localProvider;
   }
 
   private cfg(overrides?: Partial<AIConfig>): AIConfig {
     const { model: overrideModel, ...rest } = overrides || {};
     return {
-      apiKey: this.currentApiKey || undefined,
-      model: this.currentModel || overrideModel || 'deepseek/deepseek-r1:free',
+      model: this.currentModel || overrideModel || 'llama3',
       baseUrl: this.currentBaseUrl || undefined,
       ...rest,
     };
   }
-
-  /* ───────── System Documentation ───────── */
 
   async *streamSystemDoc(prompt: string): AsyncGenerator<string> {
     try {
@@ -89,11 +66,11 @@ class AIService {
         { role: 'system', content: P.SYSTEM_DOC_SYSTEM_INSTRUCTION },
         { role: 'user', content: prompt },
       ];
-      const stream = this.provider.generateChatStream(messages, this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const stream = this.provider.generateChatStream(messages, this.cfg({ model: 'llama3' }));
       for await (const chunk of stream) yield chunk;
     } catch (error: any) {
       logger.error('AI Streaming Error:', error);
-      yield error?.message?.includes('402') ? 'AI error: Credits needed. Use a free model or add funds.' : 'Error generating stream. Check API key.';
+      yield 'Error generating stream. Make sure your local AI server is running.';
     }
   }
 
@@ -103,10 +80,10 @@ class AIService {
         { role: 'system', content: P.SYSTEM_DOC_SYSTEM_INSTRUCTION_SHORT },
         { role: 'user', content: prompt },
       ];
-      return await this.provider.generateChat(messages, this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      return await this.provider.generateChat(messages, this.cfg({ model: 'llama3' }));
     } catch (error: any) {
       logger.error('AI API Error:', error);
-      return error?.message?.includes('402') ? 'AI error: Add credits to your OpenRouter account or use a free model.' : 'Error generating documentation.';
+      return 'Error generating documentation. Make sure your local AI server is running.';
     }
   }
 
@@ -116,23 +93,19 @@ class AIService {
         { role: 'system', content: systemInstruction || P.AI_ASSISTANT_SYSTEM_INSTRUCTION },
         { role: 'user', content: prompt },
       ];
-      return await this.provider.generateChat(messages, this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      return await this.provider.generateChat(messages, this.cfg({ model: 'llama3' }));
     } catch (error: any) {
       logger.error('AI API Error:', error);
       const msg = error?.message || '';
-      if (msg.includes('402') || msg.includes('Insufficient credits'))
-        return 'AI service error: Your OpenRouter account needs credits or use a free model (append :free to model ID, e.g. deepseek/deepseek-r1:free).';
-      if (msg.includes('429'))
-        return 'AI service is rate-limited. Wait a moment and retry, or switch to a different model.';
-      if (msg.includes('401'))
-        return 'AI service error: Invalid API key. Check your key in Settings > AI Provider.';
+      if (msg.includes('ECONNREFUSED') || msg.includes('Failed to fetch'))
+        return 'AI service unavailable. Ensure your local AI server (e.g. Ollama) is running on http://localhost:11434.';
       return `AI error: ${msg.slice(0, 200)}`;
     }
   }
 
   async extractInvoiceData(imageBase64: string): Promise<any> {
     try {
-      const text = await this.provider.generateChat(buildImageMessages(imageBase64, P.INVOICE_EXTRACTION_PROMPT), this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const text = await this.provider.generateChat(buildImageMessages(imageBase64, P.INVOICE_EXTRACTION_PROMPT), this.cfg({ model: 'llama3' }));
       return parseJSON(text);
     } catch (error) {
       logger.error('OCR Extraction Error:', error);
@@ -142,7 +115,7 @@ class AIService {
 
   async extractPaymentProofData(imageBase64: string): Promise<any> {
     try {
-      const text = await this.provider.generateChat(buildImageMessages(imageBase64, P.PAYMENT_PROOF_EXTRACTION_PROMPT), this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const text = await this.provider.generateChat(buildImageMessages(imageBase64, P.PAYMENT_PROOF_EXTRACTION_PROMPT), this.cfg({ model: 'llama3' }));
       return parseJSON(text);
     } catch (error) {
       logger.error('Payment Proof Extraction Error:', error);
@@ -152,7 +125,7 @@ class AIService {
 
   async extractDeliveryNoteData(fileBase64: string): Promise<any> {
     try {
-      const text = await this.provider.generateChat(buildImageMessages(fileBase64, P.DELIVERY_NOTE_EXTRACTION_PROMPT), this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const text = await this.provider.generateChat(buildImageMessages(fileBase64, P.DELIVERY_NOTE_EXTRACTION_PROMPT), this.cfg({ model: 'llama3' }));
       return parseJSON(text);
     } catch (error) {
       logger.error('DN Extraction Error:', error);
@@ -166,7 +139,7 @@ class AIService {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: [{ type: 'text', text: userPrompt }, { type: 'image_url', image_url: { url: fileBase64 } }] },
       ];
-      return await this.provider.generateChat(messages, this.cfg({ model: 'openai/gpt-4o' }));
+      return await this.provider.generateChat(messages, this.cfg({ model: 'llama3' }));
     } catch (error) {
       logger.error('File Extraction Error:', error);
       throw error;
@@ -175,7 +148,7 @@ class AIService {
 
   async performOCR(images: string[], prompt?: string): Promise<string> {
     try {
-      return await this.provider.generateChat(buildMultiImageMessages(images, prompt || P.OCR_DEFAULT_PROMPT), this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      return await this.provider.generateChat(buildMultiImageMessages(images, prompt || P.OCR_DEFAULT_PROMPT), this.cfg({ model: 'llama3' }));
     } catch (error) {
       logger.error('OCR Error:', error);
       return 'Failed to perform OCR.';
@@ -184,7 +157,7 @@ class AIService {
 
   async suggestRestock(inventoryData: any[], salesData: any[]): Promise<any> {
     try {
-      const text = await this.provider.generateChat([{ role: 'user', content: P.buildRestockPrompt(inventoryData, salesData) }], this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const text = await this.provider.generateChat([{ role: 'user', content: P.buildRestockPrompt(inventoryData, salesData) }], this.cfg({ model: 'llama3' }));
       const result = parseJSON(text);
       return Array.isArray(result) ? result : [];
     } catch (error) {
@@ -197,7 +170,7 @@ class AIService {
 
   async suggestProductPricing(productName: string, totalCost: number, category: string, wastePercentage = 0): Promise<any> {
     try {
-      const text = await this.provider.generateChat([{ role: 'user', content: P.buildPricingPrompt(productName, totalCost, category, wastePercentage) }], this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      const text = await this.provider.generateChat([{ role: 'user', content: P.buildPricingPrompt(productName, totalCost, category, wastePercentage) }], this.cfg({ model: 'llama3' }));
       const fb = { suggestedPrice: totalCost * 1.5, margin: 33.3, reasoning: 'Fallback', tiers: { small: totalCost * 1.5, medium: totalCost * 1.4, large: totalCost * 1.3 } };
       const parsed = parseJSON(text);
       return parsed ? { suggestedPrice: parsed.suggestedPrice ?? fb.suggestedPrice, margin: parsed.margin ?? fb.margin, reasoning: parsed.reasoning ?? fb.reasoning, tiers: parsed.tiers ?? fb.tiers } : fb;
@@ -217,7 +190,7 @@ class AIService {
       return await this.provider.generateChat([
         { role: 'system', content: P.BUSINESS_HEALTH_SYSTEM_INSTRUCTION },
         { role: 'user', content: P.buildBusinessHealthPrompt(snapshot) },
-      ], this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      ], this.cfg({ model: 'llama3' }));
     } catch {
       return '## Error Generating Report\nUnable to reach AI services.';
     }
@@ -228,7 +201,7 @@ class AIService {
       return await this.provider.generateChat([
         { role: 'system', content: P.FORECASTING_SYSTEM_INSTRUCTION },
         { role: 'user', content: P.buildForecastingPrompt(type, data) },
-      ], this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      ], this.cfg({ model: 'llama3' }));
     } catch { return 'Error analyzing data.'; }
   }
 
@@ -237,7 +210,7 @@ class AIService {
       return await this.provider.generateChat([
         { role: 'system', content: P.EXPENSE_ANALYSIS_SYSTEM_INSTRUCTION },
         { role: 'user', content: P.buildExpenseAnalysisPrompt(expenses) },
-      ], this.cfg({ model: 'deepseek/deepseek-r1:free' }));
+      ], this.cfg({ model: 'llama3' }));
     } catch { return 'Error analyzing expenses.'; }
   }
 
@@ -249,8 +222,6 @@ class AIService {
       ], this.cfg());
     } catch { return "Sorry, I'm having trouble."; }
   }
-
-  /* ───────── Dashboard AI Features ───────── */
 
   async generateDailyBrief(data: {
     revenue: number; revenueTarget: number; unpaidInvoices: number; unpaidTotal: number;
@@ -335,8 +306,6 @@ class AIService {
     }
   }
 
-  /* ───────── Architect Document Generation ───────── */
-
   async generateArchitectDoc(prompt: string): Promise<string> {
     try {
       const messages: ChatMessage[] = [
@@ -347,8 +316,6 @@ class AIService {
     } catch { return ''; }
   }
 
-  /* ───────── Business Communication (WhatsApp/SMS) ───────── */
-
   async generateBusinessMessage(context: string, requirement: string): Promise<string> {
     try {
       return await this.provider.generateChat([
@@ -358,8 +325,6 @@ class AIService {
     } catch { return ''; }
   }
 
-  /* ───────── Full-page AI Assistant ───────── */
-
   async askFullAssistant(context: string, question: string): Promise<string> {
     try {
       return await this.provider.generateChat([
@@ -368,8 +333,6 @@ class AIService {
       ], this.cfg());
     } catch { return ''; }
   }
-
-  /* ───────── Predictive Maintenance ───────── */
 
   async analyzePredictiveMaintenance(
     machineName: string, temperature: number, vibration: number, efficiency: number, uptime: number,
@@ -385,8 +348,6 @@ class AIService {
     }
   }
 
-  /* ───────── Ink Density Analysis ───────── */
-
   async analyzeInkDensity(): Promise<{ cyan: number; magenta: number; yellow: number; black: number; totalCoverage: number } | null> {
     try {
       const text = await this.provider.generateChat([
@@ -397,8 +358,6 @@ class AIService {
       return { cyan: parsed.cyan ?? 0, magenta: parsed.magenta ?? 0, yellow: parsed.yellow ?? 0, black: parsed.black ?? 0, totalCoverage: parsed.totalCoverage ?? 0 };
     } catch { return null; }
   }
-
-  /* ───────── Supply Chain Strategy ───────── */
 
   async generateSupplyChainStrategy(
     itemName: string, stock: number, adu: number, daysUntilStockout: number, marginPercent: number,
@@ -411,8 +370,6 @@ class AIService {
     } catch { return ''; }
   }
 
-  /* ───────── Pricing Strategy ───────── */
-
   async generatePricingStrategy(
     itemName: string, currentPrice: number, linkedBom: boolean, bomDetails: string,
     actualBomCost: number, laborCost: number, wastePct: number, lastCost: number,
@@ -424,8 +381,6 @@ class AIService {
       ], this.cfg());
     } catch { return ''; }
   }
-
-  /* ───────── Billing Email Draft ───────── */
 
   async generateBillingEmail(
     type: string, id: string, customerName: string, total: number,
@@ -442,8 +397,6 @@ class AIService {
     }
   }
 
-  /* ───────── Collections Strategy ───────── */
-
   async generateCollectionsStrategy(
     customerName: string, id: string, totalAmount: number,
     currency: string, dueDate: string, status: string,
@@ -456,8 +409,6 @@ class AIService {
     } catch { return ''; }
   }
 
-  /* ───────── Pre-press Flight Check ───────── */
-
   async runPreflightAudit(jobTitle: string, jobDescription: string, attachments: string): Promise<string> {
     try {
       return await this.provider.generateChat([
@@ -466,8 +417,6 @@ class AIService {
       ], this.cfg());
     } catch { return ''; }
   }
-
-  /* ───────── Floating Assistant (formatted) ───────── */
 
   async askFloatingAssistant(context: string, question: string): Promise<string> {
     try {
@@ -478,24 +427,21 @@ class AIService {
     } catch { return ''; }
   }
 
-  /* ───────── Connection Test ───────── */
-
   async testConnection(
-    provider: AIProvider, apiKey: string, model: string, baseUrl?: string,
+    provider: AIProvider, _apiKey: string, model: string, baseUrl?: string,
   ): Promise<{ ok: boolean; message: string }> {
     try {
       const messages: ChatMessage[] = [
         { role: 'system', content: P.CONNECTION_TEST_SYSTEM_INSTRUCTION },
         { role: 'user', content: P.CONNECTION_TEST_USER_PROMPT },
       ];
-      const result = await provider.generateChat(messages, { apiKey, model, baseUrl });
+      const result = await provider.generateChat(messages, { model, baseUrl });
       const trimmed = result.trim().toUpperCase();
       if (trimmed === 'OK' || trimmed.startsWith('OK')) return { ok: true, message: `Connected using ${model}` };
       return { ok: true, message: `Response: "${result.slice(0, 60)}..."` };
     } catch (err: any) {
       const msg = err?.message || 'Connection failed';
-      if (msg.includes('400') || msg.includes('not a valid model')) return { ok: false, message: `Invalid model ID. Check the exact name at the provider's docs` };
-      if (msg.includes('429')) return { ok: false, message: `Rate limited. Retry later or use a different model.` };
+      if (msg.includes('400') || msg.includes('not a valid model')) return { ok: false, message: `Invalid model ID. Check the exact model name.` };
       return { ok: false, message: msg };
     }
   }

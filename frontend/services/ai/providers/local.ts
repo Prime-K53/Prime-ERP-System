@@ -1,30 +1,13 @@
 import { AIProvider, ChatMessage, AIConfig } from '../types';
 
-const DEFAULT_BASE = 'https://openrouter.ai/api/v1';
+const DEFAULT_BASE = 'http://localhost:11434/v1';
 
 function resolveBaseUrl(config?: AIConfig): string {
-  return config?.baseUrl || import.meta.env.VITE_OPENROUTER_BASE_URL || DEFAULT_BASE;
-}
-
-function resolveApiKey(config?: AIConfig): string {
-  const fromConfig = config?.apiKey;
-  if (fromConfig && fromConfig !== 'PLACEHOLDER_API_KEY') return fromConfig;
-
-  const fromEnv =
-    import.meta.env.VITE_OPENROUTER_API_KEY ||
-    (process.env as Record<string, string | undefined>).VITE_OPENROUTER_API_KEY;
-  if (fromEnv && fromEnv !== 'PLACEHOLDER_API_KEY') return fromEnv;
-
-  return '';
+  return config?.baseUrl || DEFAULT_BASE;
 }
 
 function resolveModel(config?: AIConfig): string {
-  return (
-    config?.model ||
-    import.meta.env.VITE_OPENROUTER_MODEL ||
-    (process.env as Record<string, string | undefined>).VITE_OPENROUTER_MODEL ||
-    'deepseek/deepseek-r1:free'
-  );
+  return config?.model || 'llama3';
 }
 
 function normalizeMessages(messages: ChatMessage[]) {
@@ -63,23 +46,15 @@ function buildRequestBody(messages: ChatMessage[], config?: AIConfig) {
   };
 }
 
-async function openRouterFetch(
+async function localFetch(
   body: unknown,
   config?: AIConfig,
   signal?: AbortSignal,
 ): Promise<Response> {
   const baseUrl = resolveBaseUrl(config);
-  const apiKey = resolveApiKey(config);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (apiKey) {
-    headers['Authorization'] = `Bearer ${apiKey}`;
-  }
-  if (baseUrl.includes('openrouter.ai')) {
-    headers['HTTP-Referer'] = window.location.origin;
-    headers['X-Title'] = 'Prime ERP';
-  }
   return fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
     method: 'POST',
     headers,
@@ -98,13 +73,13 @@ function extractContent(choice: any): string {
   return typeof content === 'string' ? content : '';
 }
 
-export const openRouterProvider: AIProvider = {
+export const localProvider: AIProvider = {
   async generateChat(messages, config) {
     const body = buildRequestBody(messages, config);
-    const res = await openRouterFetch(body, config);
+    const res = await localFetch(body, config);
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`API error ${res.status}: ${err}`);
+      throw new Error(`Local AI error ${res.status}: ${err}`);
     }
     const data = await res.json();
     return extractContent(data.choices?.[0]) || '';
@@ -112,7 +87,7 @@ export const openRouterProvider: AIProvider = {
 
   async *generateChatStream(messages, config) {
     const body = { ...buildRequestBody(messages, config), stream: true };
-    const res = await openRouterFetch(body, config);
+    const res = await localFetch(body, config);
     if (!res.ok) {
       const err = await res.text();
       throw new Error(`Stream error ${res.status}: ${err}`);

@@ -50,7 +50,7 @@ import ProfitMarkupSettings from './settings/ProfitMarkupSettings';
 import { NotificationsTab } from './settings/tabs/NotificationsTab';
 import { CloudTab } from './settings/tabs/CloudTab';
 import { IntegrationsTab } from './settings/tabs/IntegrationsTab';
-import { AIProviderTab } from './settings/tabs/AIProviderTab';
+
 import { PricingAdminTab } from './settings/tabs/PricingAdminTab';
 import { AttributesTab } from './settings/tabs/AttributesTab';
 import { FinishingOptionsTab } from './settings/tabs/FinishingOptionsTab';
@@ -665,7 +665,6 @@ const Settings: React.FC = () => {
         {
             title: 'System & Advanced',
             items: [
-                { id: 'AIProvider', icon: Sparkles, label: 'AI Provider', desc: 'Configure AI service provider, model, and API key' },
                 { id: 'Integrations', icon: Globe, label: 'Integrations', desc: 'API and external services' },
                 { id: 'Security', icon: ShieldCheck, label: 'Backup & Security', desc: 'Data protection and recovery' },
                 { id: 'Privacy', icon: Lock, label: 'Privacy & Compliance', desc: 'GDPR, data retention, and privacy settings' },
@@ -2649,12 +2648,6 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                         {
                             activeTab === 'Cloud' && (
                                 <CloudTab config={config} setConfig={setConfig} notify={notify} isProcessing={isProcessing} setIsProcessing={setIsProcessing} api={api} />
-                            )
-                        }
-
-                        {
-                            activeTab === 'AIProvider' && (
-                                <AIProviderTab config={config} setConfig={setConfig} notify={notify} />
                             )
                         }
 

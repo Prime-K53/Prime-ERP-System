@@ -1,4 +1,3 @@
 export { aiService } from './aiService';
-export { openRouterProvider } from './providers/openrouter';
-export { geminiProvider } from './providers/gemini';
+export { localProvider, parseJSON } from './providers/local';
 export type { AIProvider, ChatMessage, AIConfig, ContentPart, ProviderName } from './types';

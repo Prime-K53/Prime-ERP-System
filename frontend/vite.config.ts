@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
       server: { port: 5173, host: '127.0.0.1', https: true, allowedHosts: ['127.0.0.1', 'localhost'], headers: { 'Content-Security-Policy': CSP } },
       plugins: [basicSsl(), react(), inlineFontsPlugin()],
       optimizeDeps: { include: ['react','react-dom','recharts','lucide-react','react-router-dom','idb','date-fns','@react-pdf/renderer','zustand','dexie'], exclude: ['@supabase/supabase-js','yoga-layout'] },
-      define: { 'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY), 'process.env.VITE_AI_PROVIDER': JSON.stringify(env.VITE_AI_PROVIDER), 'process.env.VITE_OPENROUTER_API_KEY': JSON.stringify(env.VITE_OPENROUTER_API_KEY), 'process.env.VITE_OPENROUTER_MODEL': JSON.stringify(env.VITE_OPENROUTER_MODEL) },
+      define: { 'process.env.API_KEY': JSON.stringify(''), 'process.env.GEMINI_API_KEY': JSON.stringify('') },
       esbuild: { drop: mode === 'production' ? ['console'] : [] },
       resolve: { dedupe: ['react', 'react-dom', 'dexie'], alias: [{ find: '@', replacement: path.resolve(__dirname, '.') }] },
       base: env.VITE_BASE_URL || './',
