@@ -122,17 +122,21 @@ backgroundColor: '#f0f4f8',
         backgroundColor: '#fff',
         borderBottom: '1px solid #e2e8f0',
         flexShrink: 0,
-        padding: '20px 32px',
+        padding: '18px 28px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <Sparkles size={22} color="#6366f1" />
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
-            Natural Language Reporting
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
+              Natural Language Reporting
+            </h1>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '1px 0 0' }}>
+              Ask questions about your business data in plain English
+            </p>
+          </div>
         </div>
-        <p style={{ fontSize: 13, color: '#64748b', margin: 0, marginLeft: 34 }}>
-          Ask questions about your business data in plain English
-        </p>
       </div>
 
       <div style={{
@@ -143,114 +147,134 @@ backgroundColor: '#f0f4f8',
       }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{
+            background: 'rgba(255,255,255,0.75)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: 14,
+            border: '1px solid rgba(255,255,255,0.6)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            padding: '6px 6px 6px 18px',
             display: 'flex',
-            gap: 12,
+            alignItems: 'center',
+            gap: 10,
           }}>
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#fff',
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-              padding: '4px 4px 4px 16px',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-            }}>
-              <Search size={18} color="#94a3b8" style={{ flexShrink: 0 }} />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask a question about your business... (e.g., 'Show unpaid invoices')"
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: '#0f172a',
-                  backgroundColor: 'transparent',
-                  padding: '12px 10px',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              />
-              {query && (
-                <button
-                  onClick={() => setQuery('')}
-                  style={{
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    cursor: 'pointer',
-                    color: '#94a3b8',
-                    padding: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: 8,
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              )}
+            <Search size={18} color="#94a3b8" style={{ flexShrink: 0 }} />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask a question about your business... (e.g., 'Show unpaid invoices')"
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#0f172a',
+                backgroundColor: 'transparent',
+                padding: '11px 8px',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            />
+            {query && (
               <button
-                onClick={handleSubmit}
-                disabled={isLoading || !query.trim()}
+                onClick={() => setQuery('')}
                 style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  padding: '6px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: '9px 18px',
-                  borderRadius: 10,
-                  border: 'none',
-                  backgroundColor: !query.trim() ? '#e2e8f0' : '#6366f1',
-                  color: !query.trim() ? '#94a3b8' : '#fff',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: !query.trim() ? 'not-allowed' : 'pointer',
-                  fontFamily: "'Inter', sans-serif",
+                  borderRadius: 6,
                 }}
               >
-                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {isLoading ? 'Thinking...' : 'Ask'}
+                <X size={16} />
               </button>
-            </div>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading || !query.trim()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '9px 18px',
+                borderRadius: 10,
+                border: 'none',
+                background: !query.trim() ? '#e2e8f0' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: !query.trim() ? '#94a3b8' : '#fff',
+                fontWeight: 600,
+                fontSize: 13,
+                cursor: !query.trim() ? 'not-allowed' : 'pointer',
+                boxShadow: !query.trim() ? 'none' : '0 2px 8px rgba(99,102,241,0.3)',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              {isLoading ? 'Thinking...' : 'Ask'}
+            </button>
           </div>
 
           <div style={{ display: 'flex', gap: 20, flex: 1, minHeight: 0 }}>
             {/* Left Column: Suggested Queries */}
-            <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+            <div style={{ width: 270, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
               {suggestions.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                    Suggested Queries
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {suggestions.map((s, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleSuggestionClick(s)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '10px 14px',
-                          borderRadius: 10,
-                          border: '1px solid #e2e8f0',
-                          backgroundColor: '#fff',
-                          color: '#475569',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          fontFamily: "'Inter', sans-serif",
-                        }}
-                        title={s.description}
-                      >
-                        <Sparkles size={14} color="#a5b4fc" style={{ flexShrink: 0 }} />
-                        <span>{s.query}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.75)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  borderRadius: 14,
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '16px',
+                }}>
+                  {(() => {
+                    const grouped: Record<string, typeof suggestions> = {};
+                    suggestions.forEach(s => {
+                      const cat = s.category || 'Other';
+                      if (!grouped[cat]) grouped[cat] = [];
+                      grouped[cat].push(s);
+                    });
+                    return Object.entries(grouped).map(([category, items]) => (
+                      <div key={category} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, paddingLeft: 2 }}>
+                          {category}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {items.map((s, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handleSuggestionClick(s)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                border: 'none',
+                                backgroundColor: 'transparent',
+                                color: '#475569',
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                fontFamily: "'Inter', sans-serif",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              title={s.description}
+                            >
+                              <Sparkles size={12} color="#a5b4fc" style={{ flexShrink: 0 }} />
+                              <span>{s.query}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               )}
 
@@ -260,14 +284,14 @@ backgroundColor: '#f0f4f8',
                   flexDirection: 'column',
                   alignItems: 'center',
                   textAlign: 'center',
-                  padding: '40px 16px',
+                  padding: '32px 16px',
                   color: '#94a3b8',
                 }}>
-                  <Search size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#64748b', margin: 0 }}>
+                  <Search size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#64748b', margin: 0 }}>
                     Ask a question
                   </p>
-                  <p style={{ fontSize: 11, margin: '6px 0 0', color: '#94a3b8' }}>
+                  <p style={{ fontSize: 11, margin: '4px 0 0', color: '#94a3b8' }}>
                     Try clicking a suggestion
                   </p>
                 </div>
@@ -299,7 +323,15 @@ backgroundColor: '#f0f4f8',
               )}
 
               {result && (
-                <div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.75)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  borderRadius: 14,
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '20px',
+                }}>
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -356,13 +388,9 @@ backgroundColor: '#f0f4f8',
 
                   {result.columns.length > 0 && result.data.length > 0 && (
                     <div style={{
-                      backgroundColor: 'rgba(255,255,255,0.75)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      borderRadius: 14,
-                      border: '1px solid rgba(255,255,255,0.6)',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 12,
                       overflow: 'hidden',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
                     }}>
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{
@@ -464,12 +492,7 @@ backgroundColor: '#f0f4f8',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '50px 20px',
-                      backgroundColor: 'rgba(255,255,255,0.75)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      borderRadius: 14,
-                      border: '1px solid rgba(255,255,255,0.6)',
+                      padding: '40px 20px',
                       color: '#94a3b8',
                     }}>
                       <Search size={36} style={{ opacity: 0.2, marginBottom: 10 }} />
