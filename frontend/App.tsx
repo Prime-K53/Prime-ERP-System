@@ -165,7 +165,6 @@ const MarketAdjustments = lazyWithRetry('./views/tools/MarketAdjustments', () =>
 const SmartPricing = lazyWithRetry('./views/tools/SmartPricing', () => import('./views/tools/SmartPricing'));
 const SmartOperationsHub = lazyWithRetry('./views/SmartOperationsHub', () => import('./views/SmartOperationsHub'));
 const MarketingMessages = lazyWithRetry('./views/tools/MarketingMessages', () => import('./views/tools/MarketingMessages'));
-const AIAssistant = lazyWithRetry('./views/tools/AIAssistant', () => import('./views/tools/AIAssistant'));
 const AnalyticsHub = lazyWithRetry('./views/ai/AnalyticsHub', () => import('./views/ai/AnalyticsHub'));
 const GangRunOptimizer = lazyWithRetry('./views/ai/GangRunOptimizer', () => import('./views/ai/GangRunOptimizer'));
 const CashFlowForecaster = lazyWithRetry('./views/ai/CashFlowForecaster', () => import('./views/ai/CashFlowForecaster'));
@@ -681,21 +680,9 @@ const AppLayout: React.FC = () => {
                   <Route path="/smart-operations/referrals" element={<ProtectedRoute permission="referrals.view"><Referrals /></ProtectedRoute>} />
                 </Route>
 
-                {/* AI Analytics */}
-                <Route element={<ErrorBoundary name="AI Analytics"><Outlet /></ErrorBoundary>}>
-                  <Route path="/ai-analytics" element={<AnalyticsHub />} />
-                  <Route path="/ai-analytics/assistant" element={<AIAssistant />} />
-                  <Route path="/ai-analytics/gang-run" element={<GangRunOptimizer />} />
-                  <Route path="/ai-analytics/cash-flow" element={<CashFlowForecaster />} />
-                  <Route path="/ai-analytics/anomalies" element={<AnomalyDetectorComp />} />
-                  <Route path="/ai-analytics/churn" element={<ChurnPredictor />} />
-                  <Route path="/ai-analytics/reorder" element={<ReorderOptimizer />} />
-                  <Route path="/ai-analytics/po-match" element={<POMatcher />} />
-                  <Route path="/ai-analytics/scheduler" element={<SmartScheduler />} />
-                  <Route path="/ai-analytics/query" element={<ConversationalQuery />} />
-                  <Route path="/ai-analytics/audit" element={<AuditInvestigator />} />
-                  <Route path="/ai-analytics/bom" element={<BOMGenerator />} />
-                </Route>
+                {/* AI Analytics (redirects to AI Workspace) */}
+                <Route path="/ai-analytics" element={<AnalyticsHub />} />
+                <Route path="/ai-analytics/*" element={<Navigate to="/ai-workspace" replace />} />
 
                 {/* Smart Features */}
                 <Route element={<ErrorBoundary name="Smart Features"><Outlet /></ErrorBoundary>}>
@@ -747,9 +734,21 @@ const AppLayout: React.FC = () => {
 
                 <Route path="/architect" element={<ErrorBoundary name="Architect"><Architect /></ErrorBoundary>} />
                 {/* AI Workspace */}
-                <Route path="/ai-workspace" element={<ErrorBoundary name="AI Workspace"><AIWorkspace /></ErrorBoundary>} />
-                <Route path="/ai-workspace/dashboard" element={<ErrorBoundary name="AI Dashboard"><AIWorkspaceDashboard /></ErrorBoundary>} />
-                <Route path="/ai-workspace/assistant" element={<ErrorBoundary name="AI Assistant"><AIWorkspaceChat /></ErrorBoundary>} />
+                <Route element={<ErrorBoundary name="AI Workspace"><Outlet /></ErrorBoundary>}>
+                  <Route path="/ai-workspace" element={<AIWorkspace />} />
+                  <Route path="/ai-workspace/dashboard" element={<AIWorkspaceDashboard />} />
+                  <Route path="/ai-workspace/assistant" element={<AIWorkspaceChat />} />
+                  <Route path="/ai-workspace/gang-run" element={<GangRunOptimizer />} />
+                  <Route path="/ai-workspace/cash-flow" element={<CashFlowForecaster />} />
+                  <Route path="/ai-workspace/anomalies" element={<AnomalyDetectorComp />} />
+                  <Route path="/ai-workspace/churn" element={<ChurnPredictor />} />
+                  <Route path="/ai-workspace/reorder" element={<ReorderOptimizer />} />
+                  <Route path="/ai-workspace/po-match" element={<POMatcher />} />
+                  <Route path="/ai-workspace/scheduler" element={<SmartScheduler />} />
+                  <Route path="/ai-workspace/query" element={<ConversationalQuery />} />
+                  <Route path="/ai-workspace/audit" element={<AuditInvestigator />} />
+                  <Route path="/ai-workspace/bom" element={<BOMGenerator />} />
+                </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
           </Suspense>

@@ -14,7 +14,7 @@ import {
   CheckCircle, MonitorPlay, Maximize, Share2, Cpu as Processor, Sparkles,
   Smartphone, FileSpreadsheet, BookOpen, FileCheck, History,
   Calculator, Search, GitFork,
-  Gift
+  Gift, Calendar, FileSearch
 } from 'lucide-react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -246,6 +246,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
           subItems: [
             { label: 'Dashboard', path: '/ai-workspace/dashboard', icon: <LayoutDashboard size={14} /> },
             { label: 'AI Assistant', path: '/ai-workspace/assistant', icon: <MessageSquare size={14} /> },
+            { label: 'Gang Run', path: '/ai-workspace/gang-run', icon: <Layers size={14} /> },
+            { label: 'Cash Flow', path: '/ai-workspace/cash-flow', icon: <TrendingUp size={14} /> },
+            { label: 'Anomaly Detector', path: '/ai-workspace/anomalies', icon: <Activity size={14} /> },
+            { label: 'Churn Predictor', path: '/ai-workspace/churn', icon: <Users size={14} /> },
+            { label: 'Reorder Opt.', path: '/ai-workspace/reorder', icon: <Package size={14} /> },
+            { label: 'PO Matcher', path: '/ai-workspace/po-match', icon: <FileSearch size={14} /> },
+            { label: 'Scheduler', path: '/ai-workspace/scheduler', icon: <Calendar size={14} /> },
+            { label: 'Conv. Query', path: '/ai-workspace/query', icon: <MessageSquare size={14} /> },
+            { label: 'Audit Inv.', path: '/ai-workspace/audit', icon: <Shield size={14} /> },
+            { label: 'BOM Generator', path: '/ai-workspace/bom', icon: <FileText size={14} /> },
             { label: 'Smart Sales', path: '/smart-features/sales-dashboard', icon: <BarChart3 size={14} /> },
             { label: 'Invoice Intel', path: '/smart-features/invoice-intelligence', icon: <FileText size={14} /> },
             { label: 'Customer Risk', path: '/smart-features/customer-risk', icon: <Shield size={14} /> },
@@ -255,11 +265,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
             { label: 'Report Summaries', path: '/smart-features/report-summaries', icon: <FileBarChart size={14} /> },
             { label: 'Advanced Table', path: '/smart-features/advanced-data-table', icon: <Table size={14} /> },
           ]
-        },
-        {
-          label: 'AI Analytics',
-          path: '/ai-analytics',
-          icon: <BarChart3 size={18} />,
         },
       ]
     },

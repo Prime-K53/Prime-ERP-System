@@ -16,6 +16,7 @@ const routeNameMap: Record<string, string> = {
   'internal-tools': 'internal tools',
   'smart-operations': 'smart operations',
   'ai-analytics': 'AI Analytics',
+  'ai-workspace': 'AI',
   'forecasting': 'forecasting',
   'purchases': 'procurement',
   'grn': 'goods received',
