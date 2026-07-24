@@ -190,6 +190,8 @@ const AdvancedDataTableView = lazyWithRetry('./views/AdvancedDataTable', () => i
 
 const BusinessHealthReport = lazyWithRetry('./views/reports/BusinessHealthReport', () => import('./views/reports/BusinessHealthReport'));
 const AIWorkspace = lazyWithRetry('./views/AIWorkspace', () => import('./views/AIWorkspace'));
+const AIWorkspaceDashboard = lazyWithRetry('./views/ai/AIWorkspaceDashboard', () => import('./views/ai/AIWorkspaceDashboard'));
+const AIWorkspaceChat = lazyWithRetry('./views/ai/AIWorkspaceChat', () => import('./views/ai/AIWorkspaceChat'));
 // VATReport removed
 
 const PwaUpdateNotificationWrapper: React.FC = () => {
@@ -745,6 +747,8 @@ const AppLayout: React.FC = () => {
                 <Route path="/architect" element={<ErrorBoundary name="Architect"><Architect /></ErrorBoundary>} />
                 {/* AI Workspace */}
                 <Route path="/ai-workspace" element={<ErrorBoundary name="AI Workspace"><AIWorkspace /></ErrorBoundary>} />
+                <Route path="/ai-workspace/dashboard" element={<ErrorBoundary name="AI Dashboard"><AIWorkspaceDashboard /></ErrorBoundary>} />
+                <Route path="/ai-workspace/assistant" element={<ErrorBoundary name="AI Assistant"><AIWorkspaceChat /></ErrorBoundary>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
           </Suspense>

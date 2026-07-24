@@ -7,7 +7,7 @@ import {
   Wrench, Shield, CreditCard, Barcode, ChevronDown, Download, Upload,
   FileText, Briefcase, Banknote, UserPlus,
   Award,
-  TrendingUp, Layers, Cpu, CheckSquare, MessageSquare,
+  TrendingUp, Layers, Cpu, CheckSquare, MessageSquare, LayoutDashboard,
   Activity, Box, Warehouse, Table, Clock, DollarSign, RefreshCw,
   Landmark, Coins, Landmark as Bank, Scale, FileBarChart, PieChart as Pie,
   Wallet, Target, Truck, ShieldCheck, Database, WifiOff, HardDrive,
@@ -242,6 +242,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, toggle, toggleCo
           label: 'AI Workspace',
           path: '/ai-workspace',
           icon: <Sparkles size={18} />,
+          hideSubMenu: true,
+          subItems: [
+            { label: 'Dashboard', path: '/ai-workspace/dashboard', icon: <LayoutDashboard size={14} /> },
+            { label: 'AI Assistant', path: '/ai-workspace/assistant', icon: <MessageSquare size={14} /> },
+            { label: 'Smart Sales', path: '/smart-features/sales-dashboard', icon: <BarChart3 size={14} /> },
+            { label: 'Invoice Intel', path: '/smart-features/invoice-intelligence', icon: <FileText size={14} /> },
+            { label: 'Customer Risk', path: '/smart-features/customer-risk', icon: <Shield size={14} /> },
+          ]
         },
         {
           label: 'AI Analytics',
