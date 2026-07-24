@@ -16,7 +16,7 @@ import {
   Sparkles, Database, BarChart2, X, ArrowUp, ArrowDown, Building2,
   CheckCircle2, Trash2, ExternalLink, Star, Sun, Calendar} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
-import AIFloatingAssistant from '../components/ai/AIFloatingAssistant';
+
 import { useDashboardStore } from '../stores/dashboardStore';
 import { dbService } from '../services/db';
 import { formatNumber, parseFormattedNumber } from '../utils/helpers';
@@ -133,8 +133,8 @@ const getGreeting = (): string => {
    return `${curr}${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
  };
 
-const hasChartValues = (rows: Array<{ income: number; expenses: number; pos: number; paid_inv: number; unpaid_inv: number; partial_inv: number }>) =>
-  rows.some(r => toSafeNumber(r.income) > 0 || toSafeNumber(r.expenses) > 0 || toSafeNumber(r.pos) > 0 || toSafeNumber(r.paid_inv) > 0 || toSafeNumber(r.unpaid_inv) > 0 || toSafeNumber(r.partial_inv) > 0);
+const hasChartValues = (rows: Array<{ income: number; expenses: number }>) =>
+  rows.some(r => toSafeNumber(r.income) > 0 || toSafeNumber(r.expenses) > 0);
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
@@ -1330,6 +1330,11 @@ const DashboardContent: React.FC = () => {
         }
       });
 
+      // Compute income as sum of all revenue sources
+      Object.values(cData).forEach(entry => {
+        entry.income = entry.pos + entry.paid_inv + entry.unpaid_inv + entry.partial_inv;
+      });
+
       let formattedData = Object.values(cData);
 
       if (!hasChartValues(formattedData)) {
@@ -2142,20 +2147,8 @@ const DashboardContent: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>POS</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#16a34a' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Paid</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Unpaid</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#6366f1' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Partial</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#5b578c' }}>Income</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
@@ -2182,7 +2175,7 @@ const DashboardContent: React.FC = () => {
                 <ResponsiveContainer width="100%" height={isMobile ? 220 : isTablet ? 280 : 316} minWidth={0} minHeight={150}>
                   <AreaChart data={chartData} margin={{ top: 8, right: isMobile ? 4 : 16, left: isMobile ? -24 : -8, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="gradIncome" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#16a34a" stopOpacity={0.6} />
                         <stop offset="60%" stopColor="#22c55e" stopOpacity={0.15} />
                         <stop offset="100%" stopColor="#bbf7d0" stopOpacity={0} />
@@ -2225,45 +2218,14 @@ const DashboardContent: React.FC = () => {
                     />
                     <Area
                       type="monotone"
-                      dataKey="pos"
-                      name="POS Sales"
-                      stroke="#f59e0b"
-                      strokeWidth={2}
-                      fillOpacity={0}
-                      dot={false}
-                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#f59e0b', strokeWidth: 2 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="paid_inv"
-                      name="Paid Invoices"
+                      dataKey="income"
+                      name="Income"
                       stroke="#16a34a"
                       strokeWidth={2}
-                      fillOpacity={0}
+                      fillOpacity={1}
+                      fill="url(#gradIncome)"
                       dot={false}
                       activeDot={{ r: 5, fill: '#ffffff', stroke: '#16a34a', strokeWidth: 2 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="unpaid_inv"
-                      name="Unpaid Invoices"
-                      stroke="#dc2626"
-                      strokeWidth={2}
-                      fillOpacity={0}
-                      strokeDasharray="4 3"
-                      dot={false}
-                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#dc2626', strokeWidth: 2 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="partial_inv"
-                      name="Partial Invoices"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      fillOpacity={0}
-                      strokeDasharray="2 2"
-                      dot={false}
-                      activeDot={{ r: 5, fill: '#ffffff', stroke: '#6366f1', strokeWidth: 2 }}
                     />
                     <Area
                       type="monotone"
@@ -2303,8 +2265,6 @@ const DashboardContent: React.FC = () => {
           </div>)}
         </div>
       </div>
-
-      <AIFloatingAssistant />
 
       <WhatsAppMarketingModal 
         open={isWhatsAppModalOpen} 
