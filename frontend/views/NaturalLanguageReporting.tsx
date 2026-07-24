@@ -139,13 +139,12 @@ backgroundColor: '#f0f4f8',
         flex: 1,
         minHeight: 0,
         overflowY: 'auto',
-        padding: '24px 32px',
+        padding: '20px 24px',
       }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{
             display: 'flex',
             gap: 12,
-            marginBottom: 20,
           }}>
             <div style={{
               flex: 1,
@@ -153,10 +152,9 @@ backgroundColor: '#f0f4f8',
               alignItems: 'center',
               backgroundColor: '#fff',
               border: '1px solid #e2e8f0',
-              borderRadius: 16,
-              padding: '4px 4px 4px 20px',
+              borderRadius: 12,
+              padding: '4px 4px 4px 16px',
               boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-              transition: 'box-shadow 0.15s, border-color 0.15s',
             }}>
               <Search size={18} color="#94a3b8" style={{ flexShrink: 0 }} />
               <input
@@ -173,7 +171,7 @@ backgroundColor: '#f0f4f8',
                   fontWeight: 500,
                   color: '#0f172a',
                   backgroundColor: 'transparent',
-                  padding: '14px 12px',
+                  padding: '12px 10px',
                   fontFamily: "'Inter', sans-serif",
                 }}
               />
@@ -201,15 +199,14 @@ backgroundColor: '#f0f4f8',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '10px 20px',
-                  borderRadius: 12,
+                  padding: '9px 18px',
+                  borderRadius: 10,
                   border: 'none',
                   backgroundColor: !query.trim() ? '#e2e8f0' : '#6366f1',
                   color: !query.trim() ? '#94a3b8' : '#fff',
                   fontWeight: 600,
                   fontSize: 13,
                   cursor: !query.trim() ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 0.15s',
                   fontFamily: "'Inter', sans-serif",
                 }}
               >
@@ -219,280 +216,275 @@ backgroundColor: '#f0f4f8',
             </div>
           </div>
 
-          {suggestions.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, marginTop: 0 }}>
-                Suggested Queries
-              </p>
-              <div style={{
-                display: 'flex',
-                gap: 8,
-                overflowX: 'auto',
-                paddingBottom: 8,
-                scrollbarWidth: 'thin',
-              }}>
-                {suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSuggestionClick(s)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '8px 16px',
-                      borderRadius: 20,
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: '#fff',
-                      color: '#475569',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      transition: 'all 0.15s',
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                    title={s.description}
-                  >
-                    <Sparkles size={12} color="#a5b4fc" />
-                    {s.query}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {!result && !isLoading && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '80px 20px',
-              color: '#94a3b8',
-            }}>
-              <Search size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
-              <p style={{ fontSize: 16, fontWeight: 600, color: '#64748b', margin: 0 }}>
-                Ask a question to get started
-              </p>
-              <p style={{ fontSize: 13, margin: '8px 0 0', color: '#94a3b8' }}>
-                Try clicking a suggested query above or type your own
-              </p>
-            </div>
-          )}
-
-          {isLoading && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '20px 24px',
-              backgroundColor: '#eef2ff',
-              borderRadius: 16,
-              border: '1px solid #e0e7ff',
-              marginBottom: 20,
-            }}>
-              <Loader2 size={20} className="animate-spin" color="#6366f1" />
-              <div>
-                <p style={{ fontWeight: 600, color: '#4338ca', margin: 0, fontSize: 13 }}>
-                  Processing your query...
-                </p>
-                <p style={{ color: '#6366f1', margin: '2px 0 0', fontSize: 12 }}>
-                  Analyzing business data for "{query}"
-                </p>
-              </div>
-            </div>
-          )}
-
-          {result && (
-            <div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 20,
-              }}>
+          <div style={{ display: 'flex', gap: 20, flex: 1, minHeight: 0 }}>
+            {/* Left Column: Suggested Queries */}
+            <div style={{ width: 260, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+              {suggestions.length > 0 && (
                 <div>
-                  <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
-                    {result.title}
-                  </h2>
-                  <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
-                    {result.description}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={handleClear}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '8px 16px',
-                      borderRadius: 10,
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: '#fff',
-                      color: '#64748b',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                  >
-                    <X size={14} />
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {result.summary && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '14px 20px',
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: 12,
-                  border: '1px solid #bbf7d0',
-                  marginBottom: 20,
-                }}>
-                  <TrendingUp size={18} color="#16a34a" />
-                  <p style={{ color: '#166534', fontWeight: 500, margin: 0, fontSize: 13 }}>
-                    {result.summary}
-                  </p>
-                </div>
-              )}
-
-              {result.columns.length > 0 && result.data.length > 0 && (
-                <div style={{
-                  backgroundColor: 'rgba(255,255,255,0.75)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  borderRadius: 16,
-                  border: '1px solid rgba(255,255,255,0.6)',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                }}>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{
-                      width: '100%',
-                      borderCollapse: 'collapse',
-                      fontSize: 13,
-                    }}>
-                      <thead>
-                        <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                          {result.columns.map(col => (
-                            <th
-                              key={col.key}
-                              style={{
-                                textAlign: isNumericColumn(col) ? 'right' : 'left',
-                                padding: '12px 16px',
-                                fontWeight: 700,
-                                fontSize: 11,
-                                color: '#64748b',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.04em',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: isNumericColumn(col) ? 'flex-end' : 'flex-start' }}>
-                                {typeIconMap[col.type] || null}
-                                {col.label}
-                              </div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.data.map((row: any, i: number) => (
-                          <tr
-                            key={i}
-                            style={{
-                              borderBottom: '1px solid #f1f5f9',
-                              backgroundColor: i % 2 === 0 ? '#fff' : '#fafbfc',
-                              transition: 'background-color 0.1s',
-                            }}
-                          >
-                            {result.columns.map(col => (
-                              <td
-                                key={col.key}
-                                style={{
-                                  textAlign: isNumericColumn(col) ? 'right' : 'left',
-                                  padding: '10px 16px',
-                                  fontWeight: isNumericColumn(col) ? 600 : 400,
-                                  color: '#0f172a',
-                                  fontVariantNumeric: isNumericColumn(col) ? 'tabular-nums' : 'normal',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {formatCellValue(row[col.key], col.type)}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                      {columnTotals && (
-                        <tfoot>
-                          <tr style={{ borderTop: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                            {result.columns.map(col => (
-                              <td
-                                key={col.key}
-                                style={{
-                                  textAlign: isNumericColumn(col) ? 'right' : 'left',
-                                  padding: '12px 16px',
-                                  fontWeight: 700,
-                                  color: '#0f172a',
-                                  fontSize: 13,
-                                  fontVariantNumeric: 'tabular-nums',
-                                }}
-                              >
-                                {isNumericColumn(col) ? formatCellValue(columnTotals[col.key], col.type) : col.key === result.columns[0].key ? 'Total' : ''}
-                              </td>
-                            ))}
-                          </tr>
-                        </tfoot>
-                      )}
-                    </table>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                    Suggested Queries
                   </div>
-                  <div style={{
-                    padding: '10px 16px',
-                    borderTop: '1px solid #f1f5f9',
-                    fontSize: 11,
-                    color: '#94a3b8',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                  }}>
-                    <span>{result.data.length} row(s)</span>
-                    <span>{result.type.replace(/_/g, ' ')}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSuggestionClick(s)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          border: '1px solid #e2e8f0',
+                          backgroundColor: '#fff',
+                          color: '#475569',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontFamily: "'Inter', sans-serif",
+                        }}
+                        title={s.description}
+                      >
+                        <Sparkles size={14} color="#a5b4fc" style={{ flexShrink: 0 }} />
+                        <span>{s.query}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {result.data.length === 0 && (
+              {!result && !isLoading && (
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '60px 20px',
-                  backgroundColor: '#fff',
-                  borderRadius: 16,
-                  border: '1px solid #e2e8f0',
+                  textAlign: 'center',
+                  padding: '40px 16px',
                   color: '#94a3b8',
                 }}>
-                  <Search size={40} style={{ opacity: 0.2, marginBottom: 12 }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: '#64748b' }}>
-                    No results found
+                  <Search size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#64748b', margin: 0 }}>
+                    Ask a question
                   </p>
-                  <p style={{ fontSize: 12, margin: '4px 0 0' }}>
-                    {result.summary}
+                  <p style={{ fontSize: 11, margin: '6px 0 0', color: '#94a3b8' }}>
+                    Try clicking a suggestion
                   </p>
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
+
+            {/* Right Column: Results */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+              {isLoading && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '18px 22px',
+                  backgroundColor: '#eef2ff',
+                  borderRadius: 12,
+                  border: '1px solid #e0e7ff',
+                }}>
+                  <Loader2 size={18} className="animate-spin" color="#6366f1" />
+                  <div>
+                    <p style={{ fontWeight: 600, color: '#4338ca', margin: 0, fontSize: 13 }}>
+                      Processing your query...
+                    </p>
+                    <p style={{ color: '#6366f1', margin: '2px 0 0', fontSize: 12 }}>
+                      Analyzing business data for "{query}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {result && (
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 16,
+                  }}>
+                    <div>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
+                        {result.title}
+                      </h2>
+                      <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+                        {result.description}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleClear}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '7px 14px',
+                        borderRadius: 8,
+                        border: '1px solid #e2e8f0',
+                        backgroundColor: '#fff',
+                        color: '#64748b',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      <X size={14} />
+                      Clear
+                    </button>
+                  </div>
+
+                  {result.summary && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '12px 18px',
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: 10,
+                      border: '1px solid #bbf7d0',
+                      marginBottom: 16,
+                    }}>
+                      <TrendingUp size={16} color="#16a34a" />
+                      <p style={{ color: '#166534', fontWeight: 500, margin: 0, fontSize: 13 }}>
+                        {result.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {result.columns.length > 0 && result.data.length > 0 && (
+                    <div style={{
+                      backgroundColor: 'rgba(255,255,255,0.75)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      borderRadius: 14,
+                      border: '1px solid rgba(255,255,255,0.6)',
+                      overflow: 'hidden',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                    }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: 13,
+                        }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              {result.columns.map(col => (
+                                <th
+                                  key={col.key}
+                                  style={{
+                                    textAlign: isNumericColumn(col) ? 'right' : 'left',
+                                    padding: '10px 14px',
+                                    fontWeight: 700,
+                                    fontSize: 11,
+                                    color: '#64748b',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.04em',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: isNumericColumn(col) ? 'flex-end' : 'flex-start' }}>
+                                    {typeIconMap[col.type] || null}
+                                    {col.label}
+                                  </div>
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {result.data.map((row: any, i: number) => (
+                              <tr
+                                key={i}
+                                style={{
+                                  borderBottom: '1px solid #f1f5f9',
+                                  backgroundColor: i % 2 === 0 ? '#fff' : '#fafbfc',
+                                }}
+                              >
+                                {result.columns.map(col => (
+                                  <td
+                                    key={col.key}
+                                    style={{
+                                      textAlign: isNumericColumn(col) ? 'right' : 'left',
+                                      padding: '8px 14px',
+                                      fontWeight: isNumericColumn(col) ? 600 : 400,
+                                      color: '#0f172a',
+                                      fontVariantNumeric: isNumericColumn(col) ? 'tabular-nums' : 'normal',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {formatCellValue(row[col.key], col.type)}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                          {columnTotals && (
+                            <tfoot>
+                              <tr style={{ borderTop: '2px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                                {result.columns.map(col => (
+                                  <td
+                                    key={col.key}
+                                    style={{
+                                      textAlign: isNumericColumn(col) ? 'right' : 'left',
+                                      padding: '10px 14px',
+                                      fontWeight: 700,
+                                      color: '#0f172a',
+                                      fontSize: 13,
+                                      fontVariantNumeric: 'tabular-nums',
+                                    }}
+                                  >
+                                    {isNumericColumn(col) ? formatCellValue(columnTotals[col.key], col.type) : col.key === result.columns[0].key ? 'Total' : ''}
+                                  </td>
+                                ))}
+                              </tr>
+                            </tfoot>
+                          )}
+                        </table>
+                      </div>
+                      <div style={{
+                        padding: '8px 14px',
+                        borderTop: '1px solid #f1f5f9',
+                        fontSize: 11,
+                        color: '#94a3b8',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}>
+                        <span>{result.data.length} row(s)</span>
+                        <span>{result.type.replace(/_/g, ' ')}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {result.data.length === 0 && (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '50px 20px',
+                      backgroundColor: 'rgba(255,255,255,0.75)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      borderRadius: 14,
+                      border: '1px solid rgba(255,255,255,0.6)',
+                      color: '#94a3b8',
+                    }}>
+                      <Search size={36} style={{ opacity: 0.2, marginBottom: 10 }} />
+                      <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: '#64748b' }}>
+                        No results found
+                      </p>
+                      <p style={{ fontSize: 12, margin: '4px 0 0' }}>
+                        {result.summary}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
     </div>
   );
 };
