@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Save, AlertCircle, TrendingUp, TrendingDown, RefreshCw, MapPin } from 'lucide-react';
 import { Item, Warehouse } from '../../../types';
 import { useInventory } from '../../../context/InventoryContext';
+import { getDefaultDate, validateDateInFY } from '../../../utils/financialYearUtils';
 
 interface StockAdjustmentModalProps {
     isOpen: boolean;
@@ -41,6 +42,12 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({ isOpen, onC
         if (quantity < 0 && adjustmentType !== 'SET') return;
         if (adjustmentType === 'REMOVE' && quantity > currentStock) {
             // Optional: add a confirmation or warning for negative stock
+        }
+
+        const dateValidation = validateDateInFY(getDefaultDate());
+        if (dateValidation) {
+            alert(dateValidation);
+            return;
         }
 
         setIsSubmitting(true);

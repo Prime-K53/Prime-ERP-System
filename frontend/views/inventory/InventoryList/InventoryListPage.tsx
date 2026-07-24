@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../../../context/InventoryContext';
 import { useAuth } from '../../../context/AuthContext';
 import { currencyService } from '../../../services/currencyService';
+import { getDefaultDate } from '../../../utils/financialYearUtils';
 
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import SmartAdjustModal from '../components/SmartAdjustModal';
@@ -217,7 +218,7 @@ export const InventoryListPage: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `inventory-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `inventory-export-${getDefaultDate()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     notify?.(`Exported ${selectedItems.length} item(s)`, 'success');

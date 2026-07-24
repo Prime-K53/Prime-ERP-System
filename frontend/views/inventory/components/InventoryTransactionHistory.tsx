@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '@/services/logger';
 import { useAuth } from '../../../context/AuthContext';
 import { InventoryTransaction, MaterialBatch, WarehouseInventory } from '../../../types';
+import { getDefaultDate } from '../../../utils/financialYearUtils';
 
 interface InventoryTransactionHistoryProps {
   itemId?: string;
@@ -268,7 +269,7 @@ const InventoryTransactionHistory: React.FC<InventoryTransactionHistoryProps> = 
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `inventory-transactions-${new Date().toISOString().split('T')[0]}.csv`;
+              a.download = `inventory-transactions-${getDefaultDate()}.csv`;
               a.click();
               URL.revokeObjectURL(url);
             }}

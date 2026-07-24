@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useHighlight } from '../../hooks/useHighlight';
 import { DocLink } from '../../components/DocLink';
 import { generateNextId, roundFinancial } from '../../utils/helpers';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 import { useProcurement } from '../../context/ProcurementContext';
 import { useBankingStore } from '../../context/BankingContext';
 import { api } from '../../services/api';
@@ -599,7 +600,7 @@ const Payments: React.FC = () => {
     const menuRef = useRef<HTMLDivElement>(null);
 
     const [formData, setFormData] = useState<Partial<CustomerPayment>>({
-        date: new Date().toISOString().split('T')[0],
+        date: getDefaultDate(),
         customerName: '',
         subAccountName: 'Main',
         amount: 0,
@@ -753,7 +754,7 @@ const Payments: React.FC = () => {
     const [supplierEditMode, setSupplierEditMode] = useState(false);
     const [currentSupplierPaymentId, setCurrentSupplierPaymentId] = useState<string | null>(null);
     const [supplierFormData, setSupplierFormData] = useState<Partial<SupplierPayment>>({
-        date: new Date().toISOString().split('T')[0],
+        date: getDefaultDate(),
         supplierId: '',
         amount: 0,
         paymentMethod: 'Cash',
@@ -933,7 +934,7 @@ const Payments: React.FC = () => {
         const nextId = generateNextId('pay', customerPayments, companyConfig);
         setGeneratedId(nextId);
         setFormData({
-            date: new Date().toISOString().split('T')[0],
+            date: getDefaultDate(),
             customerName: '',
             customerId: '',
             subAccountName: 'Main',
@@ -969,6 +970,13 @@ const Payments: React.FC = () => {
                     setIsSubmitting(false);
                     return;
                 }
+            }
+
+            const dateError = validateDateInFY(formData.date || '');
+            if (dateError) {
+                notify(dateError, "error");
+                setIsSubmitting(false);
+                return;
             }
 
             let finalAllocations = [...allocations];
@@ -2035,6 +2043,12 @@ const Payments: React.FC = () => {
                                             return;
                                         }
 
+                                        const dateError = validateDateInFY(supplierFormData.date || '');
+                                        if (dateError) {
+                                            notify(dateError, "error");
+                                            return;
+                                        }
+
                                         const payment: SupplierPayment = {
                                             ...supplierFormData as SupplierPayment,
                                             id: supplierEditMode ? currentSupplierPaymentId! : generateNextId('spay', supplierPayments, companyConfig),
@@ -2043,12 +2057,12 @@ const Payments: React.FC = () => {
                                             allocations: supplierAllocations
                                         };
                                         if (supplierEditMode) await updateSupplierPayment(payment);
-                                        else await recordSupplierPayment(payment);
+                                        else                                         await recordSupplierPayment(payment);
 
                                         setIsSupplierModalOpen(false);
                                         setSupplierAllocations([]);
                                         setSupplierFormData({
-                                            date: new Date().toISOString().split('T')[0],
+                                            date: getDefaultDate(),
                                             supplierId: '',
                                             amount: 0,
                                             paymentMethod: 'Bank Transfer',

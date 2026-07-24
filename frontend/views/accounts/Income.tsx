@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useBankingStore } from '../../context/BankingContext';
 import { Income } from '../../types';
 import { DEFAULT_ACCOUNTS, ACCOUNT_IDS } from '../../constants';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 
 const IncomeView: React.FC = () => {
   const { income, addIncome, updateIncome, deleteIncome } = useFinance();
@@ -22,7 +23,7 @@ const IncomeView: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<Income>>({
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     amount: 0,
     category: 'Other Income',
     description: '',
@@ -48,6 +49,12 @@ const IncomeView: React.FC = () => {
           return;
       }
 
+      const dateError = validateDateInFY(formData.date!);
+      if (dateError) {
+          notify(dateError, "error");
+          return;
+      }
+
       const incData = {
           ...formData,
           amount: amt,
@@ -65,7 +72,7 @@ const IncomeView: React.FC = () => {
 
   const resetForm = () => {
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: getDefaultDate(),
         amount: 0,
         category: 'Other Income',
         description: '',

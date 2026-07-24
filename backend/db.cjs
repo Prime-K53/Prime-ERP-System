@@ -2110,7 +2110,18 @@ const initDb = () => {
           runIndex(`CREATE INDEX IF NOT EXISTS idx_examination_batch_notifications_company_id ON examination_batch_notifications(company_id)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_notification_audit_logs_company_id ON notification_audit_logs(company_id)`),
           runIndex(`CREATE INDEX IF NOT EXISTS idx_bom_default_materials_company_id ON bom_default_materials(company_id)`),
-          runIndex(`CREATE INDEX IF NOT EXISTS idx_audit_logs_company_id ON audit_logs(company_id)`)
+          runIndex(`CREATE INDEX IF NOT EXISTS idx_audit_logs_company_id ON audit_logs(company_id)`),
+          // Financial Year performance indexes
+          runIndex('CREATE INDEX IF NOT EXISTS idx_sales_fy ON sales(company_id, date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_invoices_fy ON invoices(company_id, created_at)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_customer_payments_fy ON customer_payments(company_id, date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_ledger_entries_fy ON ledger_entries(company_id, entry_date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_expenses_fy ON expenses(company_id, expense_date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_income_fy ON income(company_id, income_date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_purchase_orders_fy ON purchase_orders(company_id, order_date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_goods_receipts_fy ON goods_receipts(company_id, received_date)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_sales_orders_fy ON sales_orders(company_id, orderDate)'),
+          runIndex('CREATE INDEX IF NOT EXISTS idx_inventory_transactions_fy ON inventory_transactions(company_id, timestamp)')
         ]).then(() => {
           resolve();
         });

@@ -18,6 +18,7 @@ import { initializePrimePdfFonts } from '../shared/components/PDF/templateSettin
 import { PrimeDocData } from '../shared/components/PDF/schemas';
 import { extractDeliveryNoteData } from '../../services/geminiService';
 import { attachDocumentSecurity } from '../../utils/documentSecurity';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 
 const GoodsReceived: React.FC = () => {
   const { purchases, goodsReceipts, inventory, warehouses, saveGoodsReceipt, processGoodsReceipt, deleteGoodsReceipt } = useInventory();
@@ -105,7 +106,7 @@ const GoodsReceived: React.FC = () => {
                   setEditingGrn({
                       id: '',
                       purchaseOrderId: matchingPO ? matchingPO.id : (extracted.purchaseOrderId || 'MANUAL'),
-                      date: extracted.date || new Date().toISOString().split('T')[0],
+                      date: extracted.date || getDefaultDate(),
                       supplierId: matchingPO ? matchingPO.supplierId : (suppliers.find(s => (s.name || '').toLowerCase().includes((extracted.supplierName || '').toLowerCase()))?.id || 'UNKNOWN'),
                       supplierName: extracted.supplierName || 'Unknown Supplier',
                       status: 'Draft',
@@ -154,7 +155,7 @@ const GoodsReceived: React.FC = () => {
 
       setEditingGrn({
           purchaseOrderId: po.id,
-          date: new Date().toISOString().split('T')[0],
+          date: getDefaultDate(),
           supplierId: po.supplierId,
           supplierName: getSupplierName(po.supplierId),
           status: 'Draft',
@@ -208,6 +209,9 @@ const GoodsReceived: React.FC = () => {
   const handleSaveDraft = async () => {
       if (!editingGrn.purchaseOrderId || !editingGrn.items) return;
       
+      const dateError = validateDateInFY(editingGrn.date || '');
+      if (dateError) { notify(dateError, "error"); return; }
+      
       const grnData = {
           ...editingGrn,
           id: editingGrn.id || '',
@@ -224,6 +228,8 @@ const GoodsReceived: React.FC = () => {
           notify("Please save draft first.", "error");
           return;
       }
+      const dateError = validateDateInFY(editingGrn.date || '');
+      if (dateError) { notify(dateError, "error"); return; }
       if (confirm("Verify GRN? This will update inventory stock and capitalize Landing Costs.")) {
           await processGoodsReceipt(editingGrn as GoodsReceipt);
           setView('List');

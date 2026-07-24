@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Item } from '../../../types';
 import { useInventory } from '../../../context/InventoryContext';
+import { getDefaultDate, validateDateInFY } from '../../../utils/financialYearUtils';
 
 interface SmartAdjustModalProps {
     isOpen: boolean;
@@ -76,6 +77,12 @@ const SmartAdjustModal: React.FC<SmartAdjustModalProps> = ({ isOpen, onClose, on
 
     const handleApplyAdjustments = async () => {
         if (selectedItems.length === 0 || !hasValidQuantity) return;
+
+        const dateValidation = validateDateInFY(getDefaultDate());
+        if (dateValidation) {
+            alert(dateValidation);
+            return;
+        }
 
         setApplying(true);
         setStep('applying');

@@ -21,6 +21,7 @@ import { PreviewModal } from '../shared/components/PDF/PreviewModal';
 import { AccountDetailsDashboard } from './components/AccountDetailsDashboard';
 import { currencyService } from '../../services/currencyService';
 import { ConfirmDialog, ConfirmDialogType } from '../../components/ConfirmDialog';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 
 type ScheduledRow = {
   id: string;
@@ -147,10 +148,10 @@ const Banking: React.FC = () => {
     accountType: 'Asset' as 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense',
     currency: companyConfig?.currencySymbol || 'USD',
     status: 'Active' as 'Active' | 'Inactive' | 'Closed',
-    openingDate: new Date().toISOString().split('T')[0]
+    openingDate: getDefaultDate()
   });
   const [transactionForm, setTransactionForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     amount: '',
     type: 'Deposit' as BankTransaction['type'],
     description: '',
@@ -499,7 +500,7 @@ const Banking: React.FC = () => {
       accountType: 'Asset',
       currency: companyConfig?.currencySymbol || 'USD',
       status: 'Active',
-      openingDate: new Date().toISOString().split('T')[0]
+      openingDate: getDefaultDate()
     });
     setShowModal('Account');
   };
@@ -537,7 +538,7 @@ const Banking: React.FC = () => {
   const handleCreateTransaction = () => {
     setModalData(null);
     setTransactionForm({
-      date: new Date().toISOString().split('T')[0],
+      date: getDefaultDate(),
       amount: '',
       type: 'Deposit',
       description: '',
@@ -565,6 +566,9 @@ const Banking: React.FC = () => {
   const handleSubmitAccount = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    const dateError = validateDateInFY(accountForm.openingDate);
+    if (dateError) { window.alert(dateError); return; }
+
     const payload = {
       name: accountForm.name.trim(),
       accountNumber: accountForm.accountNumber.trim(),
@@ -591,6 +595,9 @@ const Banking: React.FC = () => {
 
   const handleSubmitTransaction = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    const dateError = validateDateInFY(transactionForm.date);
+    if (dateError) { window.alert(dateError); return; }
 
     const amount = Number(transactionForm.amount);
     if (!transactionForm.bankAccountId || !Number.isFinite(amount) || amount <= 0) return;
@@ -621,6 +628,13 @@ const Banking: React.FC = () => {
 
   const handleSubmitScheduledPayment = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    const startDateError = validateDateInFY(scheduledPaymentForm.startDate);
+    if (startDateError) { window.alert(startDateError); return; }
+    if (scheduledPaymentForm.endDate) {
+      const endDateError = validateDateInFY(scheduledPaymentForm.endDate);
+      if (endDateError) { window.alert(endDateError); return; }
+    }
 
     const amount = Number(scheduledPaymentForm.amount);
     if (!scheduledPaymentForm.name.trim() || !scheduledPaymentForm.bankAccountId || !Number.isFinite(amount) || amount <= 0) return;
@@ -661,6 +675,11 @@ const Banking: React.FC = () => {
   const handleSubmitReconciliation = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    const startDateError = validateDateInFY(reconciliationForm.startDate);
+    if (startDateError) { window.alert(startDateError); return; }
+    const endDateError = validateDateInFY(reconciliationForm.endDate);
+    if (endDateError) { window.alert(endDateError); return; }
+
     const endingBalance = Number(reconciliationForm.endingBalance);
     if (!reconciliationForm.bankAccountId || !reconciliationForm.startDate || !reconciliationForm.endDate) return;
     if (!Number.isFinite(endingBalance)) return;
@@ -699,6 +718,10 @@ const Banking: React.FC = () => {
 
   const handleSubmitForecast = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    const dateError = validateDateInFY(forecastForm.date);
+    if (dateError) { window.alert(dateError); return; }
+
     if (!forecastForm.bankAccountId || !forecastForm.date || !forecastPreview) return;
 
     const payload = {
@@ -949,7 +972,7 @@ const Banking: React.FC = () => {
       baseCurrency: 'USD',
       targetCurrency: 'EUR',
       rate,
-      date: format(new Date(), 'yyyy-MM-dd'),
+      date: getDefaultDate(),
       source: 'Manual'
     });
   };

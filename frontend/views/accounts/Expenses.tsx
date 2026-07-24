@@ -17,6 +17,7 @@ import { DEFAULT_ACCOUNTS, ACCOUNT_IDS } from '../../constants';
 import { localFileStorage } from '../../services/localFileStorage';
 import { OfflineImage } from '../../components/OfflineImage';
 import { extractPaymentProofData, analyzeExpenses } from '../../services/geminiService';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 import ReactMarkdown from 'react-markdown';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
@@ -61,7 +62,7 @@ const Expenses: React.FC = () => {
     amount: '',
     category: 'General',
     description: '',
-    date: new Date().toISOString().split('T')[0],
+date: getDefaultDate(),
     accountId: ACCOUNT_IDS.CASH_DRAWER,
     status: 'Paid'
   });
@@ -116,7 +117,13 @@ const Expenses: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) return;
-    
+
+    const dateError = validateDateInFY(formData.date);
+    if (dateError) {
+      notify(dateError, "error");
+      return;
+    }
+
     const amt = parseFloat(formData.amount);
     if (!formData.amount || isNaN(amt) || amt <= 0) {
         notify("Please enter a valid positive expense amount.", "error");
@@ -143,7 +150,7 @@ const Expenses: React.FC = () => {
       accountId: formData.accountId
     });
 
-    setFormData({ amount: '', category: 'General', description: '', date: new Date().toISOString().split('T')[0], accountId: ACCOUNT_IDS.CASH_DRAWER, status: 'Paid' });
+    setFormData({ amount: '', category: 'General', description: '', date: getDefaultDate(), accountId: ACCOUNT_IDS.CASH_DRAWER, status: 'Paid' });
     setAttachedFileId(null); 
     setIsAddModalOpen(false);
   };

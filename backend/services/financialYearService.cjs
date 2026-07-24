@@ -30,12 +30,13 @@ class FinancialYearService extends BaseService {
   }
 
   async getFinancialYearByDate(date, companyId) {
-    return this._get(
+    const row = await this._get(
       `SELECT * FROM financial_years
        WHERE company_id = ? AND date(?) >= date(start_date) AND date(?) <= date(end_date)
        LIMIT 1`,
       [companyId, date, date]
     );
+    return row || null;
   }
 
   async createFinancialYear(data, companyId, userId) {

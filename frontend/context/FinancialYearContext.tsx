@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import { api } from '../services/api';
 
 export interface FinancialYear {
   id: string;
@@ -29,6 +29,19 @@ const FinancialYearContext = createContext<FinancialYearContextType | undefined>
 
 const STORAGE_KEY = 'selectedFinancialYearId';
 
+function getFyIdFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('financialYear') || params.get('fy') || null;
+}
+
+const persistFyToLocalStorage = (fy: FinancialYear) => {
+  localStorage.setItem(STORAGE_KEY, fy.id);
+  localStorage.setItem('selectedFinancialYearName', fy.name);
+  localStorage.setItem('selectedFinancialYearStart', fy.start_date);
+  localStorage.setItem('selectedFinancialYearEnd', fy.end_date);
+  localStorage.setItem('selectedFinancialYearClosed', String(fy.is_closed));
+};
+
 export const FinancialYearProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { companyConfig, isInitialized } = useAuth();
   const [financialYears, setFinancialYears] = useState<FinancialYear[]>([]);
@@ -52,19 +65,34 @@ export const FinancialYearProvider: React.FC<{ children: React.ReactNode }> = ({
     const { years, defaultFy } = await fetchFinancialYears();
     setFinancialYears(years);
 
+    const selectAndPersist = (fy: FinancialYear) => {
+      setSelected(fy);
+      persistFyToLocalStorage(fy);
+    };
+
+    const urlId = getFyIdFromUrl();
+    if (urlId) {
+      const urlMatch = years.find((fy: FinancialYear) => fy.id === urlId);
+      if (urlMatch) {
+        selectAndPersist(urlMatch);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const storedId = localStorage.getItem(STORAGE_KEY);
     if (storedId) {
       const match = years.find((fy: FinancialYear) => fy.id === storedId);
       if (match) {
-        setSelected(match);
+        selectAndPersist(match);
         setIsLoading(false);
         return;
       }
     }
     if (defaultFy) {
-      setSelected(defaultFy);
+      selectAndPersist(defaultFy);
     } else if (years.length > 0) {
-      setSelected(years[0]);
+      selectAndPersist(years[0]);
     }
     setIsLoading(false);
   }, [fetchFinancialYears]);
@@ -74,9 +102,19 @@ export const FinancialYearProvider: React.FC<{ children: React.ReactNode }> = ({
     refreshFinancialYears();
   }, [isInitialized, refreshFinancialYears]);
 
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue !== e.oldValue) {
+        refreshFinancialYears();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refreshFinancialYears]);
+
   const setFinancialYear = useCallback((fy: FinancialYear) => {
     setSelected(fy);
-    localStorage.setItem(STORAGE_KEY, fy.id);
+    persistFyToLocalStorage(fy);
   }, []);
 
   const isDateInFY = useCallback((date: string): boolean => {

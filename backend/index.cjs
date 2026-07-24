@@ -128,6 +128,7 @@ const { auditContextMiddleware, auditAuthMiddleware, auditCrudMiddleware } = req
 const { validateTransactionPrice, calculateSellingPrice } = require('./services/pricingEngine.cjs');
 const { verifyToken, requireRole, requirePermission } = require('./middleware/auth.cjs');
 const { tenantContext } = require('./middleware/tenantContext.cjs');
+const { injectFinancialYear, addFyDateFilter } = require('./middleware/financialYearMiddleware.cjs');
 const { validateBody, sanitizeInput, inventorySchemas, salesSchemas, userSchemas, financialSchemas, productionSchemas, documentSchemas, exchangeSchemas, orderSchemas, classSchemas, subjectSchemas, notificationSchemas, accountSchemas, expenseSchemas, incomeSchemas, budgetSchemas, transferSchemas } = require('./middleware/validation.cjs');
 const CurrencyMiddleware = require('./middleware/currencyMiddleware.cjs');
 const { createLimiter, authLimiter, sensitiveLimiter } = require('./services/redisRateLimiter.cjs');
@@ -561,7 +562,7 @@ async function startServer() {
     }
   };
 
-  app.get('/api/dashboard', async (req, res) => {
+  app.get('/api/dashboard', injectFinancialYear, async (req, res) => {
     const daysRaw = Number(req.query?.days);
     const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.min(daysRaw, 120) : 30;
     const financialYearId = req.query?.financial_year_id || req.financialYearId || '';
@@ -712,6 +713,12 @@ async function startServer() {
       });
     }
     
+    try {
+      await validateFyDate('date', payload, req.companyId || '');
+    } catch (fyError) {
+      return res.status(400).json({ error: fyError.message });
+    }
+
     try {
       await validateItemsPricing(payload.items);
     } catch (validationError) {
@@ -866,6 +873,11 @@ async function startServer() {
   app.put('/api/sales/:id', async (req, res) => {
     const { id } = req.params;
     const payload = req.body || {};
+    try {
+      await validateFyDate('date', payload, req.companyId || '');
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
     const totalAmount = Number(payload.totalAmount ?? payload.total ?? 0);
     const materialTotal = Number(payload.materialTotal ?? payload.material_total ?? 0);
     const adjustmentTotal = Number(payload.adjustmentTotal ?? payload.adjustment_total ?? 0);
@@ -1033,11 +1045,20 @@ async function startServer() {
   });
 
   // Ledger
-  app.get('/api/ledger', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/ledger', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
       const accountId = req.query.account_id;
-      const rows = await finance.getLedger(req.companyId || '', accountId);
-      res.json(rows);
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter('SELECT * FROM ledger_entries WHERE company_id = ?', [companyId], req, 'entry_date');
+      if (accountId) {
+        sql += ' AND account_id = ?';
+        params.push(accountId);
+      }
+      sql += ' ORDER BY entry_date DESC, created_at DESC';
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Finance] getLedger error:', err); return res.status(500).json({ error: 'Failed to fetch ledger' }); }
+        res.json(rows || []);
+      });
     } catch (err) {
       console.error('[Finance] getLedger error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to fetch ledger' });
@@ -1072,10 +1093,15 @@ async function startServer() {
   });
 
   // Expenses
-  app.get('/api/expenses', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/expenses', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
-      const rows = await finance.getExpenses(req.companyId || '');
-      res.json(rows);
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter('SELECT * FROM expenses WHERE company_id = ?', [companyId], req, 'expense_date');
+      sql += ' ORDER BY expense_date DESC';
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Finance] getExpenses error:', err); return res.status(500).json({ error: 'Failed to fetch expenses' }); }
+        res.json(rows || []);
+      });
     } catch (err) {
       console.error('[Finance] getExpenses error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to fetch expenses' });
@@ -1115,10 +1141,15 @@ async function startServer() {
   });
 
   // Income
-  app.get('/api/income', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/income', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
-      const rows = await finance.getIncome(req.companyId || '');
-      res.json(rows);
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter('SELECT * FROM income WHERE company_id = ?', [companyId], req, 'income_date');
+      sql += ' ORDER BY income_date DESC';
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Finance] getIncome error:', err); return res.status(500).json({ error: 'Failed to fetch income' }); }
+        res.json(rows || []);
+      });
     } catch (err) {
       console.error('[Finance] getIncome error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to fetch income' });
@@ -1127,6 +1158,7 @@ async function startServer() {
 
   app.post('/api/income', requireRole('Admin', 'Accountant', 'Manager'), validateBody(incomeSchemas.create), async (req, res) => {
     try {
+      await validateFyDate('income_date', req.body, req.companyId || '');
       const row = await finance.createIncome({ ...req.body, created_by: req.user?.id }, req.companyId || '');
       res.status(201).json(row);
     } catch (err) {
@@ -1301,6 +1333,7 @@ async function startServer() {
 
   app.post('/api/transfers', requireRole('Admin', 'Accountant', 'Manager'), validateBody(transferSchemas.create), async (req, res) => {
     try {
+      await validateFyDate('transfer_date', req.body, req.companyId || '');
       const row = await finance.createTransfer(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
     } catch (err) {
@@ -1351,13 +1384,13 @@ async function startServer() {
     }
   });
 
-  app.get('/api/bank-transactions', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/bank-transactions', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
       const filters = {
         accountId: req.query.account_id,
         type: req.query.type,
         status: req.query.status,
-        startDate: req.query.start_date,
+        startDate: req.fyStartDate || req.query.start_date,
         endDate: req.query.end_date
       };
       const rows = await banking.getTransactions(req.companyId || '', filters);
@@ -1415,12 +1448,12 @@ async function startServer() {
   });
 
   // --- Financial Reporting Endpoints ---
-  app.get('/api/reports/profit-and-loss', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/profit-and-loss', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const startDate = req.query.start_date;
-      const endDate = req.query.end_date;
+      const startDate = req.query.start_date || req.fyStartDate;
+      const endDate = req.query.end_date || req.fyEndDate;
       if (!startDate || !endDate) {
-        return res.status(400).json({ error: 'start_date and end_date are required' });
+        return res.status(400).json({ error: 'start_date and end_date are required. Select a Financial Year or provide date range.' });
       }
       const report = await reporting.getProfitAndLoss(req.companyId || '', startDate, endDate);
       res.json(report);
@@ -1430,9 +1463,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/balance-sheet', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/balance-sheet', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const asOfDate = req.query.as_of_date || null;
+      const asOfDate = req.query.as_of_date || req.fyEndDate;
       const report = await reporting.getBalanceSheet(req.companyId || '', asOfDate);
       res.json(report);
     } catch (err) {
@@ -1441,12 +1474,12 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/cash-flow', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/cash-flow', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const startDate = req.query.start_date;
-      const endDate = req.query.end_date;
+      const startDate = req.query.start_date || req.fyStartDate;
+      const endDate = req.query.end_date || req.fyEndDate;
       if (!startDate || !endDate) {
-        return res.status(400).json({ error: 'start_date and end_date are required' });
+        return res.status(400).json({ error: 'start_date and end_date are required. Select a Financial Year or provide date range.' });
       }
       const report = await reporting.getCashFlowStatement(req.companyId || '', startDate, endDate);
       res.json(report);
@@ -1456,9 +1489,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/ar-aging', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/ar-aging', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const asOfDate = req.query.as_of_date || null;
+      const asOfDate = req.query.as_of_date || req.fyEndDate;
       const report = await reporting.getARAging(req.companyId || '', asOfDate);
       res.json(report);
     } catch (err) {
@@ -1467,9 +1500,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/ap-aging', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/ap-aging', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const asOfDate = req.query.as_of_date || null;
+      const asOfDate = req.query.as_of_date || req.fyEndDate;
       const report = await reporting.getAPAging(req.companyId || '', asOfDate);
       res.json(report);
     } catch (err) {
@@ -1478,9 +1511,9 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/trial-balance', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/trial-balance', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
-      const asOfDate = req.query.as_of_date || null;
+      const asOfDate = req.query.as_of_date || req.fyEndDate;
       const report = await reporting.getTrialBalance(req.companyId || '', asOfDate);
       res.json(report);
     } catch (err) {
@@ -1489,7 +1522,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/budget-vs-actual', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/budget-vs-actual', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
       const fiscalYear = req.query.fiscal_year;
       const period = req.query.period;
@@ -1504,7 +1537,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/reports/vat', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+  app.get('/api/reports/vat', requireRole('Admin', 'Accountant', 'Manager'), injectFinancialYear, async (req, res) => {
     try {
       const period = req.query.period;
       if (!period) {
@@ -1674,11 +1707,11 @@ async function startServer() {
   });
 
   // --- Invoice Endpoints ---
-  app.get('/api/invoices', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/invoices', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
       const status = req.query.status;
-      let sql = `SELECT i.*, c.name as customer_name FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id WHERE i.company_id = ?`;
-      const params = [req.companyId || ''];
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter('SELECT i.*, c.name as customer_name FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id WHERE i.company_id = ?', [companyId], req, 'i.created_at');
       if (status) {
         sql += ` AND LOWER(i.status) = ?`;
         params.push(status.toLowerCase());
@@ -1696,6 +1729,7 @@ async function startServer() {
 
   app.post('/api/invoices', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
+      await validateFyDate('invoice_date', req.body, req.companyId || '');
       const { body } = req;
       const id = body.id || randomUUID();
       db.run(
@@ -1767,10 +1801,12 @@ async function startServer() {
   });
 
   // --- Customer Payment Endpoints ---
-  app.get('/api/customer-payments', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/customer-payments', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
       const companyId = req.companyId || '';
-      db.all(`SELECT * FROM customer_payments WHERE company_id = ? ORDER BY date DESC LIMIT 500`, [companyId], (err, rows) => {
+      let { sql, params } = addFyDateFilter('SELECT * FROM customer_payments WHERE company_id = ?', [companyId], req, 'date');
+      sql += ' ORDER BY date DESC LIMIT 500';
+      db.all(sql, params, (err, rows) => {
         if (err) { console.error('[CustomerPayments] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve payments' }); }
         res.json(rows || []);
       });
@@ -1782,6 +1818,7 @@ async function startServer() {
 
   app.post('/api/customer-payments', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
+      await validateFyDate('date', req.body, req.companyId || '');
       const { body } = req;
       const id = body.id || randomUUID();
       const companyId = req.companyId || '';
@@ -1929,10 +1966,15 @@ async function startServer() {
   });
 
   // Purchase Orders
-  app.get('/api/purchases', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/purchases', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
-      const rows = await procurement.getPurchases(req.companyId || '');
-      res.json(rows);
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter(`SELECT po.*, s.name as supplier_name FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.company_id = ?`, [companyId], req, 'po.order_date');
+      sql += ' ORDER BY po.created_at DESC';
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Procurement] getPurchases error:', err); return res.status(500).json({ error: 'Failed to fetch purchases' }); }
+        res.json(rows || []);
+      });
     } catch (err) {
       console.error('[Procurement] getPurchases error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to fetch purchases' });
@@ -1974,10 +2016,15 @@ async function startServer() {
   });
 
   // Goods Receipts
-  app.get('/api/grn', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), async (req, res) => {
+  app.get('/api/grn', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), injectFinancialYear, async (req, res) => {
     try {
-      const rows = await procurement.getGoodsReceipts(req.companyId || '');
-      res.json(rows);
+      const companyId = req.companyId || '';
+      let { sql, params } = addFyDateFilter(`SELECT gr.*, po.supplier_id, s.name as supplier_name FROM goods_receipts gr LEFT JOIN purchase_orders po ON gr.purchase_order_id = po.id LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE gr.company_id = ?`, [companyId], req, 'gr.received_date');
+      sql += ' ORDER BY gr.created_at DESC';
+      db.all(sql, params, (err, rows) => {
+        if (err) { console.error('[Procurement] getGRNs error:', err); return res.status(500).json({ error: 'Failed to fetch goods receipts' }); }
+        res.json(rows || []);
+      });
     } catch (err) {
       console.error('[Procurement] getGRNs error:', err?.message || err);
       res.status(500).json({ error: err?.message || 'Failed to fetch goods receipts' });
@@ -1986,6 +2033,7 @@ async function startServer() {
 
   app.post('/api/grn', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
     try {
+      await validateFyDate('received_date', req.body, req.companyId || '');
       const row = await procurement.createGoodsReceipt(req.body, req.companyId || '', req.user?.id);
       res.status(201).json(row);
     } catch (err) {
@@ -2560,8 +2608,11 @@ async function startServer() {
   /**
    * Sales Exchange Module Endpoints
    */
-  app.get('/api/sales-exchanges', checkPermission('view_exchanges'), (req, res) => {
-    db.all('SELECT * FROM sales_exchanges WHERE company_id = ? ORDER BY exchange_date DESC', [req.companyId || ''], (err, rows) => {
+  app.get('/api/sales-exchanges', checkPermission('view_exchanges'), injectFinancialYear, (req, res) => {
+    const companyId = req.companyId || '';
+    let { sql, params } = addFyDateFilter('SELECT * FROM sales_exchanges WHERE company_id = ?', [companyId], req, 'exchange_date');
+    sql += ' ORDER BY exchange_date DESC';
+    db.all(sql, params, (err, rows) => {
       if (err) return sendError(res, 500, err.message, 'FETCH_EXCHANGES_FAILED');
       res.json(rows);
     });
@@ -2613,6 +2664,7 @@ async function startServer() {
 
   app.post('/api/sales-exchanges', checkPermission('create_exchange'), validateBody(exchangeSchemas.create), async (req, res) => {
     try {
+      await validateFyDate('exchange_date', req.body, req.companyId || '');
       const { 
         invoice_id, customer_id, customer_name, reason, remarks, items 
       } = req.body;
@@ -2734,8 +2786,11 @@ async function startServer() {
   /**
    * Sales Orders Endpoints
    */
-  app.get('/api/sales-orders', checkPermission('view_sales_orders'), (req, res) => {
-    db.all('SELECT * FROM sales_orders WHERE company_id = ? ORDER BY orderDate DESC', [req.companyId || ''], (err, rows) => {
+  app.get('/api/sales-orders', checkPermission('view_sales_orders'), injectFinancialYear, (req, res) => {
+    const companyId = req.companyId || '';
+    let { sql, params } = addFyDateFilter('SELECT * FROM sales_orders WHERE company_id = ?', [companyId], req, 'orderDate');
+    sql += ' ORDER BY orderDate DESC';
+    db.all(sql, params, (err, rows) => {
       if (err) return sendError(res, 500, err.message, 'FETCH_SALES_ORDERS_FAILED');
       res.json(rows);
     });
@@ -2752,6 +2807,7 @@ async function startServer() {
 
   app.post('/api/sales-orders', checkPermission('create_sales_order'), validateBody(orderSchemas.create), async (req, res) => {
     try {
+      await validateFyDate('orderDate', req.body, req.companyId || '');
       const o = req.body || {};
       if (!o.id || !o.items || !Array.isArray(o.items) || o.items.length === 0) {
         return sendError(res, 400, 'Order id and items are required', 'MISSING_FIELDS');
@@ -2976,8 +3032,10 @@ async function startServer() {
 });
 
   // 2. GET Inventory
-  app.get('/api/inventory', checkPermission('view_inventory'), (req, res) => {
-    db.all("SELECT * FROM inventory WHERE company_id = ?", [req.companyId || ''], (err, rows) => {
+  app.get('/api/inventory', checkPermission('view_inventory'), injectFinancialYear, (req, res) => {
+    const companyId = req.companyId || '';
+    let { sql, params } = addFyDateFilter('SELECT * FROM inventory WHERE company_id = ?', [companyId], req, 'created_at');
+    db.all(sql, params, (err, rows) => {
     if (err) { console.error('[Inventory] GET error:', err); return res.status(500).json({ error: 'Failed to retrieve inventory' }); }
     res.json(rows);
   });
@@ -3033,27 +3091,29 @@ app.get('/api/invoices/:id/details', (req, res) => {
 });
 
   // 10. Get Examination Stats
-  app.get('/api/stats/examination', checkPermission('view_stats'), (req, res) => {
+  app.get('/api/stats/examination', checkPermission('view_stats'), injectFinancialYear, (req, res) => {
     const companyId = req.companyId || '';
+    const fyStart = req.fyStartDate;
+    const fyEnd = req.fyEndDate;
     const stats = {};
     
-    db.get("SELECT COUNT(*) as count FROM examinations WHERE status = 'pending' AND company_id = ?", [companyId], (err, row) => {
+    db.get("SELECT COUNT(*) as count FROM examinations WHERE status = 'pending' AND company_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)", [companyId, fyStart, fyEnd], (err, row) => {
       if (err) { console.error('[Stats] pending count error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
       stats.pending_jobs = row?.count || 0;
       
-      db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'paid' AND company_id = ?", [companyId], (err, row) => {
+      db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'paid' AND company_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)", [companyId, fyStart, fyEnd], (err, row) => {
         if (err) { console.error('[Stats] revenue error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
         stats.total_revenue = row?.total || 0;
         
-        db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'unpaid' AND company_id = ?", [companyId], (err, row) => {
+        db.get("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE LOWER(status) = 'unpaid' AND company_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)", [companyId, fyStart, fyEnd], (err, row) => {
           if (err) { console.error('[Stats] outstanding error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
           stats.outstanding_amount = row?.total || 0;
           
-          db.get("SELECT SUM(actual_waste_sheets) as waste FROM examinations WHERE company_id = ?", [companyId], (err, row) => {
+          db.get("SELECT SUM(actual_waste_sheets) as waste FROM examinations WHERE company_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)", [companyId, fyStart, fyEnd], (err, row) => {
             if (err) { console.error('[Stats] waste error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
             stats.total_waste = row?.waste || 0;
             
-            db.get("SELECT SUM(total_sheets_used) as total, SUM(internal_cost) as cost FROM examinations WHERE company_id = ?", [companyId], (err, row) => {
+            db.get("SELECT SUM(total_sheets_used) as total, SUM(internal_cost) as cost FROM examinations WHERE company_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)", [companyId, fyStart, fyEnd], (err, row) => {
               if (err) { console.error('[Stats] sheets/cost error:', err); return res.status(500).json({ error: 'Failed to load stats' }); }
               stats.total_sheets = row?.total || 0;
               stats.total_cost = row?.cost || 0;
@@ -3066,9 +3126,10 @@ app.get('/api/invoices/:id/details', (req, res) => {
   });
 
   // 14. Get Monthly Examination Data for Dashboard
-  app.get('/api/stats/monthly-data', checkPermission('view_stats'), (req, res) => {
-    const currentYear = new Date().getFullYear();
+  app.get('/api/stats/monthly-data', checkPermission('view_stats'), injectFinancialYear, (req, res) => {
     const companyId = req.companyId || '';
+    const fyStart = req.fyStartDate;
+    const fyEnd = req.fyEndDate;
     
     const query = `
       SELECT 
@@ -3083,19 +3144,19 @@ app.get('/api/invoices/:id/details', (req, res) => {
       LEFT JOIN (
         SELECT strftime('%m', created_at) as month, SUM(total_amount) as revenue
         FROM invoices 
-        WHERE strftime('%Y', created_at) = ? AND status != 'cancelled' AND company_id = ?
+        WHERE date(created_at) >= date(?) AND date(created_at) <= date(?) AND status != 'cancelled' AND company_id = ?
         GROUP BY month
       ) i ON m.month = i.month
       LEFT JOIN (
         SELECT strftime('%m', created_at) as month, SUM(internal_cost) as month_cost
         FROM examinations
-        WHERE strftime('%Y', created_at) = ? AND company_id = ?
+        WHERE date(created_at) >= date(?) AND date(created_at) <= date(?) AND company_id = ?
         GROUP BY month
       ) e ON m.month = e.month
       ORDER BY m.month
     `;
 
-    db.all(query, [currentYear.toString(), companyId, currentYear.toString(), companyId], (err, rows) => {
+    db.all(query, [fyStart, fyEnd, companyId, fyStart, fyEnd, companyId], (err, rows) => {
       if (err) { console.error('[Stats] monthly-data error:', err); return res.status(500).json({ error: 'Failed to load monthly data' }); }
       res.json(rows);
     });
@@ -3107,6 +3168,7 @@ app.get('/api/invoices/:id/details', (req, res) => {
   // Create inventory transaction (deduction)
   app.post('/api/inventory/transactions', checkPermission('create_transaction'), validateBody(inventorySchemas.stockAdjustment), async (req, res) => {
     try {
+      await validateFyDate('transaction_date', req.body, req.companyId || '');
       const { itemId, warehouseId, quantity, batchId, reason, reference, referenceId, performedBy, type } = req.body;
 
       // Resolve performer: prefer body value, fall back to authenticated user

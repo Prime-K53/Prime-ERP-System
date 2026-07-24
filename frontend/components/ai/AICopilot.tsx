@@ -1,38 +1,115 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, X, Send } from 'lucide-react';
+import { Sparkles, X, Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateAIResponse } from '../../services/geminiService';
+import { useAuth } from '../../context/AuthContext';
+import { useInventory } from '../../context/InventoryContext';
+import { useSales } from '../../context/SalesContext';
+import { useFinance } from '../../context/FinanceContext';
+import { useProcurement } from '../../context/ProcurementContext';
+import { executeQuery, interpretQuery, generateQuerySuggestions } from '../../services/naturalLanguageReportingService';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-const RESPONSES: Record<string, string> = {
-  revenue: 'Revenue is up 12% this month. Paid invoices grew 18%, POS sales 7%.',
-  profit: 'Net profit margin at 23.4%, 2.1% above target.',
-  invoice: '14 outstanding invoices totaling MK 3.2M. 5 overdue >30 days.',
-  customer: '8 high-risk customers, MK 1.8M outstanding. Top: Acme Corp.',
-  forecast: 'Next month: MK 8.5M revenue projected, MK 5.2M expenses.',
-  anomaly: '3 anomalies today: duplicate payment, sales spike, suspicious discount.',
-  summary: 'Today: MK 420K revenue, 28 transactions, 3 invoices, 2 payments.',
-  help: 'Ask me about revenue, invoices, customers, forecasts, anomalies...',
-};
+function buildContext(sales: any[], inventory: any[], customers: any[], invoices: any[], accounts: any[], expenses: any[], income: any[], purchases: any[], companyName: string, userName: string): string {
+  const unpaidInvoices = invoices.filter((inv: any) => {
+    const s = String(inv.status || '').toLowerCase();
+    return s !== 'cancelled' && s !== 'voided' && s !== 'draft' && (s === 'unpaid' || s === 'partial' || s === 'overdue');
+  });
+  const receivables = unpaidInvoices.reduce((sum: number, inv: any) => {
+    const total = Number(inv.totalAmount) || 0;
+    const paid = Number(inv.paidAmount) || 0;
+    return sum + Math.max(0, total - paid);
+  }, 0);
+  const overdueCount = invoices.filter((i: any) => String(i.status || '').toLowerCase() === 'overdue').length;
+  const totalRevenue = invoices
+    .filter((i: any) => String(i.status || '').toLowerCase() !== 'cancelled')
+    .reduce((s: number, i: any) => s + (Number(i.totalAmount) || 0), 0);
+  const totalExpenses = expenses.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  const totalIncome = income.reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
+  const inventoryValue = inventory.reduce((sum: number, i: any) => sum + ((i.cost || 0) * (i.stock || 0)), 0);
+  const todaySales = sales.filter((s: any) => {
+    const d = new Date(s.date);
+    return !isNaN(d.getTime()) && d.toDateString() === new Date().toDateString();
+  });
+  const todayRevenue = todaySales.reduce((s: number, sale: any) => s + (Number(sale.totalAmount) || Number(sale.total) || 0), 0);
 
-const DEFAULT_RESPONSE = 'I\'m your AI finance assistant. Ask me about revenue, invoices, customers, forecasts, or anomalies.';
+  return `COMPANY: ${companyName}
+USER: ${userName}
+DATE: ${new Date().toLocaleDateString()}
 
-function matchResponse(input: string): string {
-  const lower = input.toLowerCase();
-  for (const [key, reply] of Object.entries(RESPONSES)) {
-    if (lower.includes(key)) return reply;
+INVENTORY: ${inventory.length} items, value MWK ${inventoryValue.toLocaleString()}
+CUSTOMERS: ${customers.length} total
+INVOICES: ${invoices.length} total (${overdueCount} overdue, ${unpaidInvoices.length - overdueCount} unpaid) — MWK ${receivables.toLocaleString()} outstanding
+TOTAL REVENUE: MWK ${totalRevenue.toLocaleString()}
+TOTAL EXPENSES: MWK ${totalExpenses.toLocaleString()}
+TOTAL INCOME: MWK ${totalIncome.toLocaleString()}
+TODAY SALES: ${todaySales.length} transactions, MWK ${todayRevenue.toLocaleString()}
+ACCOUNTS: ${accounts.length} chart of accounts
+PURCHASES: ${purchases.length} purchase records
+
+Product sales data available: ${sales.length > 0 ? sales.length + ' sales records' : 'None'}
+Customer payment data available: Yes`;
+}
+
+function formatQueryResult(result: any): string {
+  const lines: string[] = [];
+
+  if (result.summary) {
+    lines.push(result.summary);
   }
-  return DEFAULT_RESPONSE;
+
+  if (result.data && result.data.length > 0) {
+    const sample = result.data.slice(0, 10);
+    sample.forEach((row: any, i: number) => {
+      const parts = result.columns.map((col: any) => {
+        let val = row[col.key];
+        if (val === null || val === undefined) return '-';
+        if (col.type === 'currency') {
+          const num = Number(val);
+          return isNaN(num) ? String(val) : `MWK ${num.toLocaleString()}`;
+        }
+        if (col.type === 'number') {
+          const num = Number(val);
+          return isNaN(num) ? String(val) : num.toLocaleString();
+        }
+        if (col.type === 'date') {
+          try { return new Date(val).toLocaleDateString(); } catch { return String(val); }
+        }
+        return String(val);
+      });
+      lines.push(`  ${i + 1}. ${parts.join(' | ')}`);
+    });
+    if (result.data.length > 10) {
+      lines.push(`  ... and ${result.data.length - 10} more`);
+    }
+  }
+
+  if (result.data && result.data.length === 0) {
+    lines.push('No results found.');
+  }
+
+  return lines.join('\n');
+}
+
+function formatCurrency(amount: number): string {
+  return `MWK ${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export default function AICopilot() {
+  const { companyConfig, user } = useAuth();
+  const { inventory } = useInventory();
+  const { customers, sales } = useSales();
+  const { invoices, accounts, expenses, income } = useFinance();
+  const { purchases } = useProcurement();
+
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hi! I\'m your AI Copilot. ' + DEFAULT_RESPONSE },
+    { role: 'assistant', content: `Hi! I'm your AI Copilot. Ask me about your business data in plain English.` },
   ]);
   const [typing, setTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,17 +131,60 @@ export default function AICopilot() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  const handleSend = useCallback(() => {
+  const allData = { sales: sales || [], invoices: invoices || [], expenses: expenses || [], customers: customers || [], inventory: inventory || [], purchases: purchases || [] };
+
+  const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || typing) return;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setTyping(true);
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: matchResponse(text) }]);
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    try {
+      const interpreted = interpretQuery(text);
+      const result = executeQuery(text, allData);
+
+      if (result.type !== 'unknown' && result.data !== undefined) {
+        setMessages(prev => [...prev, { role: 'assistant', content: formatQueryResult(result) }]);
+      } else {
+        const context = buildContext(
+          sales || [], inventory || [], customers || [], invoices || [],
+          accounts || [], expenses || [], income || [], purchases || [],
+          companyConfig?.companyName || 'Prime ERP',
+          user?.name || 'Admin'
+        );
+        const systemPrompt = `You are Prime ERP AI Assistant. Answer the user's business question using the provided data. Use plain text only — no markdown formatting, no "**" bold, no bullet symbols. Use numbers and MWK currency format. Be concise: 3-5 sentences max.`;
+        const resp = await generateAIResponse(
+          `${context}\n\nUser Question: ${text}`,
+          systemPrompt
+        );
+        const cleaned = resp.replace(/\*\*/g, '').replace(/\*/g, '');
+        setMessages(prev => [...prev, { role: 'assistant', content: cleaned }]);
+      }
+    } catch {
+      const context = buildContext(
+        sales || [], inventory || [], customers || [], invoices || [],
+        accounts || [], expenses || [], income || [], purchases || [],
+        companyConfig?.companyName || 'Prime ERP',
+        user?.name || 'Admin'
+      );
+      try {
+        const systemPrompt = `You are Prime ERP AI Assistant. Answer the user's business question using the provided data. Use plain text only — no markdown formatting, no "**" bold, no bullet symbols. Use numbers and MWK currency format. Be concise: 3-5 sentences max.`;
+        const resp = await generateAIResponse(
+          `${context}\n\nUser Question: ${text}`,
+          systemPrompt
+        );
+        const cleaned = resp.replace(/\*\*/g, '').replace(/\*/g, '');
+        setMessages(prev => [...prev, { role: 'assistant', content: cleaned }]);
+      } catch {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error processing your request. Please try again.' }]);
+      }
+    } finally {
       setTyping(false);
-    }, 800);
-  }, [input, typing]);
+    }
+  }, [input, typing, sales, inventory, customers, invoices, accounts, expenses, income, purchases, companyConfig, user, allData]);
 
   return (
     <>
@@ -112,6 +232,7 @@ export default function AICopilot() {
                   fontSize: 13,
                   lineHeight: 1.5,
                   wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
                 }}>
                   {m.content}
                 </div>
@@ -126,16 +247,7 @@ export default function AICopilot() {
                   alignItems: 'center',
                   gap: 4,
                 }}>
-                  {[0, 1, 2].map(i => (
-                    <span key={i} style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      background: '#94a3b8',
-                      animation: 'ai-bounce 1.4s infinite ease-in-out both',
-                      animationDelay: `${i * 0.16}s`,
-                    }} />
-                  ))}
+                  <Loader2 size={14} color="#94a3b8" className="animate-spin" />
                 </div>
               )}
               <div ref={bottomRef} />
@@ -146,7 +258,7 @@ export default function AICopilot() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about revenue, invoices..."
+                placeholder="Ask about your business..."
                 style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', fontSize: 13, outline: 'none', color: '#0f172a' }}
               />
               <button onClick={handleSend} disabled={typing || !input.trim()} style={{
@@ -180,10 +292,6 @@ export default function AICopilot() {
         @keyframes ai-pulse-ring {
           0% { transform: scale(1); opacity: 1; }
           100% { transform: scale(1.5); opacity: 0; }
-        }
-        @keyframes ai-bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
         }
       `}</style>
     </>

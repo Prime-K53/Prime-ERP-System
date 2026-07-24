@@ -898,6 +898,7 @@ const App: React.FC = () => {
                   </ProductionProvider>
                 </InventoryProvider>
               </FinanceProvider>
+              </FinancialYearProvider>
               </AppProvider>
             </AuthProvider>
           </NotificationProvider>

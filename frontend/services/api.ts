@@ -63,6 +63,15 @@ apiClient.interceptors.request.use((config) => {
       if (parsed?.companyId) config.headers['x-company-id'] = parsed.companyId;
     }
   } catch { /* non-fatal */ }
+  // Attach selected Financial Year ID to every request as query param
+  try {
+    const fyId = localStorage.getItem('selectedFinancialYearId');
+    if (fyId && config.params) {
+      config.params.financial_year_id = fyId;
+    } else if (fyId) {
+      config.params = { ...config.params, financial_year_id: fyId };
+    }
+  } catch { /* non-fatal */ }
   return config;
 });
 

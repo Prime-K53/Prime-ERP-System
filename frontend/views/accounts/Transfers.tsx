@@ -15,6 +15,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'da
 import { exportToCSV } from '../../services/excelService';
 import { generateNextId } from '../../utils/helpers';
 import { currencyService } from '../../services/currencyService';
+import { getDefaultDate, validateDateInFY } from '../../utils/financialYearUtils';
 
 const Transfers: React.FC = () => {
   const { transfers, executeTransfer } = useFinance();
@@ -40,7 +41,7 @@ const Transfers: React.FC = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     amount: '',
     fromAccountId: '',
     toAccountId: '',
@@ -160,9 +161,13 @@ const Transfers: React.FC = () => {
       if (fromAccountBalance < amount) {
         notify('Insufficient balance in source account', 'error');
         return;
-      }
+}
     }
-    
+
+    // Validate date against active financial year
+    const dateError = validateDateInFY(formData.date);
+    if (dateError) { notify(dateError, "error"); return; }
+
     try {
       const transferId = generateNextId('TRF', transfers, companyConfig);
       const reference = formData.reference || transferId;

@@ -10,6 +10,7 @@ import { extractInvoiceData } from '../../../services/geminiService';
 import { localFileStorage } from '../../../services/localFileStorage';
 import { useNavigate } from 'react-router-dom';
 import { SupplierModal } from './SupplierModal';
+import { getDefaultDate, validateDateInFY } from '../../../utils/financialYearUtils';
 
 interface PurchaseBuilderProps {
     inventory: Item[];
@@ -32,8 +33,12 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
     const supplierDropdownRef = useRef<HTMLDivElement>(null);
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
-    const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
-    const [dueDate, setDueDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+    const [billDate, setBillDate] = useState(getDefaultDate());
+    const [dueDate, setDueDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        return d.toISOString().split('T')[0];
+    });
     const [reference, setReference] = useState('');
     
     const [searchItem, setSearchTerm] = useState('');
@@ -64,7 +69,7 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
             const sName = suppliers.find(s => s.id === initialData.supplierId)?.name || initialData.supplierId;
             setSupplierSearch(sName);
             setBillDate(new Date(initialData.date).toISOString().split('T')[0]);
-            setDueDate(initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+            setDueDate(initialData.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })());
             setReference(initialData.reference || '');
             
             const items = (initialData.items || []).map(pItem => {
@@ -94,8 +99,8 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
             setSelectedSupplierId('');
             setSupplierSearch('');
             setPoItems([]);
-            setBillDate(new Date().toISOString().split('T')[0]);
-            setDueDate(new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]);
+            setBillDate(getDefaultDate());
+            setDueDate((() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })());
             setReference(generateNextId('VR', purchases, companyConfig));
         }
     }, [initialData, inventory, suppliers]);
@@ -162,6 +167,9 @@ export const PurchaseBuilder: React.FC<PurchaseBuilderProps> = ({ inventory, sup
 
     const handleSubmit = () => {
         if(!selectedSupplierId || poItems.length === 0) return;
+        
+        const dateError = validateDateInFY(billDate);
+        if (dateError) { notify(dateError, "error"); return; }
         
         const payload = {
             supplierId: selectedSupplierId,

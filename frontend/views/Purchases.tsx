@@ -16,6 +16,7 @@ import { PurchaseReceiveModal } from './purchases/components/PurchaseReceiveModa
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateNextId } from '../utils/helpers';
 import { ConfirmDialog, ConfirmDialogType } from '../components/ConfirmDialog';
+import { getDefaultDate, validateDateInFY } from '../utils/financialYearUtils';
 
 const Purchases: React.FC = () => {
   const { refreshAllData } = useData();
@@ -43,8 +44,8 @@ const Purchases: React.FC = () => {
          setEditingPurchase({
            id: '',
            supplierId: location.state.supplierId,
-           date: new Date().toISOString(),
-           dueDate: new Date().toISOString(),
+date: getDefaultDate(),
+            dueDate: getDefaultDate(),
            items: [],
            total: 0,
            status: 'Draft',
@@ -57,6 +58,8 @@ const Purchases: React.FC = () => {
   }, [location.state]);
   
   const handleCreateOrder = (data: { supplierId: string, items: any[], reference: string, dueDate: string, date: string }) => {
+    const dateError = validateDateInFY(data.date);
+    if (dateError) { notify(dateError, "error"); return; }
     const purchaseId = generateNextId('PO', purchases, companyConfig);
     addPurchase({
       id: purchaseId,
@@ -74,6 +77,8 @@ const Purchases: React.FC = () => {
 
   const handleUpdateOrder = (id: string, data: { supplierId: string, items: any[], reference: string, dueDate: string, date: string }) => {
       if (!editingPurchase) return;
+      const dateError = validateDateInFY(data.date);
+      if (dateError) { notify(dateError, "error"); return; }
       const updatedPurchase: Purchase = {
           ...editingPurchase,
           supplierId: data.supplierId,
@@ -173,7 +178,7 @@ const Purchases: React.FC = () => {
 
           addPurchase({
               id: newId,
-              date: new Date().toISOString(),
+              date: getDefaultDate(),
               supplierId,
               items: combinedItems,
               total: totalCost,
