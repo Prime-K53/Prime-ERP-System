@@ -44,7 +44,7 @@ export const assertInvoiceNumberFormat = (id: string, config?: CompanyConfig, ty
     .trim()
     .match(/(\d+)(?!.*\d)/)?.[1];
 
-  if (!numericText || numericText.length < 1) {
+  if (!numericText || numericText.length !== padding) {
     throw new Error(`Invoice number must end with ${padding} digits.`);
   }
   return true;

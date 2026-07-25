@@ -107,7 +107,7 @@ class InventoryAlertService {
    */
   async checkInventoryLevels(items: Item[], warehouseInventory?: WarehouseInventory[]): Promise<InventoryAlert[]> {
     const alerts: InventoryAlert[] = [];
-    const existingAlerts = this.getActiveAlerts();
+    const existingAlerts = await this.getActiveAlerts();
 
     for (const item of items) {
       const currentQty = item.stock || 0;
@@ -208,7 +208,7 @@ class InventoryAlertService {
     if (alerts.length > 0) {
       const allAlerts = this.getAllAlerts();
       allAlerts.push(...alerts);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(allAlerts.slice(-100))); // Keep last 100 alerts
+      await dbService.saveSetting(this.STORAGE_KEY, allAlerts.slice(-100)); // Keep last 100 alerts
       
       // Trigger notification if enabled
       if (this.config.enableDashboardAlerts) {
@@ -269,11 +269,11 @@ class InventoryAlertService {
   /**
    * Get all alerts
    */
-  getAllAlerts(): InventoryAlert[] {
+  async getAllAlerts(): Promise<InventoryAlert[]> {
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
+      const stored = await dbService.getSetting<InventoryAlert[]>(this.STORAGE_KEY);
+      if (stored && stored.length > 0) {
+        return stored;
       }
     } catch (error) {
       logger.error('[InventoryAlertService] Error loading alerts:', error);
@@ -284,22 +284,22 @@ class InventoryAlertService {
   /**
    * Get active (unacknowledged) alerts
    */
-  getActiveAlerts(): InventoryAlert[] {
-    return this.getAllAlerts().filter(a => !a.acknowledged);
+  async getActiveAlerts(): Promise<InventoryAlert[]> {
+    return (await this.getAllAlerts()).filter(a => !a.acknowledged);
   }
 
   /**
    * Get alerts by item
    */
-  getAlertsForItem(itemId: string): InventoryAlert[] {
-    return this.getAllAlerts().filter(a => a.itemId === itemId);
+  async getAlertsForItem(itemId: string): Promise<InventoryAlert[]> {
+    return (await this.getAllAlerts()).filter(a => a.itemId === itemId);
   }
 
   /**
    * Get alert counts by type
    */
-  getAlertCounts(): { critical: number; warning: number; info: number; total: number } {
-    const active = this.getActiveAlerts();
+  async getAlertCounts(): Promise<{ critical: number; warning: number; info: number; total: number }> {
+    const active = await this.getActiveAlerts();
     return {
       critical: active.filter(a => a.alertType === 'critical').length,
       warning: active.filter(a => a.alertType === 'warning').length,
@@ -311,22 +311,22 @@ class InventoryAlertService {
   /**
    * Acknowledge an alert
    */
-  acknowledgeAlert(alertId: string, userId: string): void {
-    const alerts = this.getAllAlerts();
+  async acknowledgeAlert(alertId: string, userId: string): Promise<void> {
+    const alerts = await this.getAllAlerts();
     const alert = alerts.find(a => a.id === alertId);
     if (alert) {
       alert.acknowledged = true;
       alert.acknowledgedBy = userId;
       alert.acknowledgedAt = new Date().toISOString();
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(alerts));
+      await dbService.saveSetting(this.STORAGE_KEY, alerts);
     }
   }
 
   /**
    * Acknowledge all alerts for an item
    */
-  acknowledgeAllForItem(itemId: string, userId: string): void {
-    const alerts = this.getAllAlerts();
+  async acknowledgeAllForItem(itemId: string, userId: string): Promise<void> {
+    const alerts = await this.getAllAlerts();
     alerts.forEach(alert => {
       if (alert.itemId === itemId && !alert.acknowledged) {
         alert.acknowledged = true;
@@ -334,14 +334,14 @@ class InventoryAlertService {
         alert.acknowledgedAt = new Date().toISOString();
       }
     });
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(alerts));
+    await dbService.saveSetting(this.STORAGE_KEY, alerts);
   }
 
   /**
    * Clear all alerts
    */
-  clearAllAlerts(): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify([]));
+  async clearAllAlerts(): Promise<void> {
+    await dbService.saveSetting(this.STORAGE_KEY, []);
   }
 
   /**
@@ -379,8 +379,8 @@ class InventoryAlertService {
   /**
    * Export alerts to CSV
    */
-  exportToCSV(): string {
-    const alerts = this.getAllAlerts();
+  async exportToCSV(): Promise<string> {
+    const alerts = await this.getAllAlerts();
     
     const headers = [
       'ID', 'Item', 'Type', 'Severity', 'Message', 'Current Qty', 'Threshold', 

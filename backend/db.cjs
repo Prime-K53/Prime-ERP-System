@@ -449,6 +449,21 @@ const initDb = () => {
         }
       });
 
+      // Warehouse Snapshots Table
+      db.run(`CREATE TABLE IF NOT EXISTS warehouse_snapshots (
+        id TEXT PRIMARY KEY,
+        snapshot_data TEXT NOT NULL,
+        snapshot_type TEXT DEFAULT 'manual',
+        notes TEXT,
+        created_by TEXT,
+        company_id TEXT NOT NULL DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`, (err) => {
+        if (!err) {
+          db.run(`CREATE INDEX IF NOT EXISTS idx_warehouse_snapshots_company ON warehouse_snapshots(company_id)`, () => {});
+        }
+      });
+
       // Material Categories Table
       db.run(`CREATE TABLE IF NOT EXISTS material_categories (
         id TEXT PRIMARY KEY,

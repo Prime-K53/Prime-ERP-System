@@ -84,10 +84,15 @@ class ExaminationProductionService {
    */
   private async loadJobs(): Promise<void> {
     try {
-      const saved = localStorage.getItem(EXAM_PRODUCTION_JOBS_KEY);
-      if (saved) {
-        const jobs: ExaminationProductionJob[] = JSON.parse(saved);
-        jobs.forEach(job => this.jobs.set(job.id, job));
+      const saved = await dbService.getSetting<ExaminationProductionJob[]>(EXAM_PRODUCTION_JOBS_KEY);
+      if (saved && saved.length > 0) {
+        saved.forEach(job => this.jobs.set(job.id, job));
+      } else {
+        const local = localStorage.getItem(EXAM_PRODUCTION_JOBS_KEY);
+        if (local) {
+          const jobs: ExaminationProductionJob[] = JSON.parse(local);
+          jobs.forEach(job => this.jobs.set(job.id, job));
+        }
       }
     } catch (error) {
       logger.error('Failed to load examination production jobs', error as Error);
@@ -100,7 +105,7 @@ class ExaminationProductionService {
   private async saveJobs(): Promise<void> {
     try {
       const jobs = Array.from(this.jobs.values());
-      localStorage.setItem(EXAM_PRODUCTION_JOBS_KEY, JSON.stringify(jobs));
+      await dbService.saveSetting(EXAM_PRODUCTION_JOBS_KEY, jobs);
     } catch (error) {
       logger.error('Failed to save examination production jobs', error as Error);
     }

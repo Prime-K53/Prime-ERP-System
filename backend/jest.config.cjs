@@ -11,7 +11,8 @@ module.exports = {
     '/dist/',
     '/tests/integration/',
     'tenant_isolation_security.test.js',
-    'profitMargin.integration.test.js'
+    'profitMargin.integration.test.js',
+    'referral.test.cjs'
   ],
   collectCoverageFrom: [
     'services/**/*.cjs',

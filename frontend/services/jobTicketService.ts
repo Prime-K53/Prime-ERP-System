@@ -57,7 +57,7 @@ const hasOwn = <T extends object>(value: T, key: keyof any) => Object.prototype.
 const migrateLegacyData = async () => {
   if (typeof window === 'undefined') return;
 
-  const migrationCompleted = localStorage.getItem(MIGRATION_KEY) === 'true';
+  const migrationCompleted = await dbService.getSetting<string>(MIGRATION_KEY) === 'true';
   let existingTickets: JobTicket[];
   try { existingTickets = await productionDb.jobTickets.toArray(); } catch { existingTickets = await dbService.getAll<JobTicket>('jobTickets'); }
   let existingSettings: ({ id: string } & JobTicketSettings) | undefined;
@@ -86,7 +86,7 @@ const migrateLegacyData = async () => {
     try { await productionDb.jobTicketSettings.put(migratedSettings); } catch { await dbService.put('jobTicketSettings', migratedSettings); }
   }
 
-  localStorage.setItem(MIGRATION_KEY, 'true');
+  await dbService.saveSetting(MIGRATION_KEY, 'true');
 };
 
 const getStoredTickets = async (): Promise<JobTicket[]> => {
@@ -389,22 +389,20 @@ export const jobTicketService = {
     });
   },
 
-  getNotificationLog: (ticketId: string): JobTicketNotification[] => {
+  getNotificationLog: async (ticketId: string): Promise<JobTicketNotification[]> => {
     try {
-      const data = localStorage.getItem('jobTicketNotifications');
-      const notifications: JobTicketNotification[] = data ? JSON.parse(data) : [];
+      const notifications = await dbService.getSetting<JobTicketNotification[]>('jobTicketNotifications') || [];
       return notifications.filter((entry) => entry.ticketId === ticketId);
     } catch {
       return [];
     }
   },
 
-  saveNotification: (notification: JobTicketNotification): void => {
+  saveNotification: async (notification: JobTicketNotification): Promise<void> => {
     try {
-      const data = localStorage.getItem('jobTicketNotifications');
-      const notifications: JobTicketNotification[] = data ? JSON.parse(data) : [];
+      const notifications = await dbService.getSetting<JobTicketNotification[]>('jobTicketNotifications') || [];
       notifications.push(notification);
-      localStorage.setItem('jobTicketNotifications', JSON.stringify(notifications));
+      await dbService.saveSetting('jobTicketNotifications', notifications);
     } catch (error) {
       logger.error('Failed to save notification:', error);
     }

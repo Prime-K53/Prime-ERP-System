@@ -41,11 +41,9 @@ describe('customerNotificationService', () => {
 
   it('should trigger notification when enabled', async () => {
     const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789', amount: '$100' };
-    vi.stubGlobal('confirm', vi.fn(() => true));
     
     await customerNotificationService.triggerNotification('QUOTATION', data);
     
-    expect(globalThis.confirm).toHaveBeenCalled();
     expect(dbService.put).toHaveBeenCalledWith('customerNotificationLogs', expect.objectContaining({
       customerName: 'John Doe',
       type: 'QUOTATION'
@@ -79,13 +77,14 @@ describe('customerNotificationService', () => {
     expect(dbService.put).not.toHaveBeenCalled();
   });
 
-  it('should not open messaging when the user cancels the prompt', async () => {
-    const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789' };
-    vi.stubGlobal('confirm', vi.fn(() => false));
+  it('should log notification with internal delivery mode', async () => {
+    const data = { id: '123', customerName: 'John Doe', phoneNumber: '123456789', amount: '$50' };
 
     await customerNotificationService.triggerNotification('RECEIPT', data);
 
-    expect(globalThis.confirm).toHaveBeenCalled();
-    expect(globalThis.open).not.toHaveBeenCalled();
+    expect(dbService.put).toHaveBeenCalledWith('customerNotificationLogs', expect.objectContaining({
+      customerName: 'John Doe',
+      type: 'RECEIPT'
+    }));
   });
 });

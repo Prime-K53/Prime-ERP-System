@@ -14,12 +14,26 @@ vi.mock('../../context/AuthContext', () => ({
   useAuth: () => mockUseAuth()
 }));
 
+const mockUseSales = vi.fn();
+vi.mock('../../context/SalesContext', () => ({
+  useSales: () => mockUseSales()
+}));
+
+vi.mock('../../context/FinanceContext', () => ({
+  useFinance: () => ({ invoices: [] })
+}));
+
+vi.mock('../../context/ExaminationContext', () => ({
+  useExamination: () => ({ batches: [] })
+}));
+
 describe('SalesAudit split payment aggregation', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-02-23T12:00:00.000Z'));
     mockUseData.mockReset();
     mockUseAuth.mockReset();
+    mockUseSales.mockReset();
   });
 
   afterEach(() => {
@@ -27,7 +41,7 @@ describe('SalesAudit split payment aggregation', () => {
   });
 
   it('does not double-count split transactions in payment method totals', () => {
-    mockUseData.mockReturnValue({
+    mockUseSales.mockReturnValue({
       sales: [
         {
           id: 'SALE-1',
@@ -57,9 +71,7 @@ describe('SalesAudit split payment aggregation', () => {
           cashierId: 'USER-1'
         }
       ],
-      customerPayments: [],
-      companyConfig: { currencySymbol: '$' },
-      allUsers: [{ id: 'USER-1', name: 'Cashier One', fullName: 'Cashier One' }]
+      customerPayments: []
     });
 
     mockUseAuth.mockReturnValue({

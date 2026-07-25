@@ -41,7 +41,7 @@ export const publishSystemAlert = async (input: SystemAlertInput) => {
       id: alert.id,
       date: alert.date
     };
-    localStorage.setItem(NOTIFICATION_SYNC_KEY, JSON.stringify(payload));
+    await dbService.saveSetting(NOTIFICATION_SYNC_KEY, payload);
     window.dispatchEvent(new CustomEvent(NOTIFICATION_UPDATE_EVENT, { detail: payload }));
   }
 

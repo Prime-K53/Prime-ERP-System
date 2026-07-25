@@ -22,6 +22,7 @@ import {
 import { transactionService } from './transactionService';
 import { generateNextId } from '../utils/helpers';
 import { generateNextSalesInvoiceNumber } from './documentNumberService';
+import { apiClient as fetchApiClient } from './apiClient';
 import { RenderPage, RenderNode, RenderText, RenderLine, RenderSecurity } from '../../contracts/RenderModel';
 import {
   recalculatePrice as recalculateProductPrice,
@@ -505,7 +506,50 @@ const mergeSalePayload = (baseSale: any, remoteSale: any) => {
   return merged;
 };
 
-// Removed API_BASE - All operations must be local-only.
+const normalizeBackendInventoryItem = (item: any): Item => ({
+  id: item.id,
+  name: item.name,
+  material: item.material || '',
+  type: item.type || 'material',
+  category: item.category || item.category_id || '',
+  quantity: Number(item.quantity || item.stock || 0),
+  unit: item.unit || 'units',
+  costPrice: Number(item.cost_per_unit ?? item.cost ?? item.costPrice ?? 0),
+  sellingPrice: Number(item.selling_price ?? item.sellingPrice ?? item.price ?? 0),
+  minStockLevel: Number(item.min_stock_level ?? item.minStockLevel ?? 0),
+  maxStockLevel: Number(item.max_stock_level ?? item.maxStockLevel ?? 0),
+  reorderPoint: Number(item.reorder_point ?? item.reorderPoint ?? 0),
+  warehouseId: item.warehouse_id || item.warehouseId || '',
+  reserved: Number(item.reserved || 0),
+  isProtected: Boolean(item.is_protected || item.isProtected),
+  category_id: item.category_id || null,
+  min_stock_level: Number(item.min_stock_level ?? item.minStockLevel ?? 0),
+  max_stock_level: Number(item.max_stock_level ?? item.maxStockLevel ?? 0),
+  reorder_point: Number(item.reorder_point ?? item.reorderPoint ?? 0),
+  cost_per_unit: Number(item.cost_per_unit ?? item.cost ?? item.costPrice ?? 0),
+  selling_price: Number(item.selling_price ?? item.sellingPrice ?? item.price ?? 0),
+  warehouse_id: item.warehouse_id || item.warehouseId || '',
+  company_id: item.company_id || '',
+  created_at: item.created_at || item.last_updated || '',
+  updated_at: item.updated_at || item.last_updated || '',
+});
+
+const mapInventoryItemToBackend = (item: Item): any => ({
+  id: item.id,
+  name: item.name,
+  material: item.material || item.category || '',
+  type: (item.type || 'material').toLowerCase(),
+  category_id: item.category_id || null,
+  quantity: Number(item.quantity || item.stock || 0),
+  unit: item.unit || 'units',
+  cost_per_unit: Number(item.costPrice ?? item.cost ?? item.cost_per_unit ?? 0),
+  selling_price: Number(item.sellingPrice ?? item.price ?? item.selling_price ?? 0),
+  min_stock_level: Number(item.minStockLevel ?? item.min_stock_level ?? 0),
+  max_stock_level: Number(item.maxStockLevel ?? item.max_stock_level ?? 0),
+  reorder_point: Number(item.reorderPoint ?? item.reorder_point ?? 0),
+  warehouse_id: item.warehouseId || item.warehouse_id || null,
+  reserved: Number(item.reserved || 0),
+});
 
 export const api = {
   auth: {
@@ -552,74 +596,32 @@ export const api = {
   },
 
   inventory: {
-    getAllItems: () => handle(() => dbService.getAll<Item>('inventory'), 'Inventory.GetAll'),
+    getAllItems: () => handle(async () => {
+      try {
+        const response = await fetchApiClient.requestJson<any[]>({ endpoint: '/inventory' });
+        const remoteItems = Array.isArray(response) ? response : [];
+        return remoteItems.map((item: any) => normalizeBackendInventoryItem(item)) as Item[];
+      } catch (err: any) {
+        if (err.name === 'OfflineRequestError' || err.name === 'ApiClientError') {
+          console.warn('[Inventory.GetAll] Remote unavailable, falling back to local cache.');
+          return dbService.getAll<Item>('inventory');
+        }
+        throw err;
+      }
+    }, 'Inventory.GetAll'),
     createItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Create');
-      const isSellable = !['material', 'raw material', 'stationery', 'service'].includes(String(item.type).toLowerCase());
-      const validation = isSellable
-        ? validateMinimumMarkup(
-            Number(item.costPrice || item.cost || 0),
-            Number(item.sellingPrice || item.price || 0),
-            item
-          )
-        : { valid: true, profit: 0, profitMarkup: 0, minimumMarkup: 0 };
-      if (!validation.valid) {
-        throw new Error(
-          `Cannot save product. Markup (${validation.profitMarkup.toFixed(1)}%) is below minimum (${validation.minimumMarkup}%). ${validation.message}`
-        );
-      }
-      const validatedItem: Item = {
-        ...item,
-        costPrice: Number(item.costPrice || item.cost || 0),
-        sellingPrice: Number(item.sellingPrice || item.price || 0),
-        profitAmount: isSellable ? validation.profit : 0,
-        profitMargin: isSellable ? validation.profitMarkup : 0,
-        minimumMargin: isSellable ? validation.minimumMarkup : 0,
-        pricingValidated: !isSellable || validation.valid,
-        validationTimestamp: new Date().toISOString(),
-      };
-      await dbService.put('inventory', validatedItem);
-      return;
+      const payload = mapInventoryItemToBackend(item);
+      await fetchApiClient.requestJson({ endpoint: '/inventory', method: 'POST', body: JSON.stringify(payload) });
     }, 'Inventory.Create'),
     updateItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Update');
-      const isSellable = !['material', 'raw material', 'stationery', 'service'].includes(String(item.type).toLowerCase());
-      const validation = isSellable
-        ? validateMinimumMarkup(
-            Number(item.costPrice || item.cost || 0),
-            Number(item.sellingPrice || item.price || 0),
-            item
-          )
-        : { valid: true, profit: 0, profitMarkup: 0, minimumMarkup: 0 };
-      if (!validation.valid) {
-        throw new Error(
-          `Cannot save product. Markup (${validation.profitMarkup.toFixed(1)}%) is below minimum (${validation.minimumMarkup}%). ${validation.message}`
-        );
-      }
-      const validatedItem: Item = {
-        ...item,
-        costPrice: Number(item.costPrice || item.cost || 0),
-        sellingPrice: Number(item.sellingPrice || item.price || 0),
-        profitAmount: isSellable ? validation.profit : 0,
-        profitMargin: isSellable ? validation.profitMarkup : 0,
-        minimumMargin: isSellable ? validation.minimumMarkup : 0,
-        pricingValidated: !isSellable || validation.valid,
-        validationTimestamp: new Date().toISOString(),
-      };
-      await dbService.put('inventory', validatedItem);
-      return;
+      const payload = mapInventoryItemToBackend(item);
+      await fetchApiClient.requestJson({ endpoint: `/inventory/${item.id}`, method: 'PUT', body: JSON.stringify(payload) });
     }, 'Inventory.Update'),
     deleteItem: (id: string) => handle(async () => {
-      checkAuth(['Admin'], 'Inventory.Delete'); // Restricted to Admin
-      
-      // Check if item is protected before deletion
-      const allItems = await dbService.getAll<Item>('inventory');
-      const item = allItems.find(i => i.id === id);
-      if (item?.isProtected) {
-        throw new Error('Cannot delete protected item. This item is required for examination module operations.');
-      }
-      
-      return dbService.delete('inventory', id);
+      checkAuth(['Admin'], 'Inventory.Delete');
+      await fetchApiClient.requestJson({ endpoint: `/inventory/${id}`, method: 'DELETE' });
     }, 'Inventory.Delete'),
     getAllWarehouses: () => handle(() => dbService.getAll<Warehouse>('warehouses'), 'Inventory.GetWarehouses'),
     saveWarehouse: (wh: Warehouse) => handle(() => {

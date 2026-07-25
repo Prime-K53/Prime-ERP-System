@@ -1,18 +1,8 @@
-/**
- * Inventory Transaction Service
- * 
- * Provides secure inventory deduction with:
- * - Multi-warehouse support
- * - Batch/lot tracking
- * - Full audit trail
- * - Transaction rollback support
- */
-
-
 import { logger } from './logger';
 import { InventoryTransaction, MaterialBatch, WarehouseInventory } from '../types';
 import { dbService } from './db';
 import { generateOpaqueId } from '../utils/idGeneration';
+import { apiClient as fetchApiClient, OfflineRequestError } from './apiClient';
 
 export interface InventoryDeductionRequest {
   itemId: string;
@@ -49,14 +39,10 @@ export interface InventoryAdditionRequest {
 }
 
 class InventoryTransactionService {
-  /**
-   * Deduct inventory from warehouse with full tracking
-   */
   async deductInventory(request: InventoryDeductionRequest): Promise<InventoryDeductionResult> {
     const { itemId, warehouseId, quantity, batchId, reason, reference, referenceId, performedBy } = request;
 
     try {
-      // Idempotency check: skip if this reference+item was already deducted
       if (reference && referenceId) {
         const existingTxns = await dbService.getAll<InventoryTransaction>('inventoryTransactions');
         const alreadyDeducted = existingTxns.some(t =>
@@ -71,49 +57,32 @@ class InventoryTransactionService {
         }
       }
 
-      // Get current inventory
       const item = await dbService.get<any>('inventory', itemId);
-      
       if (!item) {
         return { success: false, error: 'Item not found' };
       }
 
-      // Check warehouse inventory if multi-warehouse is enabled
+      const companyConfig = JSON.parse(localStorage.getItem('nexus_company_config') || '{}');
+      const allowNegative = companyConfig?.inventorySettings?.allowNegativeStock === true;
       const warehouseInventoryList = await dbService.getAll<WarehouseInventory>('warehouseInventory');
       let currentQuantity = item.stock || 0;
-      
       if (warehouseId) {
         const whInv = warehouseInventoryList.find(w => w.itemId === itemId && w.warehouseId === warehouseId);
         currentQuantity = whInv?.quantity || 0;
       }
-
-      // Check if sufficient quantity available
-      const companyConfig = JSON.parse(localStorage.getItem('nexus_company_config') || '{}');
-      const allowNegative = companyConfig?.inventorySettings?.allowNegativeStock === true;
       if (!allowNegative && currentQuantity < quantity) {
-        return { 
-          success: false, 
-          error: `Insufficient stock. Available: ${currentQuantity}, Requested: ${quantity}` 
-        };
+        return { success: false, error: `Insufficient stock. Available: ${currentQuantity}, Requested: ${quantity}` };
       }
 
-      // Handle batch-specific deduction
       if (batchId) {
         const batches = await dbService.getAll<MaterialBatch>('materialBatches');
         const batch = batches.find(b => b.id === batchId && b.itemId === itemId);
-        
         if (!batch) {
           return { success: false, error: 'Batch not found' };
         }
-
         if (batch.remainingQuantity < quantity) {
-          return { 
-            success: false, 
-            error: `Insufficient batch quantity. Available: ${batch.remainingQuantity}, Requested: ${quantity}` 
-          };
+          return { success: false, error: `Insufficient batch quantity. Available: ${batch.remainingQuantity}, Requested: ${quantity}` };
         }
-
-        // Update batch
         const updatedBatch = {
           ...batch,
           remainingQuantity: batch.remainingQuantity - quantity,
@@ -123,22 +92,31 @@ class InventoryTransactionService {
         await dbService.put('materialBatches', updatedBatch);
       }
 
-      // Calculate costs
-      const unitCost = item.cost || 0;
-      const totalCost = quantity * unitCost;
+      try {
+        await fetchApiClient.requestJson({
+          endpoint: '/inventory/transactions',
+          method: 'POST',
+          body: JSON.stringify({ itemId, warehouseId, quantity, reason, reference, referenceId, performedBy, type: 'OUT' })
+        });
+      } catch (apiErr: any) {
+        if (apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError') {
+          return this.executeLocalDeduction(request, item, warehouseInventoryList, currentQuantity);
+        }
+        throw apiErr;
+      }
 
-      // Create transaction record
+      const unitCost = item.cost || 0;
       const transaction: InventoryTransaction = {
         id: generateOpaqueId('TXN'),
         itemId,
         warehouseId,
         batchId,
         type: 'OUT',
-        quantity: -quantity,  // Negative for deduction
+        quantity: -quantity,
         previousQuantity: currentQuantity,
         newQuantity: currentQuantity - quantity,
         unitCost,
-        totalCost: -totalCost,
+        totalCost: -(quantity * unitCost),
         reference,
         referenceId,
         reason,
@@ -146,17 +124,11 @@ class InventoryTransactionService {
         timestamp: new Date().toISOString()
       };
 
-      // Save transaction
       await dbService.put('inventoryTransactions', transaction);
 
-      // Update main inventory
-      const updatedItem = {
-        ...item,
-        stock: (item.stock || 0) - quantity
-      };
+      const updatedItem = { ...item, stock: (item.stock || 0) - quantity };
       await dbService.put('inventory', updatedItem);
 
-      // Update warehouse inventory if tracking
       if (warehouseId) {
         const whInv = warehouseInventoryList.find(w => w.itemId === itemId && w.warehouseId === warehouseId);
         if (whInv) {
@@ -170,34 +142,67 @@ class InventoryTransactionService {
         }
       }
 
-      return {
-        success: true,
-        transaction,
-        remainingQuantity: currentQuantity - quantity
-      };
-
+      return { success: true, transaction, remainingQuantity: currentQuantity - quantity };
     } catch (error) {
       logger.error('[InventoryTransactionService] Error deducting inventory:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
-  /**
-   * Add inventory to warehouse with full tracking
-   */
+  private async executeLocalDeduction(
+    request: InventoryDeductionRequest,
+    item: any,
+    warehouseInventoryList: WarehouseInventory[],
+    currentQuantity: number
+  ): Promise<InventoryDeductionResult> {
+    const { itemId, warehouseId, quantity, batchId, reason, reference, referenceId, performedBy } = request;
+    const unitCost = item.cost || 0;
+    const totalCost = quantity * unitCost;
+
+    const transaction: InventoryTransaction = {
+      id: generateOpaqueId('TXN'),
+      itemId,
+      warehouseId,
+      batchId,
+      type: 'OUT',
+      quantity: -quantity,
+      previousQuantity: currentQuantity,
+      newQuantity: currentQuantity - quantity,
+      unitCost,
+      totalCost: -totalCost,
+      reference,
+      referenceId,
+      reason,
+      performedBy,
+      timestamp: new Date().toISOString()
+    };
+
+    await dbService.put('inventoryTransactions', transaction);
+
+    const updatedItem = { ...item, stock: (item.stock || 0) - quantity };
+    await dbService.put('inventory', updatedItem);
+
+    if (warehouseId) {
+      const whInv = warehouseInventoryList.find(w => w.itemId === itemId && w.warehouseId === warehouseId);
+      if (whInv) {
+        const updatedWhInv = {
+          ...whInv,
+          quantity: (whInv.quantity || 0) - quantity,
+          available: ((whInv.available || 0) - quantity),
+          lastUpdated: new Date().toISOString()
+        };
+        await dbService.put('warehouseInventory', updatedWhInv);
+      }
+    }
+
+    return { success: true, transaction, remainingQuantity: currentQuantity - quantity };
+  }
+
   async addInventory(request: InventoryAdditionRequest): Promise<InventoryDeductionResult> {
-    const { 
-      itemId, warehouseId, quantity, batchId, unitCost, reason, 
-      reference, referenceId, performedBy, supplierId, supplierName, expiryDate 
-    } = request;
+    const { itemId, warehouseId, quantity, batchId, unitCost, reason, reference, referenceId, performedBy, supplierId, supplierName, expiryDate } = request;
 
     try {
-      // Get current inventory
       const item = await dbService.get<any>('inventory', itemId);
-      
       if (!item) {
         return { success: false, error: 'Item not found' };
       }
@@ -205,10 +210,35 @@ class InventoryTransactionService {
       let currentQuantity = item.stock || 0;
       let newQuantity = currentQuantity + quantity;
 
-      // Create batch if provided
+      try {
+        await fetchApiClient.requestJson({
+          endpoint: '/inventory/transactions',
+          method: 'POST',
+          body: JSON.stringify({ itemId, warehouseId, quantity, reason, reference, referenceId, performedBy, type: 'IN' })
+        });
+
+        const currentCost = item.normalizedCP ?? item.cost ?? 0;
+        const newNormalizedCP = currentQuantity > 0
+          ? ((currentCost * currentQuantity) + (unitCost * quantity)) / newQuantity
+          : unitCost;
+
+        await fetchApiClient.requestJson({
+          endpoint: `/inventory/${itemId}`,
+          method: 'PUT',
+          body: JSON.stringify({
+            quantity: newQuantity,
+            cost_per_unit: newNormalizedCP
+          })
+        });
+      } catch (apiErr: any) {
+        if (apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError') {
+          return this.executeLocalAddition(request, item, currentQuantity);
+        }
+        throw apiErr;
+      }
+
       if (batchId && quantity > 0) {
         const batchNumber = batchId || generateOpaqueId('BATCH');
-        
         const newBatch: MaterialBatch = {
           id: batchNumber,
           itemId,
@@ -224,14 +254,10 @@ class InventoryTransactionService {
           status: 'active',
           createdAt: new Date().toISOString()
         };
-        
         await dbService.put('materialBatches', newBatch);
       }
 
-      // Calculate costs
       const totalCost = quantity * unitCost;
-
-      // Create transaction record
       const transaction: InventoryTransaction = {
         id: generateOpaqueId('TXN'),
         itemId,
@@ -250,10 +276,8 @@ class InventoryTransactionService {
         timestamp: new Date().toISOString()
       };
 
-      // Save transaction
       await dbService.put('inventoryTransactions', transaction);
 
-      // Update main inventory with weighted-average normalized cost
       const currentCost = item.normalizedCP ?? item.cost ?? 0;
       const newNormalizedCP = currentQuantity > 0
         ? ((currentCost * currentQuantity) + (unitCost * quantity)) / newQuantity
@@ -267,10 +291,9 @@ class InventoryTransactionService {
       };
       await dbService.put('inventory', updatedItem);
 
-      // Update or create warehouse inventory
       const warehouseInventoryList = await dbService.getAll<WarehouseInventory>('warehouseInventory');
       const whInv = warehouseInventoryList.find(w => w.itemId === itemId && w.warehouseId === warehouseId);
-      
+
       if (whInv) {
         const updatedWhInv = {
           ...whInv,
@@ -292,25 +315,131 @@ class InventoryTransactionService {
         await dbService.put('warehouseInventory', newWhInv);
       }
 
-      return {
-        success: true,
-        transaction,
-        remainingQuantity: newQuantity
-      };
-
+      return { success: true, transaction, remainingQuantity: newQuantity };
     } catch (error) {
       logger.error('[InventoryTransactionService] Error adding inventory:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
-  /**
-   * Get transaction history for an item
-   */
+  private async executeLocalAddition(request: InventoryAdditionRequest, item: any, currentQuantity: number): Promise<InventoryDeductionResult> {
+    const { itemId, warehouseId, quantity, batchId, unitCost, reason, reference, referenceId, performedBy, supplierId, supplierName, expiryDate } = request;
+    let newQuantity = currentQuantity + quantity;
+
+    if (batchId && quantity > 0) {
+      const batchNumber = batchId || generateOpaqueId('BATCH');
+      const newBatch: MaterialBatch = {
+        id: batchNumber,
+        itemId,
+        batchNumber,
+        quantity,
+        remainingQuantity: quantity,
+        costPerUnit: unitCost,
+        receivedDate: new Date().toISOString(),
+        expiryDate,
+        supplierId,
+        supplierName,
+        warehouseId,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+      await dbService.put('materialBatches', newBatch);
+    }
+
+    const totalCost = quantity * unitCost;
+    const transaction: InventoryTransaction = {
+      id: generateOpaqueId('TXN'),
+      itemId,
+      warehouseId,
+      batchId,
+      type: 'IN',
+      quantity,
+      previousQuantity: currentQuantity,
+      newQuantity,
+      unitCost,
+      totalCost,
+      reference,
+      referenceId,
+      reason,
+      performedBy,
+      timestamp: new Date().toISOString()
+    };
+
+    await dbService.put('inventoryTransactions', transaction);
+
+    const currentCost = item.normalizedCP ?? item.cost ?? 0;
+    const newNormalizedCP = currentQuantity > 0
+      ? ((currentCost * currentQuantity) + (unitCost * quantity)) / newQuantity
+      : unitCost;
+    const updatedItem = {
+      ...item,
+      stock: newQuantity,
+      normalizedCP: newNormalizedCP,
+      cost: newNormalizedCP,
+      costPrice: newNormalizedCP,
+    };
+    await dbService.put('inventory', updatedItem);
+
+    const warehouseInventoryList = await dbService.getAll<WarehouseInventory>('warehouseInventory');
+    const whInv = warehouseInventoryList.find(w => w.itemId === itemId && w.warehouseId === warehouseId);
+
+    if (whInv) {
+      const updatedWhInv = {
+        ...whInv,
+        quantity: (whInv.quantity || 0) + quantity,
+        available: ((whInv.available || 0) + quantity),
+        lastUpdated: new Date().toISOString()
+      };
+      await dbService.put('warehouseInventory', updatedWhInv);
+    } else if (warehouseId) {
+      const newWhInv: WarehouseInventory = {
+        id: generateOpaqueId('WHINV'),
+        itemId,
+        warehouseId,
+        quantity,
+        reserved: 0,
+        available: quantity,
+        lastUpdated: new Date().toISOString()
+      };
+      await dbService.put('warehouseInventory', newWhInv);
+    }
+
+    return { success: true, transaction, remainingQuantity: newQuantity };
+  }
+
   async getTransactionHistory(itemId: string, limit: number = 50): Promise<InventoryTransaction[]> {
+    try {
+      const response = await fetchApiClient.requestJson<any[]>({ endpoint: `/inventory/${itemId}/transactions?limit=${limit}` });
+      if (Array.isArray(response)) {
+        const mapped = response.map((t: any) => ({
+          id: t.id,
+          itemId: t.item_id,
+          warehouseId: t.warehouse_id,
+          batchId: t.batch_id,
+          type: t.type,
+          quantity: t.quantity,
+          previousQuantity: t.previous_quantity,
+          newQuantity: t.new_quantity,
+          unitCost: t.unit_cost,
+          totalCost: t.total_cost,
+          reference: t.reference,
+          referenceId: t.reference_id,
+          reason: t.reason,
+          performedBy: t.performed_by,
+          timestamp: t.timestamp
+        })) as InventoryTransaction[];
+
+        for (const txn of mapped) {
+          await dbService.put('inventoryTransactions', txn);
+        }
+        return mapped;
+      }
+    } catch (apiErr: any) {
+      if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+        logger.warn('[InventoryTransactionService] API error fetching transactions, falling back to local:', apiErr);
+      }
+    }
+
     const transactions = await dbService.getAll<InventoryTransaction>('inventoryTransactions');
     return transactions
       .filter(t => t.itemId === itemId)
@@ -318,9 +447,6 @@ class InventoryTransactionService {
       .slice(0, limit);
   }
 
-  /**
-   * Get active batches for an item
-   */
   async getActiveBatches(itemId: string): Promise<MaterialBatch[]> {
     const batches = await dbService.getAll<MaterialBatch>('materialBatches');
     return batches
@@ -328,10 +454,33 @@ class InventoryTransactionService {
       .sort((a, b) => new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime());
   }
 
-  /**
-   * Get warehouse inventory summary
-   */
   async getWarehouseInventory(warehouseId?: string): Promise<WarehouseInventory[]> {
+    try {
+      if (warehouseId) {
+        const response = await fetchApiClient.requestJson<any[]>({ endpoint: `/inventory/warehouse/${warehouseId}` });
+        if (Array.isArray(response)) {
+          const mapped = response.map((w: any) => ({
+            id: w.id || `${w.warehouse_id}_${w.item_id}`,
+            itemId: w.item_id,
+            warehouseId: w.warehouse_id,
+            quantity: w.quantity || 0,
+            reserved: w.reserved || 0,
+            available: (w.quantity || 0) - (w.reserved || 0),
+            lastUpdated: w.last_updated || new Date().toISOString()
+          })) as WarehouseInventory[];
+
+          for (const wh of mapped) {
+            await dbService.put('warehouseInventory', wh);
+          }
+          return mapped;
+        }
+      }
+    } catch (apiErr: any) {
+      if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+        logger.warn('[InventoryTransactionService] API error fetching warehouse inventory, falling back to local:', apiErr);
+      }
+    }
+
     const inventory = await dbService.getAll<WarehouseInventory>('warehouseInventory');
     if (warehouseId) {
       return inventory.filter(i => i.warehouseId === warehouseId);
@@ -340,11 +489,6 @@ class InventoryTransactionService {
   }
 }
 
-/**
- * Inventory Reservation Service
- * 
- * Manages material reservations for work orders to prevent inventory conflicts
- */
 export interface ReservationRequest {
   workOrderId: string;
   materialId: string;
@@ -367,23 +511,18 @@ export interface ReservationReleaseRequest {
 }
 
 class InventoryReservationService {
-  /**
-   * Check if materials are available for reservation
-   */
   async checkAvailability(materialId: string, quantity: number, warehouseId?: string): Promise<{ available: number; canReserve: boolean }> {
     try {
       const inventory = await dbService.getAll<any>('inventory');
       const item = inventory.find(i => i.id === materialId);
-      
+
       if (!item) {
         return { available: 0, canReserve: false };
       }
 
-      // Get current reservations for this material
       const reservations = await this.getActiveReservationsForMaterial(materialId);
       const totalReserved = reservations.reduce((sum, r) => sum + r.quantityReserved, 0);
 
-      // Check warehouse-specific availability if requested
       let availableQuantity = item.stock || 0;
       if (warehouseId) {
         const warehouseInventory = await dbService.getAll<WarehouseInventory>('warehouseInventory');
@@ -391,7 +530,6 @@ class InventoryReservationService {
         availableQuantity = whInv?.available || 0;
       }
 
-      // Calculate truly available (stock - reserved)
       const trulyAvailable = availableQuantity - totalReserved;
 
       const companyConfig = JSON.parse(localStorage.getItem('nexus_company_config') || '{}');
@@ -407,9 +545,6 @@ class InventoryReservationService {
     }
   }
 
-  /**
-   * Create material reservations for a work order
-   */
   async createReservations(requests: ReservationRequest[]): Promise<ReservationResult[]> {
     const results: ReservationResult[] = [];
 
@@ -417,7 +552,6 @@ class InventoryReservationService {
       const { workOrderId, materialId, materialName, quantity, unitCost, warehouseId } = request;
 
       try {
-        // Check availability first with over-reservation validation
         const { available, canReserve } = await this.checkAvailability(materialId, quantity, warehouseId);
 
         if (!canReserve) {
@@ -429,7 +563,6 @@ class InventoryReservationService {
           continue;
         }
 
-        // Validate that requested quantity is positive
         if (quantity <= 0) {
           results.push({
             success: false,
@@ -438,7 +571,6 @@ class InventoryReservationService {
           continue;
         }
 
-        // Create reservation record
         const reservationId = `RES-${workOrderId}-${materialId}`;
         const reservation = {
           id: reservationId,
@@ -453,10 +585,8 @@ class InventoryReservationService {
           warehouseId
         };
 
-        // Save to database
         await dbService.put('materialReservations', reservation);
 
-        // Update reserved stock in inventory
         await this.updateReservedStock(materialId, quantity, warehouseId);
 
         results.push({
@@ -476,9 +606,6 @@ class InventoryReservationService {
     return results;
   }
 
-  /**
-   * Consume reserved materials (called when work order is completed)
-   */
   async consumeReservation(workOrderId: string, materialId: string, quantity: number): Promise<ReservationResult> {
     try {
       const reservationId = `RES-${workOrderId}-${materialId}`;
@@ -489,19 +616,17 @@ class InventoryReservationService {
         return { success: false, error: 'Reservation not found' };
       }
 
-      // Update reservation
       const updatedReservation = {
         ...reservation,
         quantityConsumed: reservation.quantityConsumed + quantity,
-        status: (reservation.quantityConsumed + quantity >= reservation.quantityReserved) 
-          ? 'Fully Consumed' as const 
+        status: (reservation.quantityConsumed + quantity >= reservation.quantityReserved)
+          ? 'Fully Consumed' as const
           : 'Partially Consumed' as const,
         consumedAt: new Date().toISOString()
       };
 
       await dbService.put('materialReservations', updatedReservation);
 
-      // Deduct from reserved stock
       await this.updateReservedStock(materialId, -quantity, reservation.warehouseId);
 
       return { success: true, reservationId };
@@ -511,16 +636,13 @@ class InventoryReservationService {
     }
   }
 
-  /**
-   * Release reservations (called when work order is cancelled)
-   */
   async releaseReservations(workOrderId: string, materialId?: string): Promise<ReservationResult[]> {
     const results: ReservationResult[] = [];
 
     try {
       const reservations = await dbService.getAll<any>('materialReservations');
-      const workOrderReservations = reservations.filter((r: any) => 
-        r.workOrderId === workOrderId && 
+      const workOrderReservations = reservations.filter((r: any) =>
+        r.workOrderId === workOrderId &&
         (materialId ? r.materialId === materialId : true) &&
         r.status !== 'Released' &&
         r.status !== 'Fully Consumed'
@@ -529,7 +651,6 @@ class InventoryReservationService {
       for (const reservation of workOrderReservations) {
         const remainingQty = reservation.quantityReserved - reservation.quantityConsumed;
 
-        // Update reservation status
         const updatedReservation = {
           ...reservation,
           status: 'Released' as const,
@@ -538,7 +659,6 @@ class InventoryReservationService {
 
         await dbService.put('materialReservations', updatedReservation);
 
-        // Release reserved stock
         if (remainingQty > 0) {
           await this.updateReservedStock(reservation.materialId, -remainingQty, reservation.warehouseId);
         }
@@ -553,33 +673,35 @@ class InventoryReservationService {
     }
   }
 
-  /**
-   * Get active reservations for a material
-   */
   async getActiveReservationsForMaterial(materialId: string): Promise<any[]> {
     const reservations = await dbService.getAll<any>('materialReservations');
-    return reservations.filter((r: any) => 
-      r.materialId === materialId && 
+    return reservations.filter((r: any) =>
+      r.materialId === materialId &&
       (r.status === 'Reserved' || r.status === 'Partially Consumed')
     );
   }
 
-  /**
-   * Get reservations for a work order
-   */
   async getReservationsForWorkOrder(workOrderId: string): Promise<any[]> {
     const reservations = await dbService.getAll<any>('materialReservations');
     return reservations.filter((r: any) => r.workOrderId === workOrderId);
   }
 
-  /**
-   * Update reserved stock in inventory
-   * Writes to both `reserved` (canonical) and `reservedStock` (backward compat)
-   */
   private async updateReservedStock(materialId: string, quantity: number, warehouseId?: string): Promise<void> {
+    try {
+      await fetchApiClient.requestJson({
+        endpoint: `/inventory/${materialId}`,
+        method: 'PUT',
+        body: JSON.stringify({ reserved: quantity >= 0 ? quantity : 0 })
+      });
+    } catch (apiErr: any) {
+      if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+        logger.warn('[InventoryReservationService] API error updating reserved stock:', apiErr);
+      }
+    }
+
     const inventory = await dbService.getAll<any>('inventory');
     const item = inventory.find(i => i.id === materialId);
-    
+
     if (item) {
       const newReserved = (item.reserved || 0) + quantity;
       const updatedItem = {
@@ -590,11 +712,10 @@ class InventoryReservationService {
       await dbService.put('inventory', updatedItem);
     }
 
-    // Update warehouse inventory if specified
     if (warehouseId) {
       const warehouseInventory = await dbService.getAll<WarehouseInventory>('warehouseInventory');
       const whInv = warehouseInventory.find(w => w.itemId === materialId && w.warehouseId === warehouseId);
-      
+
       if (whInv) {
         const updatedWhInv = {
           ...whInv,
@@ -606,9 +727,6 @@ class InventoryReservationService {
     }
   }
 
-  /**
-   * Check if sales order items can be reserved (have sufficient stock)
-   */
   async checkSalesOrderAvailability(items: { productId: string; quantity: number }[]): Promise<{ available: boolean; unavailable: { productId: string; available: number; requested: number }[] }> {
     const unavailable: { productId: string; available: number; requested: number }[] = [];
     const inventory = await dbService.getAll<any>('inventory');
@@ -632,9 +750,6 @@ class InventoryReservationService {
     return { available: unavailable.length === 0, unavailable };
   }
 
-  /**
-   * Create reservations for a sales order
-   */
   async createSalesOrderReservations(
     salesOrderId: string,
     items: { productId: string; productName?: string; quantity: number; unitPrice: number; warehouseId?: string }[]
@@ -674,9 +789,6 @@ class InventoryReservationService {
     return { success: results.every(r => r.success), results };
   }
 
-  /**
-   * Release all reservations for a sales order (on cancel/fulfill)
-   */
   async releaseSalesOrderReservations(salesOrderId: string, consumeFulfilled?: boolean): Promise<void> {
     const reservations = await dbService.getAll<any>('materialReservations');
     const orderReservations = reservations.filter(
@@ -704,6 +816,5 @@ class InventoryReservationService {
 
 export const inventoryReservationService = new InventoryReservationService();
 
-// Export singleton instances
 export const inventoryTransactionService = new InventoryTransactionService();
 export default inventoryTransactionService;

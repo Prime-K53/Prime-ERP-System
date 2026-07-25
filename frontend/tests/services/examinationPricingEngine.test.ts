@@ -29,9 +29,9 @@ describe('examinationPricingEngine', () => {
 
     expect(result.reamsRequired).toBe(2);
     expect(result.paperCost).toBe(10000);
-    expect(result.tonerRequired).toBe(0.1);
-    expect(result.tonerCost).toBe(9000);
-    expect(result.materialCost).toBe(19000);
+    expect(result.tonerRequired).toBe(0.04);
+    expect(result.tonerCost).toBe(3600);
+    expect(result.materialCost).toBe(13600);
   });
 
   it('calculates precise paper cost for fractional ream usage', () => {
@@ -55,9 +55,9 @@ describe('examinationPricingEngine', () => {
       tonerUnitCost: 60000
     });
 
-    expect(result.tonerRequired).toBeCloseTo(0.0024, 8);
-    expect(result.tonerCost).toBe(144);
-    expect(result.materialCost).toBe(144);
+    expect(result.tonerRequired).toBeCloseTo(0.00096, 8);
+    expect(result.tonerCost).toBe(57.6);
+    expect(result.materialCost).toBe(57.6);
   });
 
   it('normalizes adjustment types', () => {

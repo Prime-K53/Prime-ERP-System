@@ -43,12 +43,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (!silent) set({ isLoading: true, error: null });
     try {
       const [loadedItems, loadedWarehouses] = await Promise.all([
-        dbService.getAll<Item>('inventory'),
+        api.inventory.getAllItems(),
         dbService.getAll<Warehouse>('warehouses')
       ]);
 
       const seedIds = new Set(SEED_ITEM_IDS);
-      const normalizedItems = loadedItems.map((item) => {
+      const normalizedItems = (loadedItems || []).map((item) => {
         const base = normalizeInventoryItemPricing(item);
         const hasVariants = base.variants && base.variants.length > 0;
         return {
@@ -58,17 +58,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         };
       });
 
-      if (loadedItems.length === 0) {
-        const items = normalizedItems.length > 0 ? normalizedItems : SEED_ITEMS.map(i => ({ ...normalizeStoredPricing(i), isSeed: (SEED_ITEM_IDS as readonly string[]).includes(i.id) }));
-        if (items.length > 0) {
-          for (const item of items) await dbService.put('inventory', item);
-          set({ inventory: items });
-        } else {
-          set({ inventory: [] });
-        }
-      } else {
-        set({ inventory: normalizedItems });
-      }
+      set({ inventory: normalizedItems });
 
       if (loadedWarehouses.length === 0) {
         for (const w of MOCK_WAREHOUSES) await dbService.put('warehouses', w);
@@ -116,21 +106,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       pricingValidated: !isSellable || validation.valid,
       validationTimestamp: new Date().toISOString(),
     };
-    const prevInv = get().inventory;
-    set(state => ({ inventory: [...state.inventory, newItem] }));
-    try {
-      await api.inventory.createItem(newItem);
-    } catch (error) {
-      set({ inventory: prevInv });
-      throw error;
-    }
+    await api.inventory.createItem(newItem);
     await get().fetchInventory();
-    // fetchInventory re-reads from IndexedDB which can miss items
-    // due to transaction snapshot issues. Re-insert the new item
-    // if it was dropped so the UI stays in sync.
-    if (!get().inventory.find(i => i.id === newItem.id)) {
-      set(state => ({ inventory: [...state.inventory, newItem] }));
-    }
   },
 
   updateItem: async (item: Item) => {
@@ -149,7 +126,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
 
     const previous = get().inventory.find(i => i.id === item.id);
-    const prevInv = get().inventory;
     const sellPriceVal = Number(item.sellingPrice || item.selling_price || item.price || 0);
     const costPriceVal = Number(item.costPrice || item.cost_price || item.cost || 0);
     const updatedItem = {
@@ -166,15 +142,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       pricingValidated: !isSellable || validation.valid,
       validationTimestamp: new Date().toISOString(),
     };
-    set(state => ({
-      inventory: state.inventory.map(i => i.id === item.id ? updatedItem : i)
-    }));
-    try {
-      await api.inventory.updateItem(updatedItem);
-    } catch (error) {
-      set({ inventory: prevInv });
-      throw error;
-    }
+    await api.inventory.updateItem(updatedItem);
     await get().fetchInventory();
 
     const previousCost = Number(previous?.cost_price ?? previous?.cost ?? 0);
@@ -203,16 +171,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       set({ error: 'Cannot delete protected item' });
       throw new Error('Cannot delete protected item');
     }
-    const prevInv = get().inventory;
+    await api.inventory.deleteItem(id);
     set(state => ({
       inventory: state.inventory.filter(i => i.id !== id)
     }));
-    try {
-      await api.inventory.deleteItem(id);
-    } catch (error) {
-      set({ inventory: prevInv });
-      throw error;
-    }
   },
 
   addWarehouse: async (warehouse: Warehouse) => {

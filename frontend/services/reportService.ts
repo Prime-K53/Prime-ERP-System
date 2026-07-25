@@ -27,7 +27,8 @@ import {
 import { logger } from './logger';
 import { dbService } from './db';
 import { extractProfitMargin } from '@/utils/financial/extractors';
-import { settingsBackplane } from './dexie/settings-backplane';
+
+
 
 // Storage keys
 const REPORT_DEFINITIONS_KEY = 'nexus_report_definitions';
@@ -46,12 +47,12 @@ class ReportService {
   private scheduleInterval: NodeJS.Timeout | null = null;
 
   private async loadStoredArray<T>(key: string): Promise<T[]> {
-    const stored = await settingsBackplane.getJson<T[]>(key, { exactKey: true });
+    const stored = await dbService.getSetting<T[]>(key);
     return Array.isArray(stored) ? stored : [];
   }
 
   private async saveStoredArray<T>(key: string, value: T[]): Promise<void> {
-    await settingsBackplane.setJson(key, value, { exactKey: true });
+    await dbService.saveSetting(key, value);
   }
 
   /**
@@ -1271,7 +1272,7 @@ export function getAgedData(
   });
 
   // Aged Payables (AP) from purchases
-  const apBuckets = { ...buckets };
+  const apBuckets = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
   const apItems: any[] = [];
   purchases.forEach((po: any) => {
     if (!po.dueDate) return;

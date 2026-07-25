@@ -121,7 +121,7 @@ describe('SafeFormulaEngine AST Evaluator', () => {
 
     it('should handle mixed arithmetic and Math functions', () => {
       const result = SafeFormulaEngine.evaluate('Math.ceil(5.2) + Math.floor(5.8) * 2', {});
-      expect(result).toBe(17);
+      expect(result).toBe(16);
     });
   });
 });

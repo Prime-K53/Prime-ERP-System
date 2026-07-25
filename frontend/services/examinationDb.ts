@@ -1,147 +1,46 @@
-import Dexie, { type Table } from 'dexie';
+import { initDB } from './db';
 
-export interface DexieExaminationBatch {
-  id: string;
-  name?: string;
-  school_id?: string;
-  exam_type?: string;
-  currency?: string;
-  status?: string;
-  total_amount?: number;
-  classes?: any[];
-  approvals?: any;
-  invoice?: any;
-  batch_number?: string;
-  batchNumber?: string;
-  created_at: string;
-  updated_at: string;
-  _syncStatus?: string;
-  _lastSyncedAt?: string;
-  _offline?: boolean;
-  _lastModifiedAt?: string;
-  [key: string]: any;
-}
-
-export interface DexieExaminationBatchNotification {
-  id: string;
-  batch_id: string;
-  user_id?: string;
-  notification_type: string;
-  title?: string;
-  message?: string;
-  priority?: string;
-  batch_details?: any;
-  is_read?: boolean | number;
-  read_at?: string | null;
-  delivered_at?: string;
-  created_at: string;
-  expires_at?: string;
-}
-
-export interface DexieExaminationJob {
-  id: string;
-  school_id?: string;
-  status?: string;
-  subjects?: any[];
-  invoice_group_id?: string;
-  invoice_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: any;
-}
-
-export interface DexieExaminationJobSubject {
-  id: string;
-  examination_job_id: string;
-  subject_name?: string;
-  pages?: number;
-  [key: string]: any;
-}
-
-export interface DexieExaminationInvoiceGroup {
-  id: string;
-  name?: string;
-  status?: string;
-  invoice_id?: string;
-  job_ids?: string[];
-  [key: string]: any;
-}
-
-export interface DexieExaminationRecurringProfile {
-  id: string;
-  source_type?: string;
-  source_id?: string;
-  status?: string;
-  [key: string]: any;
-}
-
-export interface DexieExaminationInventoryDeduction {
-  id: string;
-  batch_id?: string;
-  [key: string]: any;
-}
-
-export interface DexieNotificationAuditLog {
-  id: string;
-  notification_id?: string;
-  user_id?: string;
-  action?: string;
-  details_json?: any;
-  created_at?: string;
-  [key: string]: any;
-}
-
-class ExaminationDexieDB extends Dexie {
-  examinationBatches!: Table<DexieExaminationBatch, string>;
-  examinationBatchNotifications!: Table<DexieExaminationBatchNotification, string>;
-  examinationJobs!: Table<DexieExaminationJob, string>;
-  examinationJobSubjects!: Table<DexieExaminationJobSubject, string>;
-  examinationInvoiceGroups!: Table<DexieExaminationInvoiceGroup, string>;
-  examinationRecurringProfiles!: Table<DexieExaminationRecurringProfile, string>;
-  examinationInventoryDeductions!: Table<DexieExaminationInventoryDeduction, string>;
-  notificationAuditLogs!: Table<DexieNotificationAuditLog, string>;
-
-  constructor() {
-    super('PrimeERP_Examination_v1');
-    this.version(1).stores({
-      examinationBatches: 'id, school_id, status, created_at, batch_number',
-      examinationBatchNotifications: 'id, batch_id, user_id, notification_type, is_read, created_at',
-      examinationJobs: 'id, school_id, status, invoice_group_id',
-      examinationJobSubjects: 'id, examination_job_id',
-      examinationInvoiceGroups: 'id, status',
-      examinationRecurringProfiles: 'id, source_type, source_id, status',
-      examinationInventoryDeductions: 'id, batch_id',
-      notificationAuditLogs: 'id, notification_id, user_id, action, created_at',
-    });
-  }
-}
-
-let _instance: ExaminationDexieDB | null = null;
-
-let _indexedDbAvailable: boolean | null = null;
-
-const canUseIndexedDB = (): boolean => {
-  if (_indexedDbAvailable !== null) return _indexedDbAvailable;
-  if (typeof window === 'undefined') { _indexedDbAvailable = false; return false; }
-  if (typeof indexedDB === 'undefined') { _indexedDbAvailable = false; return false; }
-  _indexedDbAvailable = true;
-  return true;
+type TableAccessor = {
+  toArray: <T>() => Promise<T[]>;
+  get: <T>(id: string) => Promise<T | undefined>;
+  put: <T>(value: T) => Promise<void>;
+  delete: (id: string) => Promise<void>;
+  bulkPut: <T>(items: T[]) => Promise<void>;
 };
 
-export const getExaminationDb = (): ExaminationDexieDB | null => {
-  if (!canUseIndexedDB()) return null;
-  if (!_instance) {
-    _instance = new ExaminationDexieDB();
-  }
-  return _instance;
-};
-
-export const examinationDb = new Proxy({} as ExaminationDexieDB, {
-  get(_target, prop: string | symbol) {
-    const db = getExaminationDb();
-    if (!db) {
-      throw new Error('IndexedDB is not available. Examination Dexie database cannot be accessed.');
-    }
-    return (db as unknown as Record<string, unknown>)[prop];
-  }
+const createTable = (storeName: string): TableAccessor => ({
+  toArray: async <T>() => {
+    const db = await initDB();
+    return db.getAll(storeName) as T[];
+  },
+  get: async <T>(id: string) => {
+    const db = await initDB();
+    return db.get(storeName, id) as T | undefined;
+  },
+  put: async <T>(value: T) => {
+    const db = await initDB();
+    await db.put(storeName, value as any);
+  },
+  delete: async (id: string) => {
+    const db = await initDB();
+    await db.delete(storeName, id);
+  },
+  bulkPut: async <T>(items: T[]) => {
+    if (items.length === 0) return;
+    const db = await initDB();
+    await db.bulkPut(storeName, items as any[]);
+  },
 });
+
+export const examinationDb = {
+  examinationBatches: createTable('examinationBatches'),
+  examinationBatchNotifications: createTable('examinationBatchNotifications'),
+  examinationJobs: createTable('examinationJobs'),
+  examinationJobSubjects: createTable('examinationJobSubjects'),
+  examinationInvoiceGroups: createTable('examinationInvoiceGroups'),
+  examinationRecurringProfiles: createTable('examinationRecurringProfiles'),
+  examinationInventoryDeductions: createTable('examinationInventoryDeductions'),
+  notificationAuditLogs: createTable('notificationAuditLogs'),
+};
+
+export const getExaminationDb = () => null;

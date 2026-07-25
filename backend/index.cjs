@@ -893,7 +893,7 @@ async function startServer() {
         date = ?, customer_id = ?, customer_name = ?, sub_account_name = ?,
         total_amount = ?, material_total = ?, adjustment_total = ?, profit_margin_total = ?, rounding_total = ?, other_charges = ?,
         adjustment_snapshots_json = ?, status = ?, payment_method = ?, source = ?, items_json = ?, payments_json = ?
-      WHERE id = ?`,
+      WHERE id = ? AND company_id = ?`,
       [
         payload.date || new Date().toISOString(),
         payload.customerId || payload.customer_id || 'walk-in',
@@ -901,7 +901,7 @@ async function startServer() {
         payload.subAccountName || payload.sub_account_name || 'Main',
         totalAmount, materialTotal, adjustmentTotal, profitMarginTotal, roundingTotal, otherCharges,
         snapshotsJson, payload.status || 'Paid', payload.paymentMethod || null, payload.source || null,
-        itemsJson, paymentsJson, id
+        itemsJson, paymentsJson, id, req.companyId || ''
       ],
       (error) => {
         if (error) {
@@ -915,10 +915,10 @@ async function startServer() {
 
   app.delete('/api/sales/:id', (req, res) => {
     const { id } = req.params;
-    db.get(`SELECT id FROM sales WHERE id = ?`, [id], (err, row) => {
+    db.get(`SELECT id FROM sales WHERE id = ? AND company_id = ?`, [id, req.companyId || ''], (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!row) return res.status(404).json({ error: 'Sale not found' });
-      db.run(`UPDATE sales SET status = 'Voided' WHERE id = ?`, [id], (error) => {
+      db.run(`UPDATE sales SET status = 'Voided' WHERE id = ? AND company_id = ?`, [id, req.companyId || ''], (error) => {
         if (error) {
           console.error(`[BACKEND] Error voiding sale #${id}:`, error.message);
           return res.status(500).json({ error: 'Failed to void sale' });
@@ -3041,6 +3041,85 @@ async function startServer() {
   });
 });
 
+  // 2b. POST Inventory (Create)
+  app.post('/api/inventory', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { body } = req;
+      const id = body.id || randomUUID();
+      const name = body.name || 'Unnamed';
+      const material = body.material || body.category || null;
+      const type = (body.type || 'material').toLowerCase();
+      const quantity = Number(body.quantity) || 0;
+      const costPerUnit = Number(body.cost_per_unit ?? body.cost ?? body.costPrice ?? body.cost_price ?? 0);
+      const unit = body.unit || 'units';
+      const category_id = body.category_id || null;
+      const minStockLevel = Number(body.min_stock_level ?? body.minStockLevel ?? 0);
+      const maxStockLevel = Number(body.max_stock_level ?? body.maxStockLevel ?? 0);
+      const reorderPoint = Number(body.reorder_point ?? body.reorderPoint ?? 0);
+      const warehouseId = body.warehouse_id || null;
+      const reserved = Number(body.reserved) || 0;
+      const companyId = req.companyId || '';
+      db.run(
+        `INSERT OR REPLACE INTO inventory (id, name, material, type, quantity, cost_per_unit, unit, category_id, min_stock_level, max_stock_level, reorder_point, warehouse_id, reserved, company_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, name, material, type, quantity, costPerUnit, unit, category_id, minStockLevel, maxStockLevel, reorderPoint, warehouseId, reserved, companyId],
+        function (err) {
+          if (err) { console.error('[Inventory] POST error:', err); return res.status(500).json({ error: 'Failed to create inventory item' }); }
+          res.status(201).json({ id, name, material, type, quantity, cost_per_unit: costPerUnit, unit, category_id, min_stock_level: minStockLevel, max_stock_level: maxStockLevel, reorder_point: reorderPoint, warehouse_id: warehouseId, reserved, company_id: companyId });
+        }
+      );
+    } catch (err) {
+      console.error('[Inventory] POST error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to create inventory item' });
+    }
+  });
+
+  // 2c. PUT Inventory (Update)
+  app.put('/api/inventory/:id', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { body } = req;
+      const fields = [];
+      const params = [];
+      const allowed = ['name', 'material', 'type', 'quantity', 'cost_per_unit', 'unit', 'category_id', 'min_stock_level', 'max_stock_level', 'reorder_point', 'warehouse_id', 'reserved'];
+      for (const field of allowed) {
+        if (body[field] !== undefined) {
+          fields.push(`${field} = ?`);
+          params.push(body[field]);
+        }
+      }
+      if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+      params.push(id, req.companyId || '');
+      db.run(`UPDATE inventory SET ${fields.join(', ')}, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?`, params, function (err) {
+        if (err) { console.error('[Inventory] PUT error:', err); return res.status(500).json({ error: 'Failed to update inventory item' }); }
+        if (this.changes === 0) return res.status(404).json({ error: 'Inventory item not found' });
+        res.json({ success: true, id });
+      });
+    } catch (err) {
+      console.error('[Inventory] PUT error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to update inventory item' });
+    }
+  });
+
+  // 2d. DELETE Inventory (Delete)
+  app.delete('/api/inventory/:id', requireRole('Admin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      db.get('SELECT * FROM inventory WHERE id = ? AND company_id = ?', [id, req.companyId || ''], (err, row) => {
+        if (err) { console.error('[Inventory] DELETE error:', err); return res.status(500).json({ error: 'Failed to delete inventory item' }); }
+        if (!row) return res.status(404).json({ error: 'Inventory item not found' });
+        if (row.is_protected) return res.status(403).json({ error: 'Cannot delete protected item' });
+        db.run('DELETE FROM inventory WHERE id = ? AND company_id = ?', [id, req.companyId || ''], (err) => {
+          if (err) { console.error('[Inventory] DELETE error:', err); return res.status(500).json({ error: 'Failed to delete inventory item' }); }
+          res.json({ success: true });
+        });
+      });
+    } catch (err) {
+      console.error('[Inventory] DELETE error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to delete inventory item' });
+    }
+  });
+
 // 11. Delete Examination Batch
 app.delete('/api/examinations/batch/:batch_id', (req, res) => {
   const { batch_id } = req.params;
@@ -3279,6 +3358,101 @@ app.get('/api/invoices/:id/details', (req, res) => {
       if (err) { console.error('[Inventory] warehouse error:', err); return res.status(500).json({ error: 'Failed to load warehouse inventory' }); }
       res.json(rows || []);
     });
+  });
+
+  // Get all warehouses (distinct warehouse IDs with aggregated stock)
+  app.get('/api/warehouses', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), (req, res) => {
+    const companyId = req.companyId || '';
+    db.all(`SELECT wi.warehouse_id,
+                   COALESCE(SUM(wi.quantity), 0) as total_stock,
+                   COALESCE(SUM(wi.reserved), 0) as total_reserved,
+                   COUNT(DISTINCT wi.item_id) as item_count,
+                   MAX(wi.last_updated) as last_updated
+            FROM warehouse_inventory wi
+            WHERE wi.company_id = ?
+            GROUP BY wi.warehouse_id
+            ORDER BY wi.warehouse_id`, [companyId], (err, rows) => {
+      if (err) { console.error('[Warehouses] GET error:', err); return res.status(500).json({ error: 'Failed to load warehouses' }); }
+      res.json(rows || []);
+    });
+  });
+
+  // Save a warehouse snapshot
+  app.post('/api/warehouses/snapshot', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    try {
+      const { id, snapshot_data, snapshot_type, notes, created_by } = req.body;
+      const snapshotId = id || `SNAP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const companyId = req.companyId || '';
+      db.run(`INSERT OR REPLACE INTO warehouse_snapshots (id, snapshot_data, snapshot_type, notes, created_by, company_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [snapshotId, JSON.stringify(snapshot_data), snapshot_type || 'manual', notes || '', created_by || req.user?.id || '', companyId, new Date().toISOString()],
+        (err) => {
+          if (err) { console.error('[Warehouses] snapshot post error:', err); return res.status(500).json({ error: 'Failed to save snapshot' }); }
+          res.status(201).json({ success: true, id: snapshotId });
+        });
+    } catch (err) {
+      console.error('[Warehouses] snapshot error:', err?.message || err);
+      res.status(500).json({ error: err?.message || 'Failed to save snapshot' });
+    }
+  });
+
+  // Fetch warehouse snapshots
+  app.get('/api/warehouses/snapshot', requireRole('Admin', 'Accountant', 'Manager', 'Clerk', 'Viewer'), (req, res) => {
+    const companyId = req.companyId || '';
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    db.all(`SELECT * FROM warehouse_snapshots WHERE company_id = ? ORDER BY created_at DESC LIMIT ?`,
+      [companyId, limit], (err, rows) => {
+        if (err) { console.error('[Warehouses] snapshot get error:', err); return res.status(500).json({ error: 'Failed to load snapshots' }); }
+        res.json((rows || []).map(r => ({ ...r, snapshot_data: typeof r.snapshot_data === 'string' ? JSON.parse(r.snapshot_data) : r.snapshot_data })));
+      });
+  });
+
+  // Sync master inventory from warehouse totals
+  app.post('/api/warehouses/sync-master', requireRole('Admin', 'Accountant', 'Manager'), async (req, res) => {
+    const companyId = req.companyId || '';
+    const { itemId } = req.body;
+    try {
+      if (itemId) {
+        // Sync single item
+        const whItems = await new Promise((resolve, reject) => {
+          db.all(`SELECT item_id, SUM(quantity) as total_qty, SUM(reserved) as total_reserved
+                  FROM warehouse_inventory WHERE item_id = ? AND company_id = ? GROUP BY item_id`,
+            [itemId, companyId], (err, rows) => {
+              if (err) reject(err); else resolve(rows || []);
+            });
+        });
+        if (whItems.length > 0) {
+          const row = whItems[0];
+          db.run('UPDATE inventory SET quantity = ?, reserved = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?',
+            [row.total_qty, row.total_reserved, itemId, companyId], (err) => {
+              if (err) return res.status(500).json({ error: 'Failed to sync item' });
+              res.json({ success: true, itemId, syncedQuantity: row.total_qty, syncedReserved: row.total_reserved });
+            });
+        } else {
+          res.json({ success: true, itemId, syncedQuantity: 0, syncedReserved: 0 });
+        }
+      } else {
+        // Sync all items
+        const updated = await new Promise((resolve, reject) => {
+          db.all(`SELECT wi.item_id, SUM(wi.quantity) as total_qty, SUM(wi.reserved) as total_reserved
+                  FROM warehouse_inventory wi WHERE wi.company_id = ? GROUP BY wi.item_id`,
+            [companyId], (err, rows) => {
+              if (err) reject(err); else resolve(rows || []);
+            });
+        });
+        let count = 0;
+        const stmt = db.prepare('UPDATE inventory SET quantity = ?, reserved = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ? AND company_id = ?');
+        for (const row of updated) {
+          stmt.run([row.total_qty, row.total_reserved, row.item_id, companyId]);
+          count++;
+        }
+        stmt.finalize();
+        res.json({ success: true, syncedCount: count });
+      }
+    } catch (err) {
+      console.error('[Warehouses] sync-master error:', err);
+      res.status(500).json({ error: 'Failed to sync master inventory' });
+    }
   });
   
   // Get active batches for item

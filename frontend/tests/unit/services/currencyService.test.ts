@@ -36,8 +36,8 @@ describe('CurrencyService', () => {
       expect(currencies.some(c => c.code === 'EUR')).toBe(true);
     });
 
-    it('should set USD as default base currency', () => {
-      expect(service.getBaseCurrency()).toBe('USD');
+    it('should set MWK as default base currency', () => {
+      expect(service.getBaseCurrency()).toBe('MWK');
     });
 
     it('should load settings from localStorage', async () => {
@@ -84,7 +84,7 @@ describe('CurrencyService', () => {
     });
 
     it('should not allow disabling base currency', async () => {
-      await expect(service.disableCurrency('USD')).rejects.toThrow();
+      await expect(service.disableCurrency('MWK')).rejects.toThrow();
     });
   });
 
@@ -163,13 +163,13 @@ describe('CurrencyService', () => {
 
     it('should handle banker rounding', async () => {
       await service.updateSettings({ roundingMethod: 'bankers' });
-      const rounded = service.roundAmount(2.5, 'USD');
-      expect(rounded).toBe(2); // Banker's rounding rounds to even
+      const rounded = service.roundAmount(2.5, 'JPY');
+      expect(rounded).toBe(2); // Banker's rounding rounds half to even
     });
 
     it('should handle truncate rounding', async () => {
       await service.updateSettings({ roundingMethod: 'truncate' });
-      const rounded = service.roundAmount(2.999, 'USD');
+      const rounded = service.roundAmount(2.999, 'JPY');
       expect(rounded).toBe(2);
     });
   });

@@ -169,6 +169,24 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== self.location.origin) {
     if (url.hostname.endsWith('.supabase.co')) {
+      // Supabase REST/Realtime — NetworkOnly: never cache database responses
+      event.respondWith(fetch(request).catch(() => {
+        return new Response(JSON.stringify({
+          error: 'network_unavailable',
+          message: 'Cloud data requires an internet connection. Business data is not stored locally.'
+        }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      }));
+      return;
+    }
+
+    if (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/functions/v1/')) {
+      // Supabase REST/functions — NetworkOnly: never cache stale data
+      event.respondWith(fetch(request).catch(() => {
+        return new Response(JSON.stringify({
+          error: 'network_unavailable',
+          message: 'Cloud data requires an internet connection.'
+        }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      }));
       return;
     }
 
@@ -182,7 +200,16 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(handleApiGet(request));
+    // All API calls — NetworkOnly: never cache stale business data
+    event.respondWith(fetch(request).catch(() => {
+      const msg = url.pathname.startsWith('/api/inventory')
+        ? 'Cannot load inventory data. Please check your connection.'
+        : 'Cloud data requires an internet connection. Business data is not stored locally.';
+      return new Response(JSON.stringify({
+        error: 'network_unavailable',
+        message: msg
+      }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+    }));
     return;
   }
 

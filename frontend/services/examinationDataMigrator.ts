@@ -15,17 +15,18 @@ interface MigrationSummary {
   notificationAuditLogs: number;
 }
 
-const hasMigrationRun = (): boolean => {
+const hasMigrationRun = async (): Promise<boolean> => {
   try {
-    return localStorage.getItem(MIGRATION_KEY) === 'completed';
+    const value = await dbService.getSetting<string>(MIGRATION_KEY);
+    return value === 'completed';
   } catch {
     return false;
   }
 };
 
-const markMigrationComplete = () => {
+const markMigrationComplete = async () => {
   try {
-    localStorage.setItem(MIGRATION_KEY, 'completed');
+    await dbService.saveSetting(MIGRATION_KEY, 'completed');
   } catch {
   }
 };
@@ -86,7 +87,7 @@ const migrateBatchesFromOfflineDb = async (): Promise<number> => {
 };
 
 export const migrateExaminationData = async (): Promise<MigrationSummary> => {
-  if (hasMigrationRun()) {
+  if (await hasMigrationRun()) {
     return {
       examinationBatches: 0,
       examinationBatchNotifications: 0,
@@ -143,7 +144,7 @@ export const migrateExaminationData = async (): Promise<MigrationSummary> => {
 
   const totalMigrated = Object.values(summary).reduce((sum, count) => sum + count, 0);
   if (totalMigrated > 0) {
-    markMigrationComplete();
+    await markMigrationComplete();
   }
 
   return summary;

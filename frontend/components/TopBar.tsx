@@ -13,7 +13,6 @@ import { OfflineImage } from './OfflineImage';
 import { exportToCSV, parseCSV } from '../services/excelService';
 import { generateAccountNumber } from '../utils/helpers';
 import type { Item, ItemType } from '../types';
-import FinancialYearSwitcher from './FinancialYearSwitcher';
 
 interface TopBarProps {
     toggleSidebar: () => void;
@@ -367,8 +366,6 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
                 </div>
             )}
         </div>
-
-        <FinancialYearSwitcher compact />
 
         <div className="flex items-center gap-2 pl-2 border-l border-slate-100">
             <div className="text-right hidden sm:block">

@@ -21,6 +21,8 @@ interface SubscriptionViewProps {
     onView: (item: RecurringInvoice) => void;
     onDelete: (id: string) => void;
     onAction: (item: RecurringInvoice, action: string) => void;
+    onSort?: (field: any) => void;
+    sortConfig?: { field: any; direction: 'asc' | 'desc' };
 }
 
 const getSubscriptionToggleAction = (status?: string) => {
@@ -81,7 +83,7 @@ const useContextMenu = () => {
     return { openMenuId, menuPos, menuRef, handleContextMenu, setOpenMenuId };
 };
 
-const SubscriptionView: React.FC<SubscriptionViewProps> = ({ data, onEdit, onView, onDelete, onAction }) => {
+const SubscriptionView: React.FC<SubscriptionViewProps> = ({ data, onEdit, onView, onDelete, onAction, onSort, sortConfig }) => {
     const { companyConfig } = useAuth(); const { invoices } = useFinance(); const { runRecurringBilling } = useSales();
     const { handlePreview } = useDocumentPreview();
     const [viewMode, setViewMode] = useState<'List' | 'Grid' | 'Calendar'>('List');
@@ -220,6 +222,8 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ data, onEdit, onVie
                             onDelete={onDelete}
                             onAction={onAction}
                             viewMode="List"
+                            onSort={onSort}
+                            sortConfig={sortConfig}
                         />
                     ) : viewMode === 'Grid' ? (
                         <div className="space-y-4">

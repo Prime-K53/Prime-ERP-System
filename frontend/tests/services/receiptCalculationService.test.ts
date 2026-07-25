@@ -149,7 +149,7 @@ describe('receipt schemas', () => {
       paymentMethod: 'Cash',
       appliedInvoices: ['INV-001'],
       invoiceTotal: 100,
-      paymentStatus: 'Paid',
+      paymentStatus: 'PAID',
       balanceDue: 0,
       overpaymentAmount: 0,
       narrative: 'Test',

@@ -26,6 +26,30 @@ class FinancialYearService extends BaseService {
         [companyId]
       );
     }
+
+    if (fy) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (today > fy.end_date) {
+        const nextStartDate = new Date(fy.end_date);
+        nextStartDate.setDate(nextStartDate.getDate() + 1);
+        const nextEndDate = new Date(nextStartDate);
+        nextEndDate.setDate(nextEndDate.getDate() + 365);
+        const nextYear = nextStartDate.getFullYear();
+
+        await this.closeFinancialYear(fy.id, companyId);
+
+        fy = await this.createFinancialYear({
+          name: String(nextYear),
+          code: `FY${nextYear}`,
+          start_date: nextStartDate.toISOString().slice(0, 10),
+          end_date: nextEndDate.toISOString().slice(0, 10),
+          is_default: true,
+          status: 'Active',
+          is_closed: false
+        }, companyId, '');
+      }
+    }
+
     return fy || null;
   }
 

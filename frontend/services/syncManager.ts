@@ -2,7 +2,6 @@ import type { SyncQueueItem } from '../types/offline';
 import { apiClient, OfflineRequestError, UnauthorizedRequestError } from './apiClient';
 import { getQueuedMutations, removeQueuedMutation, saveQueuedMutation, BACKGROUND_SYNC_TAG } from './offlineQueueManager';
 import { offlineDb } from './offlineDb';
-import { dexieQueueCoordinator } from './dexie/queue-coordinator';
 
 export interface SyncSummary {
   synced: number;
@@ -18,6 +17,29 @@ export interface SyncProcessorResult {
 const nowIso = () => new Date().toISOString();
 
 const buildBackoff = (retries: number) => Math.min(60000, 1000 * Math.pow(2, Math.max(0, retries)));
+
+const createFailurePatch = (
+  item: SyncQueueItem,
+  status: SyncQueueItem['status'],
+  error: unknown,
+  nextRetryAt: string | null
+): SyncQueueItem => {
+  const attemptedAt = nowIso();
+  return {
+    ...item,
+    status: status as any,
+    nextRetryAt,
+    availableAt: nextRetryAt,
+    lastError: error instanceof Error ? error.message : String(error || 'Queue processing failed'),
+    lastAttemptAt: attemptedAt,
+    updatedAt: attemptedAt,
+    retries: (item.retries || 0) + 1,
+    attemptHistory: [
+      ...(item.attemptHistory || []),
+      { attemptedAt, status: status as any, error: error instanceof Error ? error.message : String(error) },
+    ].slice(-20),
+  } as SyncQueueItem;
+};
 
 let syncInFlight: Promise<SyncSummary> | null = null;
 
@@ -88,31 +110,31 @@ export const syncQueuedChanges = async (processor?: (item: SyncQueueItem) => Pro
       } catch (error) {
         if (error instanceof UnauthorizedRequestError) {
           blocked += 1;
-          await saveQueuedMutation(dexieQueueCoordinator.createFailurePatch(item as any, 'blocked', error, null) as any);
+          await saveQueuedMutation(createFailurePatch(item, 'blocked', error, null));
           break;
         }
 
         if (error instanceof OfflineRequestError) {
           failed += 1;
           await saveQueuedMutation(
-            dexieQueueCoordinator.createFailurePatch(
-              item as any,
+            createFailurePatch(
+              item,
               'failed',
               error,
               new Date(Date.now() + buildBackoff(item.retries + 1)).toISOString()
-            ) as any
+            )
           );
           break;
         }
 
         failed += 1;
         await saveQueuedMutation(
-          dexieQueueCoordinator.createFailurePatch(
-            item as any,
+          createFailurePatch(
+            item,
             'failed',
             error,
             new Date(Date.now() + buildBackoff(item.retries + 1)).toISOString()
-          ) as any
+          )
         );
       }
     }

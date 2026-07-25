@@ -9,10 +9,8 @@
  * - Delivery tracking
  */
 
-import type { SupplierEntity } from './dexie/types';
 import { logger } from '../services/logger';
-import { getEnterpriseRepositories } from './dexie/database';
-import { settingsBackplane } from './dexie/settings-backplane';
+import { dbService } from './db';
 
 export interface Supplier {
   id: string;
@@ -149,10 +147,6 @@ class SupplierIntegrationService {
     this.initializeCaches();
   }
 
-  private canUseIndexedDb(): boolean {
-    return typeof indexedDB !== 'undefined';
-  }
-
   private readLocalArray<T>(key: string): T[] {
     try {
       const stored = localStorage.getItem(key);
@@ -170,71 +164,6 @@ class SupplierIntegrationService {
     } catch {
       // Local mirroring is best effort only.
     }
-  }
-
-  private parsePaymentTermsDays(paymentTerms: string): number {
-    const match = String(paymentTerms || '').match(/(\d+)/);
-    return match ? Number(match[1]) : 30;
-  }
-
-  private toSupplierEntity(supplier: Supplier): SupplierEntity {
-    return {
-      id: supplier.id,
-      supplierCode: supplier.id,
-      name: supplier.name,
-      status: supplier.active ? 'active' : 'inactive',
-      category: supplier.categories[0] || 'General',
-      email: supplier.email,
-      phone: supplier.phone,
-      address: {
-        line1: supplier.address
-      },
-      primaryContact: {
-        name: supplier.contactPerson,
-        email: supplier.email,
-        phone: supplier.phone
-      },
-      currency: '$',
-      paymentTermsDays: this.parsePaymentTermsDays(supplier.paymentTerms),
-      outstandingBalance: 0,
-      entityVersion: 1,
-      createdAt: supplier.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isDeleted: false,
-      source: 'user-action',
-      sync: {
-        status: 'pending',
-        retryCount: 0
-      },
-      tags: supplier.categories,
-      extra: {
-        contactPerson: supplier.contactPerson,
-        rating: supplier.rating,
-        leadTimeDays: supplier.leadTimeDays,
-        minimumOrderValue: supplier.minimumOrderValue,
-        paymentTerms: supplier.paymentTerms,
-        categories: supplier.categories
-      }
-    };
-  }
-
-  private fromSupplierEntity(entity: SupplierEntity): Supplier {
-    const extra = (entity.extra || {}) as Record<string, any>;
-    return {
-      id: entity.id,
-      name: entity.name,
-      contactPerson: String(extra.contactPerson || entity.primaryContact?.name || ''),
-      email: entity.email || '',
-      phone: entity.phone || '',
-      address: String(entity.address?.line1 || ''),
-      categories: Array.isArray(extra.categories) ? extra.categories.map(String) : [entity.category].filter(Boolean),
-      rating: Number(extra.rating || 0) || 0,
-      leadTimeDays: Number(extra.leadTimeDays || 0) || 0,
-      minimumOrderValue: Number(extra.minimumOrderValue || 0) || 0,
-      paymentTerms: String(extra.paymentTerms || `Net ${entity.paymentTermsDays || 30}`),
-      active: entity.status === 'active',
-      createdAt: entity.createdAt
-    };
   }
 
   private initializeCaches(): void {
@@ -258,8 +187,8 @@ class SupplierIntegrationService {
   private async hydrate() {
     try {
       const [orders, quotes] = await Promise.all([
-        settingsBackplane.getJson<PurchaseOrder[]>(this.ORDERS_KEY, { exactKey: true }),
-        settingsBackplane.getJson<SupplierQuote[]>(this.QUOTES_KEY, { exactKey: true })
+        dbService.getSetting<PurchaseOrder[]>(this.ORDERS_KEY),
+        dbService.getSetting<SupplierQuote[]>(this.QUOTES_KEY)
       ]);
 
       if (Array.isArray(orders) && orders.length > 0) {
@@ -272,21 +201,6 @@ class SupplierIntegrationService {
         this.writeLocalArray(this.QUOTES_KEY, this.quotesCache);
       }
 
-      if (this.canUseIndexedDb()) {
-        try {
-          const repositories = await getEnterpriseRepositories();
-          const rows = await repositories.suppliers.findAll({
-            sort: { field: 'updatedAt', direction: 'desc' }
-          });
-
-          if (rows.length > 0) {
-            this.suppliersCache = rows.map((row) => this.fromSupplierEntity(row));
-            this.writeLocalArray(this.SUPPLIERS_KEY, this.suppliersCache);
-          }
-        } catch {
-          // Dexie not available yet â€” fallback to local cache
-        }
-      }
     } catch (error) {
       logger.error('[SupplierIntegration] Hydration failed:', error);
     }
@@ -294,25 +208,16 @@ class SupplierIntegrationService {
 
   private async persistSuppliers() {
     this.writeLocalArray(this.SUPPLIERS_KEY, this.suppliersCache);
-
-    if (!this.canUseIndexedDb()) return;
-
-    try {
-      const repositories = await getEnterpriseRepositories();
-      await repositories.suppliers.bulkUpsert(this.suppliersCache.map((supplier) => this.toSupplierEntity(supplier)));
-    } catch (error) {
-      logger.error('[SupplierIntegration] Persist failed:', error);
-    }
   }
 
   private async persistOrders() {
     this.writeLocalArray(this.ORDERS_KEY, this.ordersCache);
-    await settingsBackplane.setJson(this.ORDERS_KEY, this.ordersCache, { exactKey: true });
+    await dbService.saveSetting(this.ORDERS_KEY, this.ordersCache);
   }
 
   private async persistQuotes() {
     this.writeLocalArray(this.QUOTES_KEY, this.quotesCache);
-    await settingsBackplane.setJson(this.QUOTES_KEY, this.quotesCache, { exactKey: true });
+    await dbService.saveSetting(this.QUOTES_KEY, this.quotesCache);
   }
 
   getSuppliers(): Supplier[] {

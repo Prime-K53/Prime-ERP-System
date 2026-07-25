@@ -1,3 +1,5 @@
+import { dbService } from './db';
+
 interface LowStockItem {
   id: string;
   name: string;
@@ -16,20 +18,20 @@ interface AlertConfig {
 const STORAGE_KEY = 'prime_erp_low_stock_alert_config';
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export const getAlertConfig = (): AlertConfig => {
+export const getAlertConfig = async (): Promise<AlertConfig> => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    const saved = await dbService.getSetting<AlertConfig>(STORAGE_KEY);
+    if (saved) return saved;
   } catch {}
   return { enabled: true, recipients: [], threshold: 10, lastAlertedAt: null };
 };
 
-export const saveAlertConfig = (config: AlertConfig) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+export const saveAlertConfig = async (config: AlertConfig) => {
+  await dbService.saveSetting(STORAGE_KEY, config);
 };
 
 export const checkAndSendLowStockAlerts = async (items: LowStockItem[]) => {
-  const config = getAlertConfig();
+  const config = await getAlertConfig();
   if (!config.enabled || config.recipients.length === 0) return;
 
   const lowItems = items.filter(i => i.stock <= i.reorderPoint && i.reorderPoint > 0);
@@ -50,7 +52,7 @@ export const checkAndSendLowStockAlerts = async (items: LowStockItem[]) => {
         recipients: config.recipients,
       }),
     });
-    saveAlertConfig({ ...config, lastAlertedAt: now.toISOString() });
+    await saveAlertConfig({ ...config, lastAlertedAt: now.toISOString() });
   } catch (err) {
     console.warn('[LowStockAlert] Backend unavailable — alert queued for next attempt');
   }

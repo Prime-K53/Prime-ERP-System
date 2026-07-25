@@ -1,4 +1,5 @@
 import { dbService } from './db';
+import { apiClient as fetchApiClient, OfflineRequestError } from './apiClient';
 import { pricingService } from './pricingService';
 import { inventoryTransactionService } from './inventoryTransactionService';
 import { currencyService } from './currencyService';
@@ -3880,72 +3881,95 @@ export const transactionService = {
     },
 
     async adjustStock(params: { itemId: string, qtyChange: number, reason: string, warehouseId: string, notes?: string, variantId?: string }) {
-        return dbService.executeAtomicOperation(
-            ['inventory', 'ledger', 'warehouseInventory', 'inventoryTransactions'],
-            async (tx) => {
-                const inventoryStore = tx.objectStore('inventory');
-                const ledgerStore = tx.objectStore('ledger');
-                const whStore = tx.objectStore('warehouseInventory');
-                const auditStore = tx.objectStore('inventoryTransactions');
+        try {
+            const item = await dbService.get<any>('inventory', params.itemId);
+            if (!item) return { success: false, error: 'Item not found' };
 
-                const item = await inventoryStore.get(params.itemId);
-                if (!item) throw new Error("Item not found");
+            let adjustmentCost = item.cost || 0;
 
-                let adjustmentCost = item.cost || 0;
-
-                if (params.variantId && item.variants) {
-                    const variantIndex = item.variants.findIndex(v => v.id === params.variantId);
-                    if (variantIndex !== -1) {
-                        item.variants[variantIndex].stock = (item.variants[variantIndex].stock || 0) + params.qtyChange;
-                        adjustmentCost = item.variants[variantIndex].cost || item.cost || 0;
-                    }
-                }
-
-                item.stock = (item.stock || 0) + params.qtyChange;
-                await inventoryStore.put(item);
-
-                // Update warehouseInventory
-                const warehouseId = params.warehouseId || 'WH-MAIN';
-                const whKey = [warehouseId, params.itemId].join('_');
-                const whRecord = await whStore.get(whKey);
-                if (whRecord) {
-                    whRecord.quantity = (whRecord.quantity || 0) + params.qtyChange;
-                    await whStore.put(whRecord);
-                } else {
-                    await whStore.put({ id: whKey, itemId: params.itemId, warehouseId, quantity: Math.max(0, params.qtyChange), reserved: 0 });
-                }
-
-                // Inventory transaction audit
-                await auditStore.put({
-                    id: `ADJ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-                    itemId: params.itemId,
-                    warehouseId,
-                    quantity: params.qtyChange,
-                    type: 'ADJUSTMENT',
-                    date: new Date().toISOString(),
-                    referenceId: params.reason,
-                    notes: params.notes || ''
+            try {
+                await fetchApiClient.requestJson({
+                    endpoint: '/inventory/transactions',
+                    method: 'POST',
+                    body: JSON.stringify({
+                        itemId: params.itemId,
+                        warehouseId: params.warehouseId || 'WH-MAIN',
+                        quantity: Math.abs(params.qtyChange),
+                        reason: params.reason,
+                        type: params.qtyChange > 0 ? 'IN' : 'OUT'
+                    })
                 });
-
-                // If it's a significant adjustment, log to ledger
-                if (Math.abs(params.qtyChange * adjustmentCost) > 0) {
-                    const gl = getGLConfig();
-                    const entry: LedgerEntry = {
-                        id: generateId('LG-ADJ'),
-                        date: new Date().toISOString(),
-                        description: `Stock Adjustment: ${params.reason} (${params.notes || ''})`,
-                        debitAccountId: params.qtyChange > 0 ? (gl.defaultInventoryAccount || '1200') : (gl.defaultCOGSAccount || '5000'),
-                        creditAccountId: params.qtyChange > 0 ? (gl.defaultCOGSAccount || '5000') : (gl.defaultInventoryAccount || '1200'),
-                        amount: Math.abs(params.qtyChange * adjustmentCost),
-                        referenceId: params.itemId,
-                        reconciled: false
-                    };
-                    await ledgerStore.put(entry);
+            } catch (apiErr: any) {
+                if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+                    throw apiErr;
                 }
-
-                return { success: true };
             }
-        );
+
+            return dbService.executeAtomicOperation(
+                ['inventory', 'ledger', 'warehouseInventory', 'inventoryTransactions'],
+                async (tx) => {
+                    const inventoryStore = tx.objectStore('inventory');
+                    const ledgerStore = tx.objectStore('ledger');
+                    const whStore = tx.objectStore('warehouseInventory');
+                    const auditStore = tx.objectStore('inventoryTransactions');
+
+                    const item = await inventoryStore.get(params.itemId);
+                    if (!item) throw new Error("Item not found");
+
+                    if (params.variantId && item.variants) {
+                        const variantIndex = item.variants.findIndex(v => v.id === params.variantId);
+                        if (variantIndex !== -1) {
+                            item.variants[variantIndex].stock = (item.variants[variantIndex].stock || 0) + params.qtyChange;
+                            adjustmentCost = item.variants[variantIndex].cost || item.cost || 0;
+                        }
+                    }
+
+                    item.stock = (item.stock || 0) + params.qtyChange;
+                    await inventoryStore.put(item);
+
+                    const warehouseId = params.warehouseId || 'WH-MAIN';
+                    const whKey = [warehouseId, params.itemId].join('_');
+                    const whRecord = await whStore.get(whKey);
+                    if (whRecord) {
+                        whRecord.quantity = (whRecord.quantity || 0) + params.qtyChange;
+                        await whStore.put(whRecord);
+                    } else {
+                        await whStore.put({ id: whKey, itemId: params.itemId, warehouseId, quantity: Math.max(0, params.qtyChange), reserved: 0 });
+                    }
+
+                    await auditStore.put({
+                        id: `ADJ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                        itemId: params.itemId,
+                        warehouseId,
+                        quantity: params.qtyChange,
+                        type: 'ADJUSTMENT',
+                        date: new Date().toISOString(),
+                        referenceId: params.reason,
+                        notes: params.notes || ''
+                    });
+
+                    if (Math.abs(params.qtyChange * adjustmentCost) > 0) {
+                        const gl = getGLConfig();
+                        const entry: LedgerEntry = {
+                            id: generateId('LG-ADJ'),
+                            date: new Date().toISOString(),
+                            description: `Stock Adjustment: ${params.reason} (${params.notes || ''})`,
+                            debitAccountId: params.qtyChange > 0 ? (gl.defaultInventoryAccount || '1200') : (gl.defaultCOGSAccount || '5000'),
+                            creditAccountId: params.qtyChange > 0 ? (gl.defaultCOGSAccount || '5000') : (gl.defaultInventoryAccount || '1200'),
+                            amount: Math.abs(params.qtyChange * adjustmentCost),
+                            referenceId: params.itemId,
+                            reconciled: false
+                        };
+                        await ledgerStore.put(entry);
+                    }
+
+                    return { success: true };
+                }
+            );
+        } catch (error: any) {
+            logger.error('[TransactionService] adjustStock error:', error);
+            return { success: false, error: error.message || 'Unknown error' };
+        }
     },
 
     async updateReservedStock(itemId: string, reservedChange: number, variantId?: string) {
@@ -3953,83 +3977,125 @@ export const transactionService = {
             logger.debug(`[Inventory] Skipping reserved stock update: no item ID provided`);
             return { success: false, error: 'No item ID' };
         }
-        const cloudItem = await dbService.get<Item>('inventory', itemId);
-        if (cloudItem) {
-            await dbService.put('inventory', cloudItem);
-        }
-        return dbService.executeAtomicOperation(
-            ['inventory'],
-            async (tx) => {
-                const store = tx.objectStore('inventory');
-                const item = await store.get(itemId);
-                if (!item) {
-                    logger.warn(`[Inventory] Cannot update reserved stock: item ${itemId} not found`);
-                    return { success: false, error: 'Item not found' };
-                }
 
-                if (variantId && item.variants) {
-                    const variantIndex = item.variants.findIndex(v => v.id === variantId);
-                    if (variantIndex !== -1) {
-                        item.variants[variantIndex].reserved = (item.variants[variantIndex].reserved || 0) + reservedChange;
+        try {
+            const cloudItem = await dbService.get<Item>('inventory', itemId);
+            if (cloudItem) {
+                const newReserved = (cloudItem.reserved || 0) + reservedChange;
+                try {
+                    await fetchApiClient.requestJson({
+                        endpoint: `/inventory/${itemId}`,
+                        method: 'PUT',
+                        body: JSON.stringify({ reserved: newReserved })
+                    });
+                } catch (apiErr: any) {
+                    if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+                        throw apiErr;
                     }
                 }
-
-                item.reserved = (item.reserved || 0) + reservedChange;
-                await store.put(item);
-                return { success: true };
             }
-        );
+
+            return dbService.executeAtomicOperation(
+                ['inventory'],
+                async (tx) => {
+                    const store = tx.objectStore('inventory');
+                    const item = await store.get(itemId);
+                    if (!item) {
+                        logger.warn(`[Inventory] Cannot update reserved stock: item ${itemId} not found`);
+                        return { success: false, error: 'Item not found' };
+                    }
+
+                    if (variantId && item.variants) {
+                        const variantIndex = item.variants.findIndex(v => v.id === variantId);
+                        if (variantIndex !== -1) {
+                            item.variants[variantIndex].reserved = (item.variants[variantIndex].reserved || 0) + reservedChange;
+                        }
+                    }
+
+                    item.reserved = (item.reserved || 0) + reservedChange;
+                    await store.put(item);
+                    return { success: true };
+                }
+            );
+        } catch (error: any) {
+            logger.error('[TransactionService] updateReservedStock error:', error);
+            return { success: false, error: error.message || 'Unknown error' };
+        }
     },
 
     async transferStock(itemId: string, fromWarehouseId: string, toWarehouseId: string, quantity: number) {
-        return dbService.executeAtomicOperation(
-            ['inventory', 'warehouseInventory'],
-            async (tx) => {
-                const invStore = tx.objectStore('inventory');
-                const whStore = tx.objectStore('warehouseInventory');
-
-                // Decrement source warehouse
-                const sourceWhKey = [fromWarehouseId, itemId].join('_');
-                const sourceWh = await whStore.get(sourceWhKey);
-                if (sourceWh) {
-                    sourceWh.quantity = (sourceWh.quantity || 0) - quantity;
-                    if (sourceWh.quantity < 0) sourceWh.quantity = 0;
-                    await whStore.put(sourceWh);
-                }
-
-                // Increment destination warehouse
-                const destWhKey = [toWarehouseId, itemId].join('_');
-                const destWh = await whStore.get(destWhKey);
-                if (destWh) {
-                    destWh.quantity = (destWh.quantity || 0) + quantity;
-                    await whStore.put(destWh);
-                } else {
-                    await whStore.put({ id: destWhKey, itemId, warehouseId: toWarehouseId, quantity, reserved: 0 });
-                }
-
-                // Update master item stock
-                const item = await invStore.get(itemId);
-                if (item) {
-                    item.stock = (item.stock || 0);
-                    await invStore.put(item);
-                }
-
-                // Create inventory transaction record
-                const auditStore = tx.objectStore('inventoryTransactions');
-                await auditStore.put({
-                    id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-                    itemId,
-                    fromWarehouseId,
-                    toWarehouseId,
-                    quantity,
-                    type: 'TRANSFER',
-                    date: new Date().toISOString(),
-                    referenceId: `TRF-${itemId}-${Date.now()}`
+        try {
+            try {
+                await fetchApiClient.requestJson({
+                    endpoint: '/inventory/transactions',
+                    method: 'POST',
+                    body: JSON.stringify({
+                        itemId, warehouseId: fromWarehouseId, quantity, reason: 'Stock Transfer OUT',
+                        reference: 'TRANSFER', type: 'OUT'
+                    })
                 });
-
-                return { success: true };
+                await fetchApiClient.requestJson({
+                    endpoint: '/inventory/transactions',
+                    method: 'POST',
+                    body: JSON.stringify({
+                        itemId, warehouseId: toWarehouseId, quantity, reason: 'Stock Transfer IN',
+                        reference: 'TRANSFER', type: 'IN'
+                    })
+                });
+            } catch (apiErr: any) {
+                if (!(apiErr instanceof OfflineRequestError || apiErr?.name === 'OfflineRequestError')) {
+                    throw apiErr;
+                }
             }
-        );
+
+            return dbService.executeAtomicOperation(
+                ['inventory', 'warehouseInventory', 'inventoryTransactions'],
+                async (tx) => {
+                    const invStore = tx.objectStore('inventory');
+                    const whStore = tx.objectStore('warehouseInventory');
+                    const auditStore = tx.objectStore('inventoryTransactions');
+
+                    const sourceWhKey = [fromWarehouseId, itemId].join('_');
+                    const sourceWh = await whStore.get(sourceWhKey);
+                    if (sourceWh) {
+                        sourceWh.quantity = (sourceWh.quantity || 0) - quantity;
+                        if (sourceWh.quantity < 0) sourceWh.quantity = 0;
+                        await whStore.put(sourceWh);
+                    }
+
+                    const destWhKey = [toWarehouseId, itemId].join('_');
+                    const destWh = await whStore.get(destWhKey);
+                    if (destWh) {
+                        destWh.quantity = (destWh.quantity || 0) + quantity;
+                        await whStore.put(destWh);
+                    } else {
+                        await whStore.put({ id: destWhKey, itemId, warehouseId: toWarehouseId, quantity, reserved: 0 });
+                    }
+
+                    const item = await invStore.get(itemId);
+                    if (item) {
+                        item.stock = (item.stock || 0);
+                        await invStore.put(item);
+                    }
+
+                    await auditStore.put({
+                        id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                        itemId,
+                        fromWarehouseId,
+                        toWarehouseId,
+                        quantity,
+                        type: 'TRANSFER',
+                        date: new Date().toISOString(),
+                        referenceId: `TRF-${itemId}-${Date.now()}`
+                    });
+
+                    return { success: true };
+                }
+            );
+        } catch (error: any) {
+            logger.error('[TransactionService] transferStock error:', error);
+            return { success: false, error: error.message || 'Unknown error' };
+        }
     },
 
     async processPurchaseOrder(purchase: Purchase) {

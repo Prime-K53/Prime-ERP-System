@@ -113,7 +113,7 @@ export class SafeFormulaEngine {
       const testExpression = expression
         .replace(/Math\./g, 'MATH_DOT_');
       
-      if (!/^[0-9+\-*/().\sMATH_DOT_]+$/.test(testExpression)) {
+      if (!/^[0-9+\-*/().\s,a-zA-ZMATH_DOT_]+$/.test(testExpression)) {
         const errorMsg = `Invalid characters in formula: ${formula}`;
         console.warn('[SafeFormulaEngine]', errorMsg, { formula, expression, context });
         return {
@@ -198,11 +198,14 @@ export class SafeFormulaEngine {
    * Evaluate Math function calls safely
    */
   private static evaluateMathFunctions(expression: string): number | null {
-    const mathRegex = /Math\.(\w+)\(([^)]+)\)/g;
-    let match;
     let result = expression;
+    let hasReplaced = false;
     
-    while ((match = mathRegex.exec(expression)) !== null) {
+    while (true) {
+      const mathRegex = /Math\.(\w+)\(([^()]+)\)/;
+      const match = mathRegex.exec(result);
+      if (!match) break;
+      
       const [fullMatch, funcName, argsStr] = match;
       const args = argsStr.split(',').map(arg => this.evaluateArithmetic(arg.trim()));
       
@@ -237,10 +240,10 @@ export class SafeFormulaEngine {
       }
       
       result = result.replace(fullMatch, funcResult.toString());
+      hasReplaced = true;
     }
     
-    // If we replaced any Math functions, re-evaluate the resulting expression
-    if (result !== expression) {
+    if (hasReplaced) {
       return this.evaluateArithmetic(result);
     }
     
@@ -251,7 +254,11 @@ export class SafeFormulaEngine {
    * Evaluate arithmetic expression using shunting-yard algorithm
    */
   private static evaluateArithmetic(expression: string): number {
-    const tokens = this.tokenize(expression);
+    let processed = expression;
+    if (processed.startsWith('-')) {
+      processed = '0' + processed;
+    }
+    const tokens = this.tokenize(processed);
     const outputQueue: (number | string)[] = [];
     const operatorStack: string[] = [];
     

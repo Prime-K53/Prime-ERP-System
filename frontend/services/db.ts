@@ -9,10 +9,7 @@ import type { ReferralTimelineEntry, ReferralAuditEntry, ReferralCampaign, Refer
 import type { EngagementTimelineEntry, EngagementAuditEntry, PointEntry, PointBalance, CashbackEntry, MembershipTier, CustomerTier, GiftCard, GiftCardTransaction, AffiliateAccount, AffiliateCommission, Promotion, CustomerReward, EngagementAnalytics } from '../types/engagement';
 import type { ProductAttribute } from '../types/attributes';
 import { calculateCustomerPaymentSnapshot } from './receiptCalculationService';
-import { resetEnterpriseDatabase } from './dexie/database';
-import { isBackedStore, dexieBridge } from './dexie/bridge';
-import { settingsBackplane } from './dexie/settings-backplane';
-import type { BackedLegacyStoreName } from './dexie/bridge';
+
 import {
     BankAccount,
     BankTransaction,
@@ -300,123 +297,12 @@ const DATA_CHANGED_CHANNEL = 'primeerp-data-sync';
 let DB_SOURCE = `db-${Math.random().toString(36).slice(2)}`;
 let dataChangeChannel: BroadcastChannel | null = null;
 
-const RXDB_COLLECTION_BY_STORE: Partial<Record<keyof NexusDB, string>> = {
-    inventory: 'products',
-    customers: 'customers',
-    suppliers: 'suppliers',
-    invoices: 'invoices',
-    workCenters: 'workCenters',
-    resources: 'productionResources',
-    auditLogs: 'auditLogs',
-    examinationBatchNotifications: 'notifications'
-};
-
 const LEGACY_DATABASE_NAMES = [
     'PrimeERP_Final_v3_Clean',
     'PrimeERP_Production_v1',
     'PrimeERP_OfflineFirst',
     'PrimeERP_Examination_v1'
 ] as const;
-const lastRouteHealthAt = new Map<string, number>();
-
-const getRouteDecision = (_storeName: keyof NexusDB) => ({
-    id: 'dexie',
-    mode: 'dexie' as const,
-    readOrder: ['dexie', 'legacy'] as Array<'dexie' | 'legacy' | 'rxdb'>,
-    writeTargets: ['dexie'] as Array<'dexie' | 'legacy' | 'rxdb'>,
-});
-
-const trackRouteHealthy = async (_storeName: keyof NexusDB | 'settings') => {};
-
-const trackRouteError = async (_storeName: keyof NexusDB | 'settings', _error: unknown, _fallbackReason?: string) => {};
-
-const mergeByIdentifier = <T>(...sources: T[][]): T[] => {
-    const keyed = new Map<string, T>();
-    const passthrough: T[] = [];
-
-    sources.forEach((rows) => {
-        rows.forEach((row) => {
-            const candidate = row as Record<string, unknown>;
-            const key = String(candidate?.id ?? candidate?.key ?? '');
-            if (!key) {
-                passthrough.push(row);
-                return;
-            }
-            if (!keyed.has(key)) {
-                keyed.set(key, row);
-            }
-        });
-    });
-
-    return [...keyed.values(), ...passthrough];
-};
-
-/** Resolve which record is newer.
- *  - version/_version wins if one is higher.
- *  - Server timestamps (serverUpdatedAt/updated_at) are authoritative.
- *  - Client _updatedAt is compared when server timestamps tie.
- *  - If everything is equal, prefer cloud. */
-const pickNewerRecord = <T>(cloud: T, local: T): T => {
-    const c = cloud as Record<string, unknown>;
-    const l = local as Record<string, unknown>;
-
-    const cVer = Number(c.version || c._version || 0);
-    const lVer = Number(l.version || l._version || 0);
-    if (cVer > lVer) return cloud;
-    if (lVer > cVer) return local;
-
-    // Server-authoritative timestamps
-    const cServer = new Date(
-        (c.serverUpdatedAt || c.updated_at || 0) as string | number
-    ).getTime();
-    const lServer = new Date(
-        (l.serverUpdatedAt || l.updated_at || 0) as string | number
-    ).getTime();
-
-    if (cServer > lServer) return cloud;
-    if (lServer > cServer) return local;
-
-    // Compare client timestamps
-    const cClient = new Date(
-        (c._updatedAt || 0) as string | number
-    ).getTime();
-    const lClient = new Date(
-        (l._updatedAt || 0) as string | number
-    ).getTime();
-
-    if (lClient > cClient) return local;
-    if (cClient > lClient) return cloud;
-
-    // Everything equal — prefer cloud
-    return cloud;
-};
-
-/** Merge cloud and local data with timestamp-awareness */
-const timestampAwareMerge = <T>(cloudValues: T[], localValues: T[]): T[] => {
-    const cloudMap = new Map<string, T>();
-    const passthrough: T[] = [];
-
-    for (const row of cloudValues) {
-        const candidate = row as Record<string, unknown>;
-        const key = String(candidate?.id ?? candidate?.key ?? '');
-        if (!key) { passthrough.push(row); continue; }
-        cloudMap.set(key, row);
-    }
-
-    for (const row of localValues) {
-        const candidate = row as Record<string, unknown>;
-        const key = String(candidate?.id ?? candidate?.key ?? '');
-        if (!key) { passthrough.push(row); continue; }
-        if (cloudMap.has(key)) {
-            cloudMap.set(key, pickNewerRecord(cloudMap.get(key)!, row));
-        } else {
-            cloudMap.set(key, row);
-        }
-    }
-
-    return [...cloudMap.values(), ...passthrough];
-};
-
 const extractLegacySettingValue = <T>(value: any): T | undefined => {
     if (value === undefined || value === null) {
         return value as T | undefined;
@@ -481,7 +367,7 @@ const emitDataChange = (stores: string[]) => {
 };
 
 const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> => withDbRecovery(async (db) => {
-    if (!db.objectStoreNames.contains(storeName)) {
+    if (!db?.objectStoreNames?.contains?.(storeName)) {
         console.warn(`Object store "${storeName}" not found in IndexedDB.`);
         return [];
     }
@@ -506,7 +392,7 @@ const getAllFromLegacyStore = async <T>(storeName: keyof NexusDB): Promise<T[]> 
 });
 
 const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Promise<T | undefined> => withDbRecovery(async (db) => {
-    if (!db.objectStoreNames.contains(storeName)) {
+    if (!db?.objectStoreNames?.contains?.(storeName)) {
         console.warn(`Object store "${storeName}" not found in IndexedDB.`);
         return undefined;
     }
@@ -542,7 +428,7 @@ const putToLegacyStore = async <T>(storeName: keyof NexusDB, item: T): Promise<s
 
 const deleteFromLegacyStore = async (storeName: keyof NexusDB, id: string): Promise<void> => {
     await withDbRecovery(async (db) => {
-        if (!db.objectStoreNames.contains(storeName)) {
+        if (!db?.objectStoreNames?.contains?.(storeName)) {
             return;
         }
         await db.delete(storeName, id);
@@ -562,10 +448,7 @@ const shouldUseCloud = () => {
   return SUPABASE_CONFIGURED();
 };
 
-const writeSyncOutbox = async (entityId: string, type: string, payload: any) => {
-  // DEPRECATED: use durableSyncQueue instead
-  // Kept for backward compatibility — no-op
-};
+
 
 const CLOUD_TABLE_MAP: Record<string, string> = {
   inventory: 'products',
@@ -688,19 +571,6 @@ const CLOUD_TABLE_MAP: Record<string, string> = {
 function getCloudTable(storeName: string): string {
   return CLOUD_TABLE_MAP[storeName] || storeName;
 }
-
-const getSettingFromLegacyStore = async <T>(key: string): Promise<T | undefined> => withDbRecovery(async (db) => {
-    if (!db.objectStoreNames.contains('settings')) return undefined;
-    const value = await db.get('settings', key);
-    return extractLegacySettingValue<T>(value);
-});
-
-const saveSettingToLegacyStore = async <T>(key: string, value: T): Promise<void> => {
-    await withDbRecovery(async (db) => {
-        const record = shapeLegacySettingRecord(key, value);
-        await db.put('settings', record);
-    });
-};
 
 const STORE_NAMES: (keyof NexusDB)[] = [
     'inventory', 'warehouses', 'purchases', 'sales',
@@ -1101,34 +971,17 @@ export const dbService = {
     },
 
     async executeAtomicOperation<T>(stores: (keyof NexusDB)[], operation: (tx: any) => Promise<T>): Promise<T> {
-        if (isCloudOnlyMode()) {
-            const cloudTx = {
-                objectStore: (storeName: string) => ({
-                    put: (item: any) => this.put(storeName, item),
-                    get: (id: string) => this.get(storeName, id),
-                    getAll: () => this.getAll(storeName),
-                    delete: (id: string) => this.delete(storeName, id),
-                }),
-                done: Promise.resolve(),
-            };
-            return operation(cloudTx);
-        }
-        return withDbRecovery(async (db) => {
-            const tx = db.transaction(stores, 'readwrite');
-            try {
-                const result = await operation(tx);
-                await tx.done;
-                emitDataChange(stores.map((store) => String(store)));
-                return result;
-            } catch (err) {
-                logger.error("Atomic transaction failed. Data rolled back locally.", err);
-                try { tx.abort(); } catch (_) { /* ignore abort errors */ }
-                if (isRecoverableDbConnectionError(err)) {
-                    await resetDbConnection(db);
-                }
-                throw err;
-            }
-        });
+        // Cloud-authoritative: delegate to cloud-aware put/get/delete when Supabase is available
+        const cloudTx = {
+            objectStore: (storeName: string) => ({
+                put: (item: any) => this.put(storeName as keyof NexusDB, item),
+                get: (id: string) => this.get(storeName as keyof NexusDB, id),
+                getAll: () => this.getAll(storeName as keyof NexusDB),
+                delete: (id: string) => this.delete(storeName as keyof NexusDB, id),
+            }),
+            done: Promise.resolve(),
+        };
+        return operation(cloudTx);
     },
 
     async connectToLocalFile(): Promise<boolean> {
@@ -1202,124 +1055,47 @@ export const dbService = {
     },
 
     async getAll<T>(storeName: keyof NexusDB): Promise<T[]> {
-        let triedCloud = false
-
-        if (isCloudOnlyMode() && !LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
-            triedCloud = true
+        // Cloud-authoritative: read from Supabase first when online
+        if (!LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
             try {
                 const cloudValues = await cloudDb.getAll<T>(String(storeName));
-                if (cloudValues !== null && cloudValues.length > 0) {
-                    // Timestamp-aware merge: prefer the newer version of each item
-                    const localValues = await getAllFromLegacyStore<T>(storeName);
-                    const merged = timestampAwareMerge(cloudValues, localValues);
-                    return merged;
+                if (cloudValues !== null) {
+                    // Silently hydrate local cache for offline availability
+                    if (cloudValues.length > 0) {
+                        try {
+                            for (const item of cloudValues) {
+                                await putToLegacyStore(storeName, item).catch(() => {});
+                            }
+                        } catch { /* cache best-effort */ }
+                    }
+                    return cloudValues;
                 }
             } catch (err) {
-                console.warn(`[DB] Cloud-only getAll failed for ${String(storeName)}, falling back to local:`, err);
+                console.warn(`[DB] Cloud getAll failed for ${String(storeName)}, reading from offline cache:`, err);
             }
         }
 
-        // Cloud-primary: read from Supabase first when online
-        if (!triedCloud && shouldUseCloud() && !LOCAL_ONLY_STORES.has(String(storeName))) {
-            try {
-                const cloudValues = await cloudDb.getAll<T>(String(storeName));
-                if (cloudValues !== null && cloudValues.length > 0) {
-                    // Timestamp-aware merge: prefer the newer version of each item
-                    const localValues = await getAllFromLegacyStore<T>(storeName);
-                    const merged2 = timestampAwareMerge(cloudValues, localValues);
-                    return merged2;
-                }
-            } catch (err) {
-                console.warn(`[DB] Cloud getAll failed for ${String(storeName)}, falling back to local:`, err);
-            }
-        }
-
-        const route = getRouteDecision(storeName);
-        if (!route || !isBackedStore(String(storeName))) {
-            return getAllFromLegacyStore<T>(storeName);
-        }
-
-        if (storeName === 'inventory') {
-            console.log(`[DEBUG getAll] backed path for inventory, readOrder=${JSON.stringify(route.readOrder)}`);
-        }
-
-        const sourceStore = storeName as BackedLegacyStoreName;
-        let rxRows: T[] = [];
-        let legacyRows: T[] = [];
-
-        if (route.readOrder.includes('rxdb')) {
-            try {
-                rxRows = await dexieBridge.getAll(sourceStore) as T[];
-                void trackRouteHealthy(storeName);
-            } catch (error) {
-                void trackRouteError(storeName, error);
-            }
-        }
-
-        if (route.readOrder.includes('legacy')) {
-            legacyRows = await getAllFromLegacyStore<T>(storeName);
-        }
-
-        if (route.readOrder[0] === 'rxdb') {
-            return mergeByIdentifier(rxRows, legacyRows);
-        }
-
-        return mergeByIdentifier(legacyRows, rxRows);
+        // Offline fallback: read-only from local IndexedDB cache
+        return getAllFromLegacyStore<T>(storeName);
     },
 
     async get<T>(storeName: keyof NexusDB, id: string): Promise<T | undefined> {
-        if (isCloudOnlyMode() && String(storeName) !== 'syncOutbox' && !LOCAL_ONLY_STORES.has(String(storeName))) {
-            try {
-                const cloudValue = await cloudDb.get<T>(String(storeName), id);
-                if (cloudValue !== null && cloudValue !== undefined) return cloudValue;
-            } catch (err) {
-                console.warn(`[DB] Cloud-only get failed for ${String(storeName)}/${id}, falling back to local:`, err);
-            }
-            const localValue = await getFromLegacyStore<T>(storeName, id);
-            if (localValue !== undefined) return localValue;
-            return undefined;
-        }
-
-        // Cloud-primary: read from Supabase first when online
-        if (shouldUseCloud() && !LOCAL_ONLY_STORES.has(String(storeName))) {
+        // Cloud-authoritative: read from Supabase first when online
+        if (!LOCAL_ONLY_STORES.has(String(storeName)) && String(storeName) !== 'syncOutbox') {
             try {
                 const cloudValue = await cloudDb.get<T>(String(storeName), id);
                 if (cloudValue !== null) {
-                    await putToLegacyStore(storeName, cloudValue);
+                    // Silently hydrate local cache for offline availability
+                    try { await putToLegacyStore(storeName, cloudValue as T); } catch { /* cache best-effort */ }
                     return cloudValue;
                 }
             } catch (err) {
-                console.warn(`[DB] Cloud read failed for ${String(storeName)}/${id}, falling back to local:`, err);
+                console.warn(`[DB] Cloud get failed for ${String(storeName)}/${id}, reading from offline cache:`, err);
             }
         }
 
-        const route = getRouteDecision(storeName);
-        if (!route || !isBackedStore(String(storeName))) {
-            return getFromLegacyStore<T>(storeName, id);
-        }
-
-        const sourceStore = storeName as BackedLegacyStoreName;
-        for (const source of route.readOrder) {
-            if (source === 'rxdb') {
-                try {
-                    const value = await dexieBridge.get(sourceStore, id) as T | undefined;
-                    if (value !== undefined) {
-                        void trackRouteHealthy(storeName);
-                        return value;
-                    }
-                } catch (error) {
-                    void trackRouteError(storeName, error);
-                }
-                continue;
-            }
-
-            const legacyValue = await getFromLegacyStore<T>(storeName, id);
-            if (legacyValue !== undefined) {
-                return legacyValue;
-            }
-        }
-
-        return undefined;
+        // Offline fallback: read-only from local cache
+        return getFromLegacyStore<T>(storeName, id);
     },
 
     async put<T>(storeName: keyof NexusDB, item: T): Promise<string> {
@@ -1328,87 +1104,43 @@ export const dbService = {
         }
 
         const raw = item as Record<string, unknown>;
-        const isFromCloud = raw._cloudSource === true;
-
-        // Always clear _cloudSource before writing to the legacy store so it
-        // cannot be inherited by a subsequent local edit. The flag is ONLY used
-        // by the sync-shortcut check above and should not persist on disk.
-        // This ensures pickNewerRecord doesn't always defer to the cloud version
-        // for items that were once synced but then edited locally.
         delete raw._cloudSource;
-
-        if (isFromCloud) {
-            await putToLegacyStore(storeName, item);
-            return String(raw.id ?? '');
-        }
 
         const itemId = String(raw.id ?? '');
 
-        // Always write to local cache first for immediate UI responsiveness.
-        // Capture the resolved ID for return.
-        const route = getRouteDecision(storeName);
-        let localResultId = itemId;
-        if (route && isBackedStore(String(storeName))) {
-            const sourceStore = storeName as BackedLegacyStoreName;
-            let persisted = false;
-
-            if (route.writeTargets.includes('rxdb')) {
-                try {
-                    await dexieBridge.put(sourceStore, item);
-                    persisted = true;
-                    await trackRouteHealthy(storeName);
-                } catch (error) {
-                    await trackRouteError(
-                        storeName,
-                        error,
-                        route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy write for ${String(storeName)}.`
-                    );
-                }
-            }
-            if (route.writeTargets.includes('legacy') || !persisted) {
-                console.log(`[DEBUG put] store=${storeName}, id=${itemId}, calling putToLegacyStore...`);
-                localResultId = await putToLegacyStore(storeName, item);
-                console.log(`[DEBUG put] putToLegacyStore done, result=${localResultId}`);
-            }
-        } else {
-            localResultId = await putToLegacyStore(storeName, item);
-        }
-
-        // Queue the operation BEFORE cloud write (guarantees no data loss on crash)
+        // Cloud-authoritative: write to Supabase first
         const isLocalOnly = LOCAL_ONLY_STORES.has(String(storeName)) || String(storeName) === 'syncOutbox';
-        if (shouldUseCloud() && !isLocalOnly) {
-            const table = getCloudTable(String(storeName));
-            let dependsOn: string[] = [];
-            const depKey = (item as Record<string, unknown>)?.dependsOn as string[] | undefined;
-            if (depKey) dependsOn = depKey;
-
-            const queued = await durableSyncQueue.enqueue({
-                table,
-                recordId: localResultId || null,
-                operation: 'upsert',
-                payload: item,
-                companyId: currentCompanyId || null,
-                dependsOn,
-            });
-
-            // Try cloud write now (non-blocking — background sync will retry if this fails)
+        if (!isLocalOnly) {
             try {
                 const cloudResult = await cloudDb.put(String(storeName), item);
                 if (cloudResult?.id) {
-                    await durableSyncQueue.markCompleted(queued.id, cloudResult.updatedAt);
-                } else {
-                    // cloudDb returned null (no company_id) — mark as failed so it won't retry
-                    await durableSyncQueue.markFailed(queued.id, 'No company_id resolvable');
+                    // Cloud write succeeded — hydrate local cache for offline availability
+                    try { await putToLegacyStore(storeName, item); } catch { /* cache best-effort */ }
+                    this.triggerSync();
+                    emitDataChange([String(storeName)]);
+                    return cloudResult.id;
                 }
             } catch (err) {
-                // Queue item stays pending — background sync will retry
-                console.warn(`[DB] Cloud write failed for ${String(storeName)}, queued for retry:`, err);
+                console.warn(`[DB] Cloud put failed for ${String(storeName)}, writing offline:`, err);
+                // Queue for background sync retry
+                try {
+                    const table = getCloudTable(String(storeName));
+                    const queued = await durableSyncQueue.enqueue({
+                        table,
+                        recordId: itemId || null,
+                        operation: 'upsert',
+                        payload: item,
+                        companyId: currentCompanyId || null,
+                    });
+                    backgroundSyncService.trigger();
+                } catch (qErr) {
+                    console.warn('[DB] Failed to queue offline write:', qErr);
+                }
             }
-
-            // Trigger background sync to process queue in case the above attempt failed
-            backgroundSyncService.trigger();
         }
 
+        // Offline fallback: write to local cache
+        const localResultId = await putToLegacyStore(storeName, item);
         this.triggerSync();
         emitDataChange([String(storeName)]);
         return localResultId;
@@ -1418,7 +1150,7 @@ export const dbService = {
       if (items.length === 0) return;
       // Skip cloud writes — bulkPut is for syncing cloud data into local cache
       await withDbRecovery(async (db) => {
-        if (!db.objectStoreNames.contains(storeName)) return;
+        if (!db?.objectStoreNames?.contains?.(storeName)) return;
         const tx = db.transaction(storeName, 'readwrite');
         const store = tx.objectStore(storeName);
         for (const item of items) {
@@ -1432,63 +1164,21 @@ export const dbService = {
     },
 
     async getSetting<T>(key: string): Promise<T | undefined> {
-        if (isCloudOnlyMode()) {
+        try {
             const cloudValue = await cloudDb.getSetting<T>(key);
             return cloudValue ?? undefined;
-        }
-
-        // Cloud-primary: read settings from Supabase first when online
-        if (shouldUseCloud()) {
-            try {
-                const cloudValue = await cloudDb.getSetting<T>(key);
-                if (cloudValue !== null) {
-                    try { await settingsBackplane.setJson(key, cloudValue, { exactKey: true }); } catch { }
-                    try { await saveSettingToLegacyStore(key, cloudValue); } catch { }
-                    return cloudValue;
-                }
-            } catch (err) {
-                console.warn(`[DB] Cloud getSetting failed for ${key}, falling back to local:`, err);
-            }
-        }
-
-        try {
-            const value = await settingsBackplane.getJson<T>(key, { exactKey: true });
-            if (value !== undefined) return value;
-            return getSettingFromLegacyStore<T>(key);
-        } catch (e) {
-            console.warn("[DB] Error getting setting:", key, e);
+        } catch (err) {
+            console.warn(`[DB] Cloud getSetting failed for ${key}:`, err);
             return undefined;
         }
     },
 
     async saveSetting<T>(key: string, value: T): Promise<void> {
-        // Save locally first for immediate access
         try {
-            await settingsBackplane.setJson(key, value, { exactKey: true });
-        } catch (error) {
-            console.warn("[DB] Error saving setting:", key, error);
+            await cloudDb.saveSetting<T>(key, value);
+        } catch (err) {
+            console.warn(`[DB] Cloud saveSetting failed for ${key}:`, err);
         }
-
-        // Queue the setting save and try cloud write
-        if (shouldUseCloud()) {
-            const queued = await durableSyncQueue.enqueue({
-                table: 'settings',
-                recordId: key,
-                operation: 'upsert',
-                payload: { id: key, data: value },
-                companyId: currentCompanyId || null,
-            });
-
-            try {
-                await cloudDb.saveSetting<T>(key, value);
-                await durableSyncQueue.markCompleted(queued.id);
-            } catch (err) {
-                console.warn(`[DB] Cloud saveSetting failed for ${key}, queued for retry:`, err);
-            }
-
-            backgroundSyncService.trigger();
-        }
-
         this.triggerSync();
         emitDataChange(['settings']);
     },
@@ -1517,7 +1207,6 @@ export const dbService = {
         examinationModule.getExaminationDb()?.close();
         await offlineModule.closeOfflineDbConnection?.();
 
-        await resetEnterpriseDatabase().catch(() => undefined);
         await Promise.all(LEGACY_DATABASE_NAMES.map((name) => deleteDB(name).catch(() => undefined)));
         await durableSyncQueue.destroy().catch(() => undefined);
 
@@ -1543,56 +1232,31 @@ export const dbService = {
     },
 
     async delete(storeName: keyof NexusDB, id: string): Promise<void> {
-        // Delete from local cache first for immediate responsiveness
-        const route = getRouteDecision(storeName);
-        if (route && isBackedStore(String(storeName))) {
-            const sourceStore = storeName as BackedLegacyStoreName;
-            let deleted = false;
-            if (route.writeTargets.includes('rxdb')) {
-                try {
-                    await dexieBridge.delete(sourceStore, id);
-                    deleted = true;
-                    await trackRouteHealthy(storeName);
-                } catch (error) {
-                    await trackRouteError(
-                        storeName,
-                        error,
-                        route.writeTargets.includes('legacy') ? undefined : `Fell back to legacy delete for ${String(storeName)}.`
-                    );
-                }
-            }
-            if (route.writeTargets.includes('legacy') || !deleted) {
-                await deleteFromLegacyStore(storeName, id);
-            }
-        } else {
-            await deleteFromLegacyStore(storeName, id);
-        }
-
-        // Queue the delete BEFORE cloud write (guarantees no data loss on crash)
+        // Cloud-authoritative: delete from Supabase first
         const isLocalOnly = LOCAL_ONLY_STORES.has(String(storeName)) || String(storeName) === 'syncOutbox';
-        if (shouldUseCloud() && !isLocalOnly) {
-            const table = getCloudTable(String(storeName));
-            const queued = await durableSyncQueue.enqueue({
-                table,
-                recordId: id,
-                operation: 'delete',
-                payload: { id },
-                companyId: currentCompanyId || null,
-            });
-
-            // Try cloud delete now
+        if (!isLocalOnly) {
             try {
-                const cloudResult = await cloudDb.delete(String(storeName), id);
-                if (cloudResult) {
-                    await durableSyncQueue.markCompleted(queued.id);
-                }
+                await cloudDb.delete(String(storeName), id);
             } catch (err) {
-                console.warn(`[DB] Cloud delete failed for ${String(storeName)}/${id}, queued for retry:`, err);
+                console.warn(`[DB] Cloud delete failed for ${String(storeName)}/${id}, queueing for retry:`, err);
+                try {
+                    const table = getCloudTable(String(storeName));
+                    await durableSyncQueue.enqueue({
+                        table,
+                        recordId: id,
+                        operation: 'delete',
+                        payload: { id },
+                        companyId: currentCompanyId || null,
+                    });
+                    backgroundSyncService.trigger();
+                } catch (qErr) {
+                    console.warn('[DB] Failed to queue delete:', qErr);
+                }
             }
-
-            backgroundSyncService.trigger();
         }
 
+        // Remove from local cache
+        await deleteFromLegacyStore(storeName, id);
         this.triggerSync();
         emitDataChange([String(storeName)]);
     },
@@ -1600,7 +1264,29 @@ export const dbService = {
     async saveFile(file: File): Promise<string> {
         const id = `FILE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        // Cache locally first for immediate access
+        // Cloud-authoritative: upload to Supabase Storage first
+        try {
+            const fileId = await cloudDb.uploadFile(file);
+            if (fileId) {
+                // Hydrate local cache for offline availability
+                try {
+                    await withDbRecovery(async (db) => {
+                        await db.put('files', {
+                            id: fileId,
+                            blob: file,
+                            name: file.name,
+                            type: file.type,
+                            created: new Date().toISOString()
+                        });
+                    });
+                } catch { /* cache best-effort */ }
+                return fileId;
+            }
+        } catch (err) {
+            console.warn(`[DB] File upload failed for ${file.name}, queueing for retry:`, err);
+        }
+
+        // Offline fallback: cache locally and queue for upload
         await withDbRecovery(async (db) => {
             await db.put('files', {
                 id,
@@ -1611,9 +1297,8 @@ export const dbService = {
             });
         });
 
-        // Queue upload to Supabase Storage
-        if (shouldUseCloud()) {
-            const queued = await durableSyncQueue.enqueue({
+        try {
+            await durableSyncQueue.enqueue({
                 table: '_files',
                 recordId: id,
                 operation: 'upsert',
@@ -1621,17 +1306,9 @@ export const dbService = {
                 companyId: currentCompanyId || null,
                 fileRef: id,
             });
-
-            try {
-                const fileId = await cloudDb.uploadFile(file);
-                if (fileId) {
-                    await durableSyncQueue.markCompleted(queued.id);
-                }
-            } catch (err) {
-                console.warn(`[DB] File upload failed for ${file.name}, queued for retry:`, err);
-            }
-
             backgroundSyncService.trigger();
+        } catch (qErr) {
+            console.warn('[DB] Failed to queue file upload:', qErr);
         }
 
         return id;
@@ -1769,37 +1446,21 @@ export const dbService = {
             });
         }
 
-        await resetEnterpriseDatabase().catch(() => undefined);
-        await dexieBridge.ensureReady().catch((error) => {
-            console.warn('[DB] RxDB restore rehydration failed:', error);
-            return undefined;
-        });
-
         localStorage.setItem('prime_erp_backup_date', new Date().toISOString());
     },
 
     async checkIntegrity(): Promise<{ healthy: boolean; issues: string[] }> {
-        if (isCloudOnlyMode()) {
-            return { healthy: true, issues: [] };
-        }
-
-        const db = await initDB();
         const issues: string[] = [];
 
-        STORE_NAMES.forEach(store => {
-            if (!db.objectStoreNames.contains(store)) {
-                issues.push(`Missing object store: ${store} `);
-            }
-        });
-
         try {
-            const { databaseManager } = await import('./dexie/DatabaseManager');
-            const health = databaseManager.isHealthy();
-            if (!health) {
-                issues.push('Enterprise Dexie database reports unhealthy');
-            }
+            const db = await initDB();
+            STORE_NAMES.forEach(store => {
+                if (!db.objectStoreNames.contains(store)) {
+                    issues.push(`Missing object store: ${store} `);
+                }
+            });
         } catch (error) {
-            issues.push(`Dexie diagnostics unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            issues.push(`IndexedDB diagnostics unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         return {

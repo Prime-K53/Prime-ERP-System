@@ -125,7 +125,7 @@ const inventorySchemas = {
   }),
   stockAdjustment: z.object({
     itemId: z.string(),
-    quantityChange: z.number().int(),
+    quantity: z.number().int(),
     reason: z.string().min(1),
     warehouseId: z.string().optional()
   })

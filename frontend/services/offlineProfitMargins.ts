@@ -44,8 +44,8 @@ const readJsonArray = <T>(key: string): T[] => {
   }
 };
 
-const writeJsonArray = <T>(key: string, rows: T[]) => {
-  localStorage.setItem(key, JSON.stringify(rows));
+const writeJsonArray = async <T>(key: string, rows: T[]) => {
+  await dbService.saveSetting(key, rows);
 };
 
 const normalizeScope = (value: unknown): OfflineMarginSetting['scope'] => {
@@ -135,7 +135,7 @@ const serializeSetting = (setting: OfflineMarginSetting) => JSON.stringify({
   apply_volume_margins: normalizeBooleanFlag(setting.apply_volume_margins, false)
 });
 
-const appendAuditEntry = (
+const appendAuditEntry = async (
   setting: OfflineMarginSetting,
   action: 'CREATE' | 'UPDATE' | 'DELETE',
   oldValue: string | null,
@@ -154,7 +154,7 @@ const appendAuditEntry = (
     performed_by: getCurrentUserId(),
     timestamp: nowIso()
   });
-  writeJsonArray(OFFLINE_MARGIN_AUDIT_KEY, existing);
+  await writeJsonArray(OFFLINE_MARGIN_AUDIT_KEY, existing);
 };
 
 export const listOfflineMarginSettings = (): OfflineMarginSetting[] => {
@@ -174,7 +174,7 @@ export const listOfflineMarginSettingsAsync = async (): Promise<OfflineMarginSet
   try {
     const idbSettings = await dbService.getAll('profitMarginSettings') as OfflineMarginSetting[];
     if (idbSettings.length > 0) {
-      writeJsonArray(OFFLINE_MARGIN_STORE_KEY, idbSettings);
+      await writeJsonArray(OFFLINE_MARGIN_STORE_KEY, idbSettings);
       return idbSettings
         .map((setting) => normalizeSetting(setting, setting))
         .sort((left, right) => {
@@ -220,7 +220,7 @@ export const listOfflineMarginAuditLogs = (filters?: {
 };
 
 const persistMarginSettings = async (settings: OfflineMarginSetting[]) => {
-  writeJsonArray(OFFLINE_MARGIN_STORE_KEY, settings);
+  await writeJsonArray(OFFLINE_MARGIN_STORE_KEY, settings);
   // Also write to IndexedDB for cross-device sync
   try {
     for (const setting of settings) {
@@ -230,16 +230,16 @@ const persistMarginSettings = async (settings: OfflineMarginSetting[]) => {
   return settings;
 };
 
-export const createOfflineMarginSetting = (input: Partial<OfflineMarginSetting>) => {
+export const createOfflineMarginSetting = async (input: Partial<OfflineMarginSetting>) => {
   const settings = listOfflineMarginSettings();
   const created = normalizeSetting({ ...input, updated_at: nowIso() });
   const nextSettings = [created, ...settings.filter((setting) => setting.id !== created.id)];
-  persistMarginSettings(nextSettings);
-  appendAuditEntry(created, 'CREATE', null, serializeSetting(created), input.reason ?? null);
+  await persistMarginSettings(nextSettings);
+  await appendAuditEntry(created, 'CREATE', null, serializeSetting(created), input.reason ?? null);
   return created;
 };
 
-export const updateOfflineMarginSetting = (id: string, updates: Partial<OfflineMarginSetting>) => {
+export const updateOfflineMarginSetting = async (id: string, updates: Partial<OfflineMarginSetting>) => {
   const settings = listOfflineMarginSettings();
   const index = settings.findIndex((setting) => String(setting.id) === String(id));
   if (index < 0) {
@@ -249,12 +249,12 @@ export const updateOfflineMarginSetting = (id: string, updates: Partial<OfflineM
   const existing = settings[index];
   const updated = normalizeSetting({ ...updates, updated_at: nowIso() }, existing);
   settings[index] = updated;
-  persistMarginSettings(settings);
-  appendAuditEntry(updated, 'UPDATE', serializeSetting(existing), serializeSetting(updated), updates.reason ?? updated.reason);
+  await persistMarginSettings(settings);
+  await appendAuditEntry(updated, 'UPDATE', serializeSetting(existing), serializeSetting(updated), updates.reason ?? updated.reason);
   return updated;
 };
 
-export const deleteOfflineMarginSetting = (id: string, reason?: string | null) => {
+export const deleteOfflineMarginSetting = async (id: string, reason?: string | null) => {
   const settings = listOfflineMarginSettings();
   const index = settings.findIndex((setting) => String(setting.id) === String(id));
   if (index < 0) {
@@ -271,17 +271,17 @@ export const deleteOfflineMarginSetting = (id: string, reason?: string | null) =
   }, existing);
 
   settings[index] = deleted;
-  persistMarginSettings(settings);
-  appendAuditEntry(deleted, 'DELETE', serializeSetting(existing), null, reason ?? existing.reason);
+  await persistMarginSettings(settings);
+  await appendAuditEntry(deleted, 'DELETE', serializeSetting(existing), null, reason ?? existing.reason);
   return { success: true };
 };
 
-export const bulkUploadOfflineMarginSettings = (rows: Array<Record<string, unknown>>) => {
+export const bulkUploadOfflineMarginSettings = async (rows: Array<Record<string, unknown>>) => {
   let success = 0;
   let failed = 0;
   const errors: Array<{ row: number; error: string }> = [];
 
-  rows.forEach((row, index) => {
+  for (const [index, row] of rows.entries()) {
     try {
       const scopeRefId = String(row.sku || row.scope_ref_id || row.scopeRefId || '').trim();
       if (!scopeRefId) {
@@ -299,7 +299,7 @@ export const bulkUploadOfflineMarginSettings = (rows: Array<Record<string, unkno
       ));
 
       if (existing) {
-        updateOfflineMarginSetting(existing.id, {
+        await updateOfflineMarginSetting(existing.id, {
           margin_type: marginType,
           margin_value: marginValue,
           is_active: true,
@@ -307,7 +307,7 @@ export const bulkUploadOfflineMarginSettings = (rows: Array<Record<string, unkno
           reason
         });
       } else {
-        createOfflineMarginSetting({
+        await createOfflineMarginSetting({
           scope: 'line_item',
           scope_ref_id: scopeRefId,
           margin_type: marginType,
@@ -325,7 +325,7 @@ export const bulkUploadOfflineMarginSettings = (rows: Array<Record<string, unkno
         error: error instanceof Error ? error.message : 'Invalid CSV row'
       });
     }
-  });
+  }
 
   return { success, failed, errors };
 };
@@ -419,11 +419,8 @@ export async function restoreLocalMarginsFromSync(): Promise<void> {
   try {
     const cloud = await dbService.getAll('profitMarginSettings').catch(() => []);
     if (cloud.length === 0) return;
-    const existingRaw = localStorage.getItem(OFFLINE_MARGIN_STORE_KEY);
-    if (existingRaw) {
-      const existing = JSON.parse(existingRaw);
-      if (Array.isArray(existing) && existing.length >= cloud.length) return;
-    }
-    localStorage.setItem(OFFLINE_MARGIN_STORE_KEY, JSON.stringify(cloud));
+    const existing = await dbService.getSetting<OfflineMarginSetting[]>(OFFLINE_MARGIN_STORE_KEY);
+    if (existing && Array.isArray(existing) && existing.length >= cloud.length) return;
+    await dbService.saveSetting(OFFLINE_MARGIN_STORE_KEY, cloud);
   } catch { /* best-effort */ }
 }

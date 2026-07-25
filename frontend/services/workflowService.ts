@@ -108,10 +108,15 @@ class WorkflowService {
    */
   private async loadInstances(): Promise<void> {
     try {
-      const saved = localStorage.getItem(WORKFLOW_INSTANCES_KEY);
-      if (saved) {
-        const instances: WorkflowInstance[] = JSON.parse(saved);
-        instances.forEach(inst => this.instances.set(inst.id, inst));
+      const saved = await dbService.getSetting<WorkflowInstance[]>(WORKFLOW_INSTANCES_KEY);
+      if (saved && saved.length > 0) {
+        saved.forEach(inst => this.instances.set(inst.id, inst));
+      } else {
+        const local = localStorage.getItem(WORKFLOW_INSTANCES_KEY);
+        if (local) {
+          const instances: WorkflowInstance[] = JSON.parse(local);
+          instances.forEach(inst => this.instances.set(inst.id, inst));
+        }
       }
     } catch (error) {
       logger.error('Failed to load workflow instances', error as Error);
@@ -124,7 +129,7 @@ class WorkflowService {
   private async saveInstances(): Promise<void> {
     try {
       const instances = Array.from(this.instances.values());
-      localStorage.setItem(WORKFLOW_INSTANCES_KEY, JSON.stringify(instances));
+      await dbService.saveSetting(WORKFLOW_INSTANCES_KEY, instances);
     } catch (error) {
       logger.error('Failed to save workflow instances', error as Error);
     }
@@ -135,10 +140,15 @@ class WorkflowService {
    */
   private async loadApprovals(): Promise<void> {
     try {
-      const saved = localStorage.getItem(WORKFLOW_APPROVALS_KEY);
-      if (saved) {
-        const approvals: WorkflowApproval[] = JSON.parse(saved);
-        approvals.forEach(app => this.approvals.set(app.id, app));
+      const saved = await dbService.getSetting<WorkflowApproval[]>(WORKFLOW_APPROVALS_KEY);
+      if (saved && saved.length > 0) {
+        saved.forEach(app => this.approvals.set(app.id, app));
+      } else {
+        const local = localStorage.getItem(WORKFLOW_APPROVALS_KEY);
+        if (local) {
+          const approvals: WorkflowApproval[] = JSON.parse(local);
+          approvals.forEach(app => this.approvals.set(app.id, app));
+        }
       }
     } catch (error) {
       logger.error('Failed to load workflow approvals', error as Error);
@@ -151,7 +161,7 @@ class WorkflowService {
   private async saveApprovals(): Promise<void> {
     try {
       const approvals = Array.from(this.approvals.values());
-      localStorage.setItem(WORKFLOW_APPROVALS_KEY, JSON.stringify(approvals));
+      await dbService.saveSetting(WORKFLOW_APPROVALS_KEY, approvals);
     } catch (error) {
       logger.error('Failed to save workflow approvals', error as Error);
     }
@@ -162,12 +172,19 @@ class WorkflowService {
    */
   private async loadHistory(): Promise<void> {
     try {
-      const saved = localStorage.getItem(WORKFLOW_HISTORY_KEY);
+      const saved = await dbService.getSetting<Record<string, WorkflowHistoryEntry[]>>(WORKFLOW_HISTORY_KEY);
       if (saved) {
-        const historyData: Record<string, WorkflowHistoryEntry[]> = JSON.parse(saved);
-        Object.entries(historyData).forEach(([key, entries]) => {
+        Object.entries(saved).forEach(([key, entries]) => {
           this.history.set(key, entries);
         });
+      } else {
+        const local = localStorage.getItem(WORKFLOW_HISTORY_KEY);
+        if (local) {
+          const historyData: Record<string, WorkflowHistoryEntry[]> = JSON.parse(local);
+          Object.entries(historyData).forEach(([key, entries]) => {
+            this.history.set(key, entries);
+          });
+        }
       }
     } catch (error) {
       logger.error('Failed to load workflow history', error as Error);
@@ -183,7 +200,7 @@ class WorkflowService {
       this.history.forEach((entries, key) => {
         historyData[key] = entries;
       });
-      localStorage.setItem(WORKFLOW_HISTORY_KEY, JSON.stringify(historyData));
+      await dbService.saveSetting(WORKFLOW_HISTORY_KEY, historyData);
     } catch (error) {
       logger.error('Failed to save workflow history', error as Error);
     }
@@ -194,10 +211,15 @@ class WorkflowService {
    */
   private async loadNotifications(): Promise<void> {
     try {
-      const saved = localStorage.getItem(WORKFLOW_NOTIFICATIONS_KEY);
-      if (saved) {
-        const notifications: WorkflowNotification[] = JSON.parse(saved);
-        notifications.forEach(notif => this.notifications.set(notif.id, notif));
+      const saved = await dbService.getSetting<WorkflowNotification[]>(WORKFLOW_NOTIFICATIONS_KEY);
+      if (saved && saved.length > 0) {
+        saved.forEach(notif => this.notifications.set(notif.id, notif));
+      } else {
+        const local = localStorage.getItem(WORKFLOW_NOTIFICATIONS_KEY);
+        if (local) {
+          const notifications: WorkflowNotification[] = JSON.parse(local);
+          notifications.forEach(notif => this.notifications.set(notif.id, notif));
+        }
       }
     } catch (error) {
       logger.error('Failed to load workflow notifications', error as Error);
@@ -210,7 +232,7 @@ class WorkflowService {
   private async saveNotifications(): Promise<void> {
     try {
       const notifications = Array.from(this.notifications.values());
-      localStorage.setItem(WORKFLOW_NOTIFICATIONS_KEY, JSON.stringify(notifications));
+      await dbService.saveSetting(WORKFLOW_NOTIFICATIONS_KEY, notifications);
     } catch (error) {
       logger.error('Failed to save workflow notifications', error as Error);
     }

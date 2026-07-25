@@ -12,11 +12,13 @@ import {
     Globe, Clock, Key, Lock, Gauge, Binary, Plus, X, Percent,
     Cpu, Layers, Smartphone, Layout, Users, ShoppingBag, ShoppingCart, Palette, Monitor,
     Factory, Box, Cloud, Bell, Mail, MessageSquare, ShieldAlert, Webhook, Sun, Moon, Laptop, Info, Undo2,
-    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles, Scissors, Award, Tag, CreditCard
+    TrendingUp, Package, PlusCircle, Trash, Printer, Usb, Sparkles, Scissors, Award, Tag, CreditCard,
+    CalendarDays
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
 import { useInventory } from '../context/InventoryContext';
+import { useFinancialYear } from '../context/FinancialYearContext';
 import { CompanyConfig, InvoiceTemplatesConfig, NumberingRule, PricingRoundingMethod, RoundingRulesConfig } from '../types';
 import { OfflineImage } from '../components/OfflineImage';
 import { localFileStorage } from '../services/localFileStorage';
@@ -612,6 +614,7 @@ const Settings: React.FC = () => {
         {
             title: 'Financials',
             items: [
+                { id: 'FinancialYears', icon: CalendarDays, label: 'Financial Years', desc: 'Manage financial year periods and active year' },
                 { id: 'Currencies', icon: Wallet, label: 'Currencies', desc: 'Currency symbols and precision' },
                 { id: 'Transactions', icon: RefreshCw, label: 'Transaction Prefixes', desc: 'One shared numbering pattern for documents' },
                 { id: 'GLMapping', icon: Binary, label: 'Chart of Accounts', desc: 'Ledger and mapping configurations' },
@@ -3180,6 +3183,12 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                             )
                         }
 
+                        {
+                            activeTab === 'FinancialYears' && (
+                                <FinancialYearsSettingsTab notify={notify} />
+                            )
+                        }
+
                     </div >
                 </div >
             </div>
@@ -3227,6 +3236,239 @@ id: `webhook-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               confirmText={doubleConfirmState.confirmText}
               type={doubleConfirmState.type || 'danger'}
             />
+        </div>
+    );
+};
+
+const FinancialYearsSettingsTab: React.FC<{ notify: (msg: string, type?: string) => void }> = ({ notify }) => {
+    const { availableFinancialYears, selectedFinancialYear, refreshFinancialYears } = useFinancialYear();
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newStart, setNewStart] = useState('');
+    const [newEnd, setNewEnd] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const resetForm = () => {
+        setNewName('');
+        setNewStart('');
+        setNewEnd('');
+        setShowCreateForm(false);
+    };
+
+    const handleCreate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newName || !newStart || !newEnd) return;
+        setSubmitting(true);
+        try {
+            await api.createFinancialYear({
+                name: newName,
+                code: newName.replace(/\s+/g, '_').toUpperCase(),
+                start_date: newStart,
+                end_date: newEnd,
+                is_default: availableFinancialYears.length === 0,
+                status: 'Active',
+                is_closed: false
+            });
+            notify('Financial year created successfully', 'success');
+            resetForm();
+            refreshFinancialYears();
+        } catch (err: any) {
+            notify(err?.message || 'Failed to create financial year', 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleSetActive = async (fy: any) => {
+        try {
+            await api.updateFinancialYear(fy.id, { is_default: true });
+            notify('Active financial year updated', 'success');
+            refreshFinancialYears();
+        } catch (err: any) {
+            notify(err?.message || 'Failed to set active financial year', 'error');
+        }
+    };
+
+    const handleClose = async (fy: any) => {
+        try {
+            await api.closeFinancialYear(fy.id);
+            notify('Financial year closed', 'success');
+            refreshFinancialYears();
+        } catch (err: any) {
+            notify(err?.message || 'Failed to close financial year', 'error');
+        }
+    };
+
+    const handleDelete = async (fy: any) => {
+        try {
+            await api.deleteFinancialYear(fy.id);
+            notify('Financial year deleted', 'success');
+            refreshFinancialYears();
+        } catch (err: any) {
+            notify(err?.message || 'Failed to delete financial year', 'error');
+        }
+    };
+
+    const formatFyLabel = (fy: any) => {
+        const sy = fy.start_date?.slice(0, 4);
+        const ey = fy.end_date?.slice(0, 4);
+        return sy !== ey ? `FY ${sy}/${ey?.slice(2)}` : `FY ${sy}`;
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <CalendarDays size={20} className="text-white" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-black text-slate-900">Financial Years</h2>
+                    <p className="text-xs text-slate-500">Manage financial year periods. The active year is used for all transactions and reports.</p>
+                </div>
+            </div>
+
+            <div className="white-card overflow-hidden">
+                <div className="settings-section-header flex justify-between items-center">
+                    <div>
+                        <h3 className="text-sm font-bold text-[#393A3D]">All Financial Years</h3>
+                        <p className="text-[11px] text-[#6B6C6F] mt-0.5">Create, close, or delete financial years.</p>
+                    </div>
+                    <button
+                        onClick={() => setShowCreateForm(!showCreateForm)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center gap-2"
+                    >
+                        <Plus size={16} /> New Financial Year
+                    </button>
+                </div>
+
+                {showCreateForm && (
+                    <div className="p-6 border-b border-slate-100 bg-slate-50/30">
+                        <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="settings-label">Year Name</label>
+                                <input
+                                    type="text"
+                                    className="settings-input"
+                                    placeholder="e.g. 2025/2026"
+                                    value={newName}
+                                    onChange={e => setNewName(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="settings-label">Start Date</label>
+                                <input
+                                    type="date"
+                                    className="settings-input"
+                                    value={newStart}
+                                    onChange={e => setNewStart(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="settings-label">End Date</label>
+                                <input
+                                    type="date"
+                                    className="settings-input"
+                                    value={newEnd}
+                                    onChange={e => setNewEnd(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="flex items-end gap-2">
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {submitting ? 'Creating...' : 'Create'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={resetForm}
+                                    className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-300"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead>
+                            <tr className="border-b border-slate-100 text-xs text-slate-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 font-semibold">Name</th>
+                                <th className="px-6 py-3 font-semibold">Period</th>
+                                <th className="px-6 py-3 font-semibold">Status</th>
+                                <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {availableFinancialYears.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-8 text-center text-slate-400 text-sm">
+                                        No financial years configured. Create one to get started.
+                                    </td>
+                                </tr>
+                            ) : (
+                                availableFinancialYears.map(fy => {
+                                    const isActive = selectedFinancialYear?.id === fy.id;
+                                    const isDefault = fy.is_default === 1;
+                                    return (
+                                        <tr key={fy.id} className={`hover:bg-slate-50/50 transition-colors ${isActive ? 'bg-blue-50/30' : ''}`}>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-slate-800">{fy.name}</span>
+                                                    {isDefault && <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">Default</span>}
+                                                    {isActive && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Active</span>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600">
+                                                {fy.start_date} – {fy.end_date}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${fy.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}`}>
+                                                    {fy.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {!isDefault && fy.status === 'Active' && (
+                                                        <button
+                                                            onClick={() => handleSetActive(fy)}
+                                                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                        >
+                                                            Set Active
+                                                        </button>
+                                                    )}
+                                                    {fy.status === 'Active' && (
+                                                        <button
+                                                            onClick={() => handleClose(fy)}
+                                                            className="text-xs text-amber-600 hover:text-amber-800 font-medium"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    )}
+                                                    {!isDefault && (
+                                                        <button
+                                                            onClick={() => handleDelete(fy)}
+                                                            className="text-xs text-rose-600 hover:text-rose-800 font-medium"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };

@@ -937,16 +937,16 @@ export const getGlobalDefaultMargin = async (): Promise<{ margin_type: 'percenta
             apply_volume_margins: !!globalMargin.apply_volume_margins,
         };
 
-        // Cache the result in localStorage for next offline session
+        // Cache the result in the cloud-first setting store for next offline session
         try {
-            const existing = JSON.parse(localStorage.getItem(OFFLINE_MARGIN_STORE_KEY) || '[]');
+            const existing = await dbService.getSetting<any[]>(OFFLINE_MARGIN_STORE_KEY) || [];
             const idx = existing.findIndex((m: any) => m.scope === 'global');
             if (idx >= 0) {
                 existing[idx] = { ...existing[idx], ...globalMargin };
             } else {
                 existing.push(globalMargin);
             }
-            localStorage.setItem(OFFLINE_MARGIN_STORE_KEY, JSON.stringify(existing));
+            await dbService.saveSetting(OFFLINE_MARGIN_STORE_KEY, existing);
         } catch {
             // non-fatal cache write failure
         }

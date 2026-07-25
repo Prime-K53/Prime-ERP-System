@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle, Eye, EyeOff, Upload, Receipt } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { useAuth } from '../../context/AuthContext';
+import { useFinancialYear } from '../../context/FinancialYearContext';
 import { withNormalizedSecurityConfig } from '../../utils/securitySettings';
 
 const SUPABASE_ENABLED = Boolean(
@@ -15,6 +16,7 @@ const SUPABASE_ENABLED = Boolean(
 const SetupWizard: React.FC = () => {
   const navigate = useNavigate();
   const { companyConfig, completeSetup, validatePasswordStrength, signUpSupabase } = useAuth();
+  const { availableFinancialYears, refreshFinancialYears } = useFinancialYear();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -234,6 +236,31 @@ const SetupWizard: React.FC = () => {
           groupIds: ['GRP-ADMIN'],
         }
       );
+
+      const fyStartMonth = new Date(`${finalConfig.financialYearStart || 'January'} 1, 2000`).getMonth();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth();
+      const fyBaseYear = currentMonth < fyStartMonth ? currentYear - 1 : currentYear;
+      const fyStartDate = `${fyBaseYear}-${String(fyStartMonth + 1).padStart(2, '0')}-01`;
+      const fyEndDate = `${fyBaseYear + 1}-${String(fyStartMonth + 1).padStart(2, '0')}-${new Date(fyBaseYear + 1, fyStartMonth + 1, 0).getDate()}`;
+
+      try {
+        await fetch((import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api/financial-years', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: `${fyBaseYear}/${String(fyBaseYear + 1).slice(2)}`,
+            code: `FY${fyBaseYear}`,
+            start_date: fyStartDate,
+            end_date: fyEndDate,
+            is_default: true,
+            status: 'Active',
+            is_closed: false
+          })
+        });
+      } catch (fyError) {
+        console.warn('[Setup] Failed to create initial financial year:', fyError);
+      }
 
       navigate('/', { replace: true });
     } catch (err) {

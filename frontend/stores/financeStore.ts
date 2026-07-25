@@ -161,11 +161,12 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           }
       }
 
+      const openingBalance = await dbService.getSetting<number>('opening_balance').then(v => v ?? 500).catch(() => 500);
       set({ 
           accounts: finalAccounts, 
           ledger, invoices, recurringInvoices, expenses, income,
           scheduledPayments, walletTransactions, deliveryNotes, budgets,
-          openingBalance: parseFloat(localStorage.getItem('nexus_opening_balance') || '500'), // Note: openingBalance stored locally will differ across devices. In multi-user setups, a backend endpoint should provide this.
+          openingBalance,
           transfers, employees, payrollRuns, payslips, cheques, supplierPayments
       });
 
@@ -315,7 +316,7 @@ addInvoice: async (invoice) => {
 
   updateOpeningBalance: async (amount) => {
       set({ openingBalance: amount });
-      localStorage.setItem('nexus_opening_balance', amount.toString());
+      await dbService.saveSetting('opening_balance', amount);
   },
 
   addTransfer: async (transfer) => {

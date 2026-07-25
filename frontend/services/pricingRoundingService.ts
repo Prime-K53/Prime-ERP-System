@@ -6,6 +6,7 @@ import {
   RoundingAnalytics
 } from '../types';
 import { roundToCurrency } from '../utils/helpers';
+import { dbService } from './db';
 
 export type RoundingScope = 'pos' | 'invoice' | 'quotation';
 
@@ -365,7 +366,7 @@ export const applyProductPriceRounding = (params: {
   });
 
   if ((params.trackAnalytics ?? true) && result.roundingDifference > 0) {
-    recordRoundingAnalytics(result.roundingDifference, result.methodUsed);
+    recordRoundingAnalytics(result.roundingDifference, result.methodUsed).catch(() => {});
   }
 
   return {
@@ -376,15 +377,15 @@ export const applyProductPriceRounding = (params: {
   };
 };
 
-export const recordRoundingAnalytics = (
+export const recordRoundingAnalytics = async (
   roundingDifference: number,
   method: PricingRoundingMethod
-): RoundingAnalytics => {
+): Promise<RoundingAnalytics> => {
   if (typeof window === 'undefined' || !window.localStorage) {
     return { totalExtraProfit: 0, roundedTransactions: 0, byMethod: {} };
   }
 
-  const current = parseAnalytics(localStorage.getItem(ROUNDING_ANALYTICS_KEY));
+  const current = parseAnalytics(await dbService.getSetting<string>(ROUNDING_ANALYTICS_KEY) || null);
   const safeDifference = roundToCurrency(Number(roundingDifference || 0));
   if (safeDifference <= 0) return current;
 
@@ -398,15 +399,15 @@ export const recordRoundingAnalytics = (
     byMethod
   };
 
-  localStorage.setItem(ROUNDING_ANALYTICS_KEY, JSON.stringify(next));
+  await dbService.saveSetting(ROUNDING_ANALYTICS_KEY, next);
   return next;
 };
 
-export const getRoundingAnalytics = (): RoundingAnalytics => {
+export const getRoundingAnalytics = async (): Promise<RoundingAnalytics> => {
   if (typeof window === 'undefined' || !window.localStorage) {
     return { totalExtraProfit: 0, roundedTransactions: 0, byMethod: {} };
   }
-  return parseAnalytics(localStorage.getItem(ROUNDING_ANALYTICS_KEY));
+  return parseAnalytics(await dbService.getSetting<string>(ROUNDING_ANALYTICS_KEY) || null);
 };
 
 export const normalizeTransactionRounding = <T extends Record<string, any>>(
@@ -463,7 +464,7 @@ export const normalizeTransactionRounding = <T extends Record<string, any>>(
   }
 
   if (result.applyRounding && result.roundingDifference > 0) {
-    recordRoundingAnalytics(result.roundingDifference, result.methodUsed);
+    recordRoundingAnalytics(result.roundingDifference, result.methodUsed).catch(() => {});
   }
 
   return normalized;

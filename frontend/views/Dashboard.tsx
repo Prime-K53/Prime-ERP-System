@@ -14,7 +14,7 @@ import {
   Briefcase, Users, ChevronDown, User,
   MessageSquare, Calculator, FileText, Zap, ArrowRight, ChevronRight,
   Sparkles, Database, BarChart2, X, ArrowUp, ArrowDown, Building2,
-  Star, Sun, Calendar, Search, CalendarDays} from 'lucide-react';
+  Star, Sun, Calendar, Search} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
 
 import { useDashboardStore } from '../stores/dashboardStore';

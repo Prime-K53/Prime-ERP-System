@@ -25,54 +25,13 @@ const mocks = vi.hoisted(() => {
     idbPut: vi.fn(),
     idbDelete: vi.fn(),
     openDB: vi.fn(),
-    deleteDB: vi.fn(async () => undefined),
-    rxGetAll: vi.fn(),
-    rxGet: vi.fn(),
-    rxPut: vi.fn(),
-    rxDelete: vi.fn(),
-    rxReset: vi.fn(async () => undefined),
-    rxEnsureReady: vi.fn(async () => ({ status: 'completed' })),
-    backplaneGetJson: vi.fn(),
-    backplaneSetJson: vi.fn(async () => undefined),
-    recordHealthy: vi.fn(async () => undefined),
-    recordError: vi.fn(async () => undefined),
-    recordRollback: vi.fn(async () => undefined),
-    getCollectionRoute: vi.fn(),
-    resetPrimeDatabase: vi.fn(async () => undefined)
+    deleteDB: vi.fn(async () => undefined)
   };
 });
 
 vi.mock('idb', () => ({
   openDB: mocks.openDB,
   deleteDB: mocks.deleteDB
-}));
-
-vi.mock('../../../services/dexie/bridge', () => ({
-  isBackedStore: (storeName: string) => [
-    'inventory',
-    'customers',
-    'suppliers',
-    'invoices',
-    'workCenters',
-    'resources',
-    'auditLogs',
-    'examinationBatchNotifications'
-  ].includes(storeName),
-  dexieBridge: {
-    getAll: mocks.rxGetAll,
-    get: mocks.rxGet,
-    put: mocks.rxPut,
-    delete: mocks.rxDelete,
-    reset: mocks.rxReset,
-    ensureReady: mocks.rxEnsureReady
-  }
-}));
-
-vi.mock('../../../services/dexie/settings-backplane', () => ({
-  settingsBackplane: {
-    getJson: mocks.backplaneGetJson,
-    setJson: mocks.backplaneSetJson
-  }
 }));
 
 describe('dbService routing', () => {
@@ -85,17 +44,24 @@ describe('dbService routing', () => {
       configurable: true
     });
 
+    const customers = [
+      { id: 'c-1', name: 'Legacy Customer' },
+      { id: 'c-2', name: 'Legacy Only' }
+    ];
+
     mocks.idbGetAll.mockImplementation(async (storeName: string) => {
       if (storeName === 'customers') {
-        return [
-          { id: 'c-1', name: 'Legacy Customer' },
-          { id: 'c-2', name: 'Legacy Only' }
-        ];
+        return customers;
       }
       return [];
     });
 
-    mocks.idbGet.mockResolvedValue(undefined);
+    mocks.idbGet.mockImplementation(async (storeName: string, key: string) => {
+      if (storeName === 'customers') {
+        return customers.find(c => c.id === key);
+      }
+      return undefined;
+    });
     mocks.idbPut.mockImplementation(async (_storeName: string, value: any) => value?.id || 'legacy-id');
     mocks.idbDelete.mockResolvedValue(undefined);
 
@@ -104,6 +70,10 @@ describe('dbService routing', () => {
         contains: vi.fn(() => true)
       },
       getAll: mocks.idbGetAll,
+      getAllKeys: vi.fn(async (storeName: string) => {
+        if (storeName === 'customers') return ['c-1', 'c-2'];
+        return [];
+      }),
       get: mocks.idbGet,
       put: mocks.idbPut,
       delete: mocks.idbDelete,
@@ -119,32 +89,6 @@ describe('dbService routing', () => {
     });
 
     mocks.localStorage.setItem('nexus_company_config', JSON.stringify({ companyId: 'test-company' }));
-    mocks.getCollectionRoute.mockImplementation((collectionId: string) => {
-      if (collectionId === 'customers') {
-        return {
-          id: 'customers',
-          mode: 'dual-read',
-          readOrder: ['rxdb', 'legacy'],
-          writeTargets: ['rxdb']
-        };
-      }
-
-      if (collectionId === 'settings') {
-        return {
-          id: 'settings',
-          mode: 'rxdb',
-          readOrder: ['rxdb', 'legacy'],
-          writeTargets: ['rxdb']
-        };
-      }
-
-      return {
-        id: collectionId,
-        mode: 'legacy',
-        readOrder: ['legacy', 'rxdb'],
-        writeTargets: ['legacy']
-      };
-    });
   });
 
   it('reads from legacy store for dual-read collections', async () => {
@@ -156,16 +100,6 @@ describe('dbService routing', () => {
       { id: 'c-1', name: 'Legacy Customer' },
       { id: 'c-2', name: 'Legacy Only' }
     ]);
-    expect(mocks.idbGetAll).toHaveBeenCalledWith('customers');
-  });
-
-  it('routes settings through the exact-key settings backplane', async () => {
-    const { dbService } = await import('../../../services/db');
-    const value = { defaultCurrency: 'MWK', timezone: 'Africa/Johannesburg' };
-
-    await dbService.saveSetting('workspaceConfig', value);
-
-    expect(mocks.backplaneSetJson).toHaveBeenCalledWith('workspaceConfig', value, { exactKey: true });
   });
 
   it('writes to legacy store for backed collections', async () => {

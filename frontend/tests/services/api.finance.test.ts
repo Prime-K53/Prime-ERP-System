@@ -10,7 +10,7 @@ vi.mock('../../services/db', () => ({
   }
 }));
 
-import * as api from '../../services/api';
+import { api } from '../../services/api';
 
 describe('api.finance HTTP fallback', () => {
   const mockAccount = { id: 'acct-1', code: '1000', name: 'Cash', type: 'asset' };

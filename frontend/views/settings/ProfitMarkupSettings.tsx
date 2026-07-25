@@ -154,20 +154,19 @@ async function apiFetch(path: string, opts: RequestInit = {}) {
   }
 }
 
-/** Persist a margin record array to localStorage for offline access. */
-function cacheMarginSettings(records: MarginSetting[]) {
+/** Persist a margin record array to the cloud-first setting store for offline access. */
+async function cacheMarginSettings(records: MarginSetting[]) {
   try {
-    localStorage.setItem(OFFLINE_MARGIN_KEY, JSON.stringify(records));
+    await dbService.saveSetting(OFFLINE_MARGIN_KEY, records);
   } catch { /* non-fatal */ }
 }
 
-/** Read cached margin records from localStorage. */
-function readCachedMarginSettings(): MarginSetting[] {
+/** Read cached margin records from the cloud-first setting store. */
+async function readCachedMarginSettings(): Promise<MarginSetting[]> {
   try {
-    const raw = localStorage.getItem(OFFLINE_MARGIN_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const saved = await dbService.getSetting<MarginSetting[]>(OFFLINE_MARGIN_KEY);
+    if (!saved) return [];
+    return Array.isArray(saved) ? saved : [];
   } catch {
     return [];
   }
@@ -441,7 +440,7 @@ const ProfitMarkupSettings: React.FC = () => {
       const data = await apiFetch('/profit-margins');
       setSettings(data);
       // Cache for offline access
-      cacheMarginSettings(data);
+      await cacheMarginSettings(data);
       const global = data.find((s: MarginSetting) => s.scope === 'global' && !s.deleted_at);
       if (global) {
         setGlobalValue(String(global.margin_value));
@@ -449,7 +448,7 @@ const ProfitMarkupSettings: React.FC = () => {
       }
     } catch (err: any) {
       // Offline fallback: use cached data so the page still shows current values
-      const cached = readCachedMarginSettings();
+      const cached = await readCachedMarginSettings();
       if (cached.length > 0) {
         setSettings(cached);
         const global = cached.find((s) => s.scope === 'global' && !s.deleted_at);
@@ -548,14 +547,14 @@ const ProfitMarkupSettings: React.FC = () => {
           toast('Global margin saved', 'success');
           await load();
         } catch (err: any) {
-          const cached = readCachedMarginSettings();
+          const cached = await readCachedMarginSettings();
           const idx = cached.findIndex(s => s.scope === 'global');
           if (idx >= 0) {
             cached[idx] = { ...cached[idx], ...offlineRecord };
           } else {
             cached.push(offlineRecord);
           }
-          cacheMarginSettings(cached);
+          await cacheMarginSettings(cached);
           try {
             await dbService.put('profitMarginSettings', offlineRecord);
           } catch { /* best-effort */ }
