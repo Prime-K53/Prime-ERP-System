@@ -4,7 +4,7 @@ import {
     Play, Pause, Edit2, Trash2, Mail, MoreVertical, Eye,
     ChevronLeft, ChevronRight, AlertCircle, ShoppingBag, Clock, Copy, Activity, Zap,
     ArrowUpRight, ShieldCheck, User, ArrowRight, Wallet, Layout, Box, History as HistoryIcon, PlayCircle,
-    Download
+    Download, RefreshCw
 } from 'lucide-react';
 import { RecurringInvoice } from '../../../types';
 import { useDocumentPreview } from '../../../hooks/useDocumentPreview';

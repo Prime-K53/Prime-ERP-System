@@ -774,7 +774,7 @@ const AppLayout: React.FC = () => {
           { id: 'settings', label: 'Settings', icon: <SettingsIcon size={16} />, category: 'System', onClick: () => { window.location.hash = '#/settings'; setCommandPaletteOpen(false); } },
         ]}
       />
-      <AICopilot />
+      {location.pathname === '/' && <AICopilot />}
     </div>
   );
 };
