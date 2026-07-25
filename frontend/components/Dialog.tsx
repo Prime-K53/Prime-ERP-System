@@ -9,13 +9,16 @@ interface DialogProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  noPadding?: boolean;
+  ariaLabel?: string;
+  hideHeader?: boolean;
 }
 
 interface DivProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, children, className }) => {
+const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, children, className, noPadding = false, ariaLabel, hideHeader = false }) => {
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const { registerShortcut } = useKeyboardContext();
 
@@ -60,10 +63,10 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, chi
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={title || 'Dialog'}
+        aria-label={ariaLabel || title || 'Dialog'}
       >
         <DialogContent className={className || 'max-w-xl'}>
-          {(title || onClose) && (
+          {!hideHeader && (title || onClose) && (
             <DialogHeader className="flex items-center justify-between py-4 px-6">
               {title && <DialogTitle>{title}</DialogTitle>}
               {onClose && (
@@ -73,7 +76,7 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, onClose, title, chi
               )}
             </DialogHeader>
           )}
-          <div className="p-4">
+          <div className={noPadding ? '' : 'p-4'}>
             {children}
           </div>
         </DialogContent>

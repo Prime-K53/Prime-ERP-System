@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Filter, Download, Phone,
-  MapPin, ChevronRight, User, Trash2, Edit, ExternalLink,
+  MapPin, ChevronRight, User, School, Building2, Landmark,
+  Trash2, Edit, ExternalLink,
   DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, AlertTriangle, FileText, Target
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -29,8 +30,10 @@ export const Clients: React.FC = () => {
   const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>();
+   const [isModalOpen, setIsModalOpen] = useState(false);
+   const [isSegmentModalOpen, setIsSegmentModalOpen] = useState(false);
+   const [pendingSegment, setPendingSegment] = useState<string | undefined>();
+   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>();
   const [selectedWorkspaceCustomer, setSelectedWorkspaceCustomer] = useState<Customer | null>(null);
   const [selectedCardCustomer, setSelectedCardCustomer] = useState<Customer | null>(null);
   const [filterStatus, setFilterStatus] = useState<'All' | 'Active' | 'Inactive' | 'Lead'>('All');
@@ -152,10 +155,16 @@ export const Clients: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleAddNew = () => {
-    setSelectedCustomer(undefined);
-    setIsModalOpen(true);
-  };
+   const handleAddNew = () => {
+      setIsModalOpen(true);
+    };
+
+   const handleSegmentSelect = (segment: string) => {
+     setPendingSegment(segment);
+     setIsSegmentModalOpen(false);
+     setSelectedCustomer(undefined);
+     setIsModalOpen(true);
+   };
 
   const handleDelete = async (id: string) => {
     setConfirmState({
@@ -227,12 +236,13 @@ export const Clients: React.FC = () => {
           }}
         />
 
-        <ClientModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={selectedCustomer ? updateCustomer : addCustomer}
-          customer={selectedCustomer}
-        />
+       <ClientModal
+         isOpen={isModalOpen}
+         onClose={() => { setIsModalOpen(false); setPendingSegment(undefined); }}
+         onSave={selectedCustomer ? updateCustomer : addCustomer}
+         customer={selectedCustomer}
+         initialSegment={pendingSegment}
+       />
       </>
     );
   }
@@ -526,8 +536,11 @@ export const Clients: React.FC = () => {
                           >
                             <ChevronRight size={14} className={`transition-transform duration-200 ${expandedClientId === customer.id ? 'rotate-90' : ''}`} />
                           </button>
-                          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-semibold text-[10px] border border-blue-100 shrink-0">
-                            {customer.name.charAt(0)}
+                          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
+                            {customer.segment === 'School Account' ? <School size={14} /> :
+                             customer.segment === 'Institution' ? <Building2 size={14} /> :
+                             customer.segment === 'Government' ? <Landmark size={14} /> :
+                             <User size={14} />}
                           </div>
                           <div
                             className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -741,12 +754,13 @@ export const Clients: React.FC = () => {
         />
       )}
 
-      <ClientModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={selectedCustomer ? updateCustomer : addCustomer}
-        customer={selectedCustomer}
-      />
+        <ClientModal
+          isOpen={isModalOpen}
+          onClose={() => { setIsModalOpen(false); setPendingSegment(undefined); }}
+          onSave={selectedCustomer ? updateCustomer : addCustomer}
+          customer={selectedCustomer}
+          initialSegment={pendingSegment}
+        />
 
       <ConfirmDialog
         open={confirmState.open}
