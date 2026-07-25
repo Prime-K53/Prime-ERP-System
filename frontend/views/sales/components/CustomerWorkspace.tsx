@@ -452,7 +452,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {/* KPI Dashboard Row (QBO Style) */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
               <DollarSign size={20} />
             </div>
@@ -466,7 +466,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-rose-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg shrink-0">
               <AlertTriangle size={20} />
             </div>
@@ -477,7 +477,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
               <BadgeCheck size={20} />
             </div>
@@ -494,7 +494,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
               <Clock size={20} />
             </div>
@@ -505,7 +505,7 @@ export const CustomerWorkspace: React.FC<CustomerWorkspaceProps> = ({ customer, 
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
               <TrendingUp size={20} />
             </div>

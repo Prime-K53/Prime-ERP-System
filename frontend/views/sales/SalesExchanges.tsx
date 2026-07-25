@@ -103,7 +103,7 @@ const SalesExchanges: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
             <RefreshCw size={20} />
           </div>
@@ -112,7 +112,7 @@ const SalesExchanges: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{salesExchanges.length}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
             <Clock size={20} />
           </div>
@@ -121,7 +121,7 @@ const SalesExchanges: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{salesExchanges.filter(e => e.status.toLowerCase() === 'pending').length}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
             <Printer size={20} />
           </div>
@@ -130,7 +130,7 @@ const SalesExchanges: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{reprintJobs.filter(j => j.status !== 'completed').length}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
             <CheckCircle size={20} />
           </div>

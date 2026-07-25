@@ -36,7 +36,7 @@ const GenericHub: React.FC<GenericHubProps> = ({ title, subtitle, options, accen
         </div>
 
         <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 tablet-auto-fit-220 gap-4 max-w-6xl mx-auto animate-in fade-in zoom-in-95 duration-700 justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-6xl mx-auto animate-in fade-in zoom-in-95 duration-700 items-stretch">
             {options.map((option) => (
               <button
                 key={option.label}
@@ -47,17 +47,17 @@ const GenericHub: React.FC<GenericHubProps> = ({ title, subtitle, options, accen
                     navigate(option.path);
                   }
                 }}
-                className="group relative bg-white p-6 rounded-[1.5rem] border border-slate-200/60 shadow-sm hover:shadow-xl hover:border-emerald-500/20 transition-all duration-300 text-center flex flex-col items-center gap-3 active:scale-[0.98]"
+                className="group relative bg-white p-6 rounded-[1.5rem] border border-slate-200/60 shadow-sm hover:shadow-xl hover:border-emerald-500/20 transition-all duration-300 text-center flex flex-col items-center justify-between gap-3 h-full active:scale-[0.98]"
               >
                 <div className={`w-12 h-12 ${option.color} rounded-xl flex items-center justify-center mb-1 group-hover:scale-110 transition-transform duration-500`}>
                   {React.cloneElement(option.icon, { size: 24 })}
                 </div>
                 
-                <div>
+                <div className="flex-1 flex flex-col items-center">
                   <h3 className="text-sm font-bold text-slate-800 mb-1.5 group-hover:text-[#2eb12e] transition-colors uppercase tracking-wide">
                     {option.label}
                   </h3>
-                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed px-2 line-clamp-2">
+                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed px-2 line-clamp-3">
                     {option.description}
                   </p>
                 </div>

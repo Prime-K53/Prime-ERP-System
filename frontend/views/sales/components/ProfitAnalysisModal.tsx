@@ -87,7 +87,7 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
             
             {/* KPI Cards (QBO Style) */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
                     <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
                         <DollarSign size={20} />
                     </div>
@@ -96,7 +96,7 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
                         <p className="text-lg md:text-xl font-semibold text-slate-900 finance-nums">{currency}{(analysis.totalRevenue || 0).toLocaleString()}</p>
                     </div>
                 </div>
-                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-700 hover:bg-slate-50 transition-all duration-200">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-slate-700 hover:bg-slate-50 transition-all duration-200">
                     <div className="p-2.5 bg-slate-100 text-slate-700 rounded-lg shrink-0">
                         <TrendingUp size={20} />
                     </div>
@@ -106,7 +106,7 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
                         <p className="text-[9px] font-semibold text-slate-400 mt-0.5 uppercase">Includes Material & Labor</p>
                     </div>
                 </div>
-                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
                     <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
                         <BarChart3 size={20} />
                     </div>
@@ -115,7 +115,7 @@ export const ProfitAnalysisModal: React.FC<ProfitAnalysisModalProps> = ({ invoic
                         <p className={`text-lg md:text-xl font-semibold finance-nums ${analysis.totalProfit >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{currency}{(analysis.totalProfit || 0).toLocaleString()}</p>
                     </div>
                 </div>
-                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all duration-200">
+                <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-purple-500 hover:bg-slate-50 transition-all duration-200">
                     <div className="p-2.5 bg-purple-50 text-purple-600 rounded-lg shrink-0">
                         <PieChart size={20} />
                     </div>

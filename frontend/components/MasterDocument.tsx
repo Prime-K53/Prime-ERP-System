@@ -55,12 +55,12 @@ const MasterDocument: React.FC<MasterDocumentProps> = ({
           <div 
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
             style={{
-              opacity: 0.1,
+              opacity: watermark === 'CANCELLED' ? 0.18 : 0.1,
               transform: 'rotate(-35deg)',
               whiteSpace: 'nowrap'
             }}
           >
-            <span className="text-[100px] font-black tracking-widest border-[12px] border-slate-300 px-12 py-6 rounded-[40px] uppercase">
+            <span className={`text-[100px] font-black tracking-widest border-[12px] ${watermark === 'CANCELLED' ? 'border-red-500 text-red-600' : 'border-slate-300 text-slate-400'} px-12 py-6 rounded-[40px] uppercase`}>
               {watermark}
             </span>
           </div>

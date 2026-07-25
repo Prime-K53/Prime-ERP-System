@@ -28,6 +28,12 @@ export const StatementSummaryTemplate: React.FC<{ data: StatementDoc; configOver
   const companyName = config?.companyName || 'PRIME PRINTING INC';
   const logo = resolvePdfLogoSource(config, templateSettings.showCompanyLogo);
 
+  const isCancelled =
+    String(data.status || (data as any).transactionStatus || '').toLowerCase() === 'cancelled' ||
+    String(data.status || (data as any).transactionStatus || '').toLowerCase() === 'canceled' ||
+    (data as any).isCancelled === true ||
+    (data as any).cancelled === true;
+
   return (
     <Document
       title={`Statement - ${data.customerName}`}
@@ -36,6 +42,11 @@ export const StatementSummaryTemplate: React.FC<{ data: StatementDoc; configOver
       creator="Prime ERP System"
     >
       <Page size="A4" style={[s.page, pageStyle]}>
+        {isCancelled && (
+          <View style={s.watermarkContainer} fixed>
+            <Text style={s.watermarkText}>CANCELLED</Text>
+          </View>
+        )}
         {/* Conversion History for Statement (if applicable) */}
         {'isConverted' in data && !!(data as any).isConverted && !!(data as any).conversionDetails && (
           <View style={[s.conversionBox, { position: 'absolute', top: 40, right: 40, zIndex: 10 }]}>

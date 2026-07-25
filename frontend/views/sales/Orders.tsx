@@ -1387,7 +1387,7 @@ const Orders: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 max-w-[1600px] mx-auto h-[calc(100vh-4rem)] flex flex-col relative w-full text-sm font-normal">
+        <div className="p-4 md:p-6 max-w-screen-2xl mx-auto h-[calc(100vh-4rem)] flex flex-col relative w-full text-sm font-normal">
             {isFormOpen && (
                 <div className="absolute inset-0 z-50 bg-slate-50 overflow-y-auto custom-scrollbar p-4 md:p-6">
                     <OrderForm type={formType} initialData={editingItem} onSave={handleSave} onCancel={() => setIsFormOpen(false)} saving={isSaving} />
@@ -1460,8 +1460,8 @@ const Orders: React.FC = () => {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 shrink-0">
-                <div>
+            <div className="flex flex-wrap items-center justify-between mb-4 gap-3 shrink-0">
+                <div className="shrink-0">
                     <h1 className="text-[22px] font-semibold text-slate-900 flex items-center gap-2 tracking-tight">
                         {activeView === 'Quotations' && <FileText className="text-blue-600" size={20} />}
                         {activeView === 'Invoices' && <FileCheck className="text-blue-600" size={20} />}
@@ -1480,7 +1480,7 @@ const Orders: React.FC = () => {
                     </p>
                 </div>
 
-                {activeSearchSort && (
+                {activeSearchSort && activeView !== 'Invoices' && activeView !== 'Quotations' && activeView !== 'Orders' && (
                     <SearchSortToolbar
                         searchTerm={activeSearchSort.searchTerm}
                         onSearchChange={activeSearchSort.setSearchTerm}
@@ -1533,11 +1533,11 @@ const Orders: React.FC = () => {
                     />
                 )}
 
-                <div className="flex gap-2 items-center">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {activeView === 'Exchanges' && (
                         <button
                             onClick={() => setIsRequestModalOpen(true)}
-                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all mr-2"
+                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                         >
                             <Plus className="w-4 h-4 mr-2" />
                             New Exchange Request
@@ -1580,7 +1580,7 @@ const Orders: React.FC = () => {
                         </div>
                     )}
                     {activeView === 'Invoices' && (
-                        <div className="flex gap-2 items-center">
+                        <>
                             <button onClick={handleCheckLateFees} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl text-[10px] font-bold uppercase tracking-tight hover:bg-red-200 flex items-center gap-2" title="Assess Late Fees"><AlertTriangle size={14} /> Fees</button>
                             <div className="relative">
                                 <select
@@ -1596,7 +1596,7 @@ const Orders: React.FC = () => {
                                 </select>
                                 <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             </div>
-                        </div>
+                        </>
                     )}
                     <button
                         onClick={() => refreshModuleData(true).catch(() => undefined)}
@@ -1607,17 +1607,17 @@ const Orders: React.FC = () => {
                         <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
                         Refresh
                     </button>
-                    <div className="flex bg-white/70 backdrop-blur border border-white/60 rounded-xl p-1 shadow-sm">
-                        <button onClick={() => setViewMode('List')} className={`p - 1.5 rounded - lg transition - colors ${viewMode === 'List' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'} `}><List size={16} /></button>
-                        <button onClick={() => setViewMode('Card')} className={`p - 1.5 rounded - lg transition - colors ${viewMode === 'Card' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'} `}><LayoutGrid size={16} /></button>
+                    <div className="flex bg-white/70 backdrop-blur border border-slate-200/80 rounded-xl p-1 shadow-sm shrink-0">
+                        <button onClick={() => setViewMode('List')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'List' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={16} /></button>
+                        <button onClick={() => setViewMode('Card')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'Card' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={16} /></button>
                     </div>
                     {activeView !== 'Subscriptions' && (
-                        <button onClick={handleCreate} className="bg-blue-600 text-white px-2 py-1 rounded-xl font-bold text-[10px] uppercase tracking-tight flex items-center gap-1.5 hover:bg-blue-700 shadow-sm transition-all"><Plus size={12} /> Create New</button>
+                        <button onClick={handleCreate} className="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-tight flex items-center gap-1.5 hover:bg-blue-700 shadow-sm transition-all"><Plus size={12} /> Create New</button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 shrink-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 shrink-0 w-full">
                 {activeView === 'Invoices' ? (
                     <>
                         {[
@@ -1634,7 +1634,7 @@ const Orders: React.FC = () => {
                             };
                             const c = colorMap[item.color] || colorMap.blue;
                             return (
-                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
+                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
                                 <div className={`p-2.5 ${c.bg} ${c.text} rounded-lg shrink-0`}>
                                     <item.icon size={20} />
                                 </div>
@@ -1662,7 +1662,7 @@ const Orders: React.FC = () => {
                             };
                             const c = colorMap[item.color] || colorMap.blue;
                             return (
-                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
+                            <div key={idx} className={`bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 ${c.border} hover:bg-slate-50 transition-all duration-200`}>
                                 <div className={`p-2.5 ${c.bg} ${c.text} rounded-lg shrink-0`}>
                                     <item.icon size={20} />
                                 </div>
@@ -1751,11 +1751,11 @@ const Orders: React.FC = () => {
                         <SalesSkeletonLoader type={viewMode === 'Card' ? 'grid' : 'table'} />
                     ) : (
                         <>
-                            {activeView === 'Quotations' && <QuotationList data={processedQuotations} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} />}
-                            {activeView === 'Invoices' && <InvoiceList data={processedInvoices} onView={(inv) => setSelectedInvoiceForDetail(inv)} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} selectedId={selectedInvoiceForDetail?.id} />}
+                            {activeView === 'Quotations' && <QuotationList data={processedQuotations} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} searchTerm={activeSearchSort?.searchTerm} onSearchChange={activeSearchSort?.setSearchTerm} onSearchClear={activeSearchSort?.clearSearch} />}
+                            {activeView === 'Invoices' && <InvoiceList data={processedInvoices} onView={(inv) => setSelectedInvoiceForDetail(inv)} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} selectedId={selectedInvoiceForDetail?.id} searchTerm={activeSearchSort?.searchTerm} onSearchChange={activeSearchSort?.setSearchTerm} onSearchClear={activeSearchSort?.clearSearch} />}
                             {activeView === 'Subscriptions' && <SubscriptionView data={processedSubscriptions} onEdit={handleEdit} onView={handleView} onDelete={handleDelete} onAction={handleAction} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'nextRunDate', direction: activeSearchSort?.sortDirection || 'desc' }} />}
                             {activeView === 'SalesOrders' && <SalesOrderList data={processedJobOrders} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} />}
-                            {activeView === 'Orders' && <OrdersList data={processedOrders} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} />}
+                            {activeView === 'Orders' && <OrdersList data={processedOrders} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'orderDate', direction: activeSearchSort?.sortDirection || 'desc' }} searchTerm={activeSearchSort?.searchTerm} onSearchChange={activeSearchSort?.setSearchTerm} onSearchClear={activeSearchSort?.clearSearch} />}
                             {activeView === 'Exchanges' && <SalesExchangeList data={processedExchanges} onView={handleView} onEdit={handleEdit} onDelete={(id) => deleteSalesExchange(id)} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: activeSearchSort?.sortField || 'date', direction: activeSearchSort?.sortDirection || 'desc' }} />}
                         </>
                     )}

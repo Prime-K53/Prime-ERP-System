@@ -145,6 +145,18 @@ const formatSecurityTimestamp = (value?: string) => {
   return String(value || 'Unknown time');
 };
 
+const isCancelledStatus = (status?: string | boolean, data?: any): boolean => {
+  if (data?.isCancelled === true || data?.cancelled === true) return true;
+  const str = String(status || data?.status || data?.transactionStatus || data?.paymentStatus || data?.orderStatus || '').trim().toLowerCase();
+  return str === 'cancelled' || str === 'canceled' || str === 'void' || str === 'voided';
+};
+
+const CancelledWatermark = () => (
+  <View style={s.watermarkContainer} fixed>
+    <Text style={s.watermarkText}>CANCELLED</Text>
+  </View>
+);
+
 import { StatementSummaryTemplate } from './StatementSummaryTemplate.tsx';
 
 interface DocProps {
@@ -191,9 +203,10 @@ const SecurityFooter = ({
 
   return (
     <View style={s.securityFooter} fixed>
+      <View style={{ width: footerQrSize + 8 }} />
       <View style={s.securityFooterText}>
-        <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine1}</Text>
-        <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4 }]}>{legalFooterLine2}</Text>
+        <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'center' }]}>{legalFooterLine1}</Text>
+        <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'center' }]}>{legalFooterLine2}</Text>
       </View>
 
       <View
@@ -316,9 +329,12 @@ const CleanInvoiceTemplate = ({
     );
   };
 
+  const isCancelled = isCancelledStatus(dataAny.status, dataAny);
+
   return (
     <Document title={docTitleForMeta} author={companyName}>
       <Page size="A4" style={{ padding: 40, fontFamily: templateSettings.fontFamily }}>
+        {isCancelled && <CancelledWatermark />}
         {/* Header */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 40 }}>
            <View style={{ flex: 1 }}>
@@ -638,9 +654,12 @@ const ModernInvoiceTemplate = ({
     );
   };
 
+  const isCancelled = isCancelledStatus(rc.paymentStatus || dataAny.status, dataAny);
+
   return (
     <Document title={docTitleForMeta} author={companyName}>
       <Page size="A4" style={{ paddingVertical: 45, paddingHorizontal: 40, fontFamily: templateSettings.fontFamily, backgroundColor: '#FFFFFF' }}>
+        {isCancelled && <CancelledWatermark />}
         
 {/* Centered Logo & Company Header */}
         <View style={{ alignItems: 'center', marginBottom: 1.5 }}>
@@ -908,9 +927,12 @@ const ProfessionalInvoiceTemplate = ({
     );
   };
 
+  const isCancelled = isCancelledStatus(st.status || dataAny.status, dataAny);
+
   return (
     <Document title={docTitleForMeta} author={companyName}>
       <Page size="A4" style={{ padding: 40, fontFamily: templateSettings.fontFamily, backgroundColor: '#ffffff' }}>
+        {isCancelled && <CancelledWatermark />}
         {/* Top Row */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 }}>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -1050,11 +1072,11 @@ const ProfessionalInvoiceTemplate = ({
                 </View>
               )}
               
-              <View>
-               <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, maxWidth: 200, marginTop: 4 }}>
+              <View style={{ alignItems: 'center', textAlign: 'center', width: '100%' }}>
+               <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'center', marginTop: 4 }}>
                    This is a computer-generated document. No signature required, For enquiries contact:
                  </Text>
-                 <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, maxWidth: 200, marginTop: 1 }}>
+                 <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'center', marginTop: 1 }}>
                    {`${companyName}, ${companyAddress}, Phone ${companyPhone}`}
                 </Text>
              </View>
@@ -1221,9 +1243,12 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     const items = (d.items || []) as Array<Record<string, unknown>>;
     const cd = d.conversionDetails as Record<string, unknown> | undefined;
 
+    const isCancelled = isCancelledStatus(d.status, d);
+
     return (
       <Document title={`Sales Exchange - ${String(d.exchangeNumber)}`} author={companyName}>
         <Page size="A4" style={[s.page, pageStyle]}>
+          {isCancelled && <CancelledWatermark />}
           {Boolean(d.isConverted) && !!cd && (
             <View style={[s.conversionBox, { position: 'absolute', top: 40, right: 40, zIndex: 10 }]}>
               <Text style={s.conversionTitle}>Conversion History</Text>
@@ -1317,9 +1342,12 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
     const isOverpaid = rc.paymentStatus === 'OVERPAID';
     const overpaymentAmount = rc.overpaymentAmount || rc.walletDeposit || 0;
 
+    const isCancelled = isCancelledStatus(rc.paymentStatus || rc.status, rc);
+
     return (
       <Document title={`Payment Receipt - ${rc.receiptNumber}`} author={companyName}>
         <Page size="A4" style={[s.page, pageStyle]}>
+          {isCancelled && <CancelledWatermark />}
 
           <View style={s.headerSection}>
             <View style={s.headerLeft}>
@@ -1430,9 +1458,11 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
 
   if (type === 'SUPPLIER_PAYMENT') {
     const sp = data as SupplierPaymentDoc;
+    const isCancelled = isCancelledStatus(sp.status, sp);
     return (
       <Document title={`Payment Voucher - ${sp.paymentId}`} author={companyName}>
         <Page size="A4" style={[s.page, pageStyle]}>
+          {isCancelled && <CancelledWatermark />}
           <View style={s.headerSection}>
             <View style={s.headerLeft}>
               {renderBrandMark('left')}
@@ -1512,6 +1542,7 @@ export const PrimeDocument = ({ type, data, configOverride = null, customers = [
   }
 if (type === 'POS_RECEIPT') {
   const r = data as PosReceiptDoc;
+  const isCancelled = isCancelledStatus(r.status, r);
 
   const scale = 1;
   const baseFontSize = 7.6 * scale;
@@ -1522,6 +1553,7 @@ if (type === 'POS_RECEIPT') {
   return (
     <Document title={`Receipt - ${r.receiptNumber}`} author={companyName}>
       <Page size="A4" style={[s.page, pageStyle, { padding: 0, backgroundColor: '#f9fafb', fontFamily: templateSettings.fontFamily }]}>
+        {isCancelled && <CancelledWatermark />}
         <View style={[s.posA4Wrapper, { width: 250 * scale, paddingVertical: 24 * scale, paddingHorizontal: 8 * scale }]}>
             <View style={{ alignItems: 'center', marginBottom: 12 * scale }}>
               <Text style={{ fontWeight: 'bold', fontSize: 14 * scale, textAlign: 'center', marginBottom: 3 * scale }}>{companyName}</Text>
@@ -1658,6 +1690,8 @@ if (type === 'POS_RECEIPT') {
     }
   }
 
+  const isCancelled = isCancelledStatus(dataAny.status, dataAny);
+
   return (
     <Document
       title={`${title} - ${'number' in data ? data.number : ('receiptNumber' in data ? data.receiptNumber : ('clientName' in data ? data.clientName : 'DOC'))}`}
@@ -1667,6 +1701,7 @@ if (type === 'POS_RECEIPT') {
       keywords={`${type}, ERP, Business Document`}
     >
       <Page size="A4" style={[s.page, pageStyle]}>
+        {isCancelled && <CancelledWatermark />}
         <View style={s.headerSection}>
           {isRightAligned ? (
             <>

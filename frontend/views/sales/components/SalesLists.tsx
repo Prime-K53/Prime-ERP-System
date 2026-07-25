@@ -11,7 +11,7 @@ import Pagination from '../../../components/Pagination';
 import { OfflineImage } from '../../../components/OfflineImage';
 import { mapToInvoiceData } from '../../../utils/pdfMapper';
 import { resolveTransactionPricingSummary } from '../../../utils/pricingBreakdown';
-import { Edit2, Trash2, Star, List, LayoutGrid, CheckCircle, Check, Clock, User, Calendar, Box, Eye, Send, Copy, Plus, Phone, ChevronRight, FileText, FileCheck, Briefcase, Mail, MessageCircle, Repeat, XCircle, Archive, History as HistoryIcon, Users, RefreshCw, ArrowUp, ArrowDown, Link as LinkIcon, Paperclip, CalendarClock, AlertTriangle, Download, Truck, MoreVertical, Play, Pause, Package, Globe, DollarSign, TrendingUp, Zap, Target, Share2, ExternalLink, PlayCircle, Coins, Wallet, ShoppingBag, Printer } from 'lucide-react';
+import { Edit2, Trash2, Star, List, LayoutGrid, CheckCircle, Check, Clock, User, Calendar, Box, Eye, Send, Copy, Plus, Phone, ChevronRight, FileText, FileCheck, Briefcase, Mail, MessageCircle, Repeat, XCircle, Archive, History as HistoryIcon, Users, RefreshCw, ArrowUp, ArrowDown, Link as LinkIcon, Paperclip, CalendarClock, AlertTriangle, Download, Truck, MoreVertical, Play, Pause, Package, Globe, DollarSign, TrendingUp, Zap, Target, Share2, ExternalLink, PlayCircle, Coins, Wallet, ShoppingBag, Printer, Search, X } from 'lucide-react';
 
 export interface ListProps<T> {
     data: T[];
@@ -43,15 +43,17 @@ const SortableTh: React.FC<{
     children: React.ReactNode;
 }> = ({ field, sortConfig, onSort, className = '', children }) => {
     const isActive = sortConfig?.field === field;
+    const isRight = className.includes('text-right');
+    const isCenter = className.includes('text-center');
     return (
         <th
-            className={`table-header cursor-pointer select-none ${className} ${isActive ? 'text-blue-600' : ''}`}
+            className={`table-header cursor-pointer select-none ${className} ${isActive ? 'text-blue-600 font-bold' : ''}`}
             onClick={() => onSort?.(field)}
         >
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${isRight ? 'justify-end' : isCenter ? 'justify-center' : 'justify-start'}`}>
                 {children}
                 {isActive && (
-                    sortConfig?.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500" /> : <ArrowDown size={12} className="text-blue-500" />
+                    sortConfig?.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500 shrink-0" /> : <ArrowDown size={12} className="text-blue-500 shrink-0" />
                 )}
             </div>
         </th>
@@ -269,16 +271,16 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                 </div>
             ) : (
                 <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-[13px]">
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        <table className="w-full min-w-[640px] text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Order No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
-                                    <SortableTh field="jobTitle" sortConfig={props.sortConfig} onSort={props.onSort}>Title</SortableTh>
-                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
-                                    <th className="table-header text-right">Actions</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Order No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="w-full">Customer</SortableTh>
+                                    <SortableTh field="jobTitle" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Title</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-px whitespace-nowrap">Status</SortableTh>
+                                    <th className="table-header text-right w-px whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
@@ -293,7 +295,7 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                         onMouseMove={onMouseMove}
                                         onMouseLeave={onMouseLeave}
                                     >
-                                        <td className="table-body-cell font-mono font-bold">
+                                        <td className="table-body-cell font-mono font-bold w-px whitespace-nowrap">
                                             <DocLink
                                                 docNumber={o.id}
                                                 targetPage="/sales-flow/sales-orders"
@@ -301,18 +303,18 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell font-normal">{new Date(o.date).toLocaleDateString()}</td>
-                                        <td className="table-body-cell font-medium text-slate-900">{o.customerName}</td>
-                                        <td className="table-body-cell font-normal truncate max-w-[200px]">{o.jobTitle}</td>
-                                        <td className="table-body-cell text-center">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                        <td className="table-body-cell font-normal w-px whitespace-nowrap">{new Date(o.date).toLocaleDateString()}</td>
+                                        <td className="table-body-cell font-medium text-slate-900 w-full">{o.customerName}</td>
+                                        <td className="table-body-cell font-normal truncate max-w-[200px] w-px whitespace-nowrap">{o.jobTitle}</td>
+                                        <td className="table-body-cell text-center w-px whitespace-nowrap">
+                                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 o.status === 'In Progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                                                     o.status === 'Draft' ? 'bg-slate-100 text-slate-600 border-slate-200' :
                                                         'bg-amber-100 text-amber-700 border-amber-200'
                                                 }`}>{o.status}</span>
                                         </td>
-                                        <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-end gap-1 items-center">
+                                        <td className="table-body-cell text-right w-px whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-1.5 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('WORK_ORDER', o); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>
@@ -321,7 +323,6 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                                 </button>
                                                 <button onClick={(e) => { e.stopPropagation(); props.onEdit(o); }} className="p-1.5 text-slate-400 hover:text-amber-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Edit"><Edit2 size={14} /></button>
                                                 <button onClick={(e) => { e.stopPropagation(); handleRowClick(e, o.id); }} className="p-1.5 text-slate-400 hover:text-slate-600 rounded"><MoreVertical size={14} /></button>
-<button onClick={(e) => { e.stopPropagation(); handleRowClick(e, o.id); }} className="p-1.5 text-slate-400 hover:text-slate-600 rounded"><MoreVertical size={14} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -436,17 +437,39 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                 </div>
             ) : (
                 <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-[13px]">
+                    {(props.searchTerm !== undefined || props.onSearchChange) && (
+                        <div className="p-3 border-b border-slate-200/60 flex justify-between items-center bg-slate-50/30 shrink-0">
+                            <div className="relative w-full max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Search orders..."
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-200/80 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 font-normal"
+                                    value={props.searchTerm || ''}
+                                    onChange={e => props.onSearchChange?.(e.target.value)}
+                                />
+                                {props.searchTerm && props.onSearchClear && (
+                                    <button
+                                        onClick={props.onSearchClear}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        <table className="w-full min-w-[640px] text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="orderNumber" sortConfig={props.sortConfig} onSort={props.onSort}>Order No.</SortableTh>
-                                    <SortableTh field="orderDate" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
-                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
-                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Paid</SortableTh>
-                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
-                                    <th className="table-header text-right">Actions</th>
+                                    <SortableTh field="orderNumber" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Order No.</SortableTh>
+                                    <SortableTh field="orderDate" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="w-full">Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-px whitespace-nowrap">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-px whitespace-nowrap">Paid</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-px whitespace-nowrap">Status</SortableTh>
+                                    <th className="table-header text-right w-px whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
@@ -458,7 +481,7 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                         onClick={(e) => handleRowClick(e, o.id)}
                                         onContextMenu={(e) => handleContextMenu(e, o.id)}
                                     >
-                                        <td className="table-body-cell font-mono font-bold">
+                                        <td className="table-body-cell font-mono font-bold w-px whitespace-nowrap">
                                             <DocLink
                                                 docNumber={o.orderNumber}
                                                 targetPage="/sales-flow/orders"
@@ -466,12 +489,12 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell font-normal">{new Date(o.orderDate).toLocaleDateString()}</td>
-                                        <td className="table-body-cell font-medium text-slate-900">{o.customerName}</td>
-                                        <td className="table-body-cell text-right font-bold">{companyConfig.currencySymbol}{o.totalAmount.toLocaleString()}</td>
-                                        <td className="table-body-cell text-right font-bold text-emerald-600">{companyConfig.currencySymbol}{o.paidAmount.toLocaleString()}</td>
-                                        <td className="table-body-cell text-center">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                        <td className="table-body-cell font-normal w-px whitespace-nowrap">{new Date(o.orderDate).toLocaleDateString()}</td>
+                                        <td className="table-body-cell font-medium text-slate-900 w-full">{o.customerName}</td>
+                                        <td className="table-body-cell text-right font-bold w-px whitespace-nowrap">{companyConfig.currencySymbol}{o.totalAmount.toLocaleString()}</td>
+                                        <td className="table-body-cell text-right font-bold text-emerald-600 w-px whitespace-nowrap">{companyConfig.currencySymbol}{o.paidAmount.toLocaleString()}</td>
+                                        <td className="table-body-cell text-center w-px whitespace-nowrap">
+                                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 o.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                     o.status === 'Partially Paid' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                                                         o.status === 'Pending' ? 'bg-blue-100 text-blue-700 border-blue-200' :
@@ -479,8 +502,8 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                                                 'bg-slate-100 text-slate-600 border-slate-200'
                                                 }`}>{o.status}</span>
                                         </td>
-                                        <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-end gap-1 items-center">
+                                        <td className="table-body-cell text-right w-px whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-1.5 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('ORDER', o); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>
@@ -736,8 +759,8 @@ export const SalesExchangeList: React.FC<ListProps<SalesExchange>> = (props) => 
             {hoveredId && hoverPos && hoveredExchange && <HoverActionMenu id={hoveredId.toString()} type="SalesExchange" pos={hoverPos} data={hoveredExchange} onAction={props.onAction} />}
 
             <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden flex-1 flex flex-col">
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    <table className="w-full text-left text-[13px]">
+                <div className="flex-1 overflow-auto custom-scrollbar">
+                    <table className="w-full min-w-[640px] text-left text-[13px]">
                         <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="table-header w-10">
@@ -758,12 +781,12 @@ export const SalesExchangeList: React.FC<ListProps<SalesExchange>> = (props) => 
                                         }}
                                     />
                                 </th>
-                                <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Exchange No.</SortableTh>
-                                <SortableTh field="exchange_date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
-                                <SortableTh field="customer_name" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Exchange No.</SortableTh>
+                                <SortableTh field="exchange_date" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Date</SortableTh>
+                                <SortableTh field="customer_name" sortConfig={props.sortConfig} onSort={props.onSort} className="w-full">Customer</SortableTh>
                                 <SortableTh field="reason" sortConfig={props.sortConfig} onSort={props.onSort}>Reason</SortableTh>
-                                <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
-                                <th className="table-header text-right">Actions</th>
+                                <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-px whitespace-nowrap">Status</SortableTh>
+                                <th className="table-header text-right w-px whitespace-nowrap">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100/50">
@@ -798,7 +821,7 @@ export const SalesExchangeList: React.FC<ListProps<SalesExchange>> = (props) => 
                                     <td className="table-body-cell font-medium text-slate-900">{ex.customer_name}</td>
                                     <td className="table-body-cell font-normal">{ex.reason}</td>
                                     <td className="table-body-cell text-center">
-                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${ex.status === 'Completed' || ex.status === 'Approved' || ex.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                        <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${ex.status === 'Completed' || ex.status === 'Approved' || ex.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                             ex.status === 'Pending' || ex.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                                                 ex.status === 'Rejected' || ex.status === 'rejected' ? 'bg-rose-100 text-rose-700 border-rose-200' :
                                                     ex.status === 'Cancelled' || ex.status === 'cancelled' ? 'bg-slate-100 text-slate-400 border-slate-200' :
@@ -1048,11 +1071,33 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                 </div>
             ) : (
                 <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-[13px]">
+                    {(props.searchTerm !== undefined || props.onSearchChange) && (
+                        <div className="p-3 border-b border-slate-200/60 flex justify-between items-center bg-slate-50/30 shrink-0">
+                            <div className="relative w-full max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Search invoices..."
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-200/80 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 font-normal"
+                                    value={props.searchTerm || ''}
+                                    onChange={e => props.onSearchChange?.(e.target.value)}
+                                />
+                                {props.searchTerm && props.onSearchClear && (
+                                    <button
+                                        onClick={props.onSearchClear}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        <table className="w-full min-w-[640px] text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="table-header w-10">
+                                    <th className="table-header w-px whitespace-nowrap">
                                         <input
                                             type="checkbox"
                                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -1070,13 +1115,13 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                             }}
                                         />
                                     </th>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Invoice No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
-                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
-                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Balance</SortableTh>
-                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
-                                    <th className="table-header text-right">Actions</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Invoice No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="w-full">Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-px whitespace-nowrap">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-px whitespace-nowrap">Balance</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-px whitespace-nowrap">Status</SortableTh>
+                                    <th className="table-header text-right w-px whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
@@ -1100,7 +1145,7 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                             onMouseMove={onMouseMove}
                                             onMouseLeave={onMouseLeave}
                                         >
-                                            <td className="table-body-cell" onClick={(e) => e.stopPropagation()}>
+                                            <td className="table-body-cell w-px whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -1108,7 +1153,7 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                                     onChange={() => props.onSelect?.(inv.id)}
                                                 />
                                             </td>
-                                            <td className="table-body-cell font-mono text-slate-500 font-bold">
+                                            <td className="table-body-cell font-mono text-slate-500 font-bold w-px whitespace-nowrap">
                                                 <DocLink
                                                     docNumber={inv.id}
                                                     targetPage="/sales-flow/invoices"
@@ -1116,20 +1161,20 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                                     currentPage={location.pathname}
                                                 />
                                             </td>
-                                            <td className="table-body-cell font-normal">{new Date(inv.date).toLocaleDateString()}</td>
-                                            <td className="table-body-cell font-medium text-slate-900">{inv.customerName}</td>
-                                            <td className="table-body-cell text-right font-medium finance-nums">{companyConfig.currencySymbol} {totalAmount.toLocaleString()}</td>
-                                            <td className="table-body-cell text-right text-red-600 font-medium finance-nums">{companyConfig.currencySymbol} {balanceDue.toLocaleString()}</td>
-                                            <td className="table-body-cell text-center">
-                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                            <td className="table-body-cell font-normal w-px whitespace-nowrap">{new Date(inv.date).toLocaleDateString()}</td>
+                                            <td className="table-body-cell font-medium text-slate-900 w-full">{inv.customerName}</td>
+                                            <td className="table-body-cell text-right font-medium finance-nums w-px whitespace-nowrap">{companyConfig.currencySymbol} {totalAmount.toLocaleString()}</td>
+                                            <td className="table-body-cell text-right text-red-600 font-medium finance-nums w-px whitespace-nowrap">{companyConfig.currencySymbol} {balanceDue.toLocaleString()}</td>
+                                            <td className="table-body-cell text-center w-px whitespace-nowrap">
+                                                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                     inv.status === 'Partial' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                                                         inv.status === 'Overdue' ? 'bg-rose-100 text-rose-700 border-rose-200' :
                                                             inv.status === 'Cancelled' ? 'bg-slate-100 text-slate-400 border-slate-200 line-through' :
                                                                 'bg-slate-100 text-slate-600 border-slate-200'
                                                     }`}>{inv.status}</span>
                                             </td>
-                                            <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>
-                                                <div className="flex justify-end gap-1 items-center">
+                                            <td className="table-body-cell text-right w-px whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                                                <div className="flex justify-end gap-1.5 items-center shrink-0">
                                                     <button onClick={(e) => { e.stopPropagation(); props.onView(inv); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="View full detail">
                                                         <ChevronRight size={14} />
                                                     </button>
@@ -1280,16 +1325,38 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                 </div>
             ) : (
                 <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-sm border border-white/60 overflow-hidden flex-1 flex flex-col">
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-[13px]">
+                    {(props.searchTerm !== undefined || props.onSearchChange) && (
+                        <div className="p-3 border-b border-slate-200/60 flex justify-between items-center bg-slate-50/30 shrink-0">
+                            <div className="relative w-full max-w-md">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Search quotations..."
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-200/80 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/50 font-normal"
+                                    value={props.searchTerm || ''}
+                                    onChange={e => props.onSearchChange?.(e.target.value)}
+                                />
+                                {props.searchTerm && props.onSearchClear && (
+                                    <button
+                                        onClick={props.onSearchClear}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        <table className="w-full min-w-[640px] text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Quote No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
-                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
-                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
-                                    <th className="table-header text-right">Actions</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Quote No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="w-px whitespace-nowrap">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="w-full">Customer</SortableTh>
+                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-px whitespace-nowrap">Total</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-px whitespace-nowrap">Status</SortableTh>
+                                    <th className="table-header text-right w-px whitespace-nowrap">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
@@ -1304,7 +1371,7 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                                         onMouseMove={onMouseMove}
                                         onMouseLeave={onMouseLeave}
                                     >
-                                        <td className="table-body-cell font-mono font-bold">
+                                        <td className="table-body-cell font-mono font-bold w-px whitespace-nowrap">
                                             <DocLink
                                                 docNumber={q.id}
                                                 targetPage="/sales-flow/quotations"
@@ -1312,18 +1379,18 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell font-normal">{new Date(q.date).toLocaleDateString()}</td>
-                                        <td className="table-body-cell font-medium text-slate-900">{q.customerName}</td>
-                                        <td className="table-body-cell text-right font-medium finance-nums">{companyConfig.currencySymbol} {(q.total || 0).toLocaleString()}</td>
-                                        <td className="table-body-cell text-center">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${q.status === 'Accepted' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                        <td className="table-body-cell font-normal w-px whitespace-nowrap">{new Date(q.date).toLocaleDateString()}</td>
+                                        <td className="table-body-cell font-medium text-slate-900 w-full">{q.customerName}</td>
+                                        <td className="table-body-cell text-right font-medium finance-nums w-px whitespace-nowrap">{companyConfig.currencySymbol} {(q.total || 0).toLocaleString()}</td>
+                                        <td className="table-body-cell text-center w-px whitespace-nowrap">
+                                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${q.status === 'Accepted' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 q.status === 'Sent' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                                                     q.status === 'Pending Approval' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                                                         'bg-slate-100 text-slate-600 border-slate-200'
                                                 }`}>{q.status}</span>
                                         </td>
-                                        <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-end gap-1 items-center">
+                                        <td className="table-body-cell text-right w-px whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-1.5 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('QUOTATION', q); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>

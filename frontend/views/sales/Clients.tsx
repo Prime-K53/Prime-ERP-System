@@ -308,7 +308,7 @@ export const Clients: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div
           onClick={() => setSelectedMetric(selectedMetric === 'Overdue' ? 'All' : 'Overdue')}
-          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-rose-500 ${selectedMetric === 'Overdue' ? 'ring-2 ring-rose-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-rose-500 ${selectedMetric === 'Overdue' ? 'ring-2 ring-rose-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
         >
           <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg">
             <AlertTriangle size={20} />
@@ -320,7 +320,7 @@ export const Clients: React.FC = () => {
         </div>
         <div
           onClick={() => setSelectedMetric(selectedMetric === 'Open' ? 'All' : 'Open')}
-          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'Open' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-amber-500 ${selectedMetric === 'Open' ? 'ring-2 ring-amber-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
         >
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
             <Clock size={20} />
@@ -332,7 +332,7 @@ export const Clients: React.FC = () => {
         </div>
         <div
           onClick={() => setSelectedMetric(selectedMetric === 'Paid' ? 'All' : 'Paid')}
-          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'Paid' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 ${selectedMetric === 'Paid' ? 'ring-2 ring-emerald-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
         >
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
             <CheckCircle size={20} />
@@ -344,7 +344,7 @@ export const Clients: React.FC = () => {
         </div>
         <div
           onClick={() => setSelectedMetric('All')}
-          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'All' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
+          className={`cursor-pointer transition-all duration-200 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 ${selectedMetric === 'All' ? 'ring-2 ring-blue-500 shadow-md scale-[1.01]' : 'hover:bg-slate-50'}`}
         >
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
             <User size={20} />

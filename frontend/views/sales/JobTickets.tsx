@@ -335,7 +335,7 @@ export const JobTickets: React.FC = () => {
 
       {/* KPI Cards (QBO Style) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
             <Ticket size={20} />
           </div>
@@ -344,7 +344,7 @@ export const JobTickets: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.total}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
             <Package size={20} />
           </div>
@@ -353,7 +353,7 @@ export const JobTickets: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.received}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-amber-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg shrink-0">
             <Clock size={20} />
           </div>
@@ -362,7 +362,7 @@ export const JobTickets: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.processing}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
             <CheckCircle size={20} />
           </div>
@@ -371,7 +371,7 @@ export const JobTickets: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.ready}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-red-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0">
             <AlertTriangle size={20} />
           </div>
@@ -380,7 +380,7 @@ export const JobTickets: React.FC = () => {
             <p className="text-lg md:text-xl font-semibold text-slate-900">{stats.overdue}</p>
           </div>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+        <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
           <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0">
             <Calendar size={20} />
           </div>

@@ -56,10 +56,10 @@ const SearchSortToolbar: React.FC<SearchSortToolbarProps> = ({
   const directionLabel = sortDirection === 'asc' ? '↑ Asc' : '↓ Desc';
 
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto flex-1 justify-end">
       {/* Search Box */}
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+      <div className="relative flex-1 max-w-[320px] min-w-[200px]">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
         <input
           type="text"
           placeholder={placeholder}

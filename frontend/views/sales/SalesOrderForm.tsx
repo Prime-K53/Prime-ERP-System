@@ -292,7 +292,7 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ initial, onDone, onCrea
         {/* Add Item Form */}
         <div style={{ border: '1px dashed #ccc', padding: '15px', borderRadius: '4px', background: '#fafafa' }}>
           <h4 style={{ marginTop: 0 }}>Add New Item</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '10px', alignItems: 'end' }}>
+           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '10px', alignItems: 'start' }}>
             <div>
               <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Product ID</label>
               <input

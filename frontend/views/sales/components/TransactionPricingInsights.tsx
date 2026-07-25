@@ -44,7 +44,7 @@ export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProp
 
       <div className="p-6 space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-slate-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-slate-50 text-slate-600 rounded-lg shrink-0">
               <Layers3 size={20} />
             </div>
@@ -54,7 +54,7 @@ export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProp
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-indigo-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
               <Coins size={20} />
             </div>
@@ -64,7 +64,7 @@ export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProp
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
               <TrendingUp size={20} />
             </div>
@@ -74,7 +74,7 @@ export const TransactionPricingInsights: React.FC<TransactionPricingInsightsProp
             </div>
           </div>
 
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
               {summary.roundingTotal >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
             </div>

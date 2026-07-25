@@ -422,11 +422,21 @@ export const mapErpDataToDocument = (type: DocumentType, data: any, renderOption
     return type.toUpperCase();
   };
 
+  const isCancelled =
+    String(data?.status || data?.transactionStatus || data?.paymentStatus || data?.orderStatus || '').toLowerCase() === 'cancelled' ||
+    String(data?.status || data?.transactionStatus || data?.paymentStatus || data?.orderStatus || '').toLowerCase() === 'canceled' ||
+    String(data?.status || data?.transactionStatus || data?.paymentStatus || data?.orderStatus || '').toLowerCase() === 'void' ||
+    String(data?.status || data?.transactionStatus || data?.paymentStatus || data?.orderStatus || '').toLowerCase() === 'voided' ||
+    data?.isCancelled === true ||
+    data?.cancelled === true;
+
+  const watermarkText = options.watermarkText || (options.showWatermark ? 'DRAFT' : (isCancelled ? 'CANCELLED' : undefined));
+
   return {
     title: getTitle(),
     header: renderHeader(),
     content: renderContent(),
-    watermark: undefined,
+    watermark: watermarkText,
     companyLogo: data?.companyLogo,
     companyAddress: data?.companyAddress,
     companyName: data?.companyName,

@@ -74,7 +74,7 @@ const LeadBoard: React.FC = () => {
           <p className="text-[13px] text-slate-500 font-medium">Track opportunities across your sales pipeline.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-blue-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg shrink-0">
               <Target size={20} />
             </div>
@@ -83,7 +83,7 @@ const LeadBoard: React.FC = () => {
               <p className="text-lg md:text-xl font-semibold text-slate-900">{filteredLeads.length}</p>
             </div>
           </div>
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-emerald-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0">
               <DollarSign size={20} />
             </div>
@@ -92,7 +92,7 @@ const LeadBoard: React.FC = () => {
               <p className="text-lg md:text-xl font-semibold text-slate-900">{currency}{totalPipelineValue.toLocaleString()}</p>
             </div>
           </div>
-          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
+          <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4 border-l-4 border-l-violet-500 hover:bg-slate-50 transition-all duration-200">
             <div className="p-2.5 bg-violet-50 text-violet-600 rounded-lg shrink-0">
               <TrendingUp size={20} />
             </div>
