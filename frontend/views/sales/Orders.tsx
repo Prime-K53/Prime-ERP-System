@@ -1612,7 +1612,7 @@ const Orders: React.FC = () => {
                         <button onClick={() => setViewMode('Card')} className={`p - 1.5 rounded - lg transition - colors ${viewMode === 'Card' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'} `}><LayoutGrid size={16} /></button>
                     </div>
                     {activeView !== 'Subscriptions' && (
-                        <button onClick={handleCreate} className="bg-blue-600 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-blue-700 shadow-sm transition-all"><Plus size={14} /> Create New</button>
+                        <button onClick={handleCreate} className="bg-blue-600 text-white px-2 py-1 rounded-xl font-bold text-[10px] uppercase tracking-tight flex items-center gap-1.5 hover:bg-blue-700 shadow-sm transition-all"><Plus size={12} /> Create New</button>
                     )}
                 </div>
             </div>
