@@ -966,7 +966,7 @@ const Payments: React.FC = () => {
                 const cust = customers.find((c: any) => c.name === formData.customerName);
                 const walletBal = cust?.walletBalance || 0;
                 if (Number(formData.amount) > walletBal) {
-                    notify(`Insufficient wallet balance. Available: ${currency}${walletBal.toFixed(2)}`, "error");
+                    notify(`Insufficient wallet balance. Available: ${currency}${walletBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "error");
                     setIsSubmitting(false);
                     return;
                 }
@@ -1374,7 +1374,7 @@ const Payments: React.FC = () => {
                                                     const bal = cust?.walletBalance || 0;
                                                     return bal > 0 ? (
                                                         <p className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-lg">
-                                                            <Wallet size={12} className="text-emerald-700" /> Wallet Balance: {currency}{bal.toFixed(2)}
+                                                            <Wallet size={12} className="text-emerald-700" /> Wallet Balance: {currency}{bal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                         </p>
                                                     ) : null;
                                                 })()}
@@ -1463,7 +1463,7 @@ const Payments: React.FC = () => {
                                                             />
                                                             <div className="flex-1">
                                                                 <p className="text-[11px] font-semibold text-emerald-800">Pay from Wallet</p>
-                                                                <p className="text-[10px] text-emerald-600">{currency}{bal.toFixed(2)} available</p>
+                                                                <p className="text-[10px] text-emerald-600">{currency}{bal.toLocaleString(undefined, { minimumFractionDigits: 2 })} available</p>
                                                             </div>
                                                             {formData.paymentMethod === 'Wallet' && (
                                                                 <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-200 px-1.5 py-0.5 rounded-md">Active</span>
@@ -1498,7 +1498,7 @@ const Payments: React.FC = () => {
                                             {excessAmount > 0.01 && (
                                                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg animate-in zoom-in-95">
                                                     <label className="block text-[10px] font-semibold text-emerald-800 mb-2 flex items-center gap-1.5">
-                                                        <AlertTriangle size={12} /> Excess: {currency}{excessAmount.toFixed(2)}
+                                                        <AlertTriangle size={12} /> Excess: {currency}{excessAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </label>
                                                     <div className="flex flex-col gap-1.5">
                                                         <button
@@ -1577,12 +1577,12 @@ const Payments: React.FC = () => {
                                                                 </td>
                                                                 <td className="px-3 py-2">
                                                                     <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase">Invoice</span>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(inv.date).toLocaleDateString()}</td>
-                                                                <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{inv.totalAmount.toFixed(2)}</td>
-                                                                <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toFixed(2)}</td>
-                                                                <td className="px-3 py-2 text-right">
-                                                                    <input
+                                                                 </td>
+                                                                 <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(inv.date).toLocaleDateString()}</td>
+                                                                 <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                 <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                 <td className="px-3 py-2 text-right">
+                                                                     <input
                                                                         type="number"
                                                                         className="w-20 h-7 px-1.5 border border-slate-200 rounded-md text-right font-semibold text-blue-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none finance-nums text-[12px] bg-white transition-all"
                                                                         value={alloc?.amount || ''}
@@ -1611,12 +1611,12 @@ const Payments: React.FC = () => {
                                                                 </td>
                                                                 <td className="px-3 py-2">
                                                                     <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded uppercase">Order</span>
-                                                                </td>
-                                                                <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(order.orderDate || order.date).toLocaleDateString()}</td>
-                                                                <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{order.totalAmount.toFixed(2)}</td>
-                                                                <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toFixed(2)}</td>
-                                                                <td className="px-3 py-2 text-right">
-                                                                    <input
+                                                                 </td>
+                                                                 <td className="px-3 py-2 text-slate-500 text-[12px]">{new Date(order.orderDate || order.date).toLocaleDateString()}</td>
+                                                                 <td className="px-3 py-2 text-right text-slate-500 finance-nums text-[12px]">{currency}{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                 <td className="px-3 py-2 text-right font-semibold text-red-500 finance-nums text-[12px]">{currency}{due.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                 <td className="px-3 py-2 text-right">
+                                                                     <input
                                                                         type="number"
                                                                         className="w-20 h-7 px-1.5 border border-slate-200 rounded-md text-right font-semibold text-amber-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 outline-none finance-nums text-[12px] bg-white transition-all"
                                                                         value={alloc?.amount || ''}
@@ -1643,9 +1643,9 @@ const Payments: React.FC = () => {
 
                                         {allocations.length > 0 && (
                                             <div className="mt-2 flex items-center justify-end gap-3 text-[12px]">
-                                                <span className="text-slate-500 font-medium">Allocated: <span className="font-bold text-slate-700 finance-nums">{currency}{allocations.reduce((s, a) => s + a.amount, 0).toFixed(2)}</span></span>
+                                                <span className="text-slate-500 font-medium">Allocated: <span className="font-bold text-slate-700 finance-nums">{currency}{allocations.reduce((s, a) => s + a.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
                                                 {excessAmount > 0.01 && (
-                                                    <span className="text-emerald-600 font-medium">Excess: <span className="font-bold finance-nums">{currency}{excessAmount.toFixed(2)}</span></span>
+                                                    <span className="text-emerald-600 font-medium">Excess: <span className="font-bold finance-nums">{currency}{excessAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>
                                                 )}
                                             </div>
                                         )}
@@ -1705,8 +1705,8 @@ const Payments: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="table-body-cell font-normal"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex w-fit items-center gap-1 ${payment.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : payment.status === 'Pending' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-800'}`}>{payment.status}</span></td>
-                                                    <td className="table-body-cell text-right font-bold text-slate-900 finance-nums">{currency}{(payment.amount || 0).toFixed(2)}</td>
-                                                    <td className="table-body-cell text-right font-bold text-blue-600 finance-nums">{currency}{allocated.toFixed(2)}</td>
+                                                    <td className="table-body-cell text-right font-bold text-slate-900 finance-nums">{currency}{(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="table-body-cell text-right font-bold text-blue-600 finance-nums">{currency}{allocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     <td className="table-body-cell text-right" onClick={e => e.stopPropagation()}>
                                                         <div className="flex justify-end gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
