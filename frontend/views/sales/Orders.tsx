@@ -5,7 +5,7 @@ import {
     Link as LinkIcon, Download, Save, AlertCircle, Clock, TrendingUp, Ban,
     PieChart as PieChartIcon, Sparkles, Loader2, Upload, AlertTriangle, Wallet,
     MessageSquare, ShieldCheck, Mail, ChevronRight, ChevronDown, BarChart2, Calendar,
-    Printer, Edit2, DollarSign, ArrowLeft, RefreshCw
+    Printer, Edit2, DollarSign, ArrowLeft, RefreshCw, Search, ArrowUpDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { useData, REFRESH_INTERVAL } from '../../context/DataContext';
@@ -31,6 +31,8 @@ import { OfflineImage } from '../../components/OfflineImage';
 import { ProfitAnalysisModal } from './components/ProfitAnalysisModal';
 import { extractInvoiceData, generateAIResponse } from '../../services/geminiService';
 import { QuotationList, InvoiceList, SalesOrderList, SalesExchangeList, SalesSkeletonLoader, OrdersList } from './components/SalesLists';
+import { useSearchSort } from '../../hooks/useSearchSort';
+import SearchSortToolbar from '../../components/SearchSortToolbar';
 import { ExchangeRequestModal } from './components/ExchangeRequestModal';
 import { ExchangeDetailsModal } from './components/ExchangeDetailsModal';
 import { pdf } from '@react-pdf/renderer';
@@ -279,7 +281,7 @@ const Orders: React.FC = () => {
         });
     };
 
-    const [sortField, setSortField] = useState<keyof Invoice>('date');
+    const [sortField, setSortField] = useState<any>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const currency = companyConfig?.currencySymbol || currencyService.getCurrency(currencyService.getBaseCurrency())?.symbol || '$';
     const resolveDocumentType = (record: any, fallbackType: any) => {
@@ -1113,6 +1115,56 @@ const Orders: React.FC = () => {
         }
     };
 
+    // Search and sort hooks for each tab
+    const invoiceSearchSort = useSearchSort({
+        data: invoices || [],
+        searchFields: ['customerName', 'id', 'invoiceNumber', 'status', 'notes', 'reference'],
+        defaultSortField: 'date',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_invoice_sort',
+        initialSearch: searchText,
+    });
+
+    const quotationSearchSort = useSearchSort({
+        data: quotations || [],
+        searchFields: ['customerName', 'id', 'status', 'notes', 'reference'],
+        defaultSortField: 'date',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_quotation_sort',
+    });
+
+    const orderSearchSort = useSearchSort({
+        data: orders || [],
+        searchFields: ['customerName', 'id', 'orderNumber', 'status', 'notes'],
+        defaultSortField: 'orderDate',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_order_sort',
+    });
+
+    const jobOrderSearchSort = useSearchSort({
+        data: jobOrders || [],
+        searchFields: ['customerName', 'id', 'status', 'jobTitle', 'notes'],
+        defaultSortField: 'date',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_joborder_sort',
+    });
+
+    const exchangeSearchSort = useSearchSort({
+        data: salesExchanges || [],
+        searchFields: ['customer_name', 'id', 'exchange_number', 'reason', 'status'],
+        defaultSortField: 'exchange_date',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_exchange_sort',
+    });
+
+    const subscriptionSearchSort = useSearchSort({
+        data: recurringInvoices || [],
+        searchFields: ['customerName', 'id', 'status', 'frequency'],
+        defaultSortField: 'nextRunDate',
+        defaultSortDirection: 'desc',
+        storageKey: 'orders_subscription_sort',
+    });
+
     const processedInvoices = useMemo(() => {
         let data = [...(invoices || [])];
         const now = new Date();
@@ -1128,22 +1180,46 @@ const Orders: React.FC = () => {
         else if (moneyBarFilter === 'Paid') {
             data = data.filter(i => i.status === 'Paid');
         }
-        if (searchText) {
-            const lower = searchText.toLowerCase();
-            data = data.filter(i => (i.customerName || '').toLowerCase().includes(lower) || (i.id || '').toLowerCase().includes(lower));
+        // Apply search & sort from the hook
+        if (invoiceSearchSort.debouncedSearch) {
+            const lower = invoiceSearchSort.debouncedSearch.toLowerCase();
+            data = data.filter(i => 
+                (i.customerName || '').toLowerCase().includes(lower) || 
+                (i.id || '').toLowerCase().includes(lower) ||
+                (i.invoiceNumber || '').toLowerCase().includes(lower) ||
+                (i.status || '').toLowerCase().includes(lower) ||
+                (i.notes || '').toLowerCase().includes(lower)
+            );
         }
         data.sort((a, b) => {
-            const valA = a[sortField];
-            const valB = b[sortField];
+            const valA = a[invoiceSearchSort.sortField];
+            const valB = b[invoiceSearchSort.sortField];
             if (valA === undefined || valB === undefined) return 0;
-            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            if (valA < valB) return invoiceSearchSort.sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return invoiceSearchSort.sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
         return data;
-    }, [invoices, moneyBarFilter, searchText, sortField, sortDirection]);
+    }, [invoices, moneyBarFilter, invoiceSearchSort.debouncedSearch, invoiceSearchSort.sortField, invoiceSearchSort.sortDirection]);
 
-    const handleSort = (field: keyof Invoice) => { if (sortField === field) { setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc'); } else { setSortField(field); setSortDirection('desc'); } };
+    const handleSort = (field: any) => { if (sortField === field) { setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc'); } else { setSortField(field); setSortDirection('desc'); } };
+
+    const sortData = <T,>(data: T[], field: any, direction: 'asc' | 'desc'): T[] => {
+        return [...data].sort((a: any, b: any) => {
+            const valA = a[field];
+            const valB = b[field];
+            if (valA === undefined || valB === undefined) return 0;
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    const processedQuotations = useMemo(() => sortData(quotationSearchSort.processedData, sortField, sortDirection), [quotationSearchSort.processedData, sortField, sortDirection]);
+    const processedOrders = useMemo(() => sortData(orderSearchSort.processedData, sortField, sortDirection), [orderSearchSort.processedData, sortField, sortDirection]);
+    const processedJobOrders = useMemo(() => sortData(jobOrderSearchSort.processedData, sortField, sortDirection), [jobOrderSearchSort.processedData, sortField, sortDirection]);
+    const processedExchanges = useMemo(() => sortData(exchangeSearchSort.processedData, sortField, sortDirection), [exchangeSearchSort.processedData, sortField, sortDirection]);
+    const processedSubscriptions = useMemo(() => sortData(subscriptionSearchSort.processedData, sortField, sortDirection), [subscriptionSearchSort.processedData, sortField, sortDirection]);
     const handleSelectInvoice = (id: string) => { setSelectedInvoiceIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
 
     const handleBulkAction = async (action: string) => {
@@ -1640,12 +1716,12 @@ const Orders: React.FC = () => {
                         <SalesSkeletonLoader type={viewMode === 'Card' ? 'grid' : 'table'} />
                     ) : (
                         <>
-                            {activeView === 'Quotations' && <QuotationList data={quotations || []} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} />}
-                            {activeView === 'Invoices' && <InvoiceList data={processedInvoices || []} onView={(inv) => setSelectedInvoiceForDetail(inv)} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} selectedId={selectedInvoiceForDetail?.id} />}
-                            {activeView === 'Subscriptions' && <SubscriptionView data={recurringInvoices || []} onEdit={handleEdit} onView={handleView} onDelete={handleDelete} onAction={handleAction} />}
-                            {activeView === 'SalesOrders' && <SalesOrderList data={jobOrders || []} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} />}
-                            {activeView === 'Orders' && <OrdersList data={orders || []} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} />}
-                            {activeView === 'Exchanges' && <SalesExchangeList data={salesExchanges || []} onView={handleView} onEdit={handleEdit} onDelete={(id) => deleteSalesExchange(id)} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} />}
+                            {activeView === 'Quotations' && <QuotationList data={processedQuotations} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} />}
+                            {activeView === 'Invoices' && <InvoiceList data={processedInvoices} onView={(inv) => setSelectedInvoiceForDetail(inv)} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} selectedId={selectedInvoiceForDetail?.id} />}
+                            {activeView === 'Subscriptions' && <SubscriptionView data={processedSubscriptions} onEdit={handleEdit} onView={handleView} onDelete={handleDelete} onAction={handleAction} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} />}
+                            {activeView === 'SalesOrders' && <SalesOrderList data={processedJobOrders} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} />}
+                            {activeView === 'Orders' && <OrdersList data={processedOrders} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onAction={handleAction} viewMode={viewMode} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} />}
+                            {activeView === 'Exchanges' && <SalesExchangeList data={processedExchanges} onView={handleView} onEdit={handleEdit} onDelete={(id) => deleteSalesExchange(id)} onAction={handleAction} viewMode={viewMode} selectedIds={selectedInvoiceIds} onSelect={handleSelectInvoice} onSort={handleSort} sortConfig={{ field: sortField, direction: sortDirection }} />}
                         </>
                     )}
                 </div>

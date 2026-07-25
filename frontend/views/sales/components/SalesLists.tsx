@@ -25,7 +25,38 @@ export interface ListProps<T> {
     onSort?: (field: any) => void;
     sortConfig?: { field: any; direction: 'asc' | 'desc' };
     selectedId?: string;
+    searchTerm?: string;
+    onSearchChange?: (value: string) => void;
+    onSearchClear?: () => void;
+    sortOptions?: Array<{ field: string; label: string }>;
+    onSortFieldChange?: (field: string) => void;
+    onSortDirectionToggle?: () => void;
+    resultCount?: number;
+    totalCount?: number;
 }
+
+const SortableTh: React.FC<{
+    field: string;
+    sortConfig?: { field: any; direction: 'asc' | 'desc' };
+    onSort?: (field: any) => void;
+    className?: string;
+    children: React.ReactNode;
+}> = ({ field, sortConfig, onSort, className = '', children }) => {
+    const isActive = sortConfig?.field === field;
+    return (
+        <th
+            className={`table-header cursor-pointer select-none ${className} ${isActive ? 'text-blue-600' : ''}`}
+            onClick={() => onSort?.(field)}
+        >
+            <div className="flex items-center gap-1">
+                {children}
+                {isActive && (
+                    sortConfig?.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500" /> : <ArrowDown size={12} className="text-blue-500" />
+                )}
+            </div>
+        </th>
+    );
+};
 
 const getSubscriptionToggleAction = (status?: string) => {
     switch (status) {
@@ -242,11 +273,11 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                         <table className="w-full text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="table-header">Order No.</th>
-                                    <th className="table-header">Date</th>
-                                    <th className="table-header">Customer</th>
-                                    <th className="table-header">Title</th>
-                                    <th className="table-header text-center">Status</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Order No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                    <SortableTh field="jobTitle" sortConfig={props.sortConfig} onSort={props.onSort}>Title</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
                                     <th className="table-header text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -409,12 +440,12 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                         <table className="w-full text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="table-header">Order No.</th>
-                                    <th className="table-header">Date</th>
-                                    <th className="table-header">Customer</th>
-                                    <th className="table-header text-right">Total</th>
-                                    <th className="table-header text-right">Paid</th>
-                                    <th className="table-header text-center">Status</th>
+                                    <SortableTh field="orderNumber" sortConfig={props.sortConfig} onSort={props.onSort}>Order No.</SortableTh>
+                                    <SortableTh field="orderDate" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Paid</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
                                     <th className="table-header text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -727,11 +758,11 @@ export const SalesExchangeList: React.FC<ListProps<SalesExchange>> = (props) => 
                                         }}
                                     />
                                 </th>
-                                <th className="table-header">Exchange No.</th>
-                                <th className="table-header">Date</th>
-                                <th className="table-header">Customer</th>
-                                <th className="table-header">Reason</th>
-                                <th className="table-header text-center">Status</th>
+                                <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Exchange No.</SortableTh>
+                                <SortableTh field="exchange_date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
+                                <SortableTh field="customer_name" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                <SortableTh field="reason" sortConfig={props.sortConfig} onSort={props.onSort}>Reason</SortableTh>
+                                <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
                                 <th className="table-header text-right">Actions</th>
                             </tr>
                         </thead>
@@ -1039,12 +1070,12 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                             }}
                                         />
                                     </th>
-                                    <th className="table-header">Invoice No.</th>
-                                    <th className="table-header">Date</th>
-                                    <th className="table-header">Customer</th>
-                                    <th className="table-header text-right">Total</th>
-                                    <th className="table-header text-right">Balance</th>
-                                    <th className="table-header text-center">Status</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Invoice No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Balance</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
                                     <th className="table-header text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -1253,11 +1284,11 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                         <table className="w-full text-left text-[13px]">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="table-header">Quote No.</th>
-                                    <th className="table-header">Date</th>
-                                    <th className="table-header">Customer</th>
-                                    <th className="table-header text-right">Total</th>
-                                    <th className="table-header text-center">Status</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>Quote No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort}>Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
                                     <th className="table-header text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -1423,35 +1454,35 @@ export const RecurringList: React.FC<ListProps<RecurringInvoice>> = (props) => {
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     <table className="w-full text-left text-[13px]">
                         <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
-                            <tr>
-                                <th className="table-header">ID</th>
-                                <th className="table-header">Customer</th>
-                                <th className="table-header">Frequency</th>
-                                <th className="table-header">Next Run</th>
-                                <th className="table-header text-right">Total</th>
-                                <th className="table-header text-center">Status</th>
-                                <th className="table-header text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100/50">
-                            {(currentItems || []).map((sub: any) => (
-                                <tr
-                                    key={sub.id}
-                                    id={`sub-${sub.id}`}
-                                    className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
-                                    onClick={(e) => handleRowClick(e, sub.id)}
-                                    onContextMenu={(e) => handleContextMenu(e, sub.id)}
-                                    onMouseEnter={(e) => onMouseEnter(sub.id, e)}
-                                    onMouseMove={onMouseMove}
-                                    onMouseLeave={onMouseLeave}
-                                >
-                                    <td className="table-body-cell font-mono font-bold">
-                                        <DocLink
-                                            docNumber={sub.id}
-                                            targetPage="/sales-flow/recurring"
-                                            rowId={`sub-${sub.id}`}
-                                            currentPage={location.pathname}
-                                        />
+                                <tr>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort}>ID</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort}>Customer</SortableTh>
+                                    <SortableTh field="frequency" sortConfig={props.sortConfig} onSort={props.onSort}>Frequency</SortableTh>
+                                    <SortableTh field="nextRunDate" sortConfig={props.sortConfig} onSort={props.onSort}>Next Run</SortableTh>
+                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right">Total</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center">Status</SortableTh>
+                                    <th className="table-header text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100/50">
+                                {(currentItems || []).map((sub: any) => (
+                                    <tr
+                                        key={sub.id}
+                                        id={`sub-${sub.id}`}
+                                        className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                                        onClick={(e) => handleRowClick(e, sub.id)}
+                                        onContextMenu={(e) => handleContextMenu(e, sub.id)}
+                                        onMouseEnter={(e) => onMouseEnter(sub.id, e)}
+                                        onMouseMove={onMouseMove}
+                                        onMouseLeave={onMouseLeave}
+                                    >
+                                        <td className="table-body-cell font-mono font-bold">
+                                            <DocLink
+                                                docNumber={sub.id}
+                                                targetPage="/sales-flow/recurring"
+                                                rowId={`sub-${sub.id}`}
+                                                currentPage={location.pathname}
+                                            />
                                     </td>
                                     <td className="table-body-cell font-medium text-slate-900">{sub.customerName}</td>
                                     <td className="table-body-cell font-normal">{sub.frequency}</td>
