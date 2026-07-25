@@ -199,7 +199,7 @@ const Suppliers: React.FC = () => {
       isAfter(parseISO(current.date), parseISO(prev.date)) ? current : prev
     );
     
-    return `${format(parseISO(latest.date), 'MMM dd, yyyy')} (${latest.id})`;
+    return format(parseISO(latest.date), 'MMM dd, yyyy');
   };
 
   if (selectedWorkspaceSupplier) {
