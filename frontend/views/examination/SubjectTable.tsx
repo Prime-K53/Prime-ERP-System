@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExaminationJobSubject } from '../../types';
-import { Input } from '../../components/ui/Input';
+import Input from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Trash2 } from 'lucide-react';
 
