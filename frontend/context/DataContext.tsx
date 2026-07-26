@@ -18,8 +18,9 @@ import { cloudDb } from '../services/cloudDb';
 import { isCloudOnlyMode } from '../services/cloudMode';
 
 export const REFRESH_INTERVAL = 300_000;
-const FRESH_THRESHOLD_MS = 15_000;
-const REFRESH_DEBOUNCE_MS = 120;
+const FRESH_THRESHOLD_MS = 30_000;
+const REFRESH_DEBOUNCE_MS = 250;
+const MIN_POLL_INTERVAL = 60_000;
 
 type DataContextValue = {
   refreshAllData: (options?: { force?: boolean }) => Promise<void>;
@@ -128,9 +129,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             window.clearInterval(pollTimerRef.current);
             pollTimerRef.current = null;
         }
+        // Enforce minimum polling interval to prevent overwhelming the backend
+        const safeInterval = Math.max(intervalMs, MIN_POLL_INTERVAL);
         pollTimerRef.current = window.setInterval(() => {
             refreshAllData().catch((err) => logger.error('[DataContext] poll refresh failed:', err));
-        }, intervalMs);
+        }, safeInterval);
     }, [refreshAllData]);
 
     const stopPolling = useCallback(() => {
