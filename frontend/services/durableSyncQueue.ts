@@ -1,0 +1,471 @@
+import { openDB, IDBPDatabase } from 'idb';
+
+export type QueueStatus = 'pending' | 'syncing' | 'failed' | 'completed' | 'dead_letter';
+export type QueueOperation = 'insert' | 'update' | 'delete' | 'upsert';
+
+export interface QueuedOperation {
+  id: string;
+  operationId: string;
+  table: string;
+  recordId: string | null;
+  operation: QueueOperation;
+  payload: unknown;
+  userId: string | null;
+  companyId: string | null;
+  createdAt: string;
+  retryCount: number;
+  lastAttempt: string | null;
+  status: QueueStatus;
+  lastError: string | null;
+  dependsOn: string[];
+  fileRef: string | null;
+  errorType?: 'retryable' | 'permanent' | null;
+  payloadSizeBytes?: number;
+}
+
+export interface QueueMetrics {
+  total: number;
+  pending: number;
+  syncing: number;
+  failed: number;
+  completed: number;
+  deadLetter: number;
+  oldestPending: string | null;
+  lastSyncSuccess: string | null;
+  lastSyncFailure: string | null;
+  retryHistogram: Record<number, number>;
+  avgRetryCount: number;
+  avgSyncLatencyMs: number;
+}
+
+interface QueueDB {
+  operations: {
+    key: string;
+    value: QueuedOperation;
+    indexes: {
+      'by-status': string;
+      'by-created': string;
+      'by-operationId': string;
+    };
+  };
+  meta: {
+    key: string;
+    value: { key: string; value: unknown };
+  };
+  metrics: {
+    key: string;
+    value: {
+      id: string;
+      timestamp: string;
+      metric: string;
+      value: unknown;
+    };
+    indexes: {
+      'by-metric': string;
+    };
+  };
+}
+
+const DB_NAME = 'PrimeERP_DurableSyncQueue';
+const DB_VERSION = 3;
+
+let dbPromise: Promise<IDBPDatabase<QueueDB>> | null = null;
+
+/** @internal – reset IndexedDB connection cache (used in tests) */
+export function resetDbConnection(): void {
+  dbPromise = null;
+}
+
+function getDb(): Promise<IDBPDatabase<QueueDB>> {
+  if (!dbPromise) {
+    dbPromise = openDB<QueueDB>(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const store = db.createObjectStore('operations', { keyPath: 'id' });
+          store.createIndex('by-status', 'status');
+          store.createIndex('by-created', 'createdAt');
+          store.createIndex('by-operationId', 'operationId');
+        }
+        if (oldVersion < 2) {
+          if (!db.objectStoreNames.contains('meta')) {
+            db.createObjectStore('meta', { keyPath: 'key' });
+          }
+        }
+        if (oldVersion < 3) {
+          if (!db.objectStoreNames.contains('metrics')) {
+            const metricsStore = db.createObjectStore('metrics', { keyPath: 'id' });
+            metricsStore.createIndex('by-metric', 'metric');
+          }
+        }
+      },
+    });
+  }
+  return dbPromise;
+}
+
+function generateId(): string {
+  return `q-${crypto.randomUUID?.() ?? Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function generateOperationId(): string {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const RETRYABLE_ERROR_PATTERNS = [
+  'timeout', 'network', 'offline', 'fetch', 'abort',
+  '429', '500', '502', '503', '504',
+  'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND',
+  'rate limit', 'too many requests',
+  'service unavailable', 'internal server error',
+  'bad gateway', 'gateway timeout',
+];
+
+const PERMANENT_ERROR_PATTERNS = [
+  'validation', 'malformed', 'foreign key', 'not found',
+  'missing required', 'unauthorized', 'forbidden',
+  'deleted resource', 'schema mismatch', 'constraint',
+  'duplicate key value violates unique constraint',
+  'violates foreign key constraint',
+  'violates not-null constraint',
+  'invalid input syntax',
+  'row-level security',
+  '42501',
+  'policy',
+];
+
+export function classifyError(message: string): 'retryable' | 'permanent' {
+  const lower = message.toLowerCase();
+  for (const pattern of PERMANENT_ERROR_PATTERNS) {
+    if (lower.includes(pattern)) return 'permanent';
+  }
+  for (const pattern of RETRYABLE_ERROR_PATTERNS) {
+    if (lower.includes(pattern)) return 'retryable';
+  }
+  return 'retryable';
+}
+
+function detectCycle(dependsOn: string[], allItems: QueuedOperation[], visited: Set<string> = new Set(), path: Set<string> = new Set()): boolean {
+  for (const depId of dependsOn) {
+    if (path.has(depId)) return true;
+    if (visited.has(depId)) continue;
+    visited.add(depId);
+    path.add(depId);
+    const depItem = allItems.find(i => i.id === depId);
+    if (depItem && depItem.dependsOn.length > 0) {
+      if (detectCycle(depItem.dependsOn, allItems, visited, path)) return true;
+    }
+    path.delete(depId);
+  }
+  return false;
+}
+
+export const durableSyncQueue = {
+  async enqueue<T>(input: {
+    table: string;
+    recordId: string | null;
+    operation: QueueOperation;
+    payload: T;
+    userId?: string | null;
+    companyId?: string | null;
+    dependsOn?: string[];
+    fileRef?: string | null;
+  }): Promise<QueuedOperation> {
+    const now = new Date().toISOString();
+    const dependsOn = input.dependsOn || [];
+
+    if (dependsOn.length > 0) {
+      const db = await getDb();
+      const allExisting = await db.getAll('operations');
+      const visited = new Set<string>();
+      const path = new Set<string>();
+      if (detectCycle(dependsOn, allExisting, visited, path)) {
+        throw new Error(`Dependency cycle detected: operation would create a circular dependency`);
+      }
+    }
+
+    const payloadStr = JSON.stringify(input.payload);
+    const item: QueuedOperation = {
+      id: generateId(),
+      operationId: input.fileRef ? input.fileRef : generateOperationId(),
+      table: input.table,
+      recordId: input.recordId || null,
+      operation: input.operation,
+      payload: input.payload,
+      userId: input.userId || null,
+      companyId: input.companyId || null,
+      createdAt: now,
+      retryCount: 0,
+      lastAttempt: null,
+      status: 'pending',
+      lastError: null,
+      dependsOn,
+      fileRef: input.fileRef || null,
+      payloadSizeBytes: payloadStr.length,
+    };
+    const db = await getDb();
+    await db.put('operations', item);
+    return item;
+  },
+
+  async enqueueWithCache<T>(input: {
+    table: string;
+    recordId: string | null;
+    operation: QueueOperation;
+    payload: T;
+    userId?: string | null;
+    companyId?: string | null;
+    dependsOn?: string[];
+    fileRef?: string | null;
+  }, cacheWrite: () => Promise<void>): Promise<QueuedOperation> {
+    const item = await this.enqueue(input);
+    try {
+      await cacheWrite();
+    } catch {
+      await this.remove(item.id);
+      throw new Error('Cache write failed after queue enqueue, operation rolled back');
+    }
+    return item;
+  },
+
+  async dequeue(limit: number = 10): Promise<QueuedOperation[]> {
+    const db = await getDb();
+    const allPending = await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('pending'));
+
+    const completedIds = new Set<string>();
+    const deadLetterIds = new Set<string>();
+    const allCompleted = await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('completed'));
+    for (const op of allCompleted) completedIds.add(op.id);
+    const allDead = await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('dead_letter'));
+    for (const op of allDead) deadLetterIds.add(op.id);
+
+    const blocked = new Set<string>(completedIds);
+    for (const id of deadLetterIds) blocked.add(id);
+
+    allPending.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    const ready: QueuedOperation[] = [];
+    const processingIds = new Set<string>();
+
+    // Iteratively resolve dependencies within the batch:
+    // Items with no deps are added immediately.
+    // Items whose deps are blocked (completed/dead) are also added.
+    // Then items whose deps are now in the current batch are added (transitive).
+    let changed = true;
+    while (changed && ready.length < limit) {
+      changed = false;
+      for (const op of allPending) {
+        if (processingIds.has(op.id)) continue;
+        if (ready.length >= limit) break;
+
+        const allDepsMet = op.dependsOn.length === 0 ||
+          op.dependsOn.every(depId => blocked.has(depId) || processingIds.has(depId));
+
+        if (allDepsMet) {
+          ready.push(op);
+          processingIds.add(op.id);
+          changed = true;
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
+    for (const op of ready) {
+      op.status = 'syncing';
+      op.lastAttempt = now;
+      await db.put('operations', op);
+    }
+    return ready;
+  },
+
+  async markCompleted(id: string, serverTimestamp?: string): Promise<void> {
+    const db = await getDb();
+    const item = await db.get('operations', id);
+    if (item) {
+      item.status = 'completed';
+      item.retryCount = 0;
+      item.lastAttempt = serverTimestamp || new Date().toISOString();
+      item.lastError = null;
+      await db.put('operations', item);
+    }
+  },
+
+  async markFailed(id: string, error: string): Promise<void> {
+    const db = await getDb();
+    const item = await db.get('operations', id);
+    if (item) {
+      const errorType = classifyError(error);
+      item.status = errorType === 'permanent' ? 'dead_letter' : 'failed';
+      item.retryCount = item.retryCount + 1;
+      item.lastAttempt = new Date().toISOString();
+      item.lastError = error;
+      item.errorType = errorType;
+      await db.put('operations', item);
+    }
+  },
+
+  async retryDeadLetter(id: string): Promise<void> {
+    const db = await getDb();
+    const item = await db.get('operations', id);
+    if (item && item.status === 'dead_letter') {
+      item.status = 'pending';
+      item.retryCount = 0;
+      item.lastError = null;
+      item.errorType = null;
+      await db.put('operations', item);
+    }
+  },
+
+  async remove(id: string): Promise<void> {
+    const db = await getDb();
+    await db.delete('operations', id);
+  },
+
+  async cleanup(completedRetentionMs: number = 86400000): Promise<number> {
+    const db = await getDb();
+    const cutoff = new Date(Date.now() - completedRetentionMs).toISOString();
+    const all = await db.getAll('operations');
+    let removed = 0;
+    for (const item of all) {
+      if (item.status === 'completed' && item.lastAttempt && item.lastAttempt < cutoff) {
+        await db.delete('operations', item.id);
+        removed++;
+      }
+    }
+    return removed;
+  },
+
+  async countPending(): Promise<number> {
+    const db = await getDb();
+    return (await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('pending'))).length;
+  },
+
+  async countFailed(): Promise<number> {
+    const db = await getDb();
+    return (await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('failed'))).length;
+  },
+
+  async countDeadLetter(): Promise<number> {
+    const db = await getDb();
+    return (await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('dead_letter'))).length;
+  },
+
+  async getAll(status?: QueueStatus): Promise<QueuedOperation[]> {
+    const db = await getDb();
+    if (status) {
+      return db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only(status));
+    }
+    return db.getAll('operations');
+  },
+
+  async getByOperationId(operationId: string): Promise<QueuedOperation | undefined> {
+    const db = await getDb();
+    const all = await db.getAllFromIndex('operations', 'by-operationId', operationId);
+    return all[0];
+  },
+
+  async retryFailed(): Promise<number> {
+    const db = await getDb();
+    const failed = await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('failed'));
+    let count = 0;
+    for (const item of failed) {
+      await db.put('operations', { ...item, status: 'pending' });
+      count++;
+    }
+    return count;
+  },
+
+  async getMetrics(): Promise<QueueMetrics> {
+    const db = await getDb();
+    const all = await db.getAll('operations');
+    const byStatus: Record<string, QueuedOperation[]> = {};
+    for (const op of all) {
+      if (!byStatus[op.status]) byStatus[op.status] = [];
+      byStatus[op.status].push(op);
+    }
+
+    const pending = (byStatus.pending || []).length;
+    const syncing = (byStatus.syncing || []).length;
+    const failed = (byStatus.failed || []).length;
+    const completed = (byStatus.completed || []).length;
+    const deadLetter = (byStatus.dead_letter || []).length;
+
+    const sortedByCreated = [...(byStatus.pending || [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const oldestPending = sortedByCreated.length > 0 ? sortedByCreated[0].createdAt : null;
+
+    const lastSuccess = await db.get('metrics', 'last_sync_success');
+    const lastFailure = await db.get('metrics', 'last_sync_failure');
+
+    const retryCounts: Record<number, number> = {};
+    for (const op of all) {
+      const rc = op.retryCount || 0;
+      retryCounts[rc] = (retryCounts[rc] || 0) + 1;
+    }
+
+    const totalRetries = all.reduce((sum, op) => sum + (op.retryCount || 0), 0);
+    const avgRetryCount = all.length > 0 ? totalRetries / all.length : 0;
+
+    return {
+      total: all.length,
+      pending,
+      syncing,
+      failed,
+      completed,
+      deadLetter,
+      oldestPending,
+      lastSyncSuccess: lastSuccess?.value as string | null,
+      lastSyncFailure: lastFailure?.value as string | null,
+      retryHistogram: retryCounts,
+      avgRetryCount,
+      avgSyncLatencyMs: 0,
+    };
+  },
+
+  async recordMetric(metric: string, value: unknown): Promise<void> {
+    const db = await getDb();
+    await db.put('metrics', {
+      id: `${metric}-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      metric,
+      value,
+    });
+  },
+
+  async getMeta(key: string): Promise<unknown | undefined> {
+    const db = await getDb();
+    const record = await db.get('meta', key);
+    return record?.value;
+  },
+
+  async setMeta(key: string, value: unknown): Promise<void> {
+    const db = await getDb();
+    await db.put('meta', { key, value });
+  },
+
+  async rebuildDependencyGraph(): Promise<number> {
+    const db = await getDb();
+    const pending = await db.getAllFromIndex('operations', 'by-status', IDBKeyRange.only('pending'));
+    const all = await db.getAll('operations');
+    let recovered = 0;
+    for (const op of pending) {
+      if (op.dependsOn.length > 0) {
+        const visited = new Set<string>();
+        const path = new Set<string>();
+        if (detectCycle(op.dependsOn, all, visited, path)) {
+          op.lastError = `Dependency cycle detected and broken: ${op.dependsOn.join(', ')}`;
+          op.dependsOn = [];
+          await db.put('operations', op);
+          recovered++;
+        }
+      }
+    }
+    return recovered;
+  },
+
+  async destroy(): Promise<void> {
+    const db = await getDb();
+    db.close();
+    dbPromise = null;
+    const { deleteDB } = await import('idb');
+    await deleteDB(DB_NAME);
+  },
+};
