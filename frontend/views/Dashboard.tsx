@@ -14,7 +14,7 @@ import {
   Briefcase, Users, ChevronDown, User,
   MessageSquare, Calculator, FileText, Zap, ArrowRight, ChevronRight,
   Sparkles, Database, BarChart2, X, ArrowUp, ArrowDown, Building2,
-  Star, Sun, Calendar, Search} from 'lucide-react';
+  Star, Sun, Calendar} from 'lucide-react';
 import WhatsAppMarketingModal from '../components/WhatsAppMarketingModal';
 
 import { useDashboardStore } from '../stores/dashboardStore';
@@ -730,8 +730,7 @@ const useWindowSize = () => {
 
 const DashboardContent: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const { initialized, loadDefaults, widgets } = useDashboardStore();
 
@@ -798,7 +797,6 @@ const DashboardContent: React.FC = () => {
   // ── Company Menu & Restore Logic ─────────────────────────────────────────
 
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [confirmState, setConfirmState] = useState<{ open: boolean; title: string; message: string; confirmText?: string; type?: ConfirmDialogType; onConfirm?: () => void }>({ open: false, title: '', message: '' });
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -852,34 +850,6 @@ const DashboardContent: React.FC = () => {
         }
       });
   };
-
-  // ── Search Live Preview Logic ────────────────────────────────────────────
-
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchResults = React.useMemo(() => {
-    if (!searchQuery || searchQuery.length < 2) return [];
-    const lowerQ = searchQuery.toLowerCase();
-    const results: Array<{type: string, text: string, link: string}> = [];
-    
-    customers.forEach(c => {
-      if (typeof c.name === 'string' && c.name.toLowerCase().includes(lowerQ)) {
-        results.push({ type: 'Customer', text: c.name, link: '/customers' });
-      }
-    });
-    invoices.forEach(inv => {
-      const invNum = inv.invoiceNumber || inv.id;
-      if (String(invNum).toLowerCase().includes(lowerQ) || String(inv.customerName || '').toLowerCase().includes(lowerQ)) {
-        results.push({ type: 'Invoice', text: `${invNum} - ${inv.customerName}`, link: '/sales-flow/invoices' });
-      }
-    });
-    jobOrders.forEach(job => {
-      const jobName = job.jobName || job.title || job.orderNumber;
-      if (String(jobName).toLowerCase().includes(lowerQ)) {
-        results.push({ type: 'Job', text: String(jobName), link: '/production/jobs' });
-      }
-    });
-    return results.slice(0, 6);
-  }, [searchQuery, customers, invoices, jobOrders]);
 
   // ── account balances ─────────────────────────────────────────────────────
 
@@ -1465,69 +1435,6 @@ const DashboardContent: React.FC = () => {
             <input type="file" ref={restoreInputRef} style={{ display: 'none' }} accept=".json" onChange={handleRestoreBackupFile} />
           </div>
 
-          {/* Premium Search Bar — desktop */}
-          {!isMobile && (
-            <div className="premium-search" style={{ position: 'relative', flex: '0 1 280px', minWidth: 0 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 14px',
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0.4))',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.8)',
-                boxShadow: '0 2px 8px rgba(31,38,135,0.04), inset 0 1px 0 rgba(255,255,255,0.6)',
-                transition: 'all 0.2s ease',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(31,38,135,0.04), inset 0 1px 0 rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'; }}
-              >
-                <Search size={14} color="#6366f1" style={{ opacity: 0.6 }} />
-                <input
-                  type="text"
-                  placeholder="Search transactions, clients..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onFocus={e => { setIsSearchFocused(true); }}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                  style={{
-                    flex: 1, border: 'none', background: 'transparent',
-                    fontSize: 12, fontWeight: 500, color: '#2e2a5d',
-                    outline: 'none', minWidth: 0,
-                  }}
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} style={{ border: 'none', background: 'rgba(148,163,184,0.15)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, color: '#94a3b8', flexShrink: 0 }}>
-                    <X size={10} />
-                  </button>
-                )}
-              </div>
-
-              {/* Live Preview Dropdown */}
-              {isSearchFocused && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6,
-                  backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  borderRadius: 16, boxShadow: '0 12px 48px rgba(31,38,135,0.15)', border: '1px solid rgba(255,255,255,0.9)',
-                  overflow: 'hidden', zIndex: 50,
-                }}>
-                  {searchResults.map((res, i) => (
-                    <div key={i} onClick={() => navigate(res.link)} style={{
-                      padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      borderBottom: i === searchResults.length - 1 ? 'none' : '1px solid rgba(241,245,249,0.7)',
-                    }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.04)'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <span style={{ fontSize: 12, fontWeight: 500, color: '#1e293b' }}>{res.text}</span>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', backgroundColor: 'rgba(99,102,241,0.08)', padding: '2px 6px', borderRadius: 6 }}>{res.type}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Right side group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
             {/* Action Buttons — icon only on mobile */}
@@ -1587,65 +1494,7 @@ const DashboardContent: React.FC = () => {
 
               </div>
 
-            {/* User Profile */}
-            <div 
-              style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: isMobile ? 0 : 4, paddingLeft: isMobile ? 0 : 8, borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.3)', position: 'relative', cursor: 'pointer' }}
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div style={{
-                width: isMobile ? 34 : 38, height: isMobile ? 34 : 38,
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, #a7b5f5, #d1c5f4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#2e2a5d', fontWeight: 700, fontSize: 13, flexShrink: 0,
-                boxShadow: '0 4px 10px rgba(31,38,135,0.1)',
-                border: '2px solid rgba(255,255,255,0.8)'
-              }}>
-                {(user?.fullName || user?.name || 'A').charAt(0).toUpperCase()}
-              </div>
-              {!isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#2e2a5d' }}>{(user?.role === 'Company Admin' ? 'Admin' : user?.role) || 'User'}</div>
-                  <ChevronDown size={14} color="#5b578c" style={{ transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                </div>
-              )}
 
-              {showUserMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: 12,
-                  backgroundColor: '#ffffff',
-                  borderRadius: 16,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  overflow: 'hidden',
-                  zIndex: 60,
-                  minWidth: 160,
-                }}>
-                  <div 
-                    onClick={() => navigate('/profile')}
-                    style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <User size={16} color="#6366f1" /> User Profile
-                  </div>
-                  <div 
-                    onClick={() => {
-                        logout();
-                        navigate('/login');
-                    }}
-                    style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    <X size={16} color="#ef4444" /> Log out
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           </div>

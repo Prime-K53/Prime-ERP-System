@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { logger } from '@/services/logger';
 import { 
-  Search, Bell, AlertTriangle, WifiOff, 
+  Bell, AlertTriangle, WifiOff, 
   Menu, LayoutGrid, CheckSquare, Wrench, Download, Package,
-  RefreshCw, Database, CreditCard, Barcode, ChevronRight, User, Upload,
+  RefreshCw, Database, CreditCard, Barcode, ChevronRight, ChevronDown, User, Upload,
   X, CheckCircle, Trash2, Clock, Plus, Zap, Filter, MessageSquare
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useInventory } from '../context/InventoryContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { OfflineImage } from './OfflineImage';
 import { exportToCSV, parseCSV } from '../services/excelService';
@@ -26,10 +27,11 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
   } = useData();
   const { inventory, addItem } = useInventory();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showTools, setShowTools] = useState(false);
-  const [globalSearch, setGlobalSearch] = useState('');
   const [quickReminder, setQuickReminder] = useState('');
   const [notificationTab, setNotificationTab] = useState<'All' | 'Alerts' | 'Reminders' | 'Tasks'>('All');
   
@@ -81,10 +83,6 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleSearchSubmit = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && globalSearch.trim()) navigate(`/search?q=${encodeURIComponent(globalSearch)}`);
-  };
 
   const handleAddQuickReminder = (e: React.FormEvent) => {
       e.preventDefault();
@@ -159,67 +157,9 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
             <Menu size={20}/>
         </button>
 
-        <div className="relative hidden sm:block group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600" size={14}/>
-            <input 
-              type="text" 
-              placeholder="e.g. INV-1001" 
-              className="pl-9 pr-4 py-1.5 rounded-lg bg-slate-50 border border-slate-100 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 text-xs outline-none w-40 transition-all focus:w-64 font-medium h-9" 
-              value={globalSearch} 
-              onChange={e => setGlobalSearch(e.target.value)} 
-              onKeyDown={handleSearchSubmit}
-            />
-        </div>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-5">
-        <div className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all cursor-pointer hover:bg-slate-50
-            ${dbSyncStatus === 'connected' ? 'text-emerald-500' : 
-              dbSyncStatus === 'syncing' ? 'text-blue-500' :
-              'text-slate-300'}`}
-             title={`Database Bridge: ${dbSyncStatus}`}
-             onClick={connectDbSync}
-        >
-            {dbSyncStatus === 'syncing' ? <RefreshCw size={18} className="animate-spin"/> : <Database size={18}/>}
-        </div>
-
-        {!isOnline && (
-            <div className="p-2 text-rose-500 animate-pulse" title="Offline">
-                <WifiOff size={20}/>
-            </div>
-        )}
-        
-        <div className="relative" ref={toolsMenuRef}>
-            <button 
-                onClick={() => setShowTools(!showTools)} 
-                className={`p-2 rounded-lg transition-colors ${showTools ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'hover:bg-slate-50 text-slate-500'}`}
-                title="Tools"
-            >
-                <Wrench size={18}/>
-            </button>
-            {showTools && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 origin-top-right">
-                    <div className="px-4 py-2 border-b border-slate-50 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">System Tools</div>
-                    <Link to="/tools/cheques" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors" onClick={() => setShowTools(false)}>
-                        <CreditCard size={14} className="text-blue-500"/> Cheque Manager
-                    </Link>
-                    <Link to="/tools/barcodes" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors" onClick={() => setShowTools(false)}>
-                        <Barcode size={14} className="text-indigo-500"/> Barcode Printer
-                    </Link>
-                    <Link to="/admin/import" className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors" onClick={() => setShowTools(false)}>
-                        <Upload size={14} className="text-amber-500"/> Data Migration
-                    </Link>
-                    <div className="my-1 border-t border-slate-50"></div>
-                    <button onClick={() => { setImportType('Items'); fileInputRef.current?.click(); setShowTools(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors">
-                        <Package size={14} className="text-indigo-500"/> Import Items
-                    </button>
-                    <button onClick={handleExportProducts} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-xs font-medium text-slate-600 transition-colors">
-                        <Download size={14} className="text-emerald-500"/> Export Items
-                    </button>
-                </div>
-            )}
-        </div>
-
+      <div className="flex items-center gap-1 md:gap-3">
         {/* Dedicated Notifications Panel */}
         <div className="relative" ref={notificationRef}>
             <button 
@@ -334,7 +274,7 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
                                                        <Trash2 size={12}/>
                                                    </button>
                                                )}
-                                            </div>
+                                           </div>
                                         </div>
                                     </div>
                                 ))}
@@ -367,17 +307,27 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
             )}
         </div>
 
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-100">
-            <div className="text-right hidden sm:block">
-                <p className="text-xs font-semibold text-slate-800">{user?.name || 'Admin User'}</p>
-                <p className="text-[10px] text-slate-400 font-medium">{user?.role || 'Administrator'}</p>
-            </div>
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-100 relative" style={{ cursor: 'pointer' }} onClick={() => setShowUserMenu(!showUserMenu)}>
             <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 border border-slate-200">
                 <User size={18}/>
             </div>
+            <div className="hidden sm:flex items-center gap-1">
+                <span className="text-xs font-semibold text-slate-800">{(user?.role === 'Company Admin' ? 'Admin' : user?.role) || 'User'}</span>
+                <ChevronDown size={14} color="#5b578c" style={{ transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            </div>
+            {showUserMenu && (
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 12, backgroundColor: '#ffffff', borderRadius: 16, boxShadow: '0 10px 40px rgba(0,0,0,0.12)', border: '1px solid rgba(0,0,0,0.05)', overflow: 'hidden', zIndex: 60, minWidth: 160 }}>
+                    <div onClick={() => navigate('/profile')} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#1e293b', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                        <User size={16} color="#6366f1" /> User Profile
+                    </div>
+                    <div onClick={() => { logout(); navigate('/login'); }} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#fef2f2')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                        <X size={16} color="#ef4444" /> Log out
+                    </div>
+                </div>
+            )}
         </div>
-
-        <div className="relative" ref={appsMenuRef}>
             <button className={`p-1.5 rounded-full transition-colors ${showApps ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-100 text-slate-500'}`} onClick={() => setShowApps(!showApps)} title="Apps menu" aria-label="Toggle apps menu"><LayoutGrid size={18}/></button>
             {showApps && (
                 <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-100 p-3 z-50 animate-in fade-in zoom-in-95 origin-top-right">
@@ -398,7 +348,6 @@ const TopBar: React.FC<TopBarProps> = ({ toggleSidebar, toggleCollapse }) => {
                 </div>
             )}
         </div>
-      </div>
 
       <input 
         type="file" 

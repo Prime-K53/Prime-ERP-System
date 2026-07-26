@@ -597,17 +597,7 @@ export const api = {
 
   inventory: {
     getAllItems: () => handle(async () => {
-      try {
-        const response = await fetchApiClient.requestJson<any[]>({ endpoint: '/inventory' });
-        const remoteItems = Array.isArray(response) ? response : [];
-        return remoteItems.map((item: any) => normalizeBackendInventoryItem(item)) as Item[];
-      } catch (err: any) {
-        if (err.name === 'OfflineRequestError' || err.name === 'ApiClientError') {
-          console.warn('[Inventory.GetAll] Remote unavailable, falling back to local cache.');
-          return dbService.getAll<Item>('inventory');
-        }
-        throw err;
-      }
+      return dbService.getAll<Item>('inventory');
     }, 'Inventory.GetAll'),
     createItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Create');

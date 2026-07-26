@@ -16,6 +16,8 @@ import { ProductionProvider } from './context/ProductionContext';
 import { ProcurementProvider } from './context/ProcurementContext';
 import { DataProvider, useData } from './context/DataContext';
 import { useSales } from './context/SalesContext';
+import { useInventory } from './context/InventoryContext';
+import { useNotifications } from './context/NotificationContext';
 import { ExaminationProvider } from './context/ExaminationContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { OrdersProvider } from './context/OrdersContext';
@@ -31,9 +33,8 @@ import { useKeyboard as useGlobalKeyboard } from './hooks';
 import { useDocumentStore } from './stores/documentStore.ts';
 import { PreviewModal } from './views/shared/components/PDF/PreviewModal.tsx';
 import { PdfWorker } from './views/shared/components/PDF/PdfWorker.tsx';
-import { Bell, Loader2, Coins, X, Calculator, Menu, UserIcon, Search as SearchIcon, Sparkles, PieChart, BarChart3, FileText, Users, Activity, FileBarChart, MessageSquare, Table, Settings as SettingsIcon } from 'lucide-react';
+import { Bell, Loader2, Coins, X, Menu, UserIcon, Search as SearchIcon, FileText, Users, LogOut, Box, Package } from 'lucide-react';
 import { AICopilot } from './components/ai';
-import { CommandPalette } from './components/ui';
 import { NotificationCenter } from './components/ui';
 import Login from './views/auth/Login';
 import SetupWizard from './views/auth/SetupWizard';
@@ -310,7 +311,7 @@ const ResponsiveDebugUtility: React.FC = () => {
 const AppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { companyConfig, isOnline, user, notify } = useAuth();
+  const { companyConfig, isOnline, user, notify, logout } = useAuth();
   const {
     isOpen,
     data,
@@ -320,14 +321,27 @@ const AppLayout: React.FC = () => {
   } = useDocumentStore();
   const {
     isPosModalOpen,
-    setIsPosModalOpen
+    setIsPosModalOpen,
+    customers,
+    invoices,
+    jobOrders,
   } = useSales();
+  const { inventory } = useInventory();
+  const {
+    notifications: ctxNotifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+  } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const notificationBellRef = useRef<HTMLButtonElement>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const theme = companyConfig?.appearance?.theme || 'Light';
@@ -362,6 +376,12 @@ const AppLayout: React.FC = () => {
   }, [companyConfig?.appearance]);
 
   useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
+  }, [searchOpen]);
+
+  useEffect(() => {
     // Table responsiveness is now handled via CSS in index.css
     // avoid manual DOM manipulation that interferes with React
   }, []);
@@ -373,7 +393,7 @@ const AppLayout: React.FC = () => {
   }, [location.pathname]);
 
   useGlobalKeyboard([
-    { key: 'k', meta: true, handler: () => setCommandPaletteOpen(true) },
+    { key: 'k', meta: true, handler: () => setSearchOpen(true) },
   ]);
 
   useKeyboard([
@@ -402,7 +422,7 @@ const AppLayout: React.FC = () => {
       handler: () => setSidebarCollapsed(p => !p),
       description: 'Toggle sidebar',
     },
-  ], [location.pathname, setCommandPaletteOpen]);
+  ], [location.pathname, setSearchOpen]);
 
   return (
     <div className="app-layout-scroll">
@@ -437,8 +457,8 @@ const AppLayout: React.FC = () => {
               <Breadcrumbs />
             </div>
             <button
-              onClick={() => { setCommandPaletteOpen(true); }}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors text-xs"
+              onClick={() => { setSearchOpen(true); setSearchQuery(''); }}
+              className="hidden sm:flex items-center gap-2 px-6 py-2 rounded-full border border-slate-200 bg-white text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all text-xs"
             >
               <SearchIcon size={14} />
               <span className="hidden md:inline">Search...</span>
@@ -451,21 +471,49 @@ const AppLayout: React.FC = () => {
                 className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors relative"
               >
                 <Bell size={18} />
-                {notifications.filter(n => !n.read).length > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                    {notifications.filter(n => !n.read).length}
+                    {unreadCount}
                   </span>
                 )}
               </button>
               <NotificationCenter
                 isOpen={notificationCenterOpen}
                 onClose={() => setNotificationCenterOpen(false)}
-                notifications={notifications}
-                onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
-                onMarkAllRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-                onClear={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+                notifications={ctxNotifications.map(n => ({
+                  id: n.id,
+                  type: n.type === 'EXAM' ? 'insight' : n.type === 'SYSTEM' ? 'system' : n.priority === 'Urgent' || n.priority === 'High' ? 'alert' : 'insight',
+                  title: n.title,
+                  message: n.message,
+                  timestamp: n.created_at,
+                  severity: (n.priority === 'Urgent' ? 'critical' : n.priority === 'High' ? 'high' : n.priority === 'Medium' ? 'medium' : 'low') as any,
+                  read: n.is_read,
+                }))}
+                onMarkRead={(id) => markAsRead(id)}
+                onMarkAllRead={() => markAllAsRead()}
+                onClear={(id) => dismissNotification(id)}
                 anchorEl={notificationBellRef.current}
               />
+            </div>
+            <div className="relative flex items-center gap-2 pl-2 border-l border-slate-200">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center py-1 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                  {(user?.fullName || user?.username || 'U').charAt(0).toUpperCase()}
+                </div>
+              </button>
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in zoom-in-95 origin-top-right">
+                  <button onClick={() => { navigate('/profile'); setShowUserMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                    <UserIcon size={14} /> User Profile
+                  </button>
+                  <button onClick={() => { logout(); navigate('/login'); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <LogOut size={14} /> Log out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -757,23 +805,86 @@ const AppLayout: React.FC = () => {
       </div>
       </div>
 
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        items={[
-          { id: 'dashboard', label: 'Dashboard', icon: <PieChart size={16} />, category: 'Navigation', onClick: () => { window.location.hash = '#/'; setCommandPaletteOpen(false); } },
-          { id: 'ai-workspace', label: 'AI Workspace', icon: <Sparkles size={16} />, category: 'Navigation', onClick: () => { navigate('/ai-workspace'); setCommandPaletteOpen(false); } },
-          { id: 'sales-dashboard', label: 'Smart Sales Dashboard', icon: <BarChart3 size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/sales-dashboard'); setCommandPaletteOpen(false); } },
-          { id: 'invoice-intelligence', label: 'Invoice Intelligence', icon: <FileText size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/invoice-intelligence'); setCommandPaletteOpen(false); } },
-          { id: 'customer-risk', label: 'Customer Risk Score', icon: <Users size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/customer-risk'); setCommandPaletteOpen(false); } },
-          { id: 'anomaly-detection', label: 'Anomaly Detection', icon: <Activity size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/anomaly-detection'); setCommandPaletteOpen(false); } },
-          { id: 'report-summaries', label: 'Report Summaries', icon: <FileBarChart size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/report-summaries'); setCommandPaletteOpen(false); } },
-          { id: 'nl-reporting', label: 'Natural Language Reporting', icon: <MessageSquare size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/natural-language-reporting'); setCommandPaletteOpen(false); } },
-          { id: 'accounting-asst', label: 'Accounting Assistant', icon: <Calculator size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/accounting-assistant'); setCommandPaletteOpen(false); } },
-          { id: 'advanced-table', label: 'Advanced Data Table', icon: <Table size={16} />, category: 'Smart Features', onClick: () => { navigate('/smart-features/advanced-data-table'); setCommandPaletteOpen(false); } },
-          { id: 'settings', label: 'Settings', icon: <SettingsIcon size={16} />, category: 'System', onClick: () => { window.location.hash = '#/settings'; setCommandPaletteOpen(false); } },
-        ]}
-      />
+      {searchOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setSearchOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 slide-in-from-top-4 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+              <SearchIcon size={16} className="text-slate-400 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search customers, invoices, jobs, inventory..."
+                className="flex-1 border-none outline-none text-sm font-medium text-slate-800 placeholder:text-slate-400 bg-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setSearchOpen(false); }}
+                autoFocus
+              />
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono font-bold text-slate-400">ESC</kbd>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto">
+              {searchQuery.length < 2 ? (
+                <div className="p-8 text-center text-xs text-slate-400 font-medium">
+                  Type at least 2 characters to search
+                </div>
+              ) : (() => {
+                const q = searchQuery.toLowerCase();
+                const results: Array<{ type: string; label: string; sublabel: string; link: string; icon: React.ReactNode }> = [];
+
+                (customers || []).forEach((c: any) => {
+                  if (c.name?.toLowerCase().includes(q)) {
+                    results.push({ type: 'Customer', label: c.name, sublabel: c.phone || c.email || '', link: '/sales-flow/clients', icon: <Users size={14} /> });
+                  }
+                });
+                (invoices || []).forEach((inv: any) => {
+                  const invNum = inv.invoiceNumber || inv.id;
+                  if (String(invNum).toLowerCase().includes(q) || inv.customerName?.toLowerCase().includes(q)) {
+                    results.push({ type: 'Invoice', label: `${invNum}`, sublabel: inv.customerName || '', link: '/sales-flow/invoices', icon: <FileText size={14} /> });
+                  }
+                });
+                (jobOrders || []).forEach((job: any) => {
+                  const jobName = job.jobName || job.title || job.orderNumber;
+                  if (String(jobName).toLowerCase().includes(q)) {
+                    results.push({ type: 'Job', label: String(jobName), sublabel: job.status || '', link: '/industrial/work-orders', icon: <Package size={14} /> });
+                  }
+                });
+                (inventory || []).forEach((item: any) => {
+                  if (item.name?.toLowerCase().includes(q) || item.sku?.toLowerCase().includes(q)) {
+                    results.push({ type: 'Inventory', label: item.name, sublabel: item.sku || '', link: '/supply-chain/inventory', icon: <Box size={14} /> });
+                  }
+                });
+
+                if (results.length === 0) {
+                  return <div className="p-8 text-center text-xs text-slate-400 font-medium">No results found</div>;
+                }
+
+                return results.slice(0, 10).map((r, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { navigate(r.link); setSearchOpen(false); setSearchQuery(''); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0 text-left"
+                  >
+                    <span className="p-1.5 rounded-lg bg-slate-100 text-slate-500 shrink-0">
+                      {r.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-slate-800 truncate">{r.label}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{r.sublabel}</div>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded shrink-0">{r.type}</span>
+                  </button>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
       {location.pathname === '/' && <AICopilot />}
     </div>
   );
