@@ -35,7 +35,6 @@ import { examinationProductionService, BatchToProductionPayload } from '../servi
 import { MARKET_ADJUSTMENTS_CHANGED_EVENT } from '../utils/marketAdjustmentUtils';
 import { useAuth } from './AuthContext';
 import { useProduction } from './ProductionContext';
-import { bindSyncLifecycle } from '../services/syncManager';
 
 interface ExaminationContextType {
   // State
@@ -626,11 +625,13 @@ export const ExaminationProvider: React.FC<ExaminationProviderProps> = ({ childr
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    return bindSyncLifecycle(async () => {
-      await examinationBatchService.syncPendingBatches();
+    const handleOnline = () => {
+      examinationBatchService.syncPendingBatches();
       lastLoadBatchesAtRef.current = 0;
-      await loadBatches();
-    });
+      loadBatches();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, [loadBatches]);
 
   const createJob = useCallback(async (payload: ExaminationJobPayload) => {

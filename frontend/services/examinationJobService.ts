@@ -351,6 +351,20 @@ export interface ExaminationJobState {
 }
 
 class ExaminationJobService {
+  private async syncJobToCloud(job: ExaminationJob): Promise<void> {
+    try {
+      await dbService.put('examinationJobs', job);
+    } catch {
+    }
+  }
+
+  private async deleteJobFromCloud(id: string): Promise<void> {
+    try {
+      await dbService.delete('examinationJobs', id);
+    } catch {
+    }
+  }
+
   private async listAllJobs() {
     return examinationDb.examinationJobs.toArray();
   }
@@ -380,6 +394,7 @@ class ExaminationJobService {
         updated_at: new Date().toISOString()
       };
       await examinationDb.examinationJobs.put(detachedJob);
+      await this.syncJobToCloud(detachedJob);
       return detachedJob;
     }
 
@@ -887,6 +902,7 @@ class ExaminationJobService {
     if (!job.class_name) throw new Error('Class is required.');
 
     await examinationDb.examinationJobs.put(job);
+    await this.syncJobToCloud(job);
     await this.upsertSubjects(id, job.number_of_learners, payload.subjects);
 
     await this.recalculateExam(id);
@@ -967,6 +983,7 @@ class ExaminationJobService {
     }
 
     await examinationDb.examinationJobs.put(merged);
+    await this.syncJobToCloud(merged);
 
     if (Array.isArray(updates.subjects)) {
       await this.upsertSubjects(examId, merged.number_of_learners, updates.subjects);
@@ -1084,6 +1101,7 @@ class ExaminationJobService {
     };
 
     await examinationDb.examinationJobs.put(updated);
+    await this.syncJobToCloud(updated);
     const syncedJob = await this.syncGroupLineForJob(updated);
     return {
       job: syncedJob,
@@ -1219,6 +1237,7 @@ class ExaminationJobService {
     };
 
     await examinationDb.examinationJobs.put(updated);
+    await this.syncJobToCloud(updated);
 
     // Log significant total changes for audit purposes
     if (originalFinalAmount > 0 && updated.final_amount > 0) {
@@ -1392,6 +1411,7 @@ class ExaminationJobService {
       updated_at: new Date().toISOString()
     };
     await examinationDb.examinationJobs.put(updatedJob);
+    await this.syncJobToCloud(updatedJob);
 
     return updatedJob;
   }
@@ -1408,6 +1428,7 @@ class ExaminationJobService {
       updated_at: new Date().toISOString()
     };
     await examinationDb.examinationJobs.put(approved);
+    await this.syncJobToCloud(approved);
 
     await this.ensureInventoryDeducted(examId, `APPROVAL-${approved.id}`);
     state = await this.getJobAndSubjects(examId);
@@ -1498,11 +1519,13 @@ class ExaminationJobService {
 
     for (const job of resolvedJobs) {
       linesByJobId.set(job.id, buildJobLineFromJob(job));
-      await examinationDb.examinationJobs.put({
+      const groupedJob = {
         ...job,
         invoice_group_id: group.id,
         updated_at: new Date().toISOString()
-      });
+      };
+      await examinationDb.examinationJobs.put(groupedJob);
+      await this.syncJobToCloud(groupedJob);
     }
 
     const nextLines = Array.from(linesByJobId.values());
@@ -1537,11 +1560,13 @@ class ExaminationJobService {
 
     const job = await examinationDb.examinationJobs.get(examinationJobId);
     if (job?.invoice_group_id === group.id) {
-      await examinationDb.examinationJobs.put({
+      const detachedJob = {
         ...job,
         invoice_group_id: undefined,
         updated_at: new Date().toISOString()
-      });
+      };
+      await examinationDb.examinationJobs.put(detachedJob);
+      await this.syncJobToCloud(detachedJob);
     }
 
     return updatedGroup;
@@ -1555,11 +1580,13 @@ class ExaminationJobService {
     for (const line of group.jobs || []) {
       const job = await examinationDb.examinationJobs.get(line.examination_job_id);
       if (job?.invoice_group_id === groupId) {
-        await examinationDb.examinationJobs.put({
+        const detachedJob = {
           ...job,
           invoice_group_id: undefined,
           updated_at: new Date().toISOString()
-        });
+        };
+        await examinationDb.examinationJobs.put(detachedJob);
+        await this.syncJobToCloud(detachedJob);
       }
     }
 
@@ -1589,6 +1616,7 @@ class ExaminationJobService {
     }
 
     await examinationDb.examinationJobs.delete(examId);
+    await this.deleteJobFromCloud(examId);
     return { success: true };
   }
 
@@ -1663,12 +1691,14 @@ class ExaminationJobService {
     await transactionService.processInvoice(invoice);
 
     for (const job of refreshedJobs) {
-      await examinationDb.examinationJobs.put({
+      const invoicedJob = {
         ...job,
         status: 'Invoiced',
         invoice_id: invoiceId,
         updated_at: new Date().toISOString()
-      });
+      };
+      await examinationDb.examinationJobs.put(invoicedJob);
+      await this.syncJobToCloud(invoicedJob);
     }
 
     if (options?.groupId) {
@@ -2017,6 +2047,7 @@ class ExaminationJobService {
     };
 
     await examinationDb.examinationJobs.put(lockedJob);
+    await this.syncJobToCloud(lockedJob);
     return { job: lockedJob, subjects };
   }
 
@@ -2037,6 +2068,7 @@ class ExaminationJobService {
     };
 
     await examinationDb.examinationJobs.put(unlockedJob);
+    await this.syncJobToCloud(unlockedJob);
     return { job: unlockedJob, subjects };
   }
 }

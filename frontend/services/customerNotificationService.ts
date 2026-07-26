@@ -2,7 +2,7 @@ import { dbService } from './db';
 import { logger } from '@/services/logger';
 import { CompanyConfig } from '../types';
 import { aiService } from './ai/aiService';
-import { queueOfflineMutation } from './offlineQueueManager';
+import { durableSyncQueue } from './durableSyncQueue';
 
 export type NotificationActivityType =
   | 'QUOTATION'
@@ -209,14 +209,13 @@ export const customerNotificationService = {
       }
     } else {
       try {
-        await queueOfflineMutation({
-          entityId: data.id,
-          operation: 'create',
-          request: { url: '/api/notifications/send', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: { type, data, message, phoneNumber: sanitizePhoneNumber(data.phoneNumber || '') } },
-          payload: { type, data, message },
-          priority: 'normal',
-          processor: 'notification',
-          dedupeKey: `notification:${type}:${data.id}`
+        await durableSyncQueue.enqueue({
+          table: 'notifications',
+          recordId: data.id,
+          operation: 'insert',
+          payload: { type, data, message, phoneNumber: sanitizePhoneNumber(data.phoneNumber || '') },
+          userId: null,
+          companyId: null,
         });
         await saveLog({ type, entityId: data.id, customerName: data.customerName, phoneNumber: data.phoneNumber || '', message, status: 'pending', deliveryMode: 'queued' });
         logger.info(`[Notification] Queued for offline delivery: ${type}`);

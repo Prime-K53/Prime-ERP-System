@@ -275,10 +275,10 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                         <table className="w-full min-w-[640px] text-left text-[13px] table-fixed">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Order No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Customer</SortableTh>
-                                    <SortableTh field="jobTitle" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Title</SortableTh>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Order No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Customer</SortableTh>
+                                    <SortableTh field="jobTitle" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Title</SortableTh>
                                     <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Status</SortableTh>
                                     <th className="table-header text-center w-[16.66%]">Actions</th>
                                 </tr>
@@ -295,7 +295,7 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                         onMouseMove={onMouseMove}
                                         onMouseLeave={onMouseLeave}
                                     >
-                                        <td className="table-body-cell text-center font-mono font-bold truncate">
+                                        <td className="table-body-cell text-left font-mono font-bold truncate">
                                             <DocLink
                                                 docNumber={o.id}
                                                 targetPage="/sales-flow/sales-orders"
@@ -303,9 +303,9 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell text-center font-normal truncate">{new Date(o.date).toLocaleDateString()}</td>
-                                        <td className="table-body-cell text-center font-medium text-slate-900 truncate">{o.customerName}</td>
-                                        <td className="table-body-cell text-center font-normal truncate">{o.jobTitle}</td>
+                                        <td className="table-body-cell text-left font-normal truncate">{new Date(o.date).toLocaleDateString()}</td>
+                                        <td className="table-body-cell text-left font-medium text-slate-900 truncate">{o.customerName}</td>
+                                        <td className="table-body-cell text-left font-normal truncate">{o.jobTitle}</td>
                                         <td className="table-body-cell text-center">
                                             <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 o.status === 'In Progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
@@ -314,7 +314,7 @@ export const SalesOrderList: React.FC<ListProps<JobOrder>> = (props) => {
                                                 }`}>{o.status}</span>
                                         </td>
                                         <td className="table-body-cell text-center" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-center gap-1.5 items-center shrink-0">
+                                            <div className="flex justify-center gap-1 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('WORK_ORDER', o); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>
@@ -463,11 +463,11 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                         <table className="w-full min-w-[640px] text-left text-[13px] table-fixed">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="orderNumber" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Order No.</SortableTh>
-                                    <SortableTh field="orderDate" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Customer</SortableTh>
-                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Total</SortableTh>
-                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Paid</SortableTh>
+                                    <SortableTh field="orderNumber" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[14.28%]">Order No.</SortableTh>
+                                    <SortableTh field="orderDate" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[14.28%]">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[14.28%]">Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-[14.28%]">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-[14.28%]">Paid</SortableTh>
                                     <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[14.28%]">Status</SortableTh>
                                     <th className="table-header text-center w-[14.28%]">Actions</th>
                                 </tr>
@@ -481,7 +481,7 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                         onClick={(e) => handleRowClick(e, o.id)}
                                         onContextMenu={(e) => handleContextMenu(e, o.id)}
                                     >
-                                        <td className="table-body-cell text-center font-mono font-bold truncate">
+                                        <td className="table-body-cell text-left font-mono font-bold truncate">
                                             <DocLink
                                                 docNumber={o.orderNumber}
                                                 targetPage="/sales-flow/orders"
@@ -489,10 +489,10 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell text-center font-normal truncate">{new Date(o.orderDate).toLocaleDateString()}</td>
-                                        <td className="table-body-cell text-center font-medium text-slate-900 truncate">{o.customerName}</td>
-                                        <td className="table-body-cell text-center font-bold truncate">{companyConfig.currencySymbol}{o.totalAmount.toLocaleString()}</td>
-                                        <td className="table-body-cell text-center font-bold text-emerald-600 truncate">{companyConfig.currencySymbol}{o.paidAmount.toLocaleString()}</td>
+                                        <td className="table-body-cell text-left font-normal truncate">{new Date(o.orderDate).toLocaleDateString()}</td>
+                                        <td className="table-body-cell text-left font-medium text-slate-900 truncate">{o.customerName}</td>
+                                        <td className="table-body-cell text-right font-bold finance-nums truncate">{companyConfig.currencySymbol}{o.totalAmount.toLocaleString()}</td>
+                                        <td className="table-body-cell text-right font-bold text-emerald-600 finance-nums truncate">{companyConfig.currencySymbol}{o.paidAmount.toLocaleString()}</td>
                                         <td className="table-body-cell text-center">
                                             <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${o.status === 'Completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 o.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
@@ -503,7 +503,7 @@ export const OrdersList: React.FC<ListProps<Order>> = (props) => {
                                                 }`}>{o.status}</span>
                                         </td>
                                         <td className="table-body-cell text-center" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-center gap-1.5 items-center shrink-0">
+                                            <div className="flex justify-center gap-1 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('ORDER', o); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>
@@ -1097,7 +1097,7 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                         <table className="w-full min-w-[640px] text-left text-[13px] table-fixed">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="table-header text-center w-[12.5%]">
+                                    <th className="table-header text-center w-[3%]">
                                         <input
                                             type="checkbox"
                                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -1115,13 +1115,13 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                             }}
                                         />
                                     </th>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Invoice No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Customer</SortableTh>
-                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Total</SortableTh>
-                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Balance</SortableTh>
-                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[12.5%]">Status</SortableTh>
-                                    <th className="table-header text-center w-[12.5%]">Actions</th>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[13.85%]">Invoice No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[13.85%]">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[13.85%]">Customer</SortableTh>
+                                    <SortableTh field="totalAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-[13.85%]">Total</SortableTh>
+                                    <SortableTh field="paidAmount" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-[13.85%]">Balance</SortableTh>
+                                    <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[13.85%]">Status</SortableTh>
+                                    <th className="table-header text-center w-[13.85%]">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
@@ -1153,7 +1153,7 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                                     onChange={() => props.onSelect?.(inv.id)}
                                                 />
                                             </td>
-                                            <td className="table-body-cell text-center font-mono text-slate-500 font-bold truncate">
+                                            <td className="table-body-cell text-left font-mono text-slate-500 font-bold truncate">
                                                 <DocLink
                                                     docNumber={inv.id}
                                                     targetPage="/sales-flow/invoices"
@@ -1161,10 +1161,10 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                                     currentPage={location.pathname}
                                                 />
                                             </td>
-                                            <td className="table-body-cell text-center font-normal truncate">{new Date(inv.date).toLocaleDateString()}</td>
-                                            <td className="table-body-cell text-center font-medium text-slate-900 truncate">{inv.customerName}</td>
-                                            <td className="table-body-cell text-center font-medium finance-nums truncate">{companyConfig.currencySymbol} {totalAmount.toLocaleString()}</td>
-                                            <td className="table-body-cell text-center text-red-600 font-medium finance-nums truncate">{companyConfig.currencySymbol} {balanceDue.toLocaleString()}</td>
+                                            <td className="table-body-cell text-left font-normal truncate">{new Date(inv.date).toLocaleDateString()}</td>
+                                            <td className="table-body-cell text-left font-medium text-slate-900 truncate">{inv.customerName}</td>
+                                            <td className="table-body-cell text-right font-medium finance-nums truncate">{companyConfig.currencySymbol} {totalAmount.toLocaleString()}</td>
+                                            <td className="table-body-cell text-right text-red-600 font-medium finance-nums truncate">{companyConfig.currencySymbol} {balanceDue.toLocaleString()}</td>
                                             <td className="table-body-cell text-center">
                                                 <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                     inv.status === 'Partial' ? 'bg-amber-100 text-amber-700 border-amber-200' :
@@ -1174,7 +1174,7 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                                     }`}>{inv.status}</span>
                                             </td>
                                             <td className="table-body-cell text-center" onClick={e => e.stopPropagation()}>
-                                                <div className="flex justify-center gap-1.5 items-center shrink-0">
+                                                <div className="flex justify-center gap-1 items-center shrink-0">
                                                     <button onClick={(e) => { e.stopPropagation(); props.onView(inv); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="View full detail">
                                                         <ChevronRight size={14} />
                                                     </button>
@@ -1351,10 +1351,10 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                         <table className="w-full min-w-[640px] text-left text-[13px] table-fixed">
                             <thead className="bg-slate-50/80 backdrop-blur text-slate-500 sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Quote No.</SortableTh>
-                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Date</SortableTh>
-                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Customer</SortableTh>
-                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Total</SortableTh>
+                                    <SortableTh field="id" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Quote No.</SortableTh>
+                                    <SortableTh field="date" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Date</SortableTh>
+                                    <SortableTh field="customerName" sortConfig={props.sortConfig} onSort={props.onSort} className="text-left w-[16.66%]">Customer</SortableTh>
+                                    <SortableTh field="total" sortConfig={props.sortConfig} onSort={props.onSort} className="text-right w-[16.66%]">Total</SortableTh>
                                     <SortableTh field="status" sortConfig={props.sortConfig} onSort={props.onSort} className="text-center w-[16.66%]">Status</SortableTh>
                                     <th className="table-header text-center w-[16.66%]">Actions</th>
                                 </tr>
@@ -1371,7 +1371,7 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                                         onMouseMove={onMouseMove}
                                         onMouseLeave={onMouseLeave}
                                     >
-                                        <td className="table-body-cell text-center font-mono font-bold truncate">
+                                        <td className="table-body-cell text-left font-mono font-bold truncate">
                                             <DocLink
                                                 docNumber={q.id}
                                                 targetPage="/sales-flow/quotations"
@@ -1379,9 +1379,9 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                                                 currentPage={location.pathname}
                                             />
                                         </td>
-                                        <td className="table-body-cell text-center font-normal truncate">{new Date(q.date).toLocaleDateString()}</td>
-                                        <td className="table-body-cell text-center font-medium text-slate-900 truncate">{q.customerName}</td>
-                                        <td className="table-body-cell text-center font-medium finance-nums truncate">{companyConfig.currencySymbol} {(q.total || 0).toLocaleString()}</td>
+                                        <td className="table-body-cell text-left font-normal truncate">{new Date(q.date).toLocaleDateString()}</td>
+                                        <td className="table-body-cell text-left font-medium text-slate-900 truncate">{q.customerName}</td>
+                                        <td className="table-body-cell text-right font-medium finance-nums truncate">{companyConfig.currencySymbol} {(q.total || 0).toLocaleString()}</td>
                                         <td className="table-body-cell text-center">
                                             <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${q.status === 'Accepted' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                 q.status === 'Sent' ? 'bg-blue-100 text-blue-700 border-blue-200' :
@@ -1390,7 +1390,7 @@ export const QuotationList: React.FC<ListProps<Quotation>> = (props) => {
                                                 }`}>{q.status}</span>
                                         </td>
                                         <td className="table-body-cell text-center" onClick={e => e.stopPropagation()}>
-                                            <div className="flex justify-center gap-1.5 items-center shrink-0">
+                                            <div className="flex justify-center gap-1 items-center shrink-0">
                                                 <button onClick={(e) => { e.stopPropagation(); handlePreview('QUOTATION', q); }} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded transition-all" title="Preview PDF">
                                                     <Eye size={14} />
                                                 </button>

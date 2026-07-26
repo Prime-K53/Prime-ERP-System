@@ -1,16 +1,15 @@
 import { ExaminationBatch, ExaminationClass, ExaminationPricingSettings, ExaminationSubject, Item, MarketAdjustment } from '../types';
 import { getUrl, API_BASE_URL } from '../config/api.js';
 import { dbService } from './db';
+import { supabase } from './supabaseClient';
 import { generateNextExaminationBatchNumber } from './documentNumberService';
 import { getHeaders, safeJson, toServiceError, isLikelyNetworkError } from './examinationServiceUtils';
 import { ensureBackendInProd } from './api';
 import { calculateBatchPricing, PricingSettings } from '../utils/examinationPricingCalculator';
 import { isExaminationDebugLoggingEnabled } from '../utils/debugFlags';
 import { apiClient } from './apiClient';
-import { offlineDb } from './offlineDb';
 import { examinationDb } from './examinationDb';
-import { countQueuedMutations, getQueuedMutations, queueOfflineMutation, removeQueuedMutation } from './offlineQueueManager';
-import { syncQueuedChanges } from './syncManager';
+import { getQueuedMutations, removeQueuedMutation } from './offlineQueueManager';
 import type { BatchRecord } from '../types/offline';
 
 export interface ExaminationInvoiceLineItem {
@@ -224,8 +223,6 @@ const getLocalBatches = async () => {
     const data = await examinationDb.examinationBatches.toArray();
     batches = Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
   } catch {
-    const data = await offlineDb.getAllBatches();
-    batches = Array.isArray(data) ? data.map((batch) => normalizeBatchForStorage(batch)) : [];
   }
   try {
     const syncedBatchRecords = await dbService.getAll<any>('examinationBatches');
@@ -249,13 +246,33 @@ const storeLocalBatches = async (batches: Array<Record<string, any>>) => {
   try {
     await examinationDb.examinationBatches.bulkPut(entries);
   } catch {
-    await offlineDb.saveBatches(entries as BatchRecord[], { silent: true });
   }
   for (const entry of entries) {
-    try {
-      await dbService.put('examinationBatches', entry);
-    } catch {
-    }
+    await syncBatchToSupabase(entry);
+  }
+};
+
+const syncBatchToSupabase = async (entry: Record<string, any>) => {
+  try {
+    const record = {
+      id: entry.id,
+      name: entry.name || null,
+      school_id: entry.school_id || null,
+      exam_type: entry.exam_type || null,
+      currency: entry.currency || null,
+      status: entry.status || null,
+      total_amount: entry.total_amount ?? 0,
+      classes_json: Array.isArray(entry.classes) ? JSON.stringify(entry.classes) : entry.classes_json || null,
+      approvals_json: entry.approvals_json || null,
+      invoice_json: entry.invoice_json || null,
+      company_id: entry._companyId || entry.company_id || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from('examination_batches')
+      .upsert(record, { onConflict: 'id', ignoreDuplicates: false });
+    if (error) throw error;
+  } catch {
   }
 };
 
@@ -264,12 +281,8 @@ const storeLocalBatch = async (batch: Record<string, any>) => {
   try {
     await examinationDb.examinationBatches.put(entry);
   } catch {
-    await offlineDb.saveBatch(entry as BatchRecord, { silent: true });
   }
-  try {
-    await dbService.put('examinationBatches', entry);
-  } catch {
-  }
+  await syncBatchToSupabase(entry);
   return entry;
 };
 
@@ -277,7 +290,6 @@ const removeLocalBatch = async (id: string) => {
   try {
     await examinationDb.examinationBatches.delete(id);
   } catch {
-    await offlineDb.deleteBatch(id, { silent: true });
   }
   try {
     await dbService.delete('examinationBatches', id);
@@ -303,24 +315,6 @@ const enqueueOutbox = async (type: string, entityId: string, payload: Record<str
     });
   } catch {
   }
-
-  return queueOfflineMutation({
-    entityId,
-    operation,
-    request: {
-      url: '/api/examination/batches'
-        + (operation === 'update' || operation === 'delete' ? `/${encodeURIComponent(entityId)}` : ''),
-      method: operation === 'create' ? 'POST' : operation === 'update' ? 'PUT' : 'DELETE',
-      headers: getHeaders(),
-      body: operation === 'delete' ? { id: entityId } : payload
-    },
-    payload: {
-      ...payload,
-      id: entityId,
-      type,
-      date: toIso()
-    }
-  });
 };
 
 const loadOutbox = async () => {

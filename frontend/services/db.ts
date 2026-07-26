@@ -407,24 +407,19 @@ const getFromLegacyStore = async <T>(storeName: keyof NexusDB, id: string): Prom
     return record;
 });
 
-const putToLegacyStore = async <T>(storeName: keyof NexusDB, item: T): Promise<string> => withDbRecovery(async (db) => {
-    stampCompanyId(item);
-    if (storeName === 'inventory') {
-        console.log(`[DEBUG putToLegacyStore] about to put item id=${(item as any).id}, name=${(item as any).name}, companyId=${(item as any)._companyId}`);
-    }
-    const result = await db.put(storeName, item);
-    if (storeName === 'inventory') {
-        console.log(`[DEBUG putToLegacyStore] put result=${result}`);
-        // Verify write: immediately read back
-        try {
-            const verify = await db.get(storeName, (item as any).id);
-            console.log(`[DEBUG putToLegacyStore] verify read:`, verify ? `found id=${verify.id}` : 'NOT FOUND');
-        } catch(e) {
-            console.log(`[DEBUG putToLegacyStore] verify error:`, e);
-        }
-    }
-    return result as string;
-});
+const writeQueues = new Map<string, Promise<void>>();
+
+const putToLegacyStore = async <T>(storeName: keyof NexusDB, item: T): Promise<string> => {
+    const key = String(storeName);
+    const prev = writeQueues.get(key) ?? Promise.resolve();
+    const next = prev.then(() => withDbRecovery(async (db) => {
+        stampCompanyId(item);
+        const result = await db.put(storeName, item);
+        return result as string;
+    }));
+    writeQueues.set(key, next.then(() => {}, () => {}));
+    return next;
+};
 
 const deleteFromLegacyStore = async (storeName: keyof NexusDB, id: string): Promise<void> => {
     await withDbRecovery(async (db) => {
@@ -1121,11 +1116,11 @@ export const dbService = {
                     return cloudResult.id;
                 }
             } catch (err) {
-                console.warn(`[DB] Cloud put failed for ${String(storeName)}, writing offline:`, err);
+                console.warn(`[DB] Cloud put failed for ${String(storeName)}:`, err);
                 // Queue for background sync retry
                 try {
                     const table = getCloudTable(String(storeName));
-                    const queued = await durableSyncQueue.enqueue({
+                    await durableSyncQueue.enqueue({
                         table,
                         recordId: itemId || null,
                         operation: 'upsert',
@@ -1136,10 +1131,11 @@ export const dbService = {
                 } catch (qErr) {
                     console.warn('[DB] Failed to queue offline write:', qErr);
                 }
+                return (item as Record<string, unknown>).id as string;
             }
         }
 
-        // Offline fallback: write to local cache
+        // Local-only stores: write to local cache
         const localResultId = await putToLegacyStore(storeName, item);
         this.triggerSync();
         emitDataChange([String(storeName)]);
@@ -1252,10 +1248,11 @@ export const dbService = {
                 } catch (qErr) {
                     console.warn('[DB] Failed to queue delete:', qErr);
                 }
+                return;
             }
         }
 
-        // Remove from local cache
+        // Remove from local cache (only reached on success or local-only)
         await deleteFromLegacyStore(storeName, id);
         this.triggerSync();
         emitDataChange([String(storeName)]);

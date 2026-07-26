@@ -203,10 +203,9 @@ const SecurityFooter = ({
 
   return (
     <View style={s.securityFooter} fixed>
-      <View style={{ width: footerQrSize + 8 }} />
       <View style={s.securityFooterText}>
-        <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'center' }]}>{legalFooterLine1}</Text>
-        <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'center' }]}>{legalFooterLine2}</Text>
+        <Text style={[s.securityFooterLine, { fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'left' }]}>{legalFooterLine1}</Text>
+        <Text style={[s.securityFooterLine, { marginTop: 2, fontSize: 10 * fontScale, lineHeight: 1.4, textAlign: 'left' }]}>{legalFooterLine2}</Text>
       </View>
 
       <View
@@ -1072,11 +1071,11 @@ const ProfessionalInvoiceTemplate = ({
                 </View>
               )}
               
-              <View style={{ alignItems: 'center', textAlign: 'center', width: '100%' }}>
-               <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'center', marginTop: 4 }}>
+              <View style={{ alignItems: 'flex-start', width: '100%' }}>
+               <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'left', marginTop: 4 }}>
                    This is a computer-generated document. No signature required, For enquiries contact:
                  </Text>
-                 <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'center', marginTop: 1 }}>
+                 <Text style={{ fontSize: 8 * fontScale, color: '#aaaaaa', lineHeight: 1.4, textAlign: 'left', marginTop: 1 }}>
                    {`${companyName}, ${companyAddress}, Phone ${companyPhone}`}
                 </Text>
              </View>
@@ -1911,7 +1910,7 @@ if (type === 'POS_RECEIPT') {
                             {type === 'QUOTATION' && (
                               <View style={s.totalRow}>
                                 <Text style={{ flex: 1, fontWeight: 'bold' }}>Quoted Amount:</Text>
-                                <Text style={{ textAlign: 'right' }}>{currency} {formatAmount(displayTotal)}</Text>
+                                <Text style={{ textAlign: 'right', paddingLeft: 8 }}>{currency} {formatAmount(displayTotal)}</Text>
                               </View>
                             )}
 

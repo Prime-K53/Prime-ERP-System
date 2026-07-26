@@ -142,6 +142,7 @@ export const docStyles = StyleSheet.create({
     borderColor: '#000',
     marginTop: 4,
     fontWeight: 'bold',
+    gap: 8,
   },
 
   // 5. Movable Company Section (Moves with items)
@@ -183,7 +184,7 @@ export const docStyles = StyleSheet.create({
     bottom: 30,
     left: 40,
     right: 40,
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: 8,
     color: '#666',
     borderTopWidth: 0.5,
@@ -201,20 +202,19 @@ export const docStyles = StyleSheet.create({
     paddingTop: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
   securityFooterText: {
     flex: 1,
     paddingRight: 0,
-    alignItems: 'center',
-    textAlign: 'center',
+    alignItems: 'flex-start',
   },
   securityFooterLine: {
     fontSize: 8,
     color: '#666',
     lineHeight: 1.2,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   securityQrPanel: {
     width: 60,

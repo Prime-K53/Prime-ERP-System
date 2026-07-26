@@ -611,17 +611,15 @@ export const api = {
     }, 'Inventory.GetAll'),
     createItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Create');
-      const payload = mapInventoryItemToBackend(item);
-      await fetchApiClient.requestJson({ endpoint: '/inventory', method: 'POST', body: JSON.stringify(payload) });
+      return dbService.put('inventory', item);
     }, 'Inventory.Create'),
     updateItem: (item: Item) => handle(async () => {
       checkAuth(['Admin', 'Accountant', 'Clerk'], 'Inventory.Update');
-      const payload = mapInventoryItemToBackend(item);
-      await fetchApiClient.requestJson({ endpoint: `/inventory/${item.id}`, method: 'PUT', body: JSON.stringify(payload) });
+      return dbService.put('inventory', item);
     }, 'Inventory.Update'),
     deleteItem: (id: string) => handle(async () => {
       checkAuth(['Admin'], 'Inventory.Delete');
-      await fetchApiClient.requestJson({ endpoint: `/inventory/${id}`, method: 'DELETE' });
+      return dbService.delete('inventory', id);
     }, 'Inventory.Delete'),
     getAllWarehouses: () => handle(() => dbService.getAll<Warehouse>('warehouses'), 'Inventory.GetWarehouses'),
     saveWarehouse: (wh: Warehouse) => handle(() => {
