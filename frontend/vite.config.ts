@@ -37,7 +37,20 @@ const CSP = "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:*
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      server: { port: 5173, host: '127.0.0.1', https: true, allowedHosts: ['127.0.0.1', 'localhost'], headers: { 'Content-Security-Policy': CSP } },
+      server: {
+        port: 5173,
+        host: '127.0.0.1',
+        https: true,
+        allowedHosts: ['127.0.0.1', 'localhost'],
+        headers: { 'Content-Security-Policy': CSP },
+        proxy: {
+          '/api': {
+            target: 'http://localhost:3000',
+            changeOrigin: true,
+            secure: false,
+          },
+        },
+      },
       plugins: [basicSsl(), react(), inlineFontsPlugin()],
       optimizeDeps: { include: ['react','react-dom','recharts','lucide-react','react-router-dom','idb','date-fns','@react-pdf/renderer','zustand','dexie'], exclude: ['@supabase/supabase-js','yoga-layout'] },
       define: { 'process.env.API_KEY': JSON.stringify(''), 'process.env.GEMINI_API_KEY': JSON.stringify('') },

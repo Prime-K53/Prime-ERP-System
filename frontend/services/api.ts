@@ -36,25 +36,32 @@ import {
   ExaminationRecurringPayload
 } from './examinationJobService.ts';
 
-// Initialize axios - baseURL is centralized from api config
+// ── Axios client with deduplication, retry, and consolidated interceptors ──
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {}
 });
 
-// Intercept non-GET requests in local-first mode to prevent CORS errors
+// ── Single consolidated request interceptor ──
 apiClient.interceptors.request.use((config) => {
+  // Skip in local-first mode for non-GET requests
   if (shouldPreferLocalReadModels() && config.method && config.method.toLowerCase() !== 'get') {
     return Promise.reject({ __localOnly: true, message: 'Skipped (local-first mode)', config });
   }
-  // Attach auth headers from session on every request
+  config.headers = config.headers || {};
   try {
     const raw = sessionStorage.getItem('nexus_user');
     if (raw) {
       const user = JSON.parse(raw);
-      if (user?.id) config.headers['x-user-id'] = user.id;
-      if (user?.role) config.headers['x-user-role'] = user.role;
-      if (user?.email) config.headers['x-user-email'] = user.email;
+      if (user.id) config.headers['x-user-id'] = user.id;
+      if (user.role) config.headers['x-user-role'] = user.role;
+      if (user.email) config.headers['x-user-email'] = user.email;
+      config.headers['x-user-is-super-admin'] = user.isSuperAdmin === true ? 'true' : 'false';
+    } else if (import.meta.env?.DEV) {
+      config.headers['x-user-id'] = 'USR-0001';
+      config.headers['x-user-role'] = 'Admin';
+      config.headers['x-user-is-super-admin'] = 'true';
     }
   } catch { /* non-fatal */ }
   try {
@@ -64,47 +71,87 @@ apiClient.interceptors.request.use((config) => {
       if (parsed?.companyId) config.headers['x-company-id'] = parsed.companyId;
     }
   } catch { /* non-fatal */ }
-  // Attach selected Financial Year ID to every request as query param
   try {
     const fyId = localStorage.getItem('selectedFinancialYearId');
-    if (fyId && config.params) {
-      config.params.financial_year_id = fyId;
-    } else if (fyId) {
-      config.params = { ...config.params, financial_year_id: fyId };
+    if (fyId) {
+      config.params = { ...(config.params || {}), financial_year_id: fyId };
     }
   } catch { /* non-fatal */ }
+  if (import.meta.env?.DEV) {
+    config.headers['x-dev-bypass'] = 'true';
+  }
   return config;
-});
+}, (err) => Promise.reject(err));
 
-// Log all non-2xx API responses with full diagnostic details
+// ── Consolidated axios instance ──
+
+// ── Single consolidated response interceptor with retry for 429 ──
+const MAX_RETRIES = 3;
+
 apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error?.response) {
-      const status = error.response.status;
-      if (!verboseApiLoggingEnabled && status < 500) {
-        return Promise.reject(error);
-      }
+  (response) => {
+    // Content-type sanity checks
+    const contentType = response.headers['content-type'] || '';
+    const method = getRequestMethod(response.config?.method);
+    const fullUrl = getRequestUrl(response.config);
+    const responseText = typeof response.data === 'string' ? response.data : '';
+    if (responseText.toLowerCase().includes('method not allowed')) {
+      const error: Error & { status?: number } = new Error(`Wrong HTTP method for endpoint: ${method} ${fullUrl} (HTTP ${response.status})`);
+      error.status = response.status;
+      logger.error(`Error Wrong HTTP method detected for ${method} ${fullUrl}`, { status: response.status, contentType });
+      return Promise.reject(error);
+    }
+    if (isHtmlContent(String(contentType), response.data)) {
+      const error: Error & { status?: number } = new Error(`Wrong endpoint for API request: ${method} ${fullUrl} returned HTML instead of JSON (HTTP ${response.status})`);
+      error.status = response.status;
+      logger.error(`Error Wrong endpoint detected for ${method} ${fullUrl}`, { status: response.status, contentType });
+      return Promise.reject(error);
+    }
+    return response;
+  },
+  async (error) => {
+    const config = error.config || {};
 
-      const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
-      const url = error.config?.url || 'unknown';
-      const requestData = error.config?.data ? (() => { try { return JSON.parse(error.config.data); } catch { return error.config.data; } })() : undefined;
-      logger.error(`[API ${status}] ${method} ${url}`, {
-        status,
-        statusText: error.response.statusText,
-        responseBody: error.response.data,
-        requestPayload: requestData ? {
-          type: typeof requestData,
-          keys: typeof requestData === 'object' ? Object.keys(requestData) : undefined,
-          itemsCount: requestData?.items?.length,
-          customerName: requestData?.customerName,
-          totalAmount: requestData?.totalAmount,
-        } : undefined,
-        validationErrors: error.response.data?.errors || error.response.data?.message,
-      });
+    // Retry logic for 429 (rate limit) with exponential backoff
+    if (error.response?.status === 429) {
+      const retryCount = (config as any)._retryCount || 0;
+      if (retryCount < MAX_RETRIES) {
+        (config as any)._retryCount = retryCount + 1;
+        const delay = Math.min(1000 * Math.pow(2, retryCount) + Math.random() * 1000, 15000);
+        logger.warn(`Rate limited, retrying in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return apiClient.request(config);
+      }
+      logger.error(`Rate limit retries exhausted for ${config.url}`);
+    }
+
+    const method = getRequestMethod(config.method);
+    const fullUrl = getRequestUrl(config);
+    if (error.response) {
+      const { data, status, headers } = error.response;
+      const contentType = headers['content-type'] || '';
+      const rawBody = typeof data === 'string' ? data : '';
+      const lowerBody = String(rawBody || '').toLowerCase();
+      logger.error(`Error Response ${method} ${fullUrl} -> ${status}`);
+      if (status === 401) {
+        handleUnauthorizedResponse(fullUrl);
+        error.message = 'Your session is not authorized. Please sign in again.';
+      } else if (isHtmlContent(contentType, data)) {
+        error.message = `Wrong endpoint for API request: ${method} ${fullUrl} returned HTML instead of JSON (HTTP ${status})`;
+      } else if (status === 405 || lowerBody.includes('method not allowed')) {
+        error.message = `Wrong HTTP method for endpoint: ${method} ${fullUrl} (HTTP ${status})`;
+      } else if (isJsonContent(contentType) && data && typeof data === 'object') {
+        error.message = data.error || data.message || error.message;
+      }
+    } else if (error.request) {
+      const isNetworkError = String(error.code || '').includes('ERR_NETWORK') || String(error.message || '').includes('network error');
+      error.isCorsOrNetworkError = isNetworkError || !error.response;
+      error.message = error.isCorsOrNetworkError
+        ? 'No response from backend. Possible CORS preflight rejection or network error.'
+        : 'No response from backend. Check your connection or API URL.';
     }
     return Promise.reject(error);
-  },
+  }
 );
 
 const isProd = false;
@@ -203,131 +250,9 @@ const handleUnauthorizedResponse = (fullUrl: string) => {
   }
 };
 
-apiClient.interceptors.response.use(
-  (response) => {
-    const contentType = response.headers['content-type'] || '';
-    const method = getRequestMethod(response.config?.method);
-    const fullUrl = getRequestUrl(response.config);
-    const responseText = typeof response.data === 'string' ? response.data : '';
+// (response interceptor consolidated above — see the single consolidated handler)
 
-    logger.info(`Response ${method} ${fullUrl} -> ${response.status} (Content-Type: ${contentType})`);
-
-    if (responseText.toLowerCase().includes('method not allowed')) {
-      const error: Error & { status?: number } = new Error(`Wrong HTTP method for endpoint: ${method} ${fullUrl} (HTTP ${response.status})`);
-      error.status = response.status;
-      logger.error(`Error Wrong HTTP method detected for ${method} ${fullUrl}`, { status: response.status, contentType });
-      return Promise.reject(error);
-    }
-
-    if (isHtmlContent(String(contentType), response.data)) {
-      const error: Error & { status?: number } = new Error(`Wrong endpoint for API request: ${method} ${fullUrl} returned HTML instead of JSON (HTTP ${response.status})`);
-      error.status = response.status;
-      logger.error(`Error Wrong endpoint detected for ${method} ${fullUrl}`, { status: response.status, contentType });
-      return Promise.reject(error);
-    }
-    return response;
-  },
-  async (error) => {
-    const config = error.config || {};
-    const method = getRequestMethod(config.method);
-    const fullUrl = getRequestUrl(config);
-
-    if (error.response) {
-      const { data, status, headers } = error.response;
-      const contentType = headers['content-type'] || '';
-
-      const rawBody = typeof data === 'string' ? data : '';
-      const lowerBody = String(rawBody || '').toLowerCase();
-
-      logger.error(`Error Response ${method} ${fullUrl} -> ${status} (Content-Type: ${contentType})`);
-
-      if (status === 401) {
-        handleUnauthorizedResponse(fullUrl);
-        error.message = 'Your session is not authorized. Please sign in again.';
-      } else if (isHtmlContent(contentType, data)) {
-        logger.error(`Error Wrong endpoint detected for ${method} ${fullUrl}`);
-        error.message = `Wrong endpoint for API request: ${method} ${fullUrl} returned HTML instead of JSON (HTTP ${status})`;
-      } else if (status === 405 || lowerBody.includes('method not allowed')) {
-        logger.error(`Error Wrong HTTP method detected for ${method} ${fullUrl}`);
-        error.message = `Wrong HTTP method for endpoint: ${method} ${fullUrl} (HTTP ${status})`;
-      } else if (isJsonContent(contentType) && data && typeof data === 'object') {
-        error.message = data.error || data.message || error.message;
-      }
-    } else if (error.request) {
-      logger.error(`No Response ${method} ${fullUrl}`);
-      // Distinguish between network/CORS and other failures
-      const isNetworkError = String(error.code || '').toLowerCase().includes('err_network') || String(error.message || '').toLowerCase().includes('network error');
-      const possibleCors = !error.response && isProd;
-      if (possibleCors || isNetworkError) {
-        error.isCorsOrNetworkError = true;
-        error.message = 'No response from backend. Possible CORS preflight rejection or network error.';
-      } else {
-        error.message = 'No response from backend. Check your connection or API URL.';
-      }
-    } else {
-      logger.error(`Request Error ${error.message}`);
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Attach identity headers from sessionStorage to allow server-side permission checks
-apiClient.interceptors.request.use((config) => {
-  try {
-    config.headers = config.headers || {};
-    const saved = sessionStorage.getItem('nexus_user');
-    if (saved) {
-      const user = JSON.parse(saved);
-      if (user.id) config.headers['x-user-id'] = user.id;
-      if (user.role) config.headers['x-user-role'] = user.role;
-      config.headers['x-user-is-super-admin'] = user.isSuperAdmin === true ? 'true' : 'false';
-    } else {
-      config.headers['x-user-id'] = config.headers['x-user-id'] || 'USR-0001';
-      config.headers['x-user-role'] = config.headers['x-user-role'] || 'Admin';
-      config.headers['x-user-is-super-admin'] = config.headers['x-user-is-super-admin'] || 'true';
-    }
-    const companyConfig = localStorage.getItem('nexus_company_config');
-    if (companyConfig) {
-      const parsed = JSON.parse(companyConfig);
-      if (parsed?.companyId) config.headers['x-company-id'] = parsed.companyId;
-    }
-    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
-      config.headers['x-dev-bypass'] = 'true';
-    }
-  } catch (e) {
-    config.headers = config.headers || {};
-    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
-      config.headers['x-user-id'] = config.headers['x-user-id'] || 'USR-0001';
-      config.headers['x-user-role'] = config.headers['x-user-role'] || 'Admin';
-      config.headers['x-user-is-super-admin'] = config.headers['x-user-is-super-admin'] || 'true';
-    }
-  }
-  return config;
-}, (err) => Promise.reject(err));
-
-// Development fallback: when no session is present, attach a dev identity
-// so local dev backend (which relies on x-user-id/x-user-role) won't reject requests.
-apiClient.interceptors.request.use((config) => {
-  try {
-    config.headers = config.headers || {};
-    const alreadyHas = config.headers['x-user-id'] || config.headers['x-user-role'] || config.headers['x-user-is-super-admin'];
-    if (!alreadyHas && import.meta.env && import.meta.env.DEV) {
-      config.headers['x-user-id'] = 'dev';
-      config.headers['x-user-role'] = 'Admin';
-      config.headers['x-user-is-super-admin'] = 'true';
-    }
-  } catch (e) {
-    // ignore
-  }
-  return config;
-}, (err) => Promise.reject(err));
-
-apiClient.interceptors.request.use((config) => {
-  const method = getRequestMethod(config.method);
-  const fullUrl = getRequestUrl(config);
-  logger.info(`Request ${method} ${fullUrl}`);
-  return config;
-}, (err) => Promise.reject(err));
+// (request interceptors consolidated above — see the single consolidated handler)
 
 /**
  * Authorization Middleware Simulation

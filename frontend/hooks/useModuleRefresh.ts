@@ -6,6 +6,8 @@ interface UseModuleRefreshOptions {
   focusRefresh?: boolean;
 }
 
+const MIN_FOCUS_REFRESH_INTERVAL = 60_000;
+
 /**
  * Hook to manage data polling and window-focus refresh for specific modules.
  * 
@@ -21,18 +23,20 @@ export const useModuleRefresh = (
   
   const targetRefreshFn = refreshFn || refreshAllData;
   const lastRefreshRef = useRef<number>(0);
+  const mountedRef = useRef(true);
 
   const handleFocus = useCallback(() => {
-    if (!focusRefresh) return;
+    if (!focusRefresh || !mountedRef.current) return;
     
     const now = Date.now();
-    if (now - lastRefreshRef.current > 30_000) {
+    if (now - lastRefreshRef.current > MIN_FOCUS_REFRESH_INTERVAL) {
       lastRefreshRef.current = now;
       targetRefreshFn().catch(() => undefined);
     }
   }, [focusRefresh, targetRefreshFn]);
 
   useEffect(() => {
+    mountedRef.current = true;
     // Start polling if interval is provided
     if (interval !== null && interval > 0) {
       startPolling(interval);
@@ -44,6 +48,7 @@ export const useModuleRefresh = (
     }
 
     return () => {
+      mountedRef.current = false;
       stopPolling();
       window.removeEventListener('focus', handleFocus);
     };

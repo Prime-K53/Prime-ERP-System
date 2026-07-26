@@ -178,20 +178,31 @@ app.use((req, res, next) => {
 // Handle preflight for all routes (safe global handler)
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
+    const origin = req.headers['origin'];
+    // Sync CORS check: allow origins that pass the same logic as cors middleware
+    let allowed = false;
+    if (!origin) {
+      allowed = true;
+    } else {
+      const hostname = (() => { try { return new URL(origin).hostname; } catch { return ''; } })();
+      allowed = !hostname || hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0'
+        || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)
+        || /^10\.\d{1,3}\.\d{1,3}$/.test(hostname)
+        || /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+    }
+    res.header('Access-Control-Allow-Origin', allowed && origin ? origin : (origin ? '' : '*'));
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-role, x-user-email, x-correlation-id, x-dev-bypass');
-    // Only echo back if origin passed CORS validation (safe), otherwise deny
-    const safeOrigin = req.headers['origin']
-      ? corsOptions.origin(req.headers['origin'], (err, allowed) => allowed ? req.headers['origin'] : null)
-      : null;
-    res.header('Access-Control-Allow-Origin', safeOrigin || '');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-user-role, x-user-email, x-correlation-id, x-dev-bypass, x-company-id, x-idempotency-key, x-financial-year-id');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
     return res.sendStatus(204);
   }
   next();
 });
 
 // Rate limiting for API routes (after CORS so 429 responses include CORS headers)
-app.use('/api', createLimiter({ windowMs: 60 * 1000, maxRequests: 300 }));
+// 600 requests per 60s window = 10 req/s average; accommodates parallel refresh bursts
+app.use('/api', createLimiter({ windowMs: 60 * 1000, maxRequests: 600 }));
 
 app.use('/api/auth', auditAuthMiddleware, authLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 }), authRoutes);
 
