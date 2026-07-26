@@ -140,6 +140,46 @@ class FinancialYearService extends BaseService {
     if (!fy) throw new Error('Financial year not found');
     if (fy.is_closed) throw new Error('Financial year is already closed');
 
+    const nextFy = await this._get(
+      `SELECT * FROM financial_years WHERE company_id = ? AND date(start_date) = date(?, '+1 day') AND status = 'Active' LIMIT 1`,
+      [companyId, fy.end_date]
+    );
+
+    const carryForwardBalances = async () => {
+      const balanceSheetAccounts = await this._all(
+        `SELECT id, code, name, type, balance FROM chart_of_accounts
+         WHERE company_id = ? AND type IN ('Asset', 'Liability', 'Equity') AND balance != 0`,
+        [companyId]
+      );
+
+      if (balanceSheetAccounts.length > 0 && nextFy) {
+        const entryDate = nextFy.start_date;
+        for (const account of balanceSheetAccounts) {
+          const isDebitNormal = account.type === 'Asset';
+          const lineId = require('crypto').randomUUID();
+          const absBalance = Math.abs(account.balance);
+          const entryType = account.balance > 0
+            ? (isDebitNormal ? 'debit' : 'credit')
+            : (isDebitNormal ? 'credit' : 'debit');
+          await this._run(
+            `INSERT INTO ledger_entries (id, account_id, entry_type, amount, entry_date, description, company_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+            [
+              lineId,
+              account.id,
+              entryType,
+              absBalance,
+              entryDate,
+              `Opening balance - ${account.name} (carried forward from FY ${fy.name})`,
+              companyId
+            ]
+          );
+        }
+      }
+    };
+
+    await carryForwardBalances();
+
     await this._run(
       `UPDATE financial_years SET is_closed = 1, status = 'Closed', updated_at = datetime('now') WHERE id = ? AND company_id = ?`,
       [id, companyId]

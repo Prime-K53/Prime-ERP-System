@@ -44,4 +44,13 @@ function addFyDateFilter(sql, params, req, dateColumn = 'date') {
   return { sql, params };
 }
 
-module.exports = { injectFinancialYear, addFyDateFilter };
+function requireFyNotClosed(req, res, next) {
+  if (req.fyIsClosed) {
+    return res.status(403).json({
+      error: `Financial Year "${req.fyName || 'Selected'}" is closed. No new transactions can be created, edited, or deleted in this period.`
+    });
+  }
+  next();
+}
+
+module.exports = { injectFinancialYear, addFyDateFilter, requireFyNotClosed };

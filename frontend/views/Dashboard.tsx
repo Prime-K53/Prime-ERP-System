@@ -1701,6 +1701,15 @@ const DashboardContent: React.FC = () => {
         >
           {/* Left Column: KPI Cards Grid — 2×2 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 12 : 24, minWidth: 0 }}>
+            {revenueThisMonth === 0 && todaysCollection === 0 && receivables === 0 && (
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', borderRadius: 16, padding: '16px 20px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: '#64748b' }}>
+                <CalendarDays size={20} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <div>
+                  <span style={{ fontWeight: 600, color: '#475569' }}>No transactions recorded for {selectedFinancialYear?.name || 'this Financial Year'}.</span>
+                  {' '}Create your first transaction to see dashboard analytics.
+                </div>
+              </div>
+            )}
             {/* Card 1 — Company Overview (Sliding) */}
             {widgets.find(w => w.id === 'info-card')?.visible !== false && (
             <SlidingInfoCard

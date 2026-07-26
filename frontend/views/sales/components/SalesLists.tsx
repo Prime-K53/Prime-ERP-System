@@ -12,6 +12,7 @@ import { OfflineImage } from '../../../components/OfflineImage';
 import { mapToInvoiceData } from '../../../utils/pdfMapper';
 import { resolveTransactionPricingSummary } from '../../../utils/pricingBreakdown';
 import { Edit2, Trash2, Star, List, LayoutGrid, CheckCircle, Check, Clock, User, Calendar, Box, Eye, Send, Copy, Plus, Phone, ChevronRight, FileText, FileCheck, Briefcase, Mail, MessageCircle, Repeat, XCircle, Archive, History as HistoryIcon, Users, RefreshCw, ArrowUp, ArrowDown, Link as LinkIcon, Paperclip, CalendarClock, AlertTriangle, Download, Truck, MoreVertical, Play, Pause, Package, Globe, DollarSign, TrendingUp, Zap, Target, Share2, ExternalLink, PlayCircle, Coins, Wallet, ShoppingBag, Printer, Search, X } from 'lucide-react';
+import { TableEmptyState } from '../../../components/EmptyState';
 
 export interface ListProps<T> {
     data: T[];
@@ -1125,7 +1126,9 @@ export const InvoiceList: React.FC<ListProps<Invoice>> = (props) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100/50">
-                                {(currentItems || []).map((inv: any) => {
+                                {(currentItems || []).length === 0 ? (
+                                    <TableEmptyState module="invoices" actionLabel="Create Invoice" onAction={() => props.onAction?.({} as any, 'create')} searchTerm={props.searchTerm} />
+                                ) : (currentItems || []).map((inv: any) => {
                                     const isPaid = inv.status === 'Paid';
                                     const isCancelled = inv.status === 'Cancelled';
                                     const isPartial = inv.status === 'Partial' || (inv.paidAmount || 0) > 0;
